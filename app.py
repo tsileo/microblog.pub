@@ -58,7 +58,7 @@ app.secret_key = get_secret_key('flask')
 JWT_SECRET = get_secret_key('jwt')
 JWT = JSONWebSignatureSerializer(JWT_SECRET)
 
-with open('config/jwt_token', 'wb+') as f:
+with open('config/jwt_token', 'w+') as f:
     f.write(JWT.dumps({'type': 'admin_token'}))
 
 SIG_AUTH = HTTPSigAuth(ID+'#main-key', KEY.privkey)
