@@ -1,0 +1,9 @@
+language: python
+python:
+  - "3.6"
+install:
+  - pip install pytest mypy flake8
+script:
+  - flake8
+  - mypy --ignore-missing-imports
+  - pytest -v

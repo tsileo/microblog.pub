@@ -1,0 +1,160 @@
+.note-container p:first-child {
+        margin-top: 0;
+}
+html, body {
+	  height: 100%;
+}
+body {
+  background-color: #060606;
+  color: #808080;
+display: flex;
+flex-direction: column;
+}
+.base-container {
+ flex: 1 0 auto;
+}
+.footer {
+flex-shrink: 0;
+}
+a, h1, h2, h3, h4, h5, h6 {
+  color: #fefefe;
+}
+a {
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+.gold {
+  color: #f7ca18;
+}
+
+#header {
+	margin-bottom: 40px;
+}
+#header .h-card {
+}
+#header .title {
+font-size:1.2em;padding-right:15px;color:#fefefe;
+}
+#header .title:hover {
+text-decoration: none;
+}
+#header .menu {
+padding: 20px 0 10px 0;
+}
+#header .menu ul {
+display:inline;list-style-type:none;padding:0;
+}
+#header .menu li {
+float:left;
+padding-right:10px;
+margin-bottom:10px;
+}
+#header .menu a {
+  padding: 2px 7px;
+}
+#header .menu a.selected {
+background:#f7ca18;color:#634806;
+border-radius:2px;
+}
+#header .menu a:hover {
+background:#f7ca18;color:#060606;
+text-decoration: none;
+}
+#container {
+width:90%;max-width: 720px;margin:40px auto;
+}
+#container #notes {
+margin-top:20px;
+}
+.actor-box {
+display:block;text-decoration:none;margin-bottom:40px;
+}
+.actor-box .actor-icon {
+width: 100%;
+max-width:120px;
+border-radius:2px;
+}
+.actor-box h3 { margin:0; }
+.note .l {
+color:#666;
+}
+.note {
+display:flex;margin-bottom:70px;
+}
+.note .h-card {
+flex:initial;width:50px;
+}
+.note .u-photo {
+width:50px;border-radius:2px;
+}
+.note .note-wrapper {
+flex:1;padding-left:15px;
+}
+.note .bottom-bar {
+margin-top:10px;
+}
+.bar-item {
+background: #222;
+padding: 5px;
+color:#bbb;
+margin-right:5px;
+border-radius:2px;
+}
+.bottom-bar .perma-item {
+margin-right:5px;
+}
+.bottom-bar a.bar-item:hover {
+	text-decoration: none;
+}
+.note .img-attachment {
+max-width:100%;
+border-radius:2px;
+}
+.note h3 {
+font-size:1.1em;color:#ccc;
+}
+.note .note-container {
+clear:right;padding:10px 0;
+}
+.note strong {
+font-weight:600;
+}
+.footer > div  {
+width:90%;max-width: 720px;margin:40px auto;
+}
+.footer a, .footer a:hover, .footer a:visited {
+  text-decoration:underline;
+  color:#808080;
+}
+.summary {
+color: #ddd;
+font-size:1.3em;
+margin-top:50px;
+margin-bottom:70px;
+}
+.summary a, .summay a:hover {
+color:#ddd;
+text-decoration:underline;
+}
+#followers, #following, #new {
+	margin-top:50px;
+}
+#admin {
+	margin-top:50px;
+}
+textarea, input {
+	background: #222;
+	padding: 10px;
+	color: #bbb;
+	border: 0px;
+	border-radius: 2px;
+}
+input {
+	padding: 10px;
+}
+input[type=submit] {
+  color: #f7ca18;
+  text-transform: uppercase;
+}

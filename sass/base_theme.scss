@@ -1,0 +1,207 @@
+// a4.io dark theme
+$background-color: #060606;
+$background-light: #222;
+$color: #808080;
+$color-title-link: #fefefe;
+$color-summary: #ddd;
+$color-light: #bbb;
+$color-menu-background: #222;
+$color-note-link: #666;
+$primary-color: #f7ca18;
+
+$background-color: #eee; 
+$background-light: #ccc;
+$color: #111;
+$color-title-link: #333;
+$color-light: #555;
+$color-summary: #111;
+$color-note-link: #333;
+$color-menu-background: #ddd;
+$primary-color: #1d781d; 
+
+.note-container p:first-child {
+        margin-top: 0;
+}
+html, body {
+	  height: 100%;
+}
+body {
+  background-color: $background-color;
+  color: $color;
+  display: flex;
+  flex-direction: column;
+}
+.base-container {
+  flex: 1 0 auto;
+}
+.footer {
+  flex-shrink: 0;
+}
+a, h1, h2, h3, h4, h5, h6 {
+  color: $color-title-link;
+}
+a {
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+.gold {
+  color: $primary-color;
+}
+
+#header {
+  margin-bottom: 40px;
+
+  .title {
+    font-size: 1.2em;
+    padding-right: 15px;
+    color: $color-title-link;
+  }
+  .title:hover {
+    text-decoration: none;
+  }
+  .subtitle-username {
+    color: $color;
+  }
+  .menu {
+    padding: 20px 0 10px 0;
+    ul {
+      display: inline;
+      list-style-type: none;
+      padding: 0;
+      li {
+        float:left;
+        padding-right:10px;
+        margin-bottom:10px;
+      }
+    }
+    a {
+      padding: 2px 7px;
+    }
+    a.selected {
+      background: $primary-color;
+      color: $background-color;
+      border-radius:2px;
+    }
+    a:hover {
+      background: $primary-color;
+      color: $background-color;
+      text-decoration: none;
+    }
+  }
+}
+#container {
+  width: 90%;
+  max-width: 720px;
+  margin: 40px auto;
+}
+#container #notes {
+  margin-top: 20px;
+}
+.actor-box {
+  display: block;
+  text-decoration: none;
+  margin-bottom: 40px;
+
+  .actor-icon {
+    width: 100%;
+    max-width:120px;
+    border-radius:2px;
+  }
+  h3 { margin: 0; }
+}
+.note {
+  display: flex;
+  margin-bottom: 70px;
+  .l {
+    color: $color-note-link;
+  }
+  
+  .h-card {
+    flex: initial;
+    width: 50px;
+  }
+  
+  .u-photo {
+    width: 50px;
+    border-radius: 2px;
+  }
+  .note-wrapper {
+    flex: 1;
+    padding-left: 15px;
+  }
+
+  .bottom-bar { margin-top:10px; }
+
+  .img-attachment {
+    max-width:100%;
+    border-radius:2px;
+  }
+
+  h3 {
+    font-size: 1.1em;
+    color: $color-light;
+  }
+
+  strong { font-weight:600; }
+
+  .note-container {
+    clear: right;
+    padding:10px 0;
+  }
+}
+
+.bar-item {
+  background: $color-menu-background;
+  padding: 5px;
+  color: $color-light;
+  margin-right:5px;
+  border-radius:2px;
+}
+
+.bottom-bar .perma-item {
+  margin-right:5px;
+}
+.bottom-bar a.bar-item:hover {
+  text-decoration: none;
+}
+.footer > div  {
+  width: 90%;
+  max-width: 720px;
+  margin: 40px auto;
+}
+.footer a, .footer a:hover, .footer a:visited {
+  text-decoration: underline;
+  color: $color;
+}
+.summary {
+  color: $color-summary;
+  font-size:1.3em;
+  margin-top:50px;
+  margin-bottom:70px;
+}
+.summary a, .summay a:hover {
+  color: $color-summary;
+  text-decoration:underline;
+}
+#followers, #following, #new {
+  margin-top:50px;
+}
+#admin {
+  margin-top:50px;
+}
+textarea, input {
+  background: $color-menu-background;
+  padding: 10px;
+  color: $color-light;
+  border: 0px;
+  border-radius: 2px;
+}
+input {
+  padding: 10px;
+}
+input[type=submit] {
+  color: $primary-color;
+  text-transform: uppercase;
+}

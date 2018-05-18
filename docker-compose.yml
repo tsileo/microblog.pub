@@ -1,0 +1,30 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+     - "5005:5005"
+    links:
+     - mongo
+     - rabbitmq
+    volumes:
+     - "./config:/app/config"
+     - "./static:/app/static"
+    environment:
+     - MICROBLOGPUB_AMQP_BORKER=pyamqp://guest@rabbitmq//
+     - MICROBLOGPUB_MONGODB_HOST=mongo:27017
+  celery:
+    build: .
+    links:
+     - mongo
+     - rabbitmq
+    command: 'celery worker -l info -A tasks'
+    environment:
+     - MICROBLOGPUB_AMQP_BORKER=pyamqp://guest@rabbitmq//
+     - MICROBLOGPUB_MONGODB_HOST=mongo:27017
+  mongo:
+    image: "mongo:latest"
+    volumes:
+     - "./data:/data/db"
+  rabbitmq:
+    image: "rabbitmq:latest"

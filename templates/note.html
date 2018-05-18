@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block header %}
+<meta content="article" property="og:type" />
+<meta content="{{ note.activity.object.url }}" property="og:url" />
+
+<meta content="{{ config.USERNAME }}" property="og:site_name" />                                         
+<meta content="{{ config.USERNAME }}" property="og:title" />                                             
+<meta content="{{ note.activity.object.content | html2plaintext }}" property="og:description" />                                            
+<meta content="{{ me.icon.url }}" property="og:image" />                                                 
+<meta content="200" property="og:image:width" />    
+<meta content="200" property="og:image:height" />   
+<meta content="summary" property="twitter:card" />  
+{% endblock %}
+{% block content %}
+<div id="container">
+{% include "header.html" %}
+{{ utils.display_note(note, perma=True) }}
+{% for reply in replies %}
+{{ utils.display_note(reply, perma=False) }}
+{% endfor %}
+</div>
+{% endblock %}

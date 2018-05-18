@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block header %}
+<link rel="self" href="{{ config.ID }}/">
+<link rel="hub" href="https://pubsubhubbub.superfeedr.com/">
+<meta content="profile" property="og:type" />       
+<meta content="{{ config.ID }}" property="og:url" />
+<meta content="{{ config.USERNAME }}" property="og:site_name" />                                         
+<meta content="{{ config.USERNAME }}" property="og:title" />                                             
+<meta content="{{ me.summary | html2plaintext }}" property="og:description" />                                            
+<meta content="{{ me.icon.url }}" property="og:image" />                                                 
+<meta content="200" property="og:image:width" />    
+<meta content="200" property="og:image:height" />   
+<meta content="summary" property="twitter:card" />  
+<meta content="{{config.USERNAME}}@{{ config.DOMAIN}}" property="profile:username" />
+{% endblock %}
+{% block content %}
+<div class="h-feed" id="container">
+<data class="p-name" value="{{config.USERNAME}} notes">
+
+{% include "header.html" %}
+
+<div class="summary">
+{{ config.SUMMARY | safe }}
+</div>
+
+<div id="notes">
+	{% for item in outbox_data %}
+
+	{% if item.type == 'Announce' %}
+        {% set boost_actor = item.activity.actor | get_actor %}
+        <p style="margin-left:65px;padding-bottom:5px;"><span class="bar-item"><a style="color:#808080;" href="{{ boost_actor.url }}">{{ boost_actor.name }}</a> boosted</span></p>
+        {% if item.ref %}
+        {{ utils.display_note(item.ref, ui=False) }}
+        {% endif %}
+
+	{% elif item.type == 'Create' %}
+	{{ utils.display_note(item) }}
+        {% endif %}
+
+	{% endfor %}
+</div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% macro display_actor(follower) -%}
+<a class="actor-box" href="{{follower.url}}">
+<div class="pure-g"> 
+<div class="pure-u-1-5">
+{% if not follower.icon %}
+<img class="actor-icon" src="/static/nopic.png">
+{% else %}
+<img class="actor-icon" src="{{ follower.icon.url }}">{% endif %}
+</div>
+<div class="pure-u-4-5">
+<h3>{{ follower.name or follower.preferredUsername }}</h3>
+<small>@{{ follower.preferredUsername }}@{{ follower.url | domain }}</small>
+<div>{{ follower.summary | safe }}</div>
+</div>
+</div>
+</a>
+{%- endmacro %}
+
+{% macro display_note(item, perma=False, ui=False) -%}
+{% set actor = item.activity.object.attributedTo | get_actor  %}
+<div class="note h-entry" id="activity-{{ item['_id'].__str__() }}">
+
+<div class="h-card p-author">
+<a class="u-url u-uid no-hover" href="{{ actor.url }}"><img class="u-photo" src="{% if not actor.icon %}/static/nopic.png{% else %}{{ actor.icon.url }}{% endif %}">
+</a>
+<data class="p-name" value="{{ actor.name or actor.preferredUsername }}">
+</div>
+
+<div class="note-wrapper">
+	<a href="{{ actor.url }}" style="margin:0;text-decoration:none;" class="no-hover"><strong>{{ actor.name or actor.preferredUsername }}</strong> <span class="l">@{{ actor.preferredUsername }}@{{ actor.url | domain }}</span></a>
+
+	{% if not perma %}
+	<span style="float:right">
+		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ item.activity.object.url }}">
+			<time class="dt-published" title="{{ item.activity.object.published }}" datetime="{{ item.activity.object.published }}">{{ item.activity.object.published | format_timeago }}</time></a>
+	</span>
+	{% endif %}
+	{% if item.activity.object.summary %}<p class="p-summary">{{ item.activity.object.summary }}</p>{% endif %}
+	<div class="note-container{% if perma %} perma{%endif%} p-name e-content">
+	{{ item.activity.object.content | safe }}
+	</div>
+
+	{% if item.activity.object.attachment %}
+	<div style="padding:20px 0;">
+	{% if item.activity.object.attachment | not_only_imgs %}
+	<h3 class="l">Attachment</h3>
+	<ul>
+	{% endif %}
+	{% for a in item.activity.object.attachment %}
+	{% if a.url | is_img %}
+	<img src="{{a.url}}" class="img-attachment">
+	{% else %}
+	<li><a href="{{a.url}}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
+	{% endif  %}
+	{% endfor %}
+	{% if item.activity.object.attachment | not_only_imgs %}
+	</ul>
+	{% endif %}
+</div>
+	{% endif %}
+
+<div class="bottom-bar">
+{% if perma %}<span class="perma-item">{{ item.activity.object.published | format_time }}</span> {% endif %}	
+<a class ="bar-item" href="{{ item.activity.object.url }}">permalink</a> 
+{% if item.meta.count_reply %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_reply }} replies</a>{% endif %}
+{% if item.meta.count_boost %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_boost }} boosts</a>{% endif %}
+{% if item.meta.count_like %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_like }} likes</a>{% endif %}
+{% if ui %}
+{% set aid = item.activity.object.id | quote_plus %}
+<a class="bar-item" href="/new?reply={{ aid }}">reply</a>
+
+{% set redir = request.path + "#activity-" + item['_id'].__str__() %}
+
+{% if item.meta.boosted %}
+<a class="bar-item" href="/ui/undo?id={{ item.meta.boosted | quote_plus }}&redirect={{redir | quote_plus }}">unboost</a>
+{% else %}
+<a class="bar-item" href="/ui/boost?id={{ aid }}&redirect={{ redir | quote_plus }}">boost</a>
+{% endif %}
+
+{% if item.meta.liked %}
+<a class="bar-item" href="/ui/undo?id={{ item.meta.liked | quote_plus }}&redirect={{ redir | quote_plus }}">unlike</a>
+{% else %}
+<a class="bar-item" href="/ui/like?id={{ aid }}&redirect={{ redir | quote_plus }}">like</a>
+{% endif %}
+
+{% endif %}
+</div>
+</div>
+
+</div>                       
+{%- endmacro %}

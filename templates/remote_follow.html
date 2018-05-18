@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block header %}
+{% endblock %}
+{% block content %}
+<div id="container">
+{% include "header.html" %}
+<h2>You're about to follow me</h2>
+
+<form method="POST" action="">
+	<input type="text" name="profile" placeholder="you@your-instance">
+	<input type="submit" value="Proceed to remote follow">
+</form>
+
+</div>
+{% endblock %}

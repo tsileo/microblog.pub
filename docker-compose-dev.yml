@@ -1,0 +1,21 @@
+version: '3'
+services:
+  celery:
+    build: .
+    links:
+     - mongo
+     - rabbitmq
+    command: 'celery worker -l info -A tasks'
+    environment:
+     - MICROBLOGPUB_AMQP_BORKER=pyamqp://guest@rabbitmq//
+     - MICROBLOGPUB_MONGODB_HOST=mongo:27017
+  mongo:
+    image: "mongo:latest"
+    volumes:
+     - "./data:/data/db"
+    ports:
+     - "27017:27017"
+  rabbitmq:
+    image: "rabbitmq:latest"
+    ports:
+     - "5672:5672"

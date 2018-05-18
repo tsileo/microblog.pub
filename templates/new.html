@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block content %}
+<div id="container">
+{% include "header.html" %}
+<div id="new">
+<form action="" method="POST">
+{% if reply %}<input type="hidden" name="reply" value="{{reply}}">{% endif %}
+<textarea name="content" rows="10" cols="50" autofocus="autofocus">{{ content }}</textarea>
+<div style="margin-top:20px;">
+<input type="submit" value="post">
+</div>
+</form>
+
+</div>
+</div>
+{% endblock %}

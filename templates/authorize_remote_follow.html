@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block header %}
+{% endblock %}
+{% block content %}
+<div id="container">
+<h2>You're about to follow <strong>{{ profile}} </strong></h2>
+
+<form method="POST" action="">
+	<input type="hidden" name="profile" value="{{ profile }}">
+	<input type="submit" value="follow">
+</form>
+
+</div>
+{% endblock %}

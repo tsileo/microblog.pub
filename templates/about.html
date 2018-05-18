@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block header %}
+{% endblock %}
+{% block content %}
+<div style="width:90%;max-width: 720px;margin:40px auto;">
+
+{% include "header.html" %}
+
+<div class="h-card" style="display:flex">
+<div style="flex:initial;width:200px;min-width:50px;">
+<a class="u-url u-uid" href="{{ config.ID }}"><img class="u-photo" src="{{ me.icon.url }}" style="width:100%;max-width:200px;border-radius:5px;"></a>
+</div>
+<data class="p-name" value="{{ config.USERNAME }}">
+<div style="flex:1;padding-left:30px;">
+{{ text | safe }}
+<div class="p-note" style="margin:20px 0;">{{ me.summary }}</div>
+</div>
+</div>
+
+</div>
+{% endblock %}

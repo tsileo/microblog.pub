@@ -1,0 +1,6 @@
+username: 'username'
+name: 'You Name'
+icon_url: 'https://you-avatar-url'
+domain: 'your-domain.tld'
+summary: 'your summary'
+https: true

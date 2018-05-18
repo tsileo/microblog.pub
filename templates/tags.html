@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block header %}
+<link rel="self" href="{{ config.ID }}/">
+<link rel="hub" href="https://pubsubhubbub.superfeedr.com/">
+<meta content="profile" property="og:type" />       
+<meta content="{{ config.ID }}" property="og:url" />
+<meta content="{{ config.USERNAME }}" property="og:site_name" />                                         
+<meta content="{{ config.USERNAME }}" property="og:title" />                                             
+<meta content="{{ me.summary | html2plaintext }}" property="og:description" />                                            
+<meta content="{{ me.icon.url }}" property="og:image" />                                                 
+<meta content="200" property="og:image:width" />    
+<meta content="200" property="og:image:height" />   
+<meta content="summary" property="twitter:card" />  
+<meta content="{{config.USERNAME}}@{{ config.DOMAIN}}" property="profile:username" />
+{% endblock %}
+{% block content %}
+<div class="h-feed" id="container">
+<data class="p-name" value="#{{tag}}">
+
+{% include "header.html" %}
+<h2>#{{ tag }}</h2>
+<div id="notes">
+	{% for item in outbox_data %}
+	{{ utils.display_note(item) }}
+	{% endfor %}
+</div>
+
+</div>
+{% endblock %}

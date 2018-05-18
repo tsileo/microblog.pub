@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block content %}
+<div class="h-feed" id="container">
+{% include "header.html" %}
+<div id="admin">
+
+<div id="notes">
+	{% for item in inbox_data %}
+	{% if item.type == 'Create' %}
+	{{ utils.display_note(item, ui=True) }}
+	{% else %}
+
+	{% if item.type == 'Announce' %}
+	
+	{% set boost_actor = item.activity.actor | get_actor %}
+	<p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item"><a style="color:#808080;" href="{{ boost_actor.url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> boosted</span></p>
+	{% if item.ref %}
+	{{ utils.display_note(item.ref, ui=True) }}
+	{% endif %}
+	{% endif %}
+	
+	{% if item.type == 'Follow' %}
+	<p>{{ item.activity.actor }} followed you</p>
+	{% elif item.type == 'Accept' %}
+	<p>you followed {{ item.activity.actor }}</p>
+	{% elif item.type == 'Undo' %}
+	<p>{{ item.activity.actor }} unfollowed you</p>
+	{% else %}
+	{% endif %}
+	
+	
+	{% endif %}
+	{% endfor %}
+</div>
+</div>
+
+</div>
+{% endblock %}

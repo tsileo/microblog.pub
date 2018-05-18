@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block header %}
+{% endblock %}
+{% block content %}
+<div style="width:90%;max-width: 720px;margin:40px auto;">
+	{% if session.logged_in %}logged{% else%}not logged{%endif%}
+
+<form method="POST" id="register-form">
+	<input type="hidden" id="register-payload" name="resp" value="">
+	<input type="submit" value="login">
+</form>
+
+</div>
+<script>
+var p= {{ payload | tojson }};
+//setTimeout(function() {
+u2f.register(p.appId, p.registerRequests, p.registeredKeys, function(resp) {
+if (resp.errorCode) {
+    console.log(resp)
+} else {
+document.getElementById('register-payload').value = JSON.stringify(resp)
+document.getElementById('register-form').submit()
+}
+
+})
+//}, 1000);
+</script>
+{% endblock %}

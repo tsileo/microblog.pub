@@ -1,0 +1,29 @@
+<div id="header">
+<div class="h-card p-author">
+<data class="u-photo" value="{{ config.ME.icon.url }}">
+<a href="{{ config.ID }}" class="u-url u-uid no-hover title">
+	<span style="font-size:1.1em;">{{ config.NAME }}</span>
+	<span  style="font-size:0.85em;" class="subtitle-username">@<span class="gold p-name">{{ config.USERNAME }}</span>@<span class="gold">{{ config.DOMAIN }}</span>
+	</span>
+</a>
+<data class="p-note" value="{{ config.ME.summary }}">
+</div>
+<div class="menu">
+<ul>
+<li><a href="/" {% if request.path == "/" %}class="selected"{% endif %}>/</a></li>
+<li><a href="/followers"{% if request.path == "/followers" %} class="selected" {% endif %}>/followers</a></li>
+<li><a href="/following"{% if request.path == "/following" %} class="selected" {% endif %}>/following</a></li>
+<!-- <li><a href="/about"{% if request.path == "/about" %} class="selected" {% endif %}>/about</a></li>
+-->
+{% if logged_in %}
+<li><a href="/stream"{% if request.path == "/stream" %} class="selected" {% endif %}>/stream</a></li>
+<li><a href="/notifications"{% if request.path == "/notifications" %} class="selected" {% endif %}>/notifs</a></li>
+<li><a href="/new"{% if request.path == "/new" %} class="selected" {% endif %}>/new</a></li>
+<li><a href="/admin"{% if request.path == "/admin" %} class="selected" {% endif %}>/admin</a></li>
+<li><a href="/logout">/logout</a></li>
+{% else %}
+<li><a href="/remote_follow"{% if request.path == "/remote_follow" %} class="selected" {% endif %}>/remote_follow</a></li>
+{% endif %}
+</ul>
+</div>
+</div>

@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block header %}
+{% endblock %}
+{% block content %}
+<div style="width:90%;max-width: 720px;margin:40px auto;">
+	{% if session.logged_in %}logged{% else%}not logged{%endif%}
+
+<div style="display:flex">
+{% if client.logo %}
+<div style="flex:initial;width:100px;">
+<img src="{{client.logo}}" style="max-width:100px;">
+</div>
+{% endif %}
+<div style="flex:1;">
+<div style="margin-top:20px">
+<a style="font-size:1.2em;font-weight:600;text-decoration:none;color:#111;" href="{{ client.url }}">{{ client.name }}</a>
+<p>wants you to login</p>
+</div>
+</div>
+</div>
+
+<form method="POST" action="{{ url_for('indieauth_flow') }}">
+	{% if scopes %}
+	<h3>Scopes</h3>
+	<ul>
+	{% for scope in scopes %}
+	<li><input type="checkbox" name="scopes" value="{{scope}}" id="scope-{{scope}}"><label for="scope-{{scope}}">{{ scope }}</label>
+	</li>
+	{% endfor %}
+	</ul>
+	{% endif %}
+	<input type="hidden" name="redirect_uri" value="{{ redirect_uri }}">
+	<input type="hidden" name="state" value="{{ state }}">
+	<input type="hidden" name="client_id" value="{{ client_id }}">
+	<input type="hidden" name="me" value="{{ me }}">
+	<input type="hidden" name="response_type" value="{{ response_type }}">
+	<input type="submit" value="login">
+</form>
+
+</div>
+{% endblock %}

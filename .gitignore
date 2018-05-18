@@ -1,0 +1,8 @@
+*.sw[op]
+key_*.pem
+data/*
+config/*
+static/media/*
+
+.mypy_cache/
+__pycache__/
