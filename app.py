@@ -503,14 +503,24 @@ def new():
             if tag['type'] == 'Mention':
                 cc.append(tag['href'])
 
-        note = activitypub.Note(                                    
-            cc=cc,                       
-            to=[to if to else config.AS_PUBLIC],
-            content=content,  # TODO(tsileo): handle markdown
-            tag=tags,
-            source={'mediaType': 'text/markdown', 'content': source},
-            inReplyTo=reply.id,
-        )
+        if reply:
+            note = activitypub.Note(                                    
+                cc=cc,                       
+                to=[to if to else config.AS_PUBLIC],
+                content=content,  # TODO(tsileo): handle markdown
+                tag=tags,
+                source={'mediaType': 'text/markdown', 'content': source},
+                inReplyTo=reply.id,  # FIXME(tsieo): support None for inReplyTo?
+            )
+        else:
+            note = activitypub.Note(                                    
+                cc=cc,                       
+                to=[to if to else config.AS_PUBLIC],
+                content=content,  # TODO(tsileo): handle markdown
+                tag=tags,
+                source={'mediaType': 'text/markdown', 'content': source},
+            )
+
         create = note.build_create()
         print(create.to_dict())
         create.post_to_outbox()
