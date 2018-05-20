@@ -162,7 +162,13 @@ class BaseActivity(object):
             if len(set(kwargs.keys()) - set(allowed_keys)) > 0:
                 raise ValueError('extra data left: {}'.format(kwargs))
         else:
-            self._data.update(**kwargs)
+            # Remove keys with `None` value
+            valid_kwargs = {}
+            for k, v in kwargs.items():
+                if v is None:
+                    break
+                valid_kwargs[k] = v
+            self._data.update(**valid_kwargs)
 
     def _init(self, **kwargs) -> Optional[List[str]]:
         raise NotImplementedError
@@ -190,8 +196,15 @@ class BaseActivity(object):
     def type_enum(self) -> ActivityTypes:
         return ActivityTypes(self.type)
 
+    def _set_id(self, uri: str, obj_id: str) -> None:
+        raise NotImplementedError
+
     def set_id(self, uri: str, obj_id: str) -> None:
         self._data['id'] = uri
+        try:
+            self._set_id(uri, obj_id)
+        except NotImplementedError:
+            pass
 
     def _actor_id(self, obj: ObjectOrIDType) -> str:
         if isinstance(obj, dict) and obj['type'] == ActivityTypes.PERSON.value:
@@ -612,11 +625,11 @@ class Update(BaseActivity):
         # If the object is a Person, it means the profile was updated, we just refresh our local cache
         ACTOR_SERVICE.get(obj.id, reload_cache=True)
 
-    def _post_to_outbox(self, obj_id, activity, recipients):
+    def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
         obj = self.get_object()
 
         update_prefix = 'activity.object.'
-        update = {'$set': dict(), '$unset': dict()}
+        update = {'$set': dict(), '$unset': dict()}  # type: Dict[str, Any]
         update['$set'][f'{update_prefix}updated'] = datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
         for k, v in obj._data.items():
             if k in ['id', 'type']:
@@ -638,7 +651,7 @@ class Create(BaseActivity):
     ACTIVITY_TYPE = ActivityTypes.CREATE
     ALLOWED_OBJECT_TYPES = [ActivityTypes.NOTE]
 
-    def _set_id(self, uri, obj_id):
+    def _set_id(self, uri: str, obj_id: str) -> None:
         self._data['object']['id'] = uri + '/activity'
         self._data['object']['url'] = ID + '/' + self.get_object().type.lower() + '/' + obj_id
 
