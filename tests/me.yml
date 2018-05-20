@@ -1,0 +1,6 @@
+username: 'ci'
+name: 'CI tests'
+icon_url: 'https://sos-ch-dk-2.exo.io/microblogpub/microblobpub.png'
+domain: 'localhost:5005'
+summary: 'test instance summary'
+https: false

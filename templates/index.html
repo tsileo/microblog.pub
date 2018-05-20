@@ -26,7 +26,6 @@
 
 <div id="notes">
 	{% for item in outbox_data %}
-	{{ item }}
 
 	{% if item.type == 'Announce' %}
         {% set boost_actor = item.activity.actor | get_actor %}
