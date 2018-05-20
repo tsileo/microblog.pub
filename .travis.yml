@@ -5,6 +5,7 @@ python:
 services:
   - docker
 install:
+ - sudo apt-get install -y curl
  - sudo pip install -U pip
  - sudo curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
  - sudo chmod +x /usr/local/bin/docker-compose
@@ -17,5 +18,6 @@ script:
  - docker-compose up -d
  - docker-compose ps
  - sleep 2
+ - curl http://localhost:5005/
  - docker-compose logs web
  - pytest -v --ignore data
