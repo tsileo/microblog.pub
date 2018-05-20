@@ -1,0 +1,4 @@
+pytest
+requests
+flake8
+mypy
