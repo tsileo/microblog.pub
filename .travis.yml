@@ -17,6 +17,5 @@ script:
  - cp -r tests/me.yml config/me.yml
  - docker-compose up -d
  - docker-compose ps
- - sleep 3
- - docker-compose logs web
+ - sleep 2
  - pytest -v --ignore data
