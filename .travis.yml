@@ -1,8 +1,14 @@
 language: python
+sudo: required
 python:
   - "3.6"
+services:
+  - docker
 install:
-  - pip install pytest mypy flake8
+ - sudo curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+ - sudo chmod +x /usr/local/bin/docker-compose
+ - docker-compose --version
+ - pip install pytest mypy flake8
 script:
 #  - flake8
   - mypy --ignore-missing-imports .
