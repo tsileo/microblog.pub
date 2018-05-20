@@ -10,6 +10,9 @@ install:
  - docker-compose --version
  - pip install pytest mypy flake8
 script:
+ - mypy --ignore-missing-imports .
+ - cp -r tests/me.yml config/me.yml
+ - docker-compose up -d
+ - docker-compose ps
 #  - flake8
-  - mypy --ignore-missing-imports .
 #  - pytest -v
