@@ -8,11 +8,11 @@ install:
  - sudo curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
  - sudo chmod +x /usr/local/bin/docker-compose
  - docker-compose --version
- - pip install pytest mypy flake8
+ - pip install -r dev-requirements.txt
 script:
  - mypy --ignore-missing-imports .
+#  - flake8
  - cp -r tests/me.yml config/me.yml
  - docker-compose up -d
  - docker-compose ps
-#  - flake8
-#  - pytest -v
+ - pytest -v --ignore data
