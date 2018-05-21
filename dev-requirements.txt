@@ -1,4 +1,5 @@
 pytest
 requests
+html2text
 flake8
 mypy

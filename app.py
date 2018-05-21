@@ -34,7 +34,7 @@ import activitypub
 import config
 from activitypub import ActivityTypes
 from activitypub import clean_activity
-from activitypub import parse_markdown
+from utils.content_helper import parse_markdown
 from config import KEY
 from config import DB
 from config import ME
