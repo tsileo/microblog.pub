@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% import 'utils.html' as utils %}
+{% block title %}#{{ tag }} - {{ config.NAME }}{% endblock %}
 {% block header %}
 <link rel="self" href="{{ config.ID }}/">
 <link rel="hub" href="https://pubsubhubbub.superfeedr.com/">
