@@ -3,12 +3,12 @@ services:
   web:
     build: .
     ports:
-     - "5005:5005"
+     - "${WEB_PORT}:5005"
     links:
      - mongo
      - rabbitmq
     volumes:
-     - "./config:/app/config"
+     - "${CONFIG_DIR}:/app/config"
      - "./static:/app/static"
     environment:
      - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rabbitmq//
@@ -25,6 +25,6 @@ services:
   mongo:
     image: "mongo:latest"
     volumes:
-     - "./data:/data/db"
+     - "${DATA_DIR}:/data/db"
   rabbitmq:
     image: "rabbitmq:latest"
