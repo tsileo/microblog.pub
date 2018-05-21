@@ -46,6 +46,8 @@ from config import ACTOR_SERVICE
 from config import OBJECT_SERVICE
 from config import PASS
 from config import HEADERS
+from config import VERSION
+from config import custom_cache_purge_hook
 from utils.httpsig import HTTPSigAuth, verify_request
 from utils.key import get_secret_key
 from utils.webfinger import get_remote_follow_template
@@ -69,7 +71,11 @@ def verify_pass(pwd):
 
 @app.context_processor
 def inject_config():
-        return dict(config=config, logged_in=session.get('logged_in', False))
+        return dict(
+            microblogpub_version=VERSION,
+            config=config,
+            logged_in=session.get('logged_in', False),
+        )
 
 @app.after_request
 def set_x_powered_by(response):
@@ -452,6 +458,9 @@ def outbox():
         activity = activity.build_create()
 
     activity.post_to_outbox()
+
+    # Purge the cache if a custom hook is set, as new content was published
+    custom_cache_purge_hook()
 
     return Response(status=201, headers={'Location': activity.id})
 

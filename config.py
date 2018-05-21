@@ -1,3 +1,4 @@
+import subprocess
 import os
 import yaml
 from pymongo import MongoClient
@@ -7,8 +8,17 @@ from utils.key import Key
 from utils.actor_service import ActorService
 from utils.object_service import ObjectService
 
+def noop():
+    pass
 
-VERSION = '1.0.0'
+
+CUSTOM_CACHE_HOOKS = False
+try:
+     from cache_hooks import purge as custom_cache_purge_hook
+except ModuleNotFoundError:
+    custom_cache_purge_hook = noop
+
+VERSION = subprocess.check_output(['git', 'describe', '--always']).split()[0].decode('utf-8')
 
 CTX_AS = 'https://www.w3.org/ns/activitystreams'
 CTX_SECURITY = 'https://w3id.org/security/v1'

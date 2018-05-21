@@ -81,9 +81,8 @@ def _get_actor_id(actor: ObjectOrIDType) -> str:
 
 
 class BaseActivity(object):
-    ACTIVITY_TYPE = None  # type: Optional[ActivityTypes]
-    NO_CONTEXT = False
-    ALLOWED_OBJECT_TYPES = None  # type: List[ActivityTypes]
+    ACTIVITY_TYPE: Optional[ActivityTypes] = None
+    ALLOWED_OBJECT_TYPES: List[ActivityTypes] = []
 
     def __init__(self, **kwargs) -> None:
         if not self.ACTIVITY_TYPE:
@@ -92,7 +91,7 @@ class BaseActivity(object):
         if kwargs.get('type') is not None and kwargs.pop('type') != self.ACTIVITY_TYPE.value:
             raise ValueError('Expect the type to be {}'.format(self.ACTIVITY_TYPE))
 
-        self._data = {'type': self.ACTIVITY_TYPE.value}  # type: Dict[str, Any]
+        self._data: Dict[str, Any] = {'type': self.ACTIVITY_TYPE.value}
 
         if 'id' in kwargs:
             self._data['id'] = kwargs.pop('id')
@@ -230,7 +229,7 @@ class BaseActivity(object):
 
                 p = parse_activity(obj)
 
-        self.__obj = p  # type: BaseActivity
+        self.__obj: BaseActivity = p
         return p
 
     def _to_dict(self, data: ObjectType) -> ObjectType:
@@ -265,6 +264,9 @@ class BaseActivity(object):
         raise NotImplementedError
 
     def _undo_inbox(self) -> None:
+        raise NotImplementedError
+
+    def _should_purge_cache(self) -> bool:
         raise NotImplementedError
 
     def process_from_inbox(self) -> None:
@@ -332,7 +334,7 @@ class BaseActivity(object):
     def recipients(self) -> List[str]:
         recipients = self._recipients()
 
-        out = []  # type: List[str]
+        out: List[str] = [] 
         for recipient in recipients:
             if recipient in PUBLIC_INSTANCES:
                 if recipient not in out:
@@ -455,6 +457,10 @@ class Follow(BaseActivity):
     def build_undo(self) -> BaseActivity:
         return Undo(object=self.to_dict(embed=True))
 
+    def _should_purge_cache(self) -> bool:
+        # Receiving a follow activity in the inbox should reset the application cache
+        return True
+
 
 class Accept(BaseActivity):
     ACTIVITY_TYPE = ActivityTypes.ACCEPT
@@ -467,6 +473,12 @@ class Accept(BaseActivity):
         remote_actor = self.get_actor().id
         if DB.following.find({'remote_actor': remote_actor}).count() == 0:
             DB.following.insert_one({'remote_actor': remote_actor})
+
+    def _should_purge_cache(self) -> bool:
+        # Receiving an accept activity in the inbox should reset the application cache
+        # (a follow request has been accepted)
+        return True
+
 
 
 class Undo(BaseActivity):
@@ -628,7 +640,7 @@ class Update(BaseActivity):
         obj = self.get_object()
 
         update_prefix = 'activity.object.'
-        update = {'$set': dict(), '$unset': dict()}  # type: Dict[str, Any]
+        update: Dict[str, Any] = {'$set': dict(), '$unset': dict()}
         update['$set'][f'{update_prefix}updated'] = datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
         for k, v in obj._data.items():
             if k in ['id', 'type']:
@@ -734,7 +746,7 @@ class Note(BaseActivity):
 
     def _recipients(self) -> List[str]:
         # TODO(tsileo): audience support?
-        recipients = []  # type: List[str]
+        recipients: List[str] = []
 
         # If the note is public, we publish it to the defined "public instances"
         if AS_PUBLIC in self._data.get('to', []):
@@ -847,7 +859,7 @@ def build_inbox_json_feed(path: str, request_cursor: Optional[str] = None) -> Di
     data = []
     cursor = None
 
-    q = {'type': 'Create'}  # type: Dict[str, Any]
+    q: Dict[str, Any] = {'type': 'Create'}
     if request_cursor:
         q['_id'] = {'$lt': request_cursor}
 
@@ -889,7 +901,7 @@ def parse_collection(payload: Optional[Dict[str, Any]] = None, url: Optional[str
         return [doc['remote_actor'] for doc in DB.following.find()]
 
     # Go through all the pages
-    out = []  # type: List[str]
+    out: List[str] = []
     if url:
         resp = requests.get(url, headers={'Accept': 'application/activity+json'})
         resp.raise_for_status()
