@@ -754,7 +754,7 @@ class Create(BaseActivity):
                 return True
 
         return False
- 
+
 
 class Tombstone(BaseActivity):
     ACTIVITY_TYPE = ActivityTypes.TOMBSTONE
