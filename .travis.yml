@@ -17,8 +17,8 @@ script:
  - cp -r tests/fixtures/me.yml config/me.yml
  - docker-compose up -d
  - docker-compose ps
- - WEB_PORT=5006 DATA_DIR=./tests/fixtures/instance1/data CONFIG_DIR=./tests/fixtures/instance1/config docker-compose -p instance1 up
+ - WEB_PORT=5006 DATA_DIR=tests/fixtures/instance1/data CONFIG_DIR=tests/fixtures/instance1/config docker-compose -p instance1 up -d
  - docker-compose -p instance1 ps
- - WEB_PORT=5007 DATA_DIR=./tests/fixtures/instance2/data CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 up
+ - WEB_PORT=5007 DATA_DIR=tests/fixtures/instance2/data CONFIG_DIR=tests/fixtures/instance2/config docker-compose -p instance2 up -d
  - docker-compose -p instance2 ps
  - pytest -v --ignore data
