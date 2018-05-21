@@ -178,24 +178,26 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def _api_required():
+    if session.get('logged_in'):
+        return
 
-def api_required(f):
+    # Token verification
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not token:
+        token = request.form.get('access_token', '')
+
+    # Will raise a BadSignature on bad auth
+    payload = JWT.loads(token)
+    def api_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if session.get('logged_in'):
-            return f(*args, **kwargs)
-
-        # Token verification
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if not token:
-            token = request.form.get('access_token', '')
-
         try:
-            payload = JWT.loads(token)
-            # TODO(tsileo): log payload
+            _api_required()
         except BadSignature:
             abort(401)
-        return f(*args, **kwargs)
+
+       return f(*args, **kwargs)
     return decorated_function
 
 
@@ -434,7 +436,11 @@ def outbox():
         ))
 
     # Handle POST request
-    # FIXME(tsileo): check auth
+    try:
+        _api_required()
+    except BadSignature:
+        abort(401)
+ 
     data = request.get_json(force=True)
     print(data)
     activity = activitypub.parse_activity(data)
@@ -653,14 +659,18 @@ def inbox():
     if request.method == 'GET':                     
         if not is_api_request():                    
             abort(404)                              
-        # TODO(tsileo): handle auth and only return 404 if unauthenticated                               
-        # abort(404)                                
+        try:
+            _api_required()
+        except BadSignature:
+            abort(404)
+
         return jsonify(**activitypub.build_ordered_collection(  
             DB.inbox,                               
             q={'meta.deleted': False},              
             cursor=request.args.get('cursor'),      
             map_func=lambda doc: doc['activity'],   
         ))                                          
+
     data = request.get_json(force=True)             
     # FIXME(tsileo): ensure verify_request() == True
     print(data)                                     
