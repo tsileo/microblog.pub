@@ -266,6 +266,9 @@ class BaseActivity(object):
     def _undo_inbox(self) -> None:
         raise NotImplementedError
 
+    def _undo_should_purge_cache(self) -> bool:
+        raise NotImplementedError
+
     def _should_purge_cache(self) -> bool:
         raise NotImplementedError
 
@@ -503,6 +506,16 @@ class Undo(BaseActivity):
         except NotImplementedError:
             pass
 
+    def _should_purge_cache(self) -> bool:
+        obj = self.get_object()
+        try:
+            # Receiving a undo activity regarding an activity that was mentioning a published activity should purge the cache
+            return obj._undo_should_purge_cache()
+        except NotImplementedError:
+            pass
+
+        return False
+
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
         obj = self.get_object()
         DB.outbox.update_one({'remote_id': obj.id}, {'$set': {'meta.undo': True}})
@@ -529,6 +542,10 @@ class Like(BaseActivity):
         obj = self.get_object()
         # Update the meta counter if the object is published by the server
         DB.outbox.update_one({'activity.object.id': obj.id}, {'$inc': {'meta.count_like': -1}})
+
+    def _undo_should_purge_cache(self) -> bool:
+        # If a like coutn was decremented, we need to purge the application cache
+        return self.get_object().id.startswith(BASE_URL)
 
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]):
         obj = self.get_object()
@@ -584,6 +601,10 @@ class Announce(BaseActivity):
         DB.inbox.update_one({'remote_id': obj.id}, {'$set': {'meta.undo': True}})
         DB.outbox.update_one({'activity.object.id':  obj.id}, {'$inc': {'meta.count_boost': -1}})
 
+    def _undo_should_purge_cache(self) -> bool:
+        # If a like coutn was decremented, we need to purge the application cache
+        return self.get_object().id.startswith(BASE_URL)
+
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
         if isinstance(self._data['object'], str):
             # Put the object in the cache
@@ -615,6 +636,7 @@ class Delete(BaseActivity):
     def _process_from_inbox(self):
         DB.inbox.update_one({'activity.object.id': self.get_object().id}, {'$set': {'meta.deleted': True}})
         # TODO(tsileo): also delete copies stored in parents' `meta.replies`
+        # TODO(tsileo): also purge the cache if it's a reply of a published activity
 
     def _post_to_outbox(self, obj_id, activity, recipients):
         DB.outbox.update_one({'activity.object.id': self.get_object().id}, {'$set': {'meta.deleted': True}})
@@ -635,6 +657,8 @@ class Update(BaseActivity):
 
         # If the object is a Person, it means the profile was updated, we just refresh our local cache
         ACTOR_SERVICE.get(obj.id, reload_cache=True)
+
+        # TODO(tsileo): implements _should_purge_cache if it's a reply of a published activity (i.e. in the outbox)
 
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
         obj = self.get_object()
@@ -720,6 +744,17 @@ class Create(BaseActivity):
                 else:
                     parent = None
 
+    def _should_purge_cache(self) -> bool:
+        # TODO(tsileo): handle reply of a reply...
+        obj = self.get_object()
+        in_reply_to = obj.inReplyTo
+        if in_reply_to:
+            local_activity = DB.outbox.find_one({'activity.type': 'Create', 'activity.object.id': in_reply_to})
+            if local_activity:
+                return True
+
+        return False
+         
 
 class Tombstone(BaseActivity):
     ACTIVITY_TYPE = ActivityTypes.TOMBSTONE
