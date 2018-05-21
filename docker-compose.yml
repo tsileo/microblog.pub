@@ -6,25 +6,31 @@ services:
      - "${WEB_PORT}:5005"
     links:
      - mongo
-     - rabbitmq
+     - rmq
     volumes:
      - "${CONFIG_DIR}:/app/config"
      - "./static:/app/static"
     environment:
-     - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rabbitmq//
+     - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
   celery:
     build: .
     links:
      - mongo
-     - rabbitmq
+     - rmq
     command: 'celery worker -l info -A tasks'
     environment:
-     - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rabbitmq//
+     - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
   mongo:
     image: "mongo:latest"
     volumes:
-     - "${DATA_DIR}:/data/db"
-  rabbitmq:
+     - "${DATA_DIR}/mongodb:/data/db"
+  rmq:
     image: "rabbitmq:latest"
+    hostname: "my-rabbit"
+    environment:
+     - RABBITMQ_ERLANG_COOKIE=secretrabbit
+     - RABBITMQ_NODENAME=rabbit@my-rabbit
+    volumes:
+     - "${DATA_DIR}/rabbitmq:/var/lib/rabbitmq"
