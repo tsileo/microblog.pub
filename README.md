@@ -32,7 +32,7 @@
  - Exports RSS/Atom feeds
  - Comes with a tiny HTTP API to help posting new content and performing basic actions
  - Easy to "cache" (the external/public-facing microblog part)
-   - With a good setup, cached content should returned most of the time
+   - With a good setup, cached content can be served most of the time
    - You can setup a "purge" hook to let you invalidate cache when the microblog was updated
  - Deployable with Docker
 
