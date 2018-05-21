@@ -337,7 +337,7 @@ class BaseActivity(object):
     def recipients(self) -> List[str]:
         recipients = self._recipients()
 
-        out: List[str] = [] 
+        out: List[str] = []
         for recipient in recipients:
             if recipient in PUBLIC_INSTANCES:
                 if recipient not in out:
@@ -483,7 +483,6 @@ class Accept(BaseActivity):
         return True
 
 
-
 class Undo(BaseActivity):
     ACTIVITY_TYPE = ActivityTypes.UNDO
     ALLOWED_OBJECT_TYPES = [ActivityTypes.FOLLOW, ActivityTypes.LIKE, ActivityTypes.ANNOUNCE]
@@ -509,7 +508,8 @@ class Undo(BaseActivity):
     def _should_purge_cache(self) -> bool:
         obj = self.get_object()
         try:
-            # Receiving a undo activity regarding an activity that was mentioning a published activity should purge the cache
+            # Receiving a undo activity regarding an activity that was mentioning a published activity
+            # should purge the cache
             return obj._undo_should_purge_cache()
         except NotImplementedError:
             pass
@@ -754,7 +754,7 @@ class Create(BaseActivity):
                 return True
 
         return False
-         
+ 
 
 class Tombstone(BaseActivity):
     ACTIVITY_TYPE = ActivityTypes.TOMBSTONE
