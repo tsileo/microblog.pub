@@ -77,11 +77,7 @@ class HTTPSigAuth(AuthBase):
         sig = base64.b64encode(signer.sign(digest))
         sig = sig.decode('utf-8')
         headers = {
-            'Signature': 'keyId="{keyid}",algorithm="rsa-sha256",headers="{headers}",signature="{signature}"'.format(
-                keyid=self.keyid,
-                signature=sig,
-                headers=sigheaders,
-             ),
+            'Signature': f'keyId="{self.keyid}",algorithm="rsa-sha256",headers="{sigheaders}",signature="{sig}"'
         }
         r.headers.update(headers)
         return r

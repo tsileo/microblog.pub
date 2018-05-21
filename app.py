@@ -178,6 +178,7 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
 def _api_required():
     if session.get('logged_in'):
         return
@@ -189,7 +190,9 @@ def _api_required():
 
     # Will raise a BadSignature on bad auth
     payload = JWT.loads(token)
-    def api_required(f):
+
+
+def api_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
@@ -197,7 +200,7 @@ def _api_required():
         except BadSignature:
             abort(401)
 
-       return f(*args, **kwargs)
+        return f(*args, **kwargs)
     return decorated_function
 
 
@@ -672,12 +675,16 @@ def inbox():
         ))                                          
 
     data = request.get_json(force=True)             
-    # FIXME(tsileo): ensure verify_request() == True
     print(data)                                     
     try:                                            
         print(verify_request(ACTOR_SERVICE))        
     except Exception:                                         
-        print('failed to verify request')           
+        print('failed to verify request, trying to verify the payload by fetching the remote')
+        try:
+            data = OBJECT_SERVICE.get(data['id'])
+        except Exception:
+            print(f'failed to fetch remote id at {data["id"]}')
+            abort(422)
 
     activity = activitypub.parse_activity(data)                 
     print(activity)                                 
