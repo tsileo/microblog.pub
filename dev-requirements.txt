@@ -1,5 +1,6 @@
 pytest
 requests
 html2text
+pyyaml
 flake8
 mypy
