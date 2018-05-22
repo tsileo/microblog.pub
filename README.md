@@ -69,7 +69,7 @@ $ pip install -r requirements.txt
 # Start the Celery worker, RabbitMQ and MongoDB
 $ docker-compose -f docker-compose-dev.yml up -d
 # Run the server locally
-$ FLASK_APP=app.py flask run -p 5005 --with-threads
+$ MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py flask run -p 5005 --with-threads
 ```
 
 ## Contributions

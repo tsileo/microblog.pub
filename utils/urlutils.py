@@ -1,15 +1,23 @@
 import logging
+import os
 import socket
 import ipaddress
 from urllib.parse import urlparse
 
+from . import strtobool
+
 logger = logging.getLogger(__name__)
 
 
-def is_url_valid(url):
+def is_url_valid(url: str) -> bool:
     parsed = urlparse(url)
     if parsed.scheme not in ['http', 'https']:
         return False
+
+    # XXX in debug mode, we want to allow requests to localhost to test the federation with local instances
+    debug_mode = strtobool(os.getenv('MICROBLOGPUB_DEBUG', 'false'))
+    if debug_mode:
+        return True
 
     if parsed.hostname in ['localhost']:
         return False
