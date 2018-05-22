@@ -57,6 +57,12 @@ from utils.webfinger import get_actor_url
 app = Flask(__name__)
 app.secret_key = get_secret_key('flask')
 
+# Hook up Flask logging with gunicorn
+gunicorn_logger = logging.getLogger('gunicorn.error')
+root_logger = logging.getLogger()
+root_logger.handlers = gunicorn_logger.handlers
+root_logger.setLevel(gunicorn_logger.level)
+
 JWT_SECRET = get_secret_key('jwt')
 JWT = JSONWebSignatureSerializer(JWT_SECRET)
 

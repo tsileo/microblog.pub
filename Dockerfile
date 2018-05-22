@@ -3,4 +3,4 @@ ADD . /app
 WORKDIR /app
 RUN pip install -r requirements.txt
 ENV FLASK_APP=app.py
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5005", "app:app"]
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5005", "--log-level", "debug", "app:app"]
