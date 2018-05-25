@@ -44,6 +44,7 @@ with open('config/me.yml') as f:
     ICON_URL = conf['icon_url']
     PASS = conf['pass']
     PUBLIC_INSTANCES = conf.get('public_instances')
+    # TODO(tsileo): choose dark/light style
     THEME_COLOR = conf.get('theme_color')
 
 USER_AGENT = (

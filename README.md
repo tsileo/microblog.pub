@@ -28,6 +28,8 @@
    - Privacy-aware image upload endpoint that strip EXIF meta data before storing the file
  - No JavaScript, that's it, even the admin UI is pure HTML/CSS
  - Easy to customize (the theme is written Sass)
+   - mobile-friendly theme
+   - with dark and light version
  - Microformats aware (exports `h-feed`, `h-entry`, `h-cards`, ...)
  - Exports RSS/Atom feeds
  - Comes with a tiny HTTP API to help posting new content and performing basic actions

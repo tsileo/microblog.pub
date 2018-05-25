@@ -1,15 +1,25 @@
-from typing import Optional
 from urllib.parse import urlparse
+from typing import Dict, Any
+from typing import Optional
+import logging
 
 import requests
 
-def get_remote_follow_template(resource: str) -> Optional[str]:
-    """Mastodon-like WebFinger resolution to retrieve the activity stream Actor URL.
+from .urlutils import check_url
 
-    Returns:
-        the Actor URL or None if the resolution failed.
+
+logger = logging.getLogger(__name__)
+
+
+def webfinger(resource: str) -> Optional[Dict[str, Any]]:
+    """Mastodon-like WebFinger resolution to retrieve the activity stream Actor URL.
     """
-    if resource.startswith('http'):
+    logger.info(f'performing webfinger resolution for {resource}')
+    protos = ['https', 'http']
+    if resource.startswith('http://'):
+        protos.reverse()
+        host = urlparse(resource).netloc
+    elif resource.startswith('https://'):
         host = urlparse(resource).netloc
     else:
         if resource.startswith('acct:'):
@@ -18,15 +28,30 @@ def get_remote_follow_template(resource: str) -> Optional[str]:
             resource = resource[1:]
         _, host = resource.split('@', 1)
         resource='acct:'+resource
-    resp = requests.get(
-        f'https://{host}/.well-known/webfinger',
-        {'resource': resource}
-    )
-    print(resp, resp.request.url)
+
+    # Security check on the url (like not calling localhost)
+    check_url(f'https://{host}')
+
+    for i, proto in enumerate(protos):
+        try:
+            url = f'{proto}://{host}/.well-known/webfinger'
+            resp = requests.get(
+                url,
+                {'resource': resource}
+            )
+        except requests.ConnectionError:
+            # If we tried https first and the domain is "http only"
+            if i == 0:
+                continue
+            break
     if resp.status_code == 404:
         return None
     resp.raise_for_status()
-    data = resp.json()
+    return resp.json()
+ 
+
+def get_remote_follow_template(resource: str) -> Optional[str]:
+    data = webfinger(resource)
     for link in data['links']:
         if link.get('rel') == 'http://ostatus.org/schema/1.0/subscribe':
             return link.get('template')
@@ -39,24 +64,7 @@ def get_actor_url(resource: str) -> Optional[str]:
     Returns:
         the Actor URL or None if the resolution failed.
     """
-    if resource.startswith('http'):
-        host = urlparse(resource).netloc
-    else:
-        if resource.startswith('acct:'):
-            resource = resource[5:]
-        if resource.startswith('@'):
-            resource = resource[1:]
-        _, host = resource.split('@', 1)
-        resource='acct:'+resource
-    resp = requests.get(
-        f'https://{host}/.well-known/webfinger',
-        {'resource': resource}
-    )
-    print(resp, resp.request.url)
-    if resp.status_code == 404:
-        return None
-    resp.raise_for_status()
-    data = resp.json()
+    data = webfinger(resource)
     for link in data['links']:
         if link.get('rel') == 'self' and link.get('type') == 'application/activity+json':
             return link.get('href')

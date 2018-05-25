@@ -9,6 +9,10 @@ from . import strtobool
 logger = logging.getLogger(__name__)
 
 
+class InvalidURLError(Exception):
+    pass
+
+
 def is_url_valid(url: str) -> bool:
     parsed = urlparse(url)
     if parsed.scheme not in ['http', 'https']:
@@ -33,3 +37,10 @@ def is_url_valid(url: str) -> bool:
         return False
 
     return True
+
+
+def check_url(url: str) -> None:
+    if not is_url_valid(url):
+        raise InvalidURLError(f'"{url}" is invalid')
+
+    return None
