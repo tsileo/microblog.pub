@@ -5,7 +5,7 @@ import opengraph
 import requests
 from bs4 import BeautifulSoup
 
-from .urlutils import is_url_valid
+from .urlutils import is_url_valid, check_url
 
 
 def links_from_note(note):
@@ -38,6 +38,7 @@ def fetch_og_metadata(user_agent, col, remote_id):
     # FIXME(tsileo): set the user agent by giving HTML directly to OpenGraph
     htmls = []
     for l in links:
+        check_url(l)
         r = requests.get(l, headers={'User-Agent': user_agent})
         r.raise_for_status()
         htmls.append(r.text)

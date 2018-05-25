@@ -1,6 +1,8 @@
 import requests
 from urllib.parse import urlparse
 
+from .urlutils import check_url
+
 
 class ObjectService(object):
     def __init__(self, user_agent, col, inbox, outbox, instances):
@@ -13,6 +15,7 @@ class ObjectService(object):
 
     def _fetch_remote(self, object_id):
         print(f'fetch remote {object_id}')
+        check_url(object_id)
         resp = requests.get(object_id, headers={
             'Accept': 'application/activity+json',
             'User-Agent': self._user_agent,    

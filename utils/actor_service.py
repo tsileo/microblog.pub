@@ -4,6 +4,8 @@ import requests
 from urllib.parse import urlparse
 from Crypto.PublicKey import RSA
 
+from .urlutils import check_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,6 +25,9 @@ class ActorService(object):
 
     def _fetch(self, actor_url):
         logger.debug(f'fetching remote object {actor_url}')
+
+        check_url(actor_url)
+
         resp = requests.get(actor_url, headers={
             'Accept': 'application/activity+json',
             'User-Agent': self._user_agent,    
