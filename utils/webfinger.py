@@ -52,6 +52,8 @@ def webfinger(resource: str) -> Optional[Dict[str, Any]]:
 
 def get_remote_follow_template(resource: str) -> Optional[str]:
     data = webfinger(resource)
+    if data is None:
+        return None
     for link in data['links']:
         if link.get('rel') == 'http://ostatus.org/schema/1.0/subscribe':
             return link.get('template')
@@ -65,6 +67,8 @@ def get_actor_url(resource: str) -> Optional[str]:
         the Actor URL or None if the resolution failed.
     """
     data = webfinger(resource)
+    if data is None:
+        return None
     for link in data['links']:
         if link.get('rel') == 'self' and link.get('type') == 'application/activity+json':
             return link.get('href')
