@@ -36,8 +36,7 @@ def test_federation():
     resp = session1.get('http://localhost:5006/api/follow', params={'actor': 'http://instance2_web_1:5005'})
     assert resp.status_code == 201
 
-
-    time.sleep(2)
+    time.sleep(10)
     resp = requests.get('http://localhost:5007/followers', headers={'Accept': 'application/activity+json'})
     resp.raise_for_status()
 
