@@ -36,7 +36,12 @@
  - Easy to "cache" (the external/public-facing microblog part)
    - With a good setup, cached content can be served most of the time
    - You can setup a "purge" hook to let you invalidate cache when the microblog was updated
- - Deployable with Docker
+ - Deployable with Docker (Docker compose for everything: dev, test and deployment)
+ - Focus on testing
+   - Tested against the [official ActivityPub test suite](https://test.activitypub.rocks/) ([ ] TODO submit the report)
+   - CI runs some local "federation" tests
+   - Manually tested against [Mastodon](https://github.com/tootsuite/mastodon)
+   - Project is running an up-to-date instance
 
 ## Running your instance
 

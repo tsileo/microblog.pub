@@ -10,36 +10,64 @@ def resp2plaintext(resp):
     return html2text(resp.text)
 
 
+class Instance(object):
+    """Test instance wrapper."""
+
+    def __init__(self, host_url, docker_url=None):
+        self.host_url = host_url
+        self.docker_url = docker_url or host_url
+        self.session = requests.Session()
+
+    def ping(self):
+        """Ensures the homepage is reachable."""
+        resp = self.session.get(f'{self.host_url}/')
+        resp.raise_for_status()
+        assert resp.status_code == 200
+
+    def login(self):
+        resp = self.session.post(f'{self.host_url}/login', data={'pass': 'hello'})
+        resp.raise_for_status()
+        assert resp.status_code == 200
+
+    def follow(self, instance: 'Instance') -> None:
+        # Instance1 follows instance2
+        resp = self.session.get(f'{self.host_url}/api/follow', params={'actor': instance.docker_url})
+        assert resp.status_code == 201
+
+        # We need to wait for the Follow/Accept dance
+        time.sleep(10)
+
+    def followers(self):
+        resp = self.session.get(f'{self.host_url}/followers', headers={'Accept': 'application/activity+json'})
+        resp.raise_for_status()
+
+        data = resp.json()
+
+        return resp.json()['first']['orderedItems']
+
+    def following(self):
+        resp = self.session.get(f'{self.host_url}/following', headers={'Accept': 'application/activity+json'})
+        resp.raise_for_status()
+
+        data = resp.json()
+
+        return resp.json()['first']['orderedItems']
+
+
 def test_federation():
     """Ensure the homepage is accessible."""
-    resp = requests.get('http://localhost:5006')
-    resp.raise_for_status()
-    assert resp.status_code == 200
+    instance1 = Instance('http://localhost:5006', 'http://instance1_web_1:5005')
+    instance1.ping()
 
-    resp = requests.get('http://localhost:5007')
-    resp.raise_for_status()
-    assert resp.status_code == 200
-
-    # Keep one session per instance
+    instance2 = Instance('http://localhost:5007', 'http://instance2_web_1:5005')
+    instance2.ping()
 
     # Login
-    session1 = requests.Session()
-    resp = session1.post('http://localhost:5006/login', data={'pass': 'hello'})
-    assert resp.status_code == 200
-
-    # Login
-    session2 = requests.Session()
-    resp = session2.post('http://localhost:5007/login', data={'pass': 'hello'})
-    assert resp.status_code == 200
+    instance1.login()
+    instance2.login()
 
     # Instance1 follows instance2
-    resp = session1.get('http://localhost:5006/api/follow', params={'actor': 'http://instance2_web_1:5005'})
-    assert resp.status_code == 201
+    instance1.follow(instance2)
 
-    time.sleep(10)
-    resp = requests.get('http://localhost:5007/followers', headers={'Accept': 'application/activity+json'})
-    resp.raise_for_status()
-
-    print(resp.json())
-
-    assert resp.json()['first']['orderedItems'] == ['http://instance1_web_1:5005']
+    assert instance2.followers() == [instance1.docker_url]
+    assert instance1.following() == [instance2.docker_url]
