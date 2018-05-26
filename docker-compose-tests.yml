@@ -1,4 +1,4 @@
-version: '3'
+version: '3.5'
 services:
   web:
     build: .
@@ -31,3 +31,6 @@ services:
     environment:
      - RABBITMQ_ERLANG_COOKIE=secretrabbit
      - RABBITMQ_NODENAME=rabbit@my-rabbit
+networks:
+  default:
+    name: microblogpubfede 

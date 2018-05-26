@@ -760,6 +760,8 @@ def api_upload():
 @api_required                                      
 def api_new_note(): 
     source = request.args.get('content')
+    if not source:
+        raise ValueError('missing content')
     content, tags = parse_markdown(source)       
     to = request.args.get('to')
     cc = [ID+'/followers']
@@ -792,6 +794,8 @@ def api_stream():
 @api_required
 def api_follow():
     actor = request.args.get('actor')
+    if not actor:
+        raise ValueError('missing actor')
     if DB.following.find({'remote_actor': actor}).count() > 0:
         return Response(status=201)
 

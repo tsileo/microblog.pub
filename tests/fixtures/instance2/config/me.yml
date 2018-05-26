@@ -1,7 +1,7 @@
-username: 'instance_2'
+username: 'instance2'
 name: 'Instance 2'
 icon_url: 'https://sos-ch-dk-2.exo.io/microblogpub/microblobpub.png'
-domain: 'localhost:5007'
-summary: 'instance 2 summary'
+domain: 'instance2_web_1:5005'
+summary: 'instance2 summary'
 pass: '$2b$12$nEgJMgaYbXSPOvgnqM4jSeYnleKhXqsFgv/o3hg12x79uEdsR4cUy'  # hello
 https: false
