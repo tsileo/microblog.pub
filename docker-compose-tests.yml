@@ -15,6 +15,7 @@ services:
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
      - MICROBLOGPUB_DEBUG=1
   celery:
+#    image: "instance1_web"
     build: .
     links:
      - mongo

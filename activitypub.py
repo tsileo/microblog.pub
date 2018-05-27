@@ -21,7 +21,6 @@ from config import PUBLIC_INSTANCES
 import tasks
 
 from typing import List, Optional, Dict, Any, Union
-from typing import TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -345,7 +344,7 @@ class BaseActivity(object):
             self._post_to_outbox(obj_id, activity, recipients)
             logger.debug(f'called post to outbox hook')
         except NotImplementedError:
-            logger.debug('post to outbox hook not implemented')            
+            logger.debug('post to outbox hook not implemented')
 
         generate_signature(activity, KEY.privkey)
         payload = json.dumps(activity)
