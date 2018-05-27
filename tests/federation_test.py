@@ -3,6 +3,7 @@ import os
 
 import requests
 from html2text import html2text
+from utils import activitypub_utils
 
 
 def resp2plaintext(resp):
@@ -17,6 +18,15 @@ class Instance(object):
         self.host_url = host_url
         self.docker_url = docker_url or host_url
         self.session = requests.Session()
+
+    def _do_req(self, url, headers):
+        url = url.replace(self.docker_url, self.host_url)
+        resp = requests.get(url, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    def _parse_collection(self, payload=None, url=None):
+        return activitypub_utils.parse_collection(url=url, payload=payload, do_req=self._do_req)
 
     def ping(self):
         """Ensures the homepage is reachable."""
@@ -55,7 +65,7 @@ class Instance(object):
 
         data = resp.json()
 
-        return resp.json()['first']['orderedItems']
+        return self._parse_collection(payload=data)
 
     def following(self):
         resp = self.session.get(f'{self.host_url}/following', headers={'Accept': 'application/activity+json'})
@@ -63,7 +73,7 @@ class Instance(object):
 
         data = resp.json()
 
-        return resp.json()['first']['orderedItems']
+        return self._parse_collection(payload=data)
 
     def outbox(self):
         resp = self.session.get(f'{self.host_url}/following', headers={'Accept': 'application/activity+json'})
