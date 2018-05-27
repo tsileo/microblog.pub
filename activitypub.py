@@ -4,13 +4,13 @@ import os
 from datetime import datetime
 from enum import Enum
 
-import requests
 from bson.objectid import ObjectId
 from html2text import html2text
 from feedgen.feed import FeedGenerator
 
 from utils.linked_data_sig import generate_signature
 from utils.actor_service import NotAnActorError
+from utils import activitypub_utils
 from config import USERNAME, BASE_URL, ID
 from config import CTX_AS, CTX_SECURITY, AS_PUBLIC
 from config import KEY, DB, ME, ACTOR_SERVICE
@@ -936,46 +936,7 @@ def parse_collection(payload: Optional[Dict[str, Any]] = None, url: Optional[str
         return [doc['remote_actor'] for doc in DB.following.find()]
 
     # Go through all the pages
-    out: List[str] = []
-    if url:
-        resp = requests.get(url, headers={'Accept': 'application/activity+json'})
-        resp.raise_for_status()
-        payload = resp.json()
-
-    if not payload:
-        raise ValueError('must at least prove a payload or an URL')
-
-    if payload['type'] in ['Collection', 'OrderedCollection']:
-        if 'orderedItems' in payload:
-            return payload['orderedItems']
-        if 'items' in payload:
-            return payload['items']
-        if 'first' in payload:
-            if 'orderedItems' in payload['first']:
-                out.extend(payload['first']['orderedItems'])
-            if 'items' in payload['first']:
-                out.extend(payload['first']['items'])
-            n = payload['first'].get('next')
-            if n:
-                out.extend(parse_collection(url=n))
-        return out
-
-    while payload:
-        if payload['type'] in ['CollectionPage', 'OrderedCollectionPage']:
-            if 'orderedItems' in payload:
-                out.extend(payload['orderedItems'])
-            if 'items' in payload:
-                out.extend(payload['items'])
-            n = payload.get('next')
-            if n is None:
-                break
-            resp = requests.get(n, headers={'Accept': 'application/activity+json'})
-            resp.raise_for_status()
-            payload = resp.json()
-        else:
-            raise Exception('unexpected activity type {}'.format(payload['type']))
-
-    return out
+    return activitypub_utils.parse_collection(payload, url)
 
 
 def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, col_name=None):

@@ -4,6 +4,7 @@ import yaml
 from pymongo import MongoClient
 import requests
 
+from utils import strtobool
 from utils.key import Key
 from utils.actor_service import ActorService
 from utils.object_service import ObjectService
@@ -19,6 +20,9 @@ except ModuleNotFoundError:
     custom_cache_purge_hook = noop
 
 VERSION = subprocess.check_output(['git', 'describe', '--always']).split()[0].decode('utf-8')
+
+DEBUG_MODE = strtobool(os.getenv('MICROBLOGPUB_DEBUG', 'false'))
+
 
 CTX_AS = 'https://www.w3.org/ns/activitystreams'
 CTX_SECURITY = 'https://w3id.org/security/v1'

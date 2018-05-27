@@ -53,6 +53,11 @@ class Instance(object):
 
         return resp.json()['first']['orderedItems']
 
+    def outbox(self):
+        resp = self.session.get(f'{self.host_url}/following', headers={'Accept': 'application/activity+json'})
+        resp.raise_for_status()
+        return resp.json()
+
 
 def test_federation():
     """Ensure the homepage is accessible."""
