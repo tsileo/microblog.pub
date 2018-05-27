@@ -18,6 +18,7 @@ class Instance(object):
         self.host_url = host_url
         self.docker_url = docker_url or host_url
         self.session = requests.Session()
+        self._create_delay = 8
 
     def _do_req(self, url, headers):
         url = url.replace(self.docker_url, self.host_url)
@@ -57,7 +58,14 @@ class Instance(object):
         assert resp.status_code == 201
 
         # We need to wait for the Follow/Accept dance
-        time.sleep(10)
+        time.sleep(self._create_delay)
+        return resp.headers.get('microblogpub-created-activity')
+
+    def new_note(self, content):
+        resp = self.session.get(f'{self.host_url}/api/new_note', params={'content': content})
+        assert resp.status_code == 201
+
+        time.sleep(self._create_delay)
         return resp.headers.get('microblogpub-created-activity')
 
     def undo(self, oid: str) -> None:
@@ -65,7 +73,7 @@ class Instance(object):
         assert resp.status_code == 201
 
         # We need to wait for the Follow/Accept dance
-        time.sleep(10)
+        time.sleep(self._create_delay)
         return resp.headers.get('microblogpub-created-activity')
 
     def followers(self):
@@ -86,6 +94,11 @@ class Instance(object):
 
     def outbox(self):
         resp = self.session.get(f'{self.host_url}/following', headers={'Accept': 'application/activity+json'})
+        resp.raise_for_status()
+        return resp.json()
+
+    def stream_jsonfeed(self):
+        resp = self.session.get(f'{self.host_url}/api/stream', headers={'Accept': 'application/json'})
         resp.raise_for_status()
         return resp.json()
 
@@ -111,12 +124,10 @@ def test_follow():
     # Instance1 follows instance2
     instance1.follow(instance2)
     instance1_debug = instance1.debug()
-    print(f'instance1_debug={instance1_debug}')
     assert instance1_debug['inbox'] == 1  # An Accept activity should be there
     assert instance1_debug['outbox'] == 1  # We've sent a Follow activity
 
     instance2_debug = instance2.debug()
-    print(f'instance2_debug={instance2_debug}')
     assert instance2_debug['inbox'] == 1  # An Follow activity should be there
     assert instance2_debug['outbox'] == 1  # We've sent a Accept activity
 
@@ -152,4 +163,21 @@ def test_follow_unfollow():
     assert instance2_debug['inbox'] == 2  # An Follow and Undo activity should be there
     assert instance2_debug['outbox'] == 1  # We've sent a Accept activity
 
+def test_post_content():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    instance1.follow(instance2)
+    instance2.follow(instance1)
 
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 0
+
+    create_id = instance1.new_note('hello')
+    instance2_debug = instance2.debug()
+    assert instance2_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
+    instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
+
+    # Ensure the post is visible in instance2's stream
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 1
+    assert inbox_stream['items'][0]['id'] == create_id

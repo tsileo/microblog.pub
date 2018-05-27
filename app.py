@@ -810,10 +810,11 @@ def api_new_note():
     return Response(
         status=201,
         response='OK',
-        headers={'Microblogpub-Created-Activity': created.id},
+        headers={'Microblogpub-Created-Activity': create.id},
     )
 
 @app.route('/api/stream')
+@api_required
 def api_stream():
     return Response(
         response=json.dumps(activitypub.build_inbox_json_feed('/api/stream', request.args.get('cursor'))),
