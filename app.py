@@ -33,7 +33,7 @@ from werkzeug.utils import secure_filename
 
 import activitypub
 import config
-from activitypub import ActivityTypes
+from activitypub import ActivityType
 from activitypub import clean_activity
 from utils.content_helper import parse_markdown
 from config import KEY
@@ -444,7 +444,7 @@ def outbox():
         # FIXME(tsileo): filter deleted, add query support for build_ordered_collection
         q = {
             'meta.deleted': False,
-            'type': {'$in': [ActivityTypes.CREATE.value, ActivityTypes.ANNOUNCE.value]},
+            'type': {'$in': [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         }
         return jsonify(**activitypub.build_ordered_collection(
             DB.outbox,
@@ -463,7 +463,7 @@ def outbox():
     print(data)
     activity = activitypub.parse_activity(data)
 
-    if activity.type_enum == ActivityTypes.NOTE:
+    if activity.type_enum == ActivityType.NOTE:
         activity = activity.build_create()
 
     activity.post_to_outbox()
@@ -486,7 +486,7 @@ def outbox_activity(item_id):
     if not data:
         abort(404)
     obj = data['activity']
-    if obj['type'] != ActivityTypes.CREATE.value:
+    if obj['type'] != ActivityType.CREATE.value:
         abort(404)
     return jsonify(**clean_activity(obj['object']))
 
@@ -496,7 +496,7 @@ def admin():
     q = {
         'meta.deleted': False,
         'meta.undo': False,
-        'type': ActivityTypes.LIKE.value,
+        'type': ActivityType.LIKE.value,
     }
     col_liked = DB.outbox.count(q)
 
@@ -801,7 +801,7 @@ def api_new_note():
     note = activitypub.Note(                                    
         cc=cc,                       
         to=[to if to else config.AS_PUBLIC],
-        content=content,  # TODO(tsileo): handle markdown
+        content=content,
         tag=tags,
         source={'mediaType': 'text/markdown', 'content': source},
     )
@@ -810,6 +810,7 @@ def api_new_note():
     return Response(
         status=201,
         response='OK',
+        headers={'Microblogpub-Created-Activity': created.id},
     )
 
 @app.route('/api/stream')
@@ -895,7 +896,7 @@ def tags(tag):
     q = {
         'meta.deleted': False,
         'meta.undo': False,
-        'type': ActivityTypes.CREATE.value,
+        'type': ActivityType.CREATE.value,
         'activity.object.tag.type': 'Hashtag',
         'activity.object.tag.name': '#'+tag,
     }
@@ -915,7 +916,7 @@ def liked():
     q = {
         'meta.deleted': False,
         'meta.undo': False,
-        'type': ActivityTypes.LIKE.value,
+        'type': ActivityType.LIKE.value,
     }
     return jsonify(**activitypub.build_ordered_collection(
         DB.outbox,

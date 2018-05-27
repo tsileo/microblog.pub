@@ -24,12 +24,11 @@ from typing import TypeVar
 
 logger = logging.getLogger(__name__)
 
-A = TypeVar('A', bound='BaseActivity')
 ObjectType = Dict[str, Any]
 ObjectOrIDType = Union[str, ObjectType]
 
 
-class ActivityTypes(Enum):
+class ActivityType(Enum):
     ANNOUNCE = 'Announce'
     BLOCK = 'Block'
     LIKE = 'Like'
@@ -84,8 +83,8 @@ def _get_actor_id(actor: ObjectOrIDType) -> str:
 
 
 class BaseActivity(object):
-    ACTIVITY_TYPE: Optional[ActivityTypes] = None
-    ALLOWED_OBJECT_TYPES: List[ActivityTypes] = []
+    ACTIVITY_TYPE: Optional[ActivityType] = None
+    ALLOWED_OBJECT_TYPES: List[ActivityType] = []
 
     def __init__(self, **kwargs) -> None:
         if not self.ACTIVITY_TYPE:
@@ -99,7 +98,7 @@ class BaseActivity(object):
         if 'id' in kwargs:
             self._data['id'] = kwargs.pop('id')
 
-        if self.ACTIVITY_TYPE != ActivityTypes.PERSON:
+        if self.ACTIVITY_TYPE != ActivityType.PERSON:
             actor = kwargs.get('actor')
             if actor:
                 kwargs.pop('actor')
@@ -117,9 +116,9 @@ class BaseActivity(object):
             else:
                 if not self.ALLOWED_OBJECT_TYPES:
                     raise ValueError('unexpected object')
-                if 'type' not in obj or (self.ACTIVITY_TYPE != ActivityTypes.CREATE and 'id' not in obj):
+                if 'type' not in obj or (self.ACTIVITY_TYPE != ActivityType.CREATE and 'id' not in obj):
                     raise ValueError('invalid object')
-                if ActivityTypes(obj['type']) not in self.ALLOWED_OBJECT_TYPES:
+                if ActivityType(obj['type']) not in self.ALLOWED_OBJECT_TYPES:
                     print(self, kwargs)
                     raise ValueError(f'unexpected object type {obj["type"]} (allowed={self.ALLOWED_OBJECT_TYPES})')
                 self._data['object'] = obj
@@ -185,8 +184,8 @@ class BaseActivity(object):
             return self._data.get(name)
 
     @property
-    def type_enum(self) -> ActivityTypes:
-        return ActivityTypes(self.type)
+    def type_enum(self) -> ActivityType:
+        return ActivityType(self.type)
 
     def _set_id(self, uri: str, obj_id: str) -> None:
         raise NotImplementedError
@@ -199,7 +198,7 @@ class BaseActivity(object):
             pass
 
     def _actor_id(self, obj: ObjectOrIDType) -> str:
-        if isinstance(obj, dict) and obj['type'] == ActivityTypes.PERSON.value:
+        if isinstance(obj, dict) and obj['type'] == ActivityType.PERSON.value:
             obj_id = obj.get('id')
             if not obj_id:
                 raise ValueError('missing object id')
@@ -223,11 +222,11 @@ class BaseActivity(object):
         if isinstance(self._data['object'], dict):
             p = parse_activity(self._data['object'])
         else:
-            if self.ACTIVITY_TYPE == ActivityTypes.FOLLOW:
+            if self.ACTIVITY_TYPE == ActivityType.FOLLOW:
                 p = Person(**ACTOR_SERVICE.get(self._data['object']))
             else:
                 obj = OBJECT_SERVICE.get(self._data['object'])
-                if ActivityTypes(obj.get('type')) not in self.ALLOWED_OBJECT_TYPES:
+                if ActivityType(obj.get('type')) not in self.ALLOWED_OBJECT_TYPES:
                     raise ValueError('invalid object type')
 
                 p = parse_activity(obj)
@@ -249,7 +248,7 @@ class BaseActivity(object):
     def get_actor(self) -> 'BaseActivity':
         actor = self._data.get('actor')
         if not actor:
-            if self.type_enum == ActivityTypes.NOTE:
+            if self.type_enum == ActivityType.NOTE:
                 actor = str(self._data.get('attributedTo'))
             else:
                 raise ValueError('failed to fetch actor')
@@ -279,7 +278,7 @@ class BaseActivity(object):
         self.verify()
         actor = self.get_actor()
 
-        if DB.outbox.find_one({'type': ActivityTypes.BLOCK.value,
+        if DB.outbox.find_one({'type': ActivityType.BLOCK.value,
                                'activity.object': actor.id,
                                'meta.undo': False}):
             print('actor is blocked, drop activity')
@@ -357,8 +356,8 @@ class BaseActivity(object):
                     actor = Person(**ACTOR_SERVICE.get(recipient))
                 except NotAnActorError as error:
                     # Is the activity a `Collection`/`OrderedCollection`?
-                    if error.activity and error.activity['type'] in [ActivityTypes.COLLECTION.value,
-                                                                     ActivityTypes.ORDERED_COLLECTION.value]:
+                    if error.activity and error.activity['type'] in [ActivityType.COLLECTION.value,
+                                                                     ActivityType.ORDERED_COLLECTION.value]:
                         for item in parse_collection(error.activity):
                             if item in [ME, AS_PUBLIC]:
                                 continue
@@ -393,7 +392,7 @@ class BaseActivity(object):
 
 
 class Person(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.PERSON
+    ACTIVITY_TYPE = ActivityType.PERSON
 
     def _init(self, **kwargs):
         # if 'icon' in kwargs:
@@ -410,15 +409,15 @@ class Person(BaseActivity):
 
 
 class Block(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.BLOCK
+    ACTIVITY_TYPE = ActivityType.BLOCK
 
 
 class Collection(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.COLLECTION
+    ACTIVITY_TYPE = ActivityType.COLLECTION
 
 
 class Image(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.IMAGE
+    ACTIVITY_TYPE = ActivityType.IMAGE
     NO_CONTEXT = True
 
     def _init(self, **kwargs):
@@ -431,11 +430,11 @@ class Image(BaseActivity):
 
 
 class Follow(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.FOLLOW
-    ALLOWED_OBJECT_TYPES = [ActivityTypes.PERSON]
+    ACTIVITY_TYPE = ActivityType.FOLLOW
+    ALLOWED_OBJECT_TYPES = [ActivityType.PERSON]
 
-    def _build_reply(self, reply_type: ActivityTypes) -> BaseActivity:
-        if reply_type == ActivityTypes.ACCEPT:
+    def _build_reply(self, reply_type: ActivityType) -> BaseActivity:
+        if reply_type == ActivityType.ACCEPT:
             return Accept(
                 object=self.to_dict(embed=True),
             )
@@ -461,7 +460,7 @@ class Follow(BaseActivity):
         DB.following.delete_one({'remote_actor': self.get_object().id})
 
     def build_accept(self) -> BaseActivity:
-        return self._build_reply(ActivityTypes.ACCEPT)
+        return self._build_reply(ActivityType.ACCEPT)
 
     def build_undo(self) -> BaseActivity:
         return Undo(object=self.to_dict(embed=True))
@@ -472,8 +471,8 @@ class Follow(BaseActivity):
 
 
 class Accept(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.ACCEPT
-    ALLOWED_OBJECT_TYPES = [ActivityTypes.FOLLOW]
+    ACTIVITY_TYPE = ActivityType.ACCEPT
+    ALLOWED_OBJECT_TYPES = [ActivityType.FOLLOW]
 
     def _recipients(self) -> List[str]:
         return [self.get_object().get_actor().id]
@@ -490,12 +489,12 @@ class Accept(BaseActivity):
 
 
 class Undo(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.UNDO
-    ALLOWED_OBJECT_TYPES = [ActivityTypes.FOLLOW, ActivityTypes.LIKE, ActivityTypes.ANNOUNCE]
+    ACTIVITY_TYPE = ActivityType.UNDO
+    ALLOWED_OBJECT_TYPES = [ActivityType.FOLLOW, ActivityType.LIKE, ActivityType.ANNOUNCE]
 
     def _recipients(self) -> List[str]:
         obj = self.get_object()
-        if obj.type_enum == ActivityTypes.FOLLOW:
+        if obj.type_enum == ActivityType.FOLLOW:
             return [obj.get_object().id]
         else:
             return [obj.get_object().get_actor().id]
@@ -538,8 +537,8 @@ class Undo(BaseActivity):
 
 
 class Like(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.LIKE
-    ALLOWED_OBJECT_TYPES = [ActivityTypes.NOTE]
+    ACTIVITY_TYPE = ActivityType.LIKE
+    ALLOWED_OBJECT_TYPES = [ActivityType.NOTE]
 
     def _recipients(self) -> List[str]:
         return [self.get_object().get_actor().id]
@@ -577,8 +576,8 @@ class Like(BaseActivity):
 
 
 class Announce(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.ANNOUNCE
-    ALLOWED_OBJECT_TYPES = [ActivityTypes.NOTE]
+    ACTIVITY_TYPE = ActivityType.ANNOUNCE
+    ALLOWED_OBJECT_TYPES = [ActivityType.NOTE]
 
     def _recipients(self) -> List[str]:
         recipients = []
@@ -638,8 +637,8 @@ class Announce(BaseActivity):
 
 
 class Delete(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.DELETE
-    ALLOWED_OBJECT_TYPES = [ActivityTypes.NOTE, ActivityTypes.TOMBSTONE]
+    ACTIVITY_TYPE = ActivityType.DELETE
+    ALLOWED_OBJECT_TYPES = [ActivityType.NOTE, ActivityType.TOMBSTONE]
 
     def _recipients(self) -> List[str]:
         return self.get_object().recipients()
@@ -654,15 +653,15 @@ class Delete(BaseActivity):
 
 
 class Update(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.UPDATE
-    ALLOWED_OBJECT_TYPES = [ActivityTypes.NOTE, ActivityTypes.PERSON]
+    ACTIVITY_TYPE = ActivityType.UPDATE
+    ALLOWED_OBJECT_TYPES = [ActivityType.NOTE, ActivityType.PERSON]
 
     # TODO(tsileo): ensure the actor updating is the same as the orinial activity
     # (ensuring that the Update and its object are of same origin)
 
     def _process_from_inbox(self):
         obj = self.get_object()
-        if obj.type_enum == ActivityTypes.NOTE:
+        if obj.type_enum == ActivityType.NOTE:
             DB.inbox.update_one({'activity.object.id': obj.id}, {'$set': {'activity.object': obj.to_dict()}})
             return
 
@@ -694,8 +693,8 @@ class Update(BaseActivity):
 
 
 class Create(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.CREATE
-    ALLOWED_OBJECT_TYPES = [ActivityTypes.NOTE]
+    ACTIVITY_TYPE = ActivityType.CREATE
+    ALLOWED_OBJECT_TYPES = [ActivityType.NOTE]
 
     def _set_id(self, uri: str, obj_id: str) -> None:
         self._data['object']['id'] = uri + '/activity'
@@ -768,11 +767,11 @@ class Create(BaseActivity):
 
 
 class Tombstone(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.TOMBSTONE
+    ACTIVITY_TYPE = ActivityType.TOMBSTONE
 
 
 class Note(BaseActivity):
-    ACTIVITY_TYPE = ActivityTypes.NOTE
+    ACTIVITY_TYPE = ActivityType.NOTE
 
     def _init(self, **kwargs):
         print(self._data)
@@ -831,25 +830,25 @@ class Note(BaseActivity):
 
 
 _ACTIVITY_TYPE_TO_CLS = {
-    ActivityTypes.IMAGE: Image,
-    ActivityTypes.PERSON: Person,
-    ActivityTypes.FOLLOW: Follow,
-    ActivityTypes.ACCEPT: Accept,
-    ActivityTypes.UNDO: Undo,
-    ActivityTypes.LIKE: Like,
-    ActivityTypes.ANNOUNCE: Announce,
-    ActivityTypes.UPDATE: Update,
-    ActivityTypes.DELETE: Delete,
-    ActivityTypes.CREATE: Create,
-    ActivityTypes.NOTE: Note,
-    ActivityTypes.BLOCK: Block,
-    ActivityTypes.COLLECTION: Collection,
-    ActivityTypes.TOMBSTONE: Tombstone,
+    ActivityType.IMAGE: Image,
+    ActivityType.PERSON: Person,
+    ActivityType.FOLLOW: Follow,
+    ActivityType.ACCEPT: Accept,
+    ActivityType.UNDO: Undo,
+    ActivityType.LIKE: Like,
+    ActivityType.ANNOUNCE: Announce,
+    ActivityType.UPDATE: Update,
+    ActivityType.DELETE: Delete,
+    ActivityType.CREATE: Create,
+    ActivityType.NOTE: Note,
+    ActivityType.BLOCK: Block,
+    ActivityType.COLLECTION: Collection,
+    ActivityType.TOMBSTONE: Tombstone,
 }
 
 
 def parse_activity(payload: ObjectType) -> BaseActivity:
-    t = ActivityTypes(payload['type'])
+    t = ActivityType(payload['type'])
     if t not in _ACTIVITY_TYPE_TO_CLS:
         raise ValueError('unsupported activity type')
 
