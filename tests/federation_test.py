@@ -58,6 +58,15 @@ class Instance(object):
 
         # We need to wait for the Follow/Accept dance
         time.sleep(10)
+        return resp.headers.get('microblogpub-created-activity')
+
+    def undo(self, oid: str) -> None:
+        resp = self.session.get(f'{self.host_url}/api/undo', params={'id': oid})
+        assert resp.status_code == 201
+
+        # We need to wait for the Follow/Accept dance
+        time.sleep(10)
+        return resp.headers.get('microblogpub-created-activity')
 
     def followers(self):
         resp = self.session.get(f'{self.host_url}/followers', headers={'Accept': 'application/activity+json'})
@@ -81,8 +90,7 @@ class Instance(object):
         return resp.json()
 
 
-def test_federation():
-    """Ensure the homepage is accessible."""
+def _instances():
     instance1 = Instance('http://localhost:5006', 'http://instance1_web_1:5005')
     instance1.ping()
 
@@ -94,16 +102,54 @@ def test_federation():
     instance1.drop_db()
     instance2.login()
     instance2.drop_db()
+    
+    return instance1, instance2
 
+
+def test_follow():
+    instance1, instance2 = _instances()
     # Instance1 follows instance2
     instance1.follow(instance2)
+    instance1_debug = instance1.debug()
+    print(f'instance1_debug={instance1_debug}')
+    assert instance1_debug['inbox'] == 1  # An Accept activity should be there
+    assert instance1_debug['outbox'] == 1  # We've sent a Follow activity
+
+    instance2_debug = instance2.debug()
+    print(f'instance2_debug={instance2_debug}')
+    assert instance2_debug['inbox'] == 1  # An Follow activity should be there
+    assert instance2_debug['outbox'] == 1  # We've sent a Accept activity
+
+    assert instance2.followers() == [instance1.docker_url]
+    assert instance1.following() == [instance2.docker_url]
+
+
+def test_follow_unfollow():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    follow_id = instance1.follow(instance2)
     instance1_debug = instance1.debug()
     assert instance1_debug['inbox'] == 1  # An Accept activity should be there
     assert instance1_debug['outbox'] == 1  # We've sent a Follow activity
 
     instance2_debug = instance2.debug()
-    assert instance1_debug['inbox'] == 1  # An Follow activity should be there
-    assert instance1_debug['outbox'] == 1  # We've sent a Accept activity
+    assert instance2_debug['inbox'] == 1  # An Follow activity should be there
+    assert instance2_debug['outbox'] == 1  # We've sent a Accept activity
 
     assert instance2.followers() == [instance1.docker_url]
     assert instance1.following() == [instance2.docker_url]
+
+    instance1.undo(follow_id)
+
+    assert instance2.followers() == []
+    assert instance1.following() == []
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 1  # An Accept activity should be there
+    assert instance1_debug['outbox'] == 2  # We've sent a Follow and a Undo activity
+
+    instance2_debug = instance2.debug()
+    assert instance2_debug['inbox'] == 2  # An Follow and Undo activity should be there
+    assert instance2_debug['outbox'] == 1  # We've sent a Accept activity
+
+

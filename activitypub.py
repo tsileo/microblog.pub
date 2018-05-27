@@ -1,3 +1,4 @@
+import logging
 import json
 import binascii
 import os
@@ -20,6 +21,8 @@ import tasks
 
 from typing import List, Optional, Dict, Any, Union
 from typing import TypeVar
+
+logger = logging.getLogger(__name__)
 
 A = TypeVar('A', bound='BaseActivity')
 ObjectType = Dict[str, Any]
@@ -454,6 +457,9 @@ class Follow(BaseActivity):
     def _undo_inbox(self) -> None:
         DB.followers.delete_one({'remote_actor': self.get_actor().id})
 
+    def _undo_outbox(self) -> None:
+        DB.following.delete_one({'remote_actor': self.get_object().id})
+
     def build_accept(self) -> BaseActivity:
         return self._build_reply(ActivityTypes.ACCEPT)
 
@@ -517,12 +523,17 @@ class Undo(BaseActivity):
         return False
 
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
+        logger.debug('processing undo to outbox')
+        logger.debug('self={}'.format(self))
         obj = self.get_object()
+        logger.debug('obj={}'.format(obj))
         DB.outbox.update_one({'remote_id': obj.id}, {'$set': {'meta.undo': True}})
 
         try:
             obj._undo_outbox()
+            logger.debug(f'_undo_outbox called for {obj}')
         except NotImplementedError:
+            logger.debug(f'_undo_outbox not implemented for {obj}')
             pass
 
 

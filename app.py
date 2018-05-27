@@ -615,16 +615,25 @@ def ui_like():
     like.post_to_outbox()
     return redirect(request.args.get('redirect'))
 
-@app.route('/ui/undo')
-@login_required
-def ui_undo():
+@app.route('/api/undo', methods=['GET', 'POST'])
+@api_required
+def api_undo():
     oid = request.args.get('id')
-    doc =DB.outbox.find_one({'id': oid})
+    doc = DB.outbox.find_one({'$or': [{'id': oid}, {'remote_id': oid}]})
+    undo_id = None
     if doc:
         obj = activitypub.parse_activity(doc.get('activity'))
+        # FIXME(tsileo): detect already undo-ed and make this API call idempotent
         undo = obj.build_undo()
         undo.post_to_outbox()
-    return redirect(request.args.get('redirect'))
+        undo_id = undo.id
+    if request.args.get('redirect'):
+        return redirect(request.args.get('redirect'))
+    return Response(
+        status=201,
+        headers={'Microblogpub-Created-Activity': undo_id},
+    )
+
 
 @app.route('/stream')
 @login_required
@@ -823,6 +832,7 @@ def api_follow():
     follow.post_to_outbox()
     return Response(
         status=201,
+        headers={'Microblogpub-Created-Activity': follow.id},
     )
 
 
