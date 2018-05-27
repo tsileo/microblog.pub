@@ -18,7 +18,7 @@ class Instance(object):
         self.host_url = host_url
         self.docker_url = docker_url or host_url
         self.session = requests.Session()
-        self._create_delay = 8
+        self._create_delay = 10
 
     def _do_req(self, url, headers):
         url = url.replace(self.docker_url, self.host_url)
