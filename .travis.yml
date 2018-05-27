@@ -22,6 +22,6 @@ script:
  - WEB_PORT=5007 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d
  - docker-compose -p instance2 -f docker-compose-tests.yml ps
  # Integration tests first
- - pytest -v --ignore data -k integration
+ - python -m pytest -v --ignore data -k integration
  # Federation tests (with two local instances)
- - pytest -v -s --ignore data -k federation
+ - python -m pytest -v -s --ignore data -k federation

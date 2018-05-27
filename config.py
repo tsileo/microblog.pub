@@ -62,7 +62,15 @@ mongo_client = MongoClient(
         host=[os.getenv('MICROBLOGPUB_MONGODB_HOST', 'localhost:27017')],
 )
 
-DB = mongo_client['{}_{}'.format(USERNAME, DOMAIN.replace('.', '_'))]
+DB_NAME = '{}_{}'.format(USERNAME, DOMAIN.replace('.', '_'))
+DB = mongo_client[DB_NAME]
+
+def _drop_db():
+    if not DEBUG_MODE:
+        return
+
+    mongo_client.drop_database(DB_NAME)
+
 KEY = Key(USERNAME, DOMAIN, create=True)
 
 ME = {

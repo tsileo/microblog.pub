@@ -24,6 +24,18 @@ class Instance(object):
         resp.raise_for_status()
         assert resp.status_code == 200
 
+    def debug(self):
+        resp = self.session.get(f'{self.host_url}/api/debug', headers={'Accept': 'application/json'})
+        resp.raise_for_status()
+
+        return resp.json()
+    
+    def drop_db(self):
+        resp = self.session.delete(f'{self.host_url}/api/debug', headers={'Accept': 'application/json'})
+        resp.raise_for_status()
+
+        return resp.json()
+
     def login(self):
         resp = self.session.post(f'{self.host_url}/login', data={'pass': 'hello'})
         resp.raise_for_status()
@@ -63,9 +75,11 @@ def test_federation():
     """Ensure the homepage is accessible."""
     instance1 = Instance('http://localhost:5006', 'http://instance1_web_1:5005')
     instance1.ping()
+    instance1.drop_db()
 
     instance2 = Instance('http://localhost:5007', 'http://instance2_web_1:5005')
     instance2.ping()
+    instance2.drop_db()
 
     # Login
     instance1.login()
@@ -73,6 +87,13 @@ def test_federation():
 
     # Instance1 follows instance2
     instance1.follow(instance2)
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 1  # An Accept activity should be there
+    assert instance1_debug['outbox'] == 1  # We've sent a Follow activity
+
+    instance2_debug = instance2.debug()
+    assert instance1_debug['inbox'] == 1  # An Follow activity should be there
+    assert instance1_debug['outbox'] == 1  # We've sent a Accept activity
 
     assert instance2.followers() == [instance1.docker_url]
     assert instance1.following() == [instance2.docker_url]

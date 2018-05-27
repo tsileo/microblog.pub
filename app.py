@@ -21,6 +21,7 @@ from flask import redirect
 from flask import Response
 from flask import render_template
 from flask import session
+from flask import jsonify as flask_jsonify
 from flask import url_for
 from html2text import html2text
 from itsdangerous import JSONWebSignatureSerializer
@@ -47,6 +48,8 @@ from config import OBJECT_SERVICE
 from config import PASS
 from config import HEADERS
 from config import VERSION
+from config import DEBUG_MODE
+from config import _drop_db
 from config import custom_cache_purge_hook
 from utils.httpsig import HTTPSigAuth, verify_request
 from utils.key import get_secret_key
@@ -708,6 +711,23 @@ def inbox():
     return Response(                                
         status=201,                                 
     )                                               
+
+
+@app.route('/api/debug', methods=['GET', 'DELETE'])
+@api_required
+def api_debug():
+    """Endpoint used/needed for testing, only works in DEBUG_MODE."""
+    if not DEBUG_MODE:
+        return flask_jsonify(message='DEBUG_MODE is off')
+
+    if request.method == 'DELETE':
+        _drop_db()
+        return flask_jsonify(message='DB dropped')
+
+    return flask_jsonify(
+        inbox=DB.inbox.count(),
+        outbox=DB.outbox.count(),
+    )
 
 
 @app.route('/api/upload', methods=['POST'])
