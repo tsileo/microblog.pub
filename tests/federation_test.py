@@ -75,15 +75,15 @@ def test_federation():
     """Ensure the homepage is accessible."""
     instance1 = Instance('http://localhost:5006', 'http://instance1_web_1:5005')
     instance1.ping()
-    instance1.drop_db()
 
     instance2 = Instance('http://localhost:5007', 'http://instance2_web_1:5005')
     instance2.ping()
-    instance2.drop_db()
 
     # Login
     instance1.login()
+    instance1.drop_db()
     instance2.login()
+    instance2.drop_db()
 
     # Instance1 follows instance2
     instance1.follow(instance2)
