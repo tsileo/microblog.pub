@@ -622,9 +622,25 @@ def notifications():
     )
 
 
+@app.route('/api/delete')
+@api_required
+def api_delete():
+    # FIXME(tsileo): ensure a Note and not a Create is given
+    oid = request.args.get('id')
+    obj = activitypub.parse_activity(OBJECT_SERVICE.get(oid))
+    delete = obj.build_delete()
+    delete.post_to_outbox()
+    if request.args.get('redirect'):
+        return redirect(request.args.get('redirect'))
+    return Response(
+        status=201,
+        headers={'Microblogpub-Created-Activity': delete.id},
+    )
+
 @app.route('/api/boost')
 @api_required
 def api_boost():
+    # FIXME(tsileo): ensure a Note and not a Create is given
     oid = request.args.get('id')
     obj = activitypub.parse_activity(OBJECT_SERVICE.get(oid))
     announce = obj.build_announce()

@@ -82,6 +82,13 @@ class Instance(object):
         time.sleep(self._create_delay)
         return resp.headers.get('microblogpub-created-activity')
 
+    def delete(self, oid: str) -> None:
+        resp = self.session.get(f'{self.host_url}/api/delete', params={'id': oid})
+        assert resp.status_code == 201
+
+        time.sleep(self._create_delay)
+        return resp.headers.get('microblogpub-created-activity')
+
     def undo(self, oid: str) -> None:
         resp = self.session.get(f'{self.host_url}/api/undo', params={'id': oid})
         assert resp.status_code == 201
@@ -201,6 +208,35 @@ def test_post_content():
     inbox_stream = instance2.stream_jsonfeed()
     assert len(inbox_stream['items']) == 1
     assert inbox_stream['items'][0]['id'] == create_id
+
+
+def test_post_content_and_delete():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    instance1.follow(instance2)
+    instance2.follow(instance1)
+
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 0
+
+    create_id = instance1.new_note('hello')
+    instance2_debug = instance2.debug()
+    assert instance2_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
+    instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
+
+    # Ensure the post is visible in instance2's stream
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 1
+    assert inbox_stream['items'][0]['id'] == create_id
+
+    instance1.delete(f'{create_id}/activity')
+    instance2_debug = instance2.debug()
+    assert instance2_debug['inbox'] == 4  # An Follow, Accept and Create and Delete activity should be there
+    instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
+
+    # Ensure the post has been delete from instance2's stream
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 0
 
 
 def test_post_content_and_like():

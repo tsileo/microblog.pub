@@ -119,7 +119,7 @@ class BaseActivity(object):
                 actor = self._validate_person(actor)
                 self._data['actor'] = actor
             else:
-                if not self.NO_CONTEXT:
+                if not self.NO_CONTEXT and self.ACTIVITY_TYPE != ActivityType.TOMBSTONE:
                     actor = ID
                     self._data['actor'] = actor
 
@@ -299,6 +299,7 @@ class BaseActivity(object):
         self.verify()
         actor = self.get_actor()
 
+        # Check for Block activity
         if DB.outbox.find_one({'type': ActivityType.BLOCK.value,
                                'activity.object': actor.id,
                                'meta.undo': False}):
@@ -413,6 +414,9 @@ class BaseActivity(object):
         return out
 
     def build_undo(self) -> 'BaseActivity':
+        raise NotImplementedError
+
+    def build_delete(self) -> 'BaseActivity':
         raise NotImplementedError
 
 
@@ -645,6 +649,7 @@ class Announce(BaseActivity):
             '$inc': {'meta.count_boost': 1},
             '$addToSet': {'meta.col_shares': self.to_dict(embed=True, embed_object_id_only=True)},
         })
+
     def _undo_inbox(self) -> None:
         obj = self.get_object()
         # Update the meta counter if the object is published by the server
@@ -683,14 +688,17 @@ class Delete(BaseActivity):
     ALLOWED_OBJECT_TYPES = [ActivityType.NOTE, ActivityType.TOMBSTONE]
 
     def _recipients(self) -> List[str]:
-        return self.get_object().recipients()
+        obj = self.get_object()
+        if obj.type_enum == ActivityType.TOMBSTONE:
+            obj = parse_activity(OBJECT_SERVICE.get(obj.id))
+        return obj._recipients()
 
-    def _process_from_inbox(self):
+    def _process_from_inbox(self) -> None:
         DB.inbox.update_one({'activity.object.id': self.get_object().id}, {'$set': {'meta.deleted': True}})
         # TODO(tsileo): also delete copies stored in parents' `meta.replies`
         # TODO(tsileo): also purge the cache if it's a reply of a published activity
 
-    def _post_to_outbox(self, obj_id, activity, recipients):
+    def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
         DB.outbox.update_one({'activity.object.id': self.get_object().id}, {'$set': {'meta.deleted': True}})
 
 
@@ -870,6 +878,9 @@ class Note(BaseActivity):
                 published=datetime.utcnow().replace(microsecond=0).isoformat() + 'Z',
         )
 
+    def build_delete(self) -> BaseActivity:
+        return Delete(object=Tombstone(id=self.id).to_dict(embed=True))
+
 
 _ACTIVITY_TYPE_TO_CLS = {
     ActivityType.IMAGE: Image,
@@ -946,7 +957,7 @@ def build_inbox_json_feed(path: str, request_cursor: Optional[str] = None) -> Di
     data = []
     cursor = None
 
-    q: Dict[str, Any] = {'type': 'Create'}
+    q: Dict[str, Any] = {'type': 'Create', 'meta.deleted': False}
     if request_cursor:
         q['_id'] = {'$lt': request_cursor}
 
