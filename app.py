@@ -847,9 +847,16 @@ def api_new_note():
     source = request.args.get('content')
     if not source:
         raise ValueError('missing content')
+    
+    reply = None
+    if request.args.get('reply'):
+        reply = activitypub.parse_activity(OBJECT_SERVICE.get(request.args.get('reply')))
+    source = request.args.get('content')
     content, tags = parse_markdown(source)       
     to = request.args.get('to')
     cc = [ID+'/followers']
+    if reply:
+        cc.append(reply.attributedTo)
     for tag in tags:
         if tag['type'] == 'Mention':
             cc.append(tag['href'])
@@ -857,12 +864,14 @@ def api_new_note():
     note = activitypub.Note(                                    
         cc=cc,                       
         to=[to if to else config.AS_PUBLIC],
-        content=content,
+        content=content,  # TODO(tsileo): handle markdown
         tag=tags,
         source={'mediaType': 'text/markdown', 'content': source},
+        inReplyTo=reply.id if reply else None
     )
     create = note.build_create()
     create.post_to_outbox()
+
     return Response(
         status=201,
         response='OK',
@@ -876,6 +885,27 @@ def api_stream():
         response=json.dumps(activitypub.build_inbox_json_feed('/api/stream', request.args.get('cursor'))),
         headers={'Content-Type': 'application/json'},
     )
+
+
+@app.route('/api/block')
+@api_required
+def api_block():
+    # FIXME(tsileo): ensure it's a Person ID
+    actor = request.args.get('actor')
+    if not actor:
+        raise ValueError('missing actor')
+    if DB.outbox.find_one({'type': ActivityType.BLOCK.value,
+                           'activity.object': actor,
+                           'meta.undo': False}):
+        return Response(status=201)
+
+    block = activitypub.Block(object=actor)
+    block.post_to_outbox()
+    return Response(
+        status=201,
+        headers={'Microblogpub-Created-Activity': block.id},
+    )
+
 
 @app.route('/api/follow')
 @api_required

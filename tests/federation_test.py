@@ -52,6 +52,15 @@ class Instance(object):
         resp.raise_for_status()
         assert resp.status_code == 200
 
+    def block(self, actor_url) -> None:
+        # Instance1 follows instance2
+        resp = self.session.get(f'{self.host_url}/api/block', params={'actor': actor_url})
+        assert resp.status_code == 201
+
+        # We need to wait for the Follow/Accept dance
+        time.sleep(self._create_delay/2)
+        return resp.headers.get('microblogpub-created-activity')
+
     def follow(self, instance: 'Instance') -> None:
         # Instance1 follows instance2
         resp = self.session.get(f'{self.host_url}/api/follow', params={'actor': instance.docker_url})
@@ -61,8 +70,11 @@ class Instance(object):
         time.sleep(self._create_delay)
         return resp.headers.get('microblogpub-created-activity')
 
-    def new_note(self, content):
-        resp = self.session.get(f'{self.host_url}/api/new_note', params={'content': content})
+    def new_note(self, content, reply=None):
+        params = {'content': content}
+        if reply:
+            params['reply'] = reply
+        resp = self.session.get(f'{self.host_url}/api/new_note', params=params)
         assert resp.status_code == 201
 
         time.sleep(self._create_delay)
@@ -202,12 +214,33 @@ def test_post_content():
     create_id = instance1.new_note('hello')
     instance2_debug = instance2.debug()
     assert instance2_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
-    instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
+    assert instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
 
     # Ensure the post is visible in instance2's stream
     inbox_stream = instance2.stream_jsonfeed()
     assert len(inbox_stream['items']) == 1
     assert inbox_stream['items'][0]['id'] == create_id
+
+
+def test_block_and_post_content():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    instance1.follow(instance2)
+    instance2.follow(instance1)
+
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 0
+
+    instance2.block(instance1.docker_url)
+
+    instance1.new_note('hello')
+    instance2_debug = instance2.debug()
+    assert instance2_debug['inbox'] == 2  # An Follow, Accept activity should be there, Create should have been dropped
+    assert instance2_debug['outbox'] == 3  # We've sent a Accept and a Follow  activity + the Block activity
+
+    # Ensure the post is not visible in instance2's stream
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 0
 
 
 def test_post_content_and_delete():
@@ -222,7 +255,7 @@ def test_post_content_and_delete():
     create_id = instance1.new_note('hello')
     instance2_debug = instance2.debug()
     assert instance2_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
-    instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
+    assert instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
 
     # Ensure the post is visible in instance2's stream
     inbox_stream = instance2.stream_jsonfeed()
@@ -232,7 +265,7 @@ def test_post_content_and_delete():
     instance1.delete(f'{create_id}/activity')
     instance2_debug = instance2.debug()
     assert instance2_debug['inbox'] == 4  # An Follow, Accept and Create and Delete activity should be there
-    instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
+    assert instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
 
     # Ensure the post has been delete from instance2's stream
     inbox_stream = instance2.stream_jsonfeed()
@@ -359,3 +392,42 @@ def test_post_content_and_boost_unboost():
     note = instance1.outbox_get(f'{create_id}/activity')
     assert 'shares' in note
     assert len(note['shares']['items']) == 0
+
+
+def test_post_content_and_post_reply():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    instance1.follow(instance2)
+    instance2.follow(instance1)
+
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 0
+
+    instance1_create_id = instance1.new_note('hello')
+    instance2_debug = instance2.debug()
+    assert instance2_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
+    assert instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
+
+    # Ensure the post is visible in instance2's stream
+    instance2_inbox_stream = instance2.stream_jsonfeed()
+    assert len(instance2_inbox_stream['items']) == 1
+    assert instance2_inbox_stream['items'][0]['id'] == instance1_create_id
+
+    instance2_create_id = instance2.new_note(f'hey @instance1@{instance1.docker_url}', reply=f'{instance1_create_id}/activity')
+    instance2_debug = instance2.debug()
+    assert instance2_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
+    assert instance2_debug['outbox'] == 3  # We've sent a Accept and a Follow and a Create  activity
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
+    assert instance1_debug['outbox'] == 3  # We've sent a Accept and a Follow and a Create  activity
+
+    instance1_inbox_stream = instance1.stream_jsonfeed()
+    assert len(instance1_inbox_stream['items']) == 1
+    assert instance1_inbox_stream['items'][0]['id'] == instance2_create_id
+
+    # TODO(tsileo): find the activity and check the `replies` collection
+
+
+# TODO(tsileo):
+# def test_post_content_and_post_reply_and_delete():
