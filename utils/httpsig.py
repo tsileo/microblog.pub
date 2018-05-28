@@ -8,12 +8,15 @@ from urllib.parse import urlparse
 from typing import Any, Dict
 import base64
 import hashlib
+import logging
 
 from flask import request
 from requests.auth import AuthBase
 
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
+
+logger = logging.getLogger(__name__)
 
 
 def _build_signed_string(signed_headers: str, method: str, path: str, headers: Any, body_digest: str) -> str:
@@ -51,6 +54,7 @@ def _body_digest() -> str:
 
 def verify_request(actor_service) -> bool:
     hsig = _parse_sig_header(request.headers.get('Signature'))
+    logger.debug(f'hsig={hsig}')
     signed_string = _build_signed_string(hsig['headers'], request.method, request.path, request.headers, _body_digest())
     _, rk = actor_service.get_public_key(hsig['keyId'])
     return _verify_h(signed_string, base64.b64decode(hsig['signature']), rk)
@@ -62,6 +66,7 @@ class HTTPSigAuth(AuthBase):
         self.privkey = privkey
 
     def __call__(self, r):
+        logger.info(f'keyid={self.keyid}')
         host = urlparse(r.url).netloc
         bh = hashlib.new('sha256')
         bh.update(r.body.encode('utf-8'))
@@ -79,5 +84,6 @@ class HTTPSigAuth(AuthBase):
         headers = {
             'Signature': f'keyId="{self.keyid}",algorithm="rsa-sha256",headers="{sigheaders}",signature="{sig}"'
         }
+        logger.info(f'signed request headers={headers}')
         r.headers.update(headers)
         return r

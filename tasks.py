@@ -15,7 +15,7 @@ from utils.httpsig import HTTPSigAuth
 from utils.opengraph import fetch_og_metadata
 
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 app = Celery('tasks', broker=os.getenv('MICROBLOGPUB_AMQP_BROKER', 'pyamqp://guest@localhost//'))
 # app = Celery('tasks', broker='pyamqp://guest@rabbitmq//')
 SigAuth = HTTPSigAuth(ID+'#main-key', KEY.privkey)
@@ -31,7 +31,6 @@ def post_to_inbox(self, payload, to):
             'Accept': HEADERS[1],
             'User-Agent': USER_AGENT,    
         })
-        print(resp)
         log.info('resp=%s', resp)
         log.info('resp_body=%s', resp.text)
         resp.raise_for_status()

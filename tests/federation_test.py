@@ -68,6 +68,20 @@ class Instance(object):
         time.sleep(self._create_delay)
         return resp.headers.get('microblogpub-created-activity')
 
+    def boost(self, activity_id):
+        resp = self.session.get(f'{self.host_url}/api/boost', params={'id': activity_id})
+        assert resp.status_code == 201
+
+        time.sleep(self._create_delay)
+        return resp.headers.get('microblogpub-created-activity')
+
+    def like(self, activity_id):
+        resp = self.session.get(f'{self.host_url}/api/like', params={'id': activity_id})
+        assert resp.status_code == 201
+
+        time.sleep(self._create_delay)
+        return resp.headers.get('microblogpub-created-activity')
+
     def undo(self, oid: str) -> None:
         resp = self.session.get(f'{self.host_url}/api/undo', params={'id': oid})
         assert resp.status_code == 201
@@ -94,6 +108,11 @@ class Instance(object):
 
     def outbox(self):
         resp = self.session.get(f'{self.host_url}/following', headers={'Accept': 'application/activity+json'})
+        resp.raise_for_status()
+        return resp.json()
+
+    def outbox_get(self, aid):
+        resp = self.session.get(aid.replace(self.docker_url, self.host_url), headers={'Accept': 'application/activity+json'})
         resp.raise_for_status()
         return resp.json()
 
@@ -163,6 +182,7 @@ def test_follow_unfollow():
     assert instance2_debug['inbox'] == 2  # An Follow and Undo activity should be there
     assert instance2_debug['outbox'] == 1  # We've sent a Accept activity
 
+
 def test_post_content():
     instance1, instance2 = _instances()
     # Instance1 follows instance2
@@ -181,3 +201,125 @@ def test_post_content():
     inbox_stream = instance2.stream_jsonfeed()
     assert len(inbox_stream['items']) == 1
     assert inbox_stream['items'][0]['id'] == create_id
+
+
+def test_post_content_and_like():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    instance1.follow(instance2)
+    instance2.follow(instance1)
+
+    create_id = instance1.new_note('hello')
+
+    # Ensure the post is visible in instance2's stream
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 1
+    assert inbox_stream['items'][0]['id'] == create_id
+
+    # Now, instance2 like the note
+    like_id = instance2.like(f'{create_id}/activity')
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 3  # Follow, Accept and Like
+    assert instance1_debug['outbox'] == 3  # Folllow, Accept, and Create
+
+    note = instance1.outbox_get(f'{create_id}/activity')
+    assert 'likes' in note
+    assert len(note['likes']['items']) == 1
+    assert note['likes']['items'][0]['id'] == like_id
+
+def test_post_content_and_like_unlike():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    instance1.follow(instance2)
+    instance2.follow(instance1)
+
+    create_id = instance1.new_note('hello')
+
+    # Ensure the post is visible in instance2's stream
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 1
+    assert inbox_stream['items'][0]['id'] == create_id
+
+    # Now, instance2 like the note
+    like_id = instance2.like(f'{create_id}/activity')
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 3  # Follow, Accept and Like
+    assert instance1_debug['outbox'] == 3  # Folllow, Accept, and Create
+
+    note = instance1.outbox_get(f'{create_id}/activity')
+    assert 'likes' in note
+    assert len(note['likes']['items']) == 1
+    assert note['likes']['items'][0]['id'] == like_id
+
+    instance2.undo(like_id)
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 4  # Follow, Accept and Like and Undo
+    assert instance1_debug['outbox'] == 3  # Folllow, Accept, and Create
+
+    note = instance1.outbox_get(f'{create_id}/activity')
+    assert 'likes' in note
+    assert len(note['likes']['items']) == 0
+
+def test_post_content_and_boost():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    instance1.follow(instance2)
+    instance2.follow(instance1)
+
+    create_id = instance1.new_note('hello')
+
+    # Ensure the post is visible in instance2's stream
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 1
+    assert inbox_stream['items'][0]['id'] == create_id
+
+    # Now, instance2 like the note
+    boost_id = instance2.boost(f'{create_id}/activity')
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 3  # Follow, Accept and Announce
+    assert instance1_debug['outbox'] == 3  # Folllow, Accept, and Create
+
+    note = instance1.outbox_get(f'{create_id}/activity')
+    assert 'shares' in note
+    assert len(note['shares']['items']) == 1
+    assert note['shares']['items'][0]['id'] == boost_id
+
+
+def test_post_content_and_boost_unboost():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    instance1.follow(instance2)
+    instance2.follow(instance1)
+
+    create_id = instance1.new_note('hello')
+
+    # Ensure the post is visible in instance2's stream
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 1
+    assert inbox_stream['items'][0]['id'] == create_id
+
+    # Now, instance2 like the note
+    boost_id = instance2.boost(f'{create_id}/activity')
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 3  # Follow, Accept and Announce
+    assert instance1_debug['outbox'] == 3  # Folllow, Accept, and Create
+
+    note = instance1.outbox_get(f'{create_id}/activity')
+    assert 'shares' in note
+    assert len(note['shares']['items']) == 1
+    assert note['shares']['items'][0]['id'] == boost_id
+
+    instance2.undo(boost_id)
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 4  # Follow, Accept and Announce and Undo
+    assert instance1_debug['outbox'] == 3  # Folllow, Accept, and Create
+
+    note = instance1.outbox_get(f'{create_id}/activity')
+    assert 'shares' in note
+    assert len(note['shares']['items']) == 0

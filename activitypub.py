@@ -251,16 +251,19 @@ class BaseActivity(object):
         self.__obj: BaseActivity = p
         return p
 
-    def _to_dict(self, data: ObjectType) -> ObjectType:
-        return data
-
-    def to_dict(self, embed: bool = False) -> ObjectType:
+    def to_dict(self, embed: bool = False, embed_object_id_only: bool = False) -> ObjectType:
         data = dict(self._data)
         if embed:
             for k in ['@context', 'signature']:
                 if k in data:
                     del(data[k])
-        return self._to_dict(data)
+        if data.get('object') and embed_object_id_only and isinstance(data['object'], dict):
+            try:
+                data['object'] = data['object']['id']
+            except KeyError:
+                raise BadActivityError('embedded object does not have an id')
+
+        return data
 
     def get_actor(self) -> 'BaseActivity':
         actor = self._data.get('actor')
@@ -424,11 +427,6 @@ class Person(BaseActivity):
     def _verify(self) -> None:
         ACTOR_SERVICE.get(self._data['id'])
 
-    def _to_dict(self, data):
-        # if 'icon' in data:
-        #     data['icon'] = data['icon'].to_dict()
-        return data
-
 
 class Block(BaseActivity):
     ACTIVITY_TYPE = ActivityType.BLOCK
@@ -568,12 +566,19 @@ class Like(BaseActivity):
     def _process_from_inbox(self):
         obj = self.get_object()
         # Update the meta counter if the object is published by the server
-        DB.outbox.update_one({'activity.object.id': obj.id}, {'$inc': {'meta.count_like': 1}})
+        DB.outbox.update_one({'activity.object.id': obj.id}, {
+            '$inc': {'meta.count_like': 1},
+            '$addToSet': {'meta.col_likes': self.to_dict(embed=True, embed_object_id_only=True)},
+        })
+        # XXX(tsileo): notification??
 
     def _undo_inbox(self) -> None:
         obj = self.get_object()
         # Update the meta counter if the object is published by the server
-        DB.outbox.update_one({'activity.object.id': obj.id}, {'$inc': {'meta.count_like': -1}})
+        DB.outbox.update_one({'activity.object.id': obj.id}, {
+            '$inc': {'meta.count_like': -1},
+            '$pull': {'meta.col_likes': {'id': self.id}},
+        })
 
     def _undo_should_purge_cache(self) -> bool:
         # If a like coutn was decremented, we need to purge the application cache
@@ -582,19 +587,26 @@ class Like(BaseActivity):
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]):
         obj = self.get_object()
         # Unlikely, but an actor can like it's own post
-        DB.outbox.update_one({'activity.object.id': obj.id}, {'$inc': {'meta.count_like': 1}})
+        DB.outbox.update_one({'activity.object.id': obj.id}, {
+            '$inc': {'meta.count_like': 1},
+            '$addToSet': {'meta.col_likes': self.to_dict(embed=True, embed_object_id_only=True)},
+        })
 
+        # Keep track of the like we just performed
         DB.inbox.update_one({'activity.object.id': obj.id}, {'$set': {'meta.liked': obj_id}})
 
     def _undo_outbox(self) -> None:
         obj = self.get_object()
         # Unlikely, but an actor can like it's own post
-        DB.outbox.update_one({'activity.object.id': obj.id}, {'$inc': {'meta.count_like': -1}})
+        DB.outbox.update_one({'activity.object.id': obj.id}, {
+            '$inc': {'meta.count_like': -1},
+            '$pull': {'meta.col_likes': {'id': self.id}},
+        })
 
         DB.inbox.update_one({'activity.object.id': obj.id}, {'$set': {'meta.liked': False}})
 
     def build_undo(self) -> BaseActivity:
-        return Undo(object=self.to_dict(embed=True))
+        return Undo(object=self.to_dict(embed=True, embed_object_id_only=True))
 
 
 class Announce(BaseActivity):
@@ -613,7 +625,9 @@ class Announce(BaseActivity):
     def _process_from_inbox(self) -> None:
         if isinstance(self._data['object'], str) and not self._data['object'].startswith('http'):
             # TODO(tsileo): actually drop it without storing it and better logging, also move the check somewhere else
-            print(f'received an Annouce referencing an OStatus notice ({self._data["object"]}), dropping the message')
+            logger.warn(
+                f'received an Annouce referencing an OStatus notice ({self._data["object"]}), dropping the message'
+            )
             return
         # Save/cache the object, and make it part of the stream so we can fetch it
         if isinstance(self._data['object'], str):
@@ -626,12 +640,18 @@ class Announce(BaseActivity):
             obj = parse_activity(raw_obj)
         else:
             obj = self.get_object()
-        DB.outbox.update_one({'activity.object.id': obj.id}, {'$inc': {'meta.count_boost': 1}})
 
+        DB.outbox.update_one({'activity.object.id': obj.id}, {
+            '$inc': {'meta.count_boost': 1},
+            '$addToSet': {'meta.col_shares': self.to_dict(embed=True, embed_object_id_only=True)},
+        })
     def _undo_inbox(self) -> None:
         obj = self.get_object()
-        DB.inbox.update_one({'remote_id': obj.id}, {'$set': {'meta.undo': True}})
-        DB.outbox.update_one({'activity.object.id':  obj.id}, {'$inc': {'meta.count_boost': -1}})
+        # Update the meta counter if the object is published by the server
+        DB.outbox.update_one({'activity.object.id': obj.id}, {
+            '$inc': {'meta.count_boost': -1},
+            '$pull': {'meta.col_shares': {'id': self.id}},
+        })
 
     def _undo_should_purge_cache(self) -> bool:
         # If a like coutn was decremented, we need to purge the application cache
@@ -969,6 +989,14 @@ def parse_collection(payload: Optional[Dict[str, Any]] = None, url: Optional[str
 
     # Go through all the pages
     return activitypub_utils.parse_collection(payload, url)
+
+
+def embed_collection(data):
+    return {
+        "type": "Collection",
+        "totalItems": len(data),
+        "items": data,
+    }
 
 
 def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, col_name=None):

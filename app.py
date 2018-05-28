@@ -35,6 +35,7 @@ import activitypub
 import config
 from activitypub import ActivityType
 from activitypub import clean_activity
+from activitypub import embed_collection
 from utils.content_helper import parse_markdown
 from config import KEY
 from config import DB
@@ -56,9 +57,12 @@ from utils.key import get_secret_key
 from utils.webfinger import get_remote_follow_template
 from utils.webfinger import get_actor_url
 
+from typing import Dict, Any
  
 app = Flask(__name__)
 app.secret_key = get_secret_key('flask')
+
+logger = logging.getLogger(__name__)
 
 # Hook up Flask logging with gunicorn
 gunicorn_logger = logging.getLogger('gunicorn.error')
@@ -435,6 +439,25 @@ def webfinger():
         headers={'Content-Type': 'application/jrd+json; charset=utf-8' if not app.debug else 'application/json'},
     )
 
+
+def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
+    if 'col_likes' in raw_doc.get('meta', {}):
+        col_likes = raw_doc['meta']['col_likes']
+        if raw_doc['activity']['type'] == ActivityType.CREATE.value:
+            raw_doc['activity']['object']['likes'] = embed_collection(col_likes)
+    if 'col_shares' in raw_doc.get('meta', {}):
+        col_shares = raw_doc['meta']['col_shares']
+        if raw_doc['activity']['type'] == ActivityType.CREATE.value:
+            raw_doc['activity']['object']['shares'] = embed_collection(col_shares)
+
+    return raw_doc
+
+
+def activity_from_doc(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
+    raw_doc = add_extra_collection(raw_doc)
+    return clean_activity(raw_doc['activity'])
+
+
 @app.route('/outbox', methods=['GET', 'POST'])      
 def outbox():                                       
     if request.method == 'GET':                     
@@ -444,7 +467,7 @@ def outbox():
         # FIXME(tsileo): filter deleted, add query support for build_ordered_collection
         q = {
             'meta.deleted': False,
-            'type': {'$in': [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+            #'type': {'$in': [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         }
         return jsonify(**activitypub.build_ordered_collection(
             DB.outbox,
@@ -477,7 +500,7 @@ def outbox():
 @app.route('/outbox/<item_id>')
 def outbox_detail(item_id):
     doc = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
-    return jsonify(**clean_activity(doc['activity']))
+    return jsonify(**activity_from_doc(doc))
 
 
 @app.route('/outbox/<item_id>/activity')
@@ -485,10 +508,11 @@ def outbox_activity(item_id):
     data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
     if not data:
         abort(404)
-    obj = data['activity']
+    obj = activity_from_doc(data)
     if obj['type'] != ActivityType.CREATE.value:
         abort(404)
-    return jsonify(**clean_activity(obj['object']))
+    return jsonify(**obj['object'])
+
 
 @app.route('/admin', methods=['GET'])
 @login_required
@@ -597,23 +621,38 @@ def notifications():
         cursor=cursor,
     )
 
-@app.route('/ui/boost')
-@login_required
-def ui_boost():
+
+@app.route('/api/boost')
+@api_required
+def api_boost():
     oid = request.args.get('id')
     obj = activitypub.parse_activity(OBJECT_SERVICE.get(oid))
     announce = obj.build_announce()
     announce.post_to_outbox()
-    return redirect(request.args.get('redirect'))
+    if request.args.get('redirect'):
+        return redirect(request.args.get('redirect'))
+    return Response(
+        status=201,
+        headers={'Microblogpub-Created-Activity': announce.id},
+    )
 
-@app.route('/ui/like')
-@login_required
-def ui_like():
+@app.route('/api/like')
+@api_required
+def api_like():
+    # FIXME(tsileo): ensure a Note and not a Create is given
     oid = request.args.get('id')
     obj = activitypub.parse_activity(OBJECT_SERVICE.get(oid))
+    if not obj:
+        raise ValueError(f'unkown {oid} object')
     like = obj.build_like()
     like.post_to_outbox()
-    return redirect(request.args.get('redirect'))
+    if request.args.get('redirect'):
+        return redirect(request.args.get('redirect'))
+    return Response(
+        status=201,
+        headers={'Microblogpub-Created-Activity': like.id},
+    )
+
 
 @app.route('/api/undo', methods=['GET', 'POST'])
 @api_required
@@ -702,19 +741,20 @@ def inbox():
         ))                                          
 
     data = request.get_json(force=True)             
-    print(data)                                     
+    logger.debug(f'req_headers={request.headers}')
+    logger.debug(f'raw_data={data}')
     try:                                            
         print(verify_request(ACTOR_SERVICE))        
     except Exception:                                         
-        print('failed to verify request, trying to verify the payload by fetching the remote')
+        logger.exception('failed to verify request, trying to verify the payload by fetching the remote')
         try:
             data = OBJECT_SERVICE.get(data['id'])
         except Exception:
-            print(f'failed to fetch remote id at {data["id"]}')
+            logger.exception(f'failed to fetch remote id at {data["id"]}')
             abort(422)
 
     activity = activitypub.parse_activity(data)                 
-    print(activity)                                 
+    logger.debug(f'inbox activity={activity}/{data}')                                 
     activity.process_from_inbox()                   
 
     return Response(                                

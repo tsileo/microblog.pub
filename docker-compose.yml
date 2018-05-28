@@ -19,7 +19,9 @@ services:
      - mongo
      - rmq
     command: 'celery worker -l info -A tasks'
-    environment:
+    volumes:
+     - "${CONFIG_DIR}:/app/config"
+     environment:
      - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
   mongo:
