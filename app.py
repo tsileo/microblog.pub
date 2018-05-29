@@ -83,7 +83,7 @@ JWT_SECRET = get_secret_key('jwt')
 JWT = JSONWebSignatureSerializer(JWT_SECRET)
 
 def _admin_jwt_token() -> str:
-    return JWT.dumps({'me': 'ADMIN', 'ts': datetime.now().timestamp()}).decode('utf-8')
+    return JWT.dumps({'me': 'ADMIN', 'ts': datetime.now().timestamp()}).decode('utf-8')  # type: ignore
 
 ADMIN_API_KEY = get_secret_key('admin_api_key', _admin_jwt_token)
 

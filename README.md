@@ -91,9 +91,11 @@ $ MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py flask run -p 5005 --with-threads
 
 The user API is used by the admin UI (and requires a CSRF token when used with a regular user session), but it can also be accessed with an API key.
 
+All the examples are using [HTTPie](https://httpie.org/).
+
 ### POST /api/note/delete{?id}
 
-Delete the given note `id`.
+Deletes the given note `id`.
 
 Answers a **201** (Created) status code.
 
