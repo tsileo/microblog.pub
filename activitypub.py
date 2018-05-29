@@ -107,7 +107,7 @@ class BaseActivity(object):
 
         # Initialize the object
         self._data: Dict[str, Any] = {'type': self.ACTIVITY_TYPE.value}
-        logger.debug(f'initializing a {self.ACTIVITY_TYPE.value} activity')
+        logger.debug(f'initializing a {self.ACTIVITY_TYPE.value} activity: {kwargs}')
 
         if 'id' in kwargs:
             self._data['id'] = kwargs.pop('id')
@@ -687,15 +687,22 @@ class Delete(BaseActivity):
     ACTIVITY_TYPE = ActivityType.DELETE
     ALLOWED_OBJECT_TYPES = [ActivityType.NOTE, ActivityType.TOMBSTONE]
 
-    def _recipients(self) -> List[str]:
+    def _get_actual_object(self) -> BaseActivity:
         obj = self.get_object()
         if obj.type_enum == ActivityType.TOMBSTONE:
             obj = parse_activity(OBJECT_SERVICE.get(obj.id))
+        return obj
+
+    def _recipients(self) -> List[str]:
+        obj = self._get_actual_object()
         return obj._recipients()
 
     def _process_from_inbox(self) -> None:
         DB.inbox.update_one({'activity.object.id': self.get_object().id}, {'$set': {'meta.deleted': True}})
-        # TODO(tsileo): also delete copies stored in parents' `meta.replies`
+        obj = self._get_actual_object()
+        if obj.type_enum == ActivityType.NOTE:
+            obj._delete_from_threads()
+
         # TODO(tsileo): also purge the cache if it's a reply of a published activity
 
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
@@ -773,36 +780,60 @@ class Create(BaseActivity):
 
         return recipients
 
-    def _process_from_inbox(self):
+    def _update_threads(self) -> None:
+        logger.debug('_update_threads hook')
         obj = self.get_object()
 
-        tasks.fetch_og.delay('INBOX', self.id)
+        # TODO(tsileo): re-enable me
+        # tasks.fetch_og.delay('INBOX', self.id)
 
-        in_reply_to = obj.inReplyTo
-        if in_reply_to:
-            parent = DB.inbox.find_one({'activity.type': 'Create', 'activity.object.id': in_reply_to})
-            if not parent:
-                DB.outbox.update_one(
-                    {'activity.object.id': in_reply_to},
-                    {'$inc': {'meta.count_reply': 1}},
-                )
-                return
+        threads = []
+        reply = obj.get_local_reply()
+        logger.debug(f'initial_reply={reply}')
+        reply_id = None
+        direct_reply = 1
+        while reply is not None:
+            if not DB.inbox.find_one_and_update({'activity.object.id': reply.id}, {
+                '$inc': {
+                    'meta.count_reply': 1,
+                    'meta.count_direct_reply': direct_reply,
+                },
+            }):
+                DB.outbox.update_one({'activity.object.id': reply.id}, {
+                    '$inc': {
+                        'meta.count_reply': 1,
+                        'meta.count_direct_reply': direct_reply,
+                    },
+                })
 
-            # If the note is a "reply of a reply" update the parent message
-            # TODO(tsileo): review this code
-            while parent:
-                DB.inbox.update_one({'_id': parent['_id']}, {'$push': {'meta.replies': self.to_dict()}})
-                in_reply_to = parent.get('activity', {}).get('object', {}).get('inReplyTo')
-                if in_reply_to:
-                    parent = DB.inbox.find_one({'activity.type': 'Create', 'activity.object.id': in_reply_to})
-                    if parent is None:
-                        # The reply is a note from the outbox
-                        DB.outbox.update_one(
-                            {'activity.object.id': in_reply_to},
-                            {'$inc': {'meta.count_reply': 1}},
-                        )
-                else:
-                    parent = None
+            direct_reply = 0
+            reply_id = reply.id
+            reply = reply.get_local_reply()
+            logger.debug(f'next_reply={reply}')
+            if reply:
+                # Only append to threads if it's not the root
+                threads.append(reply_id)
+
+        if reply_id:
+            if not DB.inbox.find_one_and_update({'activity.object.id': obj.id}, {
+                '$set': {
+                    'meta.thread_parents': threads,
+                    'meta.thread_root_parent': reply_id,
+                },
+            }):
+                DB.outbox.update_one({'activity.object.id': obj.id}, {
+                    '$set': {
+                        'meta.thread_parents': threads,
+                        'meta.thread_root_parent': reply_id,
+                    },
+                })
+        logger.debug('_update_threads done')
+
+    def _process_from_inbox(self) -> None:
+        self._update_threads()
+
+    def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
+        self._update_threads()
 
     def _should_purge_cache(self) -> bool:
         # TODO(tsileo): handle reply of a reply...
@@ -828,16 +859,8 @@ class Note(BaseActivity):
         # Remove the `actor` field as `attributedTo` is used for `Note` instead
         if 'actor' in self._data:
             del(self._data['actor'])
-        # FIXME(tsileo): use kwarg
-        # TODO(tsileo): support mention tag
-        # TODO(tisleo): implement the tag endpoint
         if 'sensitive' not in kwargs:
             self._data['sensitive'] = False
-
-        # FIXME(tsileo): add the tag in CC
-        # for t in kwargs.get('tag', []):
-        #     if t['type'] == 'Mention':
-        #         cc -> c['href']
 
     def _recipients(self) -> List[str]:
         # TODO(tsileo): audience support?
@@ -854,6 +877,51 @@ class Note(BaseActivity):
                 recipients.extend(_to_list(self._data[field]))
 
         return recipients
+
+    def _delete_from_threads(self) -> None:
+        logger.debug('_delete_from_threads hook')
+
+        reply = self.get_local_reply()
+        logger.debug(f'initial_reply={reply}')
+        direct_reply = -1
+        while reply is not None:
+            if not DB.inbox.find_one_and_update({'activity.object.id': reply.id}, {
+                '$inc': {
+                    'meta.count_reply': -1,
+                    'meta.count_direct_reply': direct_reply,
+                },
+            }):
+                DB.outbox.update_one({'activity.object.id': reply.id}, {
+                    '$inc': {
+                        'meta.count_reply': 1,
+                        'meta.count_direct_reply': direct_reply,
+                    },
+                })
+
+            direct_reply = 0
+            reply = reply.get_local_reply()
+            logger.debug(f'next_reply={reply}')
+
+        logger.debug('_delete_from_threads done')
+        return None
+
+    def get_local_reply(self) -> Optional[BaseActivity]:
+        "Find the note reply if any."""
+        in_reply_to = self.inReplyTo
+        if not in_reply_to:
+            # This is the root comment
+            return None
+
+        inbox_parent = DB.inbox.find_one({'activity.type': 'Create', 'activity.object.id': in_reply_to})
+        if inbox_parent:
+            return parse_activity(inbox_parent['activity']['object'])
+
+        outbox_parent = DB.outbox.find_one({'activity.type': 'Create', 'activity.object.id': in_reply_to})
+        if outbox_parent:
+            return parse_activity(outbox_parent['activity']['object'])
+
+        # The parent is no stored on this instance
+        return None
 
     def build_create(self) -> BaseActivity:
         """Wraps an activity in a Create activity."""
@@ -872,10 +940,10 @@ class Note(BaseActivity):
 
     def build_announce(self) -> BaseActivity:
         return Announce(
-                object=self.id,
-                to=[AS_PUBLIC],
-                cc=[ID+'/followers', self.attributedTo],
-                published=datetime.utcnow().replace(microsecond=0).isoformat() + 'Z',
+            object=self.id,
+            to=[AS_PUBLIC],
+            cc=[ID+'/followers', self.attributedTo],
+            published=datetime.utcnow().replace(microsecond=0).isoformat() + 'Z',
         )
 
     def build_delete(self) -> BaseActivity:

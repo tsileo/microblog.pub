@@ -5,6 +5,7 @@ requests
 markdown
 python-u2flib-server
 Flask
+Flask-WTF
 Celery
 pymongo
 pyld

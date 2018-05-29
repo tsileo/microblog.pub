@@ -30,6 +30,7 @@ from passlib.hash import bcrypt
 from u2flib_server import u2f
 from urllib.parse import urlparse, urlencode
 from werkzeug.utils import secure_filename
+from flask_wtf.csrf import CSRFProtect
 
 import activitypub
 import config
@@ -57,10 +58,17 @@ from utils.key import get_secret_key
 from utils.webfinger import get_remote_follow_template
 from utils.webfinger import get_actor_url
 
+
+
+
 from typing import Dict, Any
  
 app = Flask(__name__)
 app.secret_key = get_secret_key('flask')
+app.config.update(
+    WTF_CSRF_CHECK_DEFAULT=False,
+)
+csrf = CSRFProtect(app)
 
 logger = logging.getLogger(__name__)
 
@@ -441,15 +449,21 @@ def webfinger():
 
 
 def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
+    if raw_doc['activity']['type'] != ActivityType.CREATE.value:
+        return raw_doc
+
     if 'col_likes' in raw_doc.get('meta', {}):
         col_likes = raw_doc['meta']['col_likes']
-        if raw_doc['activity']['type'] == ActivityType.CREATE.value:
-            raw_doc['activity']['object']['likes'] = embed_collection(col_likes)
+        raw_doc['activity']['object']['likes'] = embed_collection(col_likes)
+
     if 'col_shares' in raw_doc.get('meta', {}):
         col_shares = raw_doc['meta']['col_shares']
-        if raw_doc['activity']['type'] == ActivityType.CREATE.value:
-            raw_doc['activity']['object']['shares'] = embed_collection(col_shares)
+        raw_doc['activity']['object']['shares'] = embed_collection(col_shares)
 
+    if 'count_direct_reply' in raw_doc.get('meta', {}):
+        # FIXME(tsileo): implements the collection handler
+        raw_doc['activity']['object']['replies'] = {'type': 'Collection', 'totalItems': raw_doc['meta']['count_direct_reply']}
+ 
     return raw_doc
 
 

@@ -297,6 +297,7 @@ def test_post_content_and_like():
     assert len(note['likes']['items']) == 1
     assert note['likes']['items'][0]['id'] == like_id
 
+
 def test_post_content_and_like_unlike():
     instance1, instance2 = _instances()
     # Instance1 follows instance2
@@ -331,6 +332,7 @@ def test_post_content_and_like_unlike():
     note = instance1.outbox_get(f'{create_id}/activity')
     assert 'likes' in note
     assert len(note['likes']['items']) == 0
+
 
 def test_post_content_and_boost():
     instance1, instance2 = _instances()
@@ -426,8 +428,54 @@ def test_post_content_and_post_reply():
     assert len(instance1_inbox_stream['items']) == 1
     assert instance1_inbox_stream['items'][0]['id'] == instance2_create_id
 
-    # TODO(tsileo): find the activity and check the `replies` collection
+    instance1_note = instance1.outbox_get(f'{instance1_create_id}/activity')
+    assert 'replies' in instance1_note
+    assert instance1_note['replies']['totalItems'] == 1
+    # TODO(tsileo): inspect the `replies` collection
 
 
-# TODO(tsileo):
-# def test_post_content_and_post_reply_and_delete():
+def test_post_content_and_post_reply_and_delete():
+    instance1, instance2 = _instances()
+    # Instance1 follows instance2
+    instance1.follow(instance2)
+    instance2.follow(instance1)
+
+    inbox_stream = instance2.stream_jsonfeed()
+    assert len(inbox_stream['items']) == 0
+
+    instance1_create_id = instance1.new_note('hello')
+    instance2_debug = instance2.debug()
+    assert instance2_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
+    assert instance2_debug['outbox'] == 2  # We've sent a Accept and a Follow  activity
+
+    # Ensure the post is visible in instance2's stream
+    instance2_inbox_stream = instance2.stream_jsonfeed()
+    assert len(instance2_inbox_stream['items']) == 1
+    assert instance2_inbox_stream['items'][0]['id'] == instance1_create_id
+
+    instance2_create_id = instance2.new_note(f'hey @instance1@{instance1.docker_url}', reply=f'{instance1_create_id}/activity')
+    instance2_debug = instance2.debug()
+    assert instance2_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
+    assert instance2_debug['outbox'] == 3  # We've sent a Accept and a Follow and a Create  activity
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 3  # An Follow, Accept and Create activity should be there
+    assert instance1_debug['outbox'] == 3  # We've sent a Accept and a Follow and a Create  activity
+
+    instance1_inbox_stream = instance1.stream_jsonfeed()
+    assert len(instance1_inbox_stream['items']) == 1
+    assert instance1_inbox_stream['items'][0]['id'] == instance2_create_id
+
+    instance1_note = instance1.outbox_get(f'{instance1_create_id}/activity')
+    assert 'replies' in instance1_note
+    assert instance1_note['replies']['totalItems'] == 1
+
+    instance2.delete(f'{instance2_create_id}/activity')
+
+    instance1_debug = instance1.debug()
+    assert instance1_debug['inbox'] == 4  # An Follow, Accept and Create and Delete activity should be there
+    assert instance1_debug['outbox'] == 3  # We've sent a Accept and a Follow and a Create  activity
+
+    instance1_note = instance1.outbox_get(f'{instance1_create_id}/activity')
+    assert 'replies' in instance1_note
+    assert instance1_note['replies']['totalItems'] == 0
