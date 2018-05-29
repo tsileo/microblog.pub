@@ -25,3 +25,4 @@ script:
  - python -m pytest -v --ignore data -k integration
  # Federation tests (with two local instances)
  - python -m pytest -v -s --ignore data -k federation
+ - docker logs instance1_web_1

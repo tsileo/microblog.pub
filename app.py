@@ -69,7 +69,7 @@ app.secret_key = get_secret_key('flask')
 app.config.update(
     WTF_CSRF_CHECK_DEFAULT=False,
 )
-csrf = CSRFProtect(app)
+# csrf = CSRFProtect(app)
 
 logger = logging.getLogger(__name__)
 
@@ -668,7 +668,7 @@ def api_user_key():
 
 
 def _user_api_get_note():
-    if request.is_json():
+    if request.is_json:
         oid = request.json.get('id')
     else:
         oid = request.args.get('id') or request.form.get('id')
