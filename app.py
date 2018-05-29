@@ -57,8 +57,9 @@ from utils.httpsig import HTTPSigAuth, verify_request
 from utils.key import get_secret_key
 from utils.webfinger import get_remote_follow_template
 from utils.webfinger import get_actor_url
-
-
+from utils.errors import Error
+from utils.errors import UnexpectedActivityTypeError
+from utils.errors import BadActivityError
 
 
 from typing import Dict, Any
@@ -81,8 +82,10 @@ root_logger.setLevel(gunicorn_logger.level)
 JWT_SECRET = get_secret_key('jwt')
 JWT = JSONWebSignatureSerializer(JWT_SECRET)
 
-with open('config/jwt_token', 'wb+') as f:
-    f.write(JWT.dumps({'type': 'admin_token'}))  # type: ignore
+def _admin_jwt_token() -> str:
+    return JWT.dumps({'me': 'ADMIN', 'ts': datetime.now().timestamp()}).decode('utf-8')
+
+ADMIN_API_KEY = get_secret_key('admin_api_key', _admin_jwt_token)
 
 SIG_AUTH = HTTPSigAuth(ID+'#main-key', KEY.privkey)
 
@@ -208,15 +211,20 @@ def login_required(f):
 
 def _api_required():
     if session.get('logged_in'):
+        #if request.method not in ['GET', 'HEAD']:
+        #    # If a standard API request is made with a "login session", it must havw a CSRF token
+        #    csrf.protect()
         return
 
     # Token verification
     token = request.headers.get('Authorization', '').replace('Bearer ', '')
     if not token:
+        # IndieAuth token
         token = request.form.get('access_token', '')
 
     # Will raise a BadSignature on bad auth
     payload = JWT.loads(token)
+    logger.info(f'api call by {payload}')
 
 
 def api_required(f):
@@ -248,6 +256,23 @@ def is_api_request():
     if h in HEADERS or h == 'application/json':
         return True
     return False
+
+
+@app.errorhandler(ValueError)
+def handle_value_error(error):
+    logger.error(f'caught value error: {error!r}')
+    response = flask_jsonify(message=error.args[0])
+    response.status_code = 400
+    return response
+
+
+@app.errorhandler(Error)
+def handle_activitypub_error(error):
+    logger.error(f'caught activitypub error {error!r}')
+    response = flask_jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
+
 
 # App routes 
 
@@ -636,20 +661,43 @@ def notifications():
     )
 
 
-@app.route('/api/delete')
-@api_required
-def api_delete():
-    # FIXME(tsileo): ensure a Note and not a Create is given
-    oid = request.args.get('id')
-    obj = activitypub.parse_activity(OBJECT_SERVICE.get(oid))
-    delete = obj.build_delete()
-    delete.post_to_outbox()
+@app.route('/api/key')
+@login_required
+def api_user_key():
+    return flask_jsonify(api_key=ADMIN_API_KEY)
+
+
+def _user_api_get_note():
+    if request.is_json():
+        oid = request.json.get('id')
+    else:
+        oid = request.args.get('id') or request.form.get('id')
+
+    if not oid:
+        raise ValueError('missing id')
+
+    return activitypub.parse_activity(OBJECT_SERVICE.get(oid), expected=ActivityType.NOTE)
+
+
+def _user_api_response(**kwargs):
     if request.args.get('redirect'):
         return redirect(request.args.get('redirect'))
-    return Response(
-        status=201,
-        headers={'Microblogpub-Created-Activity': delete.id},
-    )
+
+    resp = flask_jsonify(**kwargs)
+    resp.status_code = 201
+    return resp
+
+
+@app.route('/api/note/delete', methods=['POST'])
+@api_required
+def api_delete():
+    """API endpoint to delete a Note activity."""
+    note = _user_api_get_note()
+    delete = note.build_delete()
+    delete.post_to_outbox()
+
+    return _user_api_response(activity=delete.id)
+
 
 @app.route('/api/boost')
 @api_required

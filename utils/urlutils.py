@@ -5,11 +5,12 @@ import ipaddress
 from urllib.parse import urlparse
 
 from . import strtobool
+from .errors import Error
 
 logger = logging.getLogger(__name__)
 
 
-class InvalidURLError(Exception):
+class InvalidURLError(Error):
     pass
 
 

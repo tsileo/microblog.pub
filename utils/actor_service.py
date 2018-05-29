@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from Crypto.PublicKey import RSA
 
 from .urlutils import check_url
+from .errors import ActivityNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,9 @@ class ActorService(object):
             'Accept': 'application/activity+json',
             'User-Agent': self._user_agent,    
         })
+        if resp.status_code == 404:
+            raise ActivityNotFoundError(f'{actor_url} cannot be fetched, 404 not found error')
+
         resp.raise_for_status()
         return resp.json()
 

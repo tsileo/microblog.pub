@@ -2,14 +2,18 @@ import os
 import binascii
 
 from Crypto.PublicKey import RSA
+from typing import Callable
 
 KEY_DIR = 'config/'
 
 
-def get_secret_key(name:str) -> str:
+def _new_key() -> str:
+    return binascii.hexlify(os.urandom(32)).decode('utf-8')
+
+def get_secret_key(name: str, new_key: Callable[[], str] = _new_key) -> str:
     key_path = f'{KEY_DIR}{name}.key'
     if not os.path.exists(key_path):
-        k = binascii.hexlify(os.urandom(32)).decode('utf-8')
+        k = new_key()
         with open(key_path, 'w+') as f:
             f.write(k)
         return k

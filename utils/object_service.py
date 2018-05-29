@@ -2,6 +2,7 @@ import requests
 from urllib.parse import urlparse
 
 from .urlutils import check_url
+from .errors import ActivityNotFoundError
 
 
 class ObjectService(object):
@@ -20,6 +21,9 @@ class ObjectService(object):
             'Accept': 'application/activity+json',
             'User-Agent': self._user_agent,    
         })
+        if resp.status_code == 404:
+            raise ActivityNotFoundError(f'{object_id} cannot be fetched, 404 error not found')
+
         resp.raise_for_status()
         return resp.json()
 

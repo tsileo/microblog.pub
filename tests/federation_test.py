@@ -19,6 +19,7 @@ class Instance(object):
         self.docker_url = docker_url or host_url
         self.session = requests.Session()
         self._create_delay = 10
+        self._auth_headers = {}
 
     def _do_req(self, url, headers):
         url = url.replace(self.docker_url, self.host_url)
@@ -51,6 +52,8 @@ class Instance(object):
         resp = self.session.post(f'{self.host_url}/login', data={'pass': 'hello'})
         resp.raise_for_status()
         assert resp.status_code == 200
+        api_key = self.session.get(f'{self.host_url}/api/key').json().get('api_key')
+        self._auth_headers = {'Authorization': f'Bearer {api_key}'}
 
     def block(self, actor_url) -> None:
         # Instance1 follows instance2
@@ -95,11 +98,15 @@ class Instance(object):
         return resp.headers.get('microblogpub-created-activity')
 
     def delete(self, oid: str) -> None:
-        resp = self.session.get(f'{self.host_url}/api/delete', params={'id': oid})
+        resp = requests.post(
+                f'{self.host_url}/api/note/delete',
+                json={'id': oid},
+                headers=self._auth_headers,        
+        )
         assert resp.status_code == 201
 
         time.sleep(self._create_delay)
-        return resp.headers.get('microblogpub-created-activity')
+        return resp.json().get('activity')
 
     def undo(self, oid: str) -> None:
         resp = self.session.get(f'{self.host_url}/api/undo', params={'id': oid})

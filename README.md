@@ -87,6 +87,32 @@ $ docker-compose -f docker-compose-dev.yml up -d
 $ MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py flask run -p 5005 --with-threads
 ```
 
+## User API
+
+The user API is used by the admin UI (and requires a CSRF token when used with a regular user session), but it can also be accessed with an API key.
+
+### POST /api/note/delete{?id}
+
+Delete the given note `id`.
+
+Answers a **201** (Created) status code.
+
+You can pass the `id` via JSON, form data or query argument.
+
+#### Example
+
+```shell
+$ http POST https://microblog.pub/api/note/delete Authorization:'Bearer <token>' id=http://microblob.pub/outbox/<node_id>/activity
+```
+
+#### Response
+
+```json
+{
+    "activity": "https://microblog.pub/outbox/<delete_id>"
+}
+```
+
 ## Contributions
 
 PRs are welcome, please open an issue to start a discussion before your start any work.

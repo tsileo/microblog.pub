@@ -968,13 +968,18 @@ _ACTIVITY_TYPE_TO_CLS = {
 }
 
 
-def parse_activity(payload: ObjectType) -> BaseActivity:
+def parse_activity(payload: ObjectType, expected: Optional[ActivityType] = None) -> BaseActivity:
     t = ActivityType(payload['type'])
+
+    if expected and t != expected:
+        raise UnexpectedActivityTypeError(f'expected a {expected.name} activity, got a {payload["type"]}')
+
     if t not in _ACTIVITY_TYPE_TO_CLS:
-        raise ValueError('unsupported activity type')
+        raise BadActivityTypeError(f'unsupported activity type {payload["type"]}')
 
-    return _ACTIVITY_TYPE_TO_CLS[t](**payload)
+    activity = _ACTIVITY_TYPE_TO_CLS[t](**payload)
 
+    return activity
 
 def gen_feed():
     fg = FeedGenerator()
