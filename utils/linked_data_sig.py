@@ -6,6 +6,23 @@ from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 import base64
 
+from typing import Any, Dict
+
+
+# cache the downloaded "schemas", otherwise the library is super slow
+# (https://github.com/digitalbazaar/pyld/issues/70)
+_CACHE: Dict[str, Any] = {}
+LOADER = jsonld.requests_document_loader()
+
+def _caching_document_loader(url: str) -> Any:
+    if url in _CACHE:
+        return _CACHE[url]
+    resp = LOADER(url)
+    _CACHE[url] = resp
+    return resp
+
+jsonld.set_document_loader(_caching_document_loader)
+
 
 def options_hash(doc):
     doc = dict(doc['signature'])
