@@ -19,15 +19,9 @@ script:
  - docker-compose ps
  - WEB_PORT=5006 CONFIG_DIR=./tests/fixtures/instance1/config docker-compose -p instance1 -f docker-compose-tests.yml up -d
  - docker-compose -p instance1 -f docker-compose-tests.yml ps
- - docker inspect instance1_web_1
  - WEB_PORT=5007 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d
  - docker-compose -p instance2 -f docker-compose-tests.yml ps
  # Integration tests first
  - python -m pytest -v --ignore data -k integration
  # Federation tests (with two local instances)
- - curl http://localhost:5006
- - curl http://localhost:5007
- - pwd
- - ls -lR .
  - python -m pytest -v -s --ignore data -k federation
- - docker logs instance1_web_1
