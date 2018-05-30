@@ -51,6 +51,8 @@ from config import PASS
 from config import HEADERS
 from config import VERSION
 from config import DEBUG_MODE
+from config import JWT
+from config import ADMIN_API_KEY
 from config import _drop_db
 from config import custom_cache_purge_hook
 from utils.httpsig import HTTPSigAuth, verify_request
@@ -78,14 +80,6 @@ gunicorn_logger = logging.getLogger('gunicorn.error')
 root_logger = logging.getLogger()
 root_logger.handlers = gunicorn_logger.handlers
 root_logger.setLevel(gunicorn_logger.level)
-
-JWT_SECRET = get_secret_key('jwt')
-JWT = JSONWebSignatureSerializer(JWT_SECRET)
-
-def _admin_jwt_token() -> str:
-    return JWT.dumps({'me': 'ADMIN', 'ts': datetime.now().timestamp()}).decode('utf-8')  # type: ignore
-
-ADMIN_API_KEY = get_secret_key('admin_api_key', _admin_jwt_token)
 
 SIG_AUTH = HTTPSigAuth(ID+'#main-key', KEY.privkey)
 

@@ -3,9 +3,10 @@ import os
 import yaml
 from pymongo import MongoClient
 import requests
+from itsdangerous import JSONWebSignatureSerializer
 
 from utils import strtobool
-from utils.key import Key, KEY_DIR
+from utils.key import Key, KEY_DIR, get_secret_key
 from utils.actor_service import ActorService
 from utils.object_service import ObjectService
 
@@ -72,6 +73,16 @@ def _drop_db():
     mongo_client.drop_database(DB_NAME)
 
 KEY = Key(USERNAME, DOMAIN, create=True)
+
+
+JWT_SECRET = get_secret_key('jwt')
+JWT = JSONWebSignatureSerializer(JWT_SECRET)
+
+def _admin_jwt_token() -> str:
+    return JWT.dumps({'me': 'ADMIN', 'ts': datetime.now().timestamp()}).decode('utf-8')  # type: ignore
+
+ADMIN_API_KEY = get_secret_key('admin_api_key', _admin_jwt_token)
+
 
 ME = {
     "@context": [
