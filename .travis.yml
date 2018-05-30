@@ -24,6 +24,7 @@ script:
  # Integration tests first
  - python -m pytest -v --ignore data -k integration
  # Federation tests (with two local instances)
- - ls -lR /app
+ - pwd
+ - ls -lR .
  - python -m pytest -v -s --ignore data -k federation
  - docker logs instance1_web_1
