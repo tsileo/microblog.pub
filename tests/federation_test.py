@@ -19,7 +19,7 @@ class Instance(object):
         self.docker_url = docker_url or host_url
         self.session = requests.Session()
         self._create_delay = 10
-        with open(f'tests/fixtures/{name}/config/admin_api_key.key') as f:
+        with open(os.path.join(os.path.abspath(__file__), f'fixtures/{name}/config/admin_api_key.key')) as f:
             api_key = f.read()
         self._auth_headers = {'Authorization': f'Bearer {api_key}'}
 
