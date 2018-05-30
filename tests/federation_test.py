@@ -14,12 +14,14 @@ def resp2plaintext(resp):
 class Instance(object):
     """Test instance wrapper."""
 
-    def __init__(self, host_url, docker_url=None):
+    def __init__(self, name, host_url, docker_url=None):
         self.host_url = host_url
         self.docker_url = docker_url or host_url
         self.session = requests.Session()
         self._create_delay = 10
-        self._auth_headers = {}
+        with open(f'tests/fixtures/{name}/config/admin_api_key.key') as f:
+            api_key = f.read()
+        self._auth_headers = {'Authorization': f'Bearer {api_key}'}
 
     def _do_req(self, url, headers):
         url = url.replace(self.docker_url, self.host_url)
@@ -52,8 +54,6 @@ class Instance(object):
         resp = self.session.post(f'{self.host_url}/login', data={'pass': 'hello'})
         resp.raise_for_status()
         assert resp.status_code == 200
-        api_key = self.session.get(f'{self.host_url}/api/key').json().get('api_key')
-        self._auth_headers = {'Authorization': f'Bearer {api_key}'}
 
     def block(self, actor_url) -> None:
         # Instance1 follows instance2
@@ -149,10 +149,10 @@ class Instance(object):
 
 
 def _instances():
-    instance1 = Instance('http://localhost:5006', 'http://instance1_web_1:5005')
+    instance1 = Instance('instance1', 'http://localhost:5006', 'http://instance1_web_1:5005')
     instance1.ping()
 
-    instance2 = Instance('http://localhost:5007', 'http://instance2_web_1:5005')
+    instance2 = Instance('instance2', 'http://localhost:5007', 'http://instance2_web_1:5005')
     instance2.ping()
 
     # Login
