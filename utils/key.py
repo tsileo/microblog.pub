@@ -13,7 +13,7 @@ def _new_key() -> str:
     return binascii.hexlify(os.urandom(32)).decode('utf-8')
 
 def get_secret_key(name: str, new_key: Callable[[], str] = _new_key) -> str:
-    key_path = f'{KEY_DIR}{name}.key'
+    key_path = os.path.join(KEY_DIR, f'{name}.key')
     if not os.path.exists(key_path):
         k = new_key()
         with open(key_path, 'w+') as f:
@@ -28,7 +28,7 @@ class Key(object):
     def __init__(self, user: str, domain: str, create: bool = True) -> None:
         user = user.replace('.', '_')
         domain = domain.replace('.', '_')
-        key_path = f'{KEY_DIR}/key_{user}_{domain}.pem'
+        key_path = os.path.join(KEY_DIR, f'key_{user}_{domain}.pem')
         if os.path.isfile(key_path):
             with open(key_path) as f:
                 self.privkey_pem = f.read()
