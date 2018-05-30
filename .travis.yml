@@ -25,6 +25,8 @@ script:
  # Integration tests first
  - python -m pytest -v --ignore data -k integration
  # Federation tests (with two local instances)
+ - curl http://localhost:5006
+ - curl http://localhost:5007
  - pwd
  - ls -lR .
  - python -m pytest -v -s --ignore data -k federation
