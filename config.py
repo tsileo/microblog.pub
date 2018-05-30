@@ -5,7 +5,7 @@ from pymongo import MongoClient
 import requests
 
 from utils import strtobool
-from utils.key import Key
+from utils.key import Key, KEY_DIR
 from utils.actor_service import ActorService
 from utils.object_service import ObjectService
 
@@ -35,7 +35,7 @@ HEADERS = [
 ]
 
 
-with open('config/me.yml') as f:
+with open(os.path.join(KEY_DIR, 'me.yml')) as f:
     conf = yaml.load(f)
 
     USERNAME = conf['username']

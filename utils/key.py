@@ -4,7 +4,9 @@ import binascii
 from Crypto.PublicKey import RSA
 from typing import Callable
 
-KEY_DIR = 'config/'
+KEY_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), '..', 'config'
+)
 
 
 def _new_key() -> str:
