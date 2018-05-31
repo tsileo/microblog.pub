@@ -1129,7 +1129,6 @@ def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, 
 
         return resp
 
-
     # If there's a cursor, then we return an OrderedCollectionPage
     resp = {
         '@context': CTX_AS,
