@@ -380,6 +380,16 @@ class BaseActivity(object):
             else:
                 try:
                     actor = Person(**ACTOR_SERVICE.get(recipient))
+
+                    if actor.endpoints:
+                        shared_inbox = actor.endpoints.get('sharedInbox')
+                        if shared_inbox not in out:
+                            out.append(shared_inbox)
+                            continue
+
+                    if actor.inbox and actor.inbox not in out:
+                        out.append(actor.inbox)
+
                 except NotAnActorError as error:
                     # Is the activity a `Collection`/`OrderedCollection`?
                     if error.activity and error.activity['type'] in [ActivityType.COLLECTION.value,
@@ -399,17 +409,6 @@ class BaseActivity(object):
                                     continue
                             if col_actor.inbox and col_actor.inbox not in out:
                                 out.append(col_actor.inbox)
-
-                        continue
-
-            if actor.endpoints:
-                shared_inbox = actor.endpoints.get('sharedInbox')
-                if shared_inbox not in out:
-                    out.append(shared_inbox)
-                    continue
-
-            if actor.inbox and actor.inbox not in out:
-                out.append(actor.inbox)
 
         return out
 
@@ -1076,11 +1075,11 @@ def parse_collection(payload: Optional[Dict[str, Any]] = None, url: Optional[str
     return activitypub_utils.parse_collection(payload, url)
 
 
-def embed_collection(data):
+def embed_collection(total_items, first_page_id):
     return {
-        "type": "Collection",
-        "totalItems": len(data),
-        "items": data,
+        "type": ActivityType.ORDERED_COLLECTION.value,
+        "totalItems": total_items,
+        "first": first_page_id,
     }
 
 
@@ -1097,7 +1096,7 @@ def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, 
         return {
             'id': BASE_URL + '/' + col_name,
             'totalItems': 0,
-            'type': 'OrderedCollection',
+            'type': ActivityType.ORDERED_COLLECTION.value,
             'orederedItems': [],
         }
 
@@ -1115,13 +1114,13 @@ def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, 
             '@context': CTX_AS,
             'id': f'{BASE_URL}/{col_name}',
             'totalItems': total_items,
-            'type': 'OrderedCollection',
+            'type': ActivityType.ORDERED_COLLECTION.value,
             'first': {
                 'id': f'{BASE_URL}/{col_name}?cursor={start_cursor}',
                 'orderedItems': data,
                 'partOf': f'{BASE_URL}/{col_name}',
                 'totalItems': total_items,
-                'type': 'OrderedCollectionPage'
+                'type': ActivityType.ORDERED_COLLECTION_PAGE.value,
             },
         }
 
@@ -1130,10 +1129,11 @@ def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, 
 
         return resp
 
+
     # If there's a cursor, then we return an OrderedCollectionPage
     resp = {
         '@context': CTX_AS,
-        'type': 'OrderedCollectionPage',
+        'type': ActivityType.ORDERED_COLLECTION_PAGE.value,
         'id': BASE_URL + '/' + col_name + '?cursor=' + start_cursor,
         'totalItems': total_items,
         'partOf': BASE_URL + '/' + col_name,
@@ -1141,5 +1141,7 @@ def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, 
     }
     if len(data) == limit:
         resp['next'] = BASE_URL + '/' + col_name + '?cursor=' + next_page_cursor
+
+    # TODO(tsileo): implements prev with prev=<first item cursor>
 
     return resp

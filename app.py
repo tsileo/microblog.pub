@@ -471,18 +471,21 @@ def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
     if raw_doc['activity']['type'] != ActivityType.CREATE.value:
         return raw_doc
 
-    if 'col_likes' in raw_doc.get('meta', {}):
-        col_likes = raw_doc['meta']['col_likes']
-        raw_doc['activity']['object']['likes'] = embed_collection(col_likes)
+    raw_doc['activity']['object']['replies'] = embed_collection(
+        raw_doc.get('meta', {}).get('count_direct_reply', 0),
+        f'{ID}/outbox/{raw_doc["id"]}/replies',
+    )
 
-    if 'col_shares' in raw_doc.get('meta', {}):
-        col_shares = raw_doc['meta']['col_shares']
-        raw_doc['activity']['object']['shares'] = embed_collection(col_shares)
+    raw_doc['activity']['object']['likes'] = embed_collection(
+        raw_doc.get('meta', {}).get('count_like', 0),
+        f'{ID}/outbox/{raw_doc["id"]}/likes',
+    )
 
-    if 'count_direct_reply' in raw_doc.get('meta', {}):
-        # FIXME(tsileo): implements the collection handler
-        raw_doc['activity']['object']['replies'] = {'type': 'Collection', 'totalItems': raw_doc['meta']['count_direct_reply']}
- 
+    raw_doc['activity']['object']['shares'] = embed_collection(
+        raw_doc.get('meta', {}).get('count_boost', 0),
+        f'{ID}/outbox/{raw_doc["id"]}/shares',
+    )
+
     return raw_doc
 
 
@@ -545,6 +548,86 @@ def outbox_activity(item_id):
     if obj['type'] != ActivityType.CREATE.value:
         abort(404)
     return jsonify(**obj['object'])
+
+
+@app.route('/outbox/<item_id>/replies')
+def outbox_activity_replies(item_id):
+    if not is_api_request():
+        abort(404)
+    data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
+    if not data:
+        abort(404)
+    obj = activitypub.parse_activity(data)
+    if obj.type_enum != ActivityType.CREATE:
+        abort(404)
+
+    q = {
+        'meta.deleted': False,
+        'type': ActivityType.CREATE.value,
+        'activity.object.inReplyTo': obj.get_object().id,
+    }
+
+    return jsonify(**activitypub.build_ordered_collection(
+        DB.inbox,
+        q=q,
+        cursor=request.args.get('cursor'),
+        map_func=lambda doc: doc['activity'],
+        col_name=f'outbox/{item_id}/replies',
+    ))
+
+
+@app.route('/outbox/<item_id>/likes')
+def outbox_activity_likes(item_id):
+    if not is_api_request():
+        abort(404)
+    data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
+    if not data:
+        abort(404)
+    obj = activitypub.parse_activity(data)
+    if obj.type_enum != ActivityType.CREATE:
+        abort(404)
+
+    q = {
+        'meta.undo': False,
+        'type': ActivityType.LIKE.value,
+        '$or': [{'activity.object.id': obj.get_object().id},
+                {'activity.object': obj.get_object().id}],
+    }
+
+    return jsonify(**activitypub.build_ordered_collection(
+        DB.inbox,
+        q=q,
+        cursor=request.args.get('cursor'),
+        map_func=lambda doc: doc['activity'],
+        col_name=f'outbox/{item_id}/likes',
+    ))
+
+
+@app.route('/outbox/<item_id>/shares')
+def outbox_activity_shares(item_id):
+    if not is_api_request():
+        abort(404)
+    data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
+    if not data:
+        abort(404)
+    obj = activitypub.parse_activity(data)
+    if obj.type_enum != ActivityType.CREATE:
+        abort(404)
+
+    q = {
+        'meta.undo': False,
+        'type': ActivityType.ANNOUNCE.value,
+        '$or': [{'activity.object.id': obj.get_object().id},
+                {'activity.object': obj.get_object().id}],
+    }
+
+    return jsonify(**activitypub.build_ordered_collection(
+        DB.inbox,
+        q=q,
+        cursor=request.args.get('cursor'),
+        map_func=lambda doc: doc['activity'],
+        col_name=f'outbox/{item_id}/shares',
+    ))
 
 
 @app.route('/admin', methods=['GET'])
