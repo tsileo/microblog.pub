@@ -73,7 +73,7 @@ app.secret_key = get_secret_key('flask')
 app.config.update(
     WTF_CSRF_CHECK_DEFAULT=False,
 )
-# csrf = CSRFProtect(app)
+csrf = CSRFProtect(app)
 
 logger = logging.getLogger(__name__)
 
@@ -287,6 +287,7 @@ def login():
     devices = [doc['device'] for doc in DB.u2f.find()]
     u2f_enabled = True if devices else False
     if request.method == 'POST':
+        csrf.protect()
         pwd = request.form.get('pass')
         if pwd and verify_pass(pwd):
             if devices:

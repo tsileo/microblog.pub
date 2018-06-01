@@ -8,6 +8,7 @@
 	{% if session.logged_in %}logged{% else%}not logged{%endif%}
 
 <form id="login-form" method="POST">
+	 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 	<input type="password" name="pass" placeholder="password">
 	{% if u2f_enabled %}
 	<input type="hidden" name="resp" id="sig-payload" value="">
