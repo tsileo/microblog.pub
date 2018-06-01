@@ -1,7 +1,7 @@
 version: '2'
 services:
   celery:
-    build: .
+    image: microblogpub:latest
     links:
      - mongo
      - rabbitmq

@@ -5,7 +5,7 @@ Mastodon instances won't accept requests that are not signed using this scheme.
 """
 from datetime import datetime
 from urllib.parse import urlparse
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import base64
 import hashlib
 import logging
@@ -31,7 +31,9 @@ def _build_signed_string(signed_headers: str, method: str, path: str, headers: A
     return '\n'.join(out)
 
 
-def _parse_sig_header(val: str) -> Dict[str, str]:
+def _parse_sig_header(val: Optional[str]) -> Optional[Dict[str, str]]:
+    if not val:
+        return None
     out = {}
     for data in val.split(','):
         k, v = data.split('=', 1)
@@ -54,6 +56,9 @@ def _body_digest() -> str:
 
 def verify_request(actor_service) -> bool:
     hsig = _parse_sig_header(request.headers.get('Signature'))
+    if not hsig:
+        logger.debug('no signature in header')
+        return False
     logger.debug(f'hsig={hsig}')
     signed_string = _build_signed_string(hsig['headers'], request.method, request.path, request.headers, _body_digest())
     _, rk = actor_service.get_public_key(hsig['keyId'])

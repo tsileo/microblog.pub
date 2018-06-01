@@ -719,12 +719,13 @@ class Update(BaseActivity):
         # TODO(tsileo): implements _should_purge_cache if it's a reply of a published activity (i.e. in the outbox)
 
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
-        obj = self.get_object()
+        print('UPDATE')
+        obj = self._data['object']
 
         update_prefix = 'activity.object.'
         update: Dict[str, Any] = {'$set': dict(), '$unset': dict()}
         update['$set'][f'{update_prefix}updated'] = datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
-        for k, v in obj._data.items():
+        for k, v in obj.items():
             if k in ['id', 'type']:
                 continue
             if v is None:
@@ -735,7 +736,9 @@ class Update(BaseActivity):
         if len(update['$unset']) == 0:
             del(update['$unset'])
 
-        DB.outbox.update_one({'remote_id': obj.id.replace('/activity', '')}, update)
+        print(f'updating note from outbox {obj!r} {update}')
+        logger.info(f'updating note from outbox {obj!r} {update}')
+        DB.outbox.update_one({'activity.object.id': obj['id']}, update)
         # FIXME(tsileo): should send an Update (but not a partial one, to all the note's recipients
         # (create a new Update with the result of the update, and send it without saving it?)
 
