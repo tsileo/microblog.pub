@@ -9,13 +9,12 @@ from bson.objectid import ObjectId
 from html2text import html2text
 from feedgen.feed import FeedGenerator
 
-from utils.linked_data_sig import generate_signature
 from utils.actor_service import NotAnActorError
 from utils.errors import BadActivityError, UnexpectedActivityTypeError
 from utils import activitypub_utils
 from config import USERNAME, BASE_URL, ID
 from config import CTX_AS, CTX_SECURITY, AS_PUBLIC
-from config import KEY, DB, ME, ACTOR_SERVICE
+from config import DB, ME, ACTOR_SERVICE
 from config import OBJECT_SERVICE
 from config import PUBLIC_INSTANCES
 import tasks
@@ -350,7 +349,6 @@ class BaseActivity(object):
         except NotImplementedError:
             logger.debug('post to outbox hook not implemented')
 
-        generate_signature(activity, KEY.privkey)
         payload = json.dumps(activity)
         for recp in recipients:
             logger.debug(f'posting to {recp}')
@@ -571,7 +569,6 @@ class Like(BaseActivity):
         # Update the meta counter if the object is published by the server
         DB.outbox.update_one({'activity.object.id': obj.id}, {
             '$inc': {'meta.count_like': 1},
-            '$addToSet': {'meta.col_likes': self.to_dict(embed=True, embed_object_id_only=True)},
         })
         # XXX(tsileo): notification??
 
@@ -580,7 +577,6 @@ class Like(BaseActivity):
         # Update the meta counter if the object is published by the server
         DB.outbox.update_one({'activity.object.id': obj.id}, {
             '$inc': {'meta.count_like': -1},
-            '$pull': {'meta.col_likes': {'id': self.id}},
         })
 
     def _undo_should_purge_cache(self) -> bool:
@@ -592,7 +588,6 @@ class Like(BaseActivity):
         # Unlikely, but an actor can like it's own post
         DB.outbox.update_one({'activity.object.id': obj.id}, {
             '$inc': {'meta.count_like': 1},
-            '$addToSet': {'meta.col_likes': self.to_dict(embed=True, embed_object_id_only=True)},
         })
 
         # Keep track of the like we just performed
@@ -603,7 +598,6 @@ class Like(BaseActivity):
         # Unlikely, but an actor can like it's own post
         DB.outbox.update_one({'activity.object.id': obj.id}, {
             '$inc': {'meta.count_like': -1},
-            '$pull': {'meta.col_likes': {'id': self.id}},
         })
 
         DB.inbox.update_one({'activity.object.id': obj.id}, {'$set': {'meta.liked': False}})
@@ -646,7 +640,6 @@ class Announce(BaseActivity):
 
         DB.outbox.update_one({'activity.object.id': obj.id}, {
             '$inc': {'meta.count_boost': 1},
-            '$addToSet': {'meta.col_shares': self.to_dict(embed=True, embed_object_id_only=True)},
         })
 
     def _undo_inbox(self) -> None:
@@ -654,7 +647,6 @@ class Announce(BaseActivity):
         # Update the meta counter if the object is published by the server
         DB.outbox.update_one({'activity.object.id': obj.id}, {
             '$inc': {'meta.count_boost': -1},
-            '$pull': {'meta.col_shares': {'id': self.id}},
         })
 
     def _undo_should_purge_cache(self) -> bool:
@@ -1079,11 +1071,12 @@ def embed_collection(total_items, first_page_id):
     return {
         "type": ActivityType.ORDERED_COLLECTION.value,
         "totalItems": total_items,
-        "first": first_page_id,
+        "first": f'{first_page_id}?page=first',
+        "id": first_page_id,
     }
 
 
-def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, col_name=None):
+def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, col_name=None, first_page=False):
     col_name = col_name or col.name
     if q is None:
         q = {}
@@ -1127,6 +1120,9 @@ def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, 
         if len(data) == limit:
             resp['first']['next'] = BASE_URL + '/' + col_name + '?cursor=' + next_page_cursor
 
+        if first_page:
+            return resp['first']
+
         return resp
 
     # If there's a cursor, then we return an OrderedCollectionPage
@@ -1141,6 +1137,9 @@ def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, 
     if len(data) == limit:
         resp['next'] = BASE_URL + '/' + col_name + '?cursor=' + next_page_cursor
 
-    # TODO(tsileo): implements prev with prev=<first item cursor>
+    if first_page:
+        return resp['first']
+
+    # XXX(tsileo): implements prev with prev=<first item cursor>?
 
     return resp

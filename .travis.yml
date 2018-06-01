@@ -15,6 +15,7 @@ script:
  - mypy --ignore-missing-imports .
  - flake8 activitypub.py
  - cp -r tests/fixtures/me.yml config/me.yml
+ - docker build . -t microblogpub:latest
  - docker-compose up -d
  - docker-compose ps
  - WEB_PORT=5006 CONFIG_DIR=./tests/fixtures/instance1/config docker-compose -p instance1 -f docker-compose-tests.yml up -d

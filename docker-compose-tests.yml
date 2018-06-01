@@ -1,7 +1,7 @@
 version: '3.5'
 services:
   web:
-    build: .
+    image: 'microblogpub:latest'
     ports:
      - "${WEB_PORT}:5005"
     links:
@@ -16,7 +16,7 @@ services:
      - MICROBLOGPUB_DEBUG=1
   celery:
 #    image: "instance1_web"
-    build: .
+    image: 'microblogpub:latest'
     links:
      - mongo
      - rmq

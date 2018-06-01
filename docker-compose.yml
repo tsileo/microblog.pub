@@ -1,7 +1,7 @@
 version: '2'
 services:
   web:
-    build: .
+    image: 'microblogpub:latest'
     ports:
      - "${WEB_PORT}:5005"
     links:
@@ -14,7 +14,7 @@ services:
      - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
   celery:
-    build: .
+    image: 'microblogpub:latest'
     links:
      - mongo
      - rmq

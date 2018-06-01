@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 import random
 
@@ -13,6 +14,7 @@ from config import KEY
 from config import USER_AGENT
 from utils.httpsig import HTTPSigAuth
 from utils.opengraph import fetch_og_metadata
+from utils.linked_data_sig import generate_signature
 
 
 log = logging.getLogger(__name__)
@@ -22,11 +24,14 @@ SigAuth = HTTPSigAuth(ID+'#main-key', KEY.privkey)
 
 
 @app.task(bind=True, max_retries=12)
-def post_to_inbox(self, payload, to):
+def post_to_inbox(self, payload: str, to: str) -> None:
     try:
         log.info('payload=%s', payload)
+        log.info('generating sig')
+        signed_payload = json.loads(payload)
+        generate_signature(signed_payload, KEY.privkey)
         log.info('to=%s', to)
-        resp = requests.post(to, data=payload, auth=SigAuth, headers={
+        resp = requests.post(to, data=json.dumps(signed_payload), auth=SigAuth, headers={
             'Content-Type': HEADERS[1],
             'Accept': HEADERS[1],
             'User-Agent': USER_AGENT,    

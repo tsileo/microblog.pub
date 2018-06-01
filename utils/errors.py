@@ -18,6 +18,9 @@ class Error(Exception):
         return f'{self.__class__.__qualname__}({self.message!r}, payload={self.payload!r}, status_code={self.status_code})'
 
 
+class NotFromOutboxError(Error):
+    pass
+
 class ActivityNotFoundError(Error):
     status_code = 404
 

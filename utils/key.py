@@ -25,6 +25,7 @@ def get_secret_key(name: str, new_key: Callable[[], str] = _new_key) -> str:
 
 
 class Key(object):
+    DEFAULT_KEY_SIZE = 2048
     def __init__(self, user: str, domain: str, create: bool = True) -> None:
         user = user.replace('.', '_')
         domain = domain.replace('.', '_')
@@ -37,7 +38,7 @@ class Key(object):
         else:
             if not create:
                 raise Exception('must init private key first')
-            k = RSA.generate(4096)
+            k = RSA.generate(self.DEFAULT_KEY_SIZE)
             self.privkey_pem = k.exportKey('PEM').decode('utf-8')
             self.pubkey_pem = k.publickey().exportKey('PEM').decode('utf-8')
             with open(key_path, 'w') as f:

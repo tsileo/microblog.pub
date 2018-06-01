@@ -62,6 +62,8 @@ from utils.webfinger import get_actor_url
 from utils.errors import Error
 from utils.errors import UnexpectedActivityTypeError
 from utils.errors import BadActivityError
+from utils.errors import NotFromOutboxError
+from utils.errors import ActivityNotFoundError
 
 
 from typing import Dict, Any
@@ -509,7 +511,7 @@ def outbox():
             DB.outbox,
             q=q,
             cursor=request.args.get('cursor'),
-            map_func=lambda doc: clean_activity(doc['activity']),
+            map_func=lambda doc: activity_from_doc(doc),
         ))
 
     # Handle POST request
@@ -557,7 +559,7 @@ def outbox_activity_replies(item_id):
     data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
     if not data:
         abort(404)
-    obj = activitypub.parse_activity(data)
+    obj = activitypub.parse_activity(data['activity'])
     if obj.type_enum != ActivityType.CREATE:
         abort(404)
 
@@ -571,8 +573,9 @@ def outbox_activity_replies(item_id):
         DB.inbox,
         q=q,
         cursor=request.args.get('cursor'),
-        map_func=lambda doc: doc['activity'],
+        map_func=lambda doc: doc['activity']['object'],
         col_name=f'outbox/{item_id}/replies',
+        first_page=request.args.get('page') == 'first',
     ))
 
 
@@ -583,7 +586,7 @@ def outbox_activity_likes(item_id):
     data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
     if not data:
         abort(404)
-    obj = activitypub.parse_activity(data)
+    obj = activitypub.parse_activity(data['activity'])
     if obj.type_enum != ActivityType.CREATE:
         abort(404)
 
@@ -600,6 +603,7 @@ def outbox_activity_likes(item_id):
         cursor=request.args.get('cursor'),
         map_func=lambda doc: doc['activity'],
         col_name=f'outbox/{item_id}/likes',
+        first_page=request.args.get('page') == 'first',
     ))
 
 
@@ -610,7 +614,7 @@ def outbox_activity_shares(item_id):
     data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
     if not data:
         abort(404)
-    obj = activitypub.parse_activity(data)
+    obj = activitypub.parse_activity(data['activity'])
     if obj.type_enum != ActivityType.CREATE:
         abort(404)
 
@@ -627,6 +631,7 @@ def outbox_activity_shares(item_id):
         cursor=request.args.get('cursor'),
         map_func=lambda doc: doc['activity'],
         col_name=f'outbox/{item_id}/shares',
+        first_page=request.args.get('page') == 'first',
     ))
 
 
@@ -744,16 +749,26 @@ def api_user_key():
     return flask_jsonify(api_key=ADMIN_API_KEY)
 
 
-def _user_api_get_note():
+def _user_api_arg(key: str) -> str:
+    """Try to get the given key from the requests, try JSON body, form data and query arg."""
     if request.is_json:
-        oid = request.json.get('id')
+        oid = request.json.get(key)
     else:
-        oid = request.args.get('id') or request.form.get('id')
+        oid = request.args.get(key) or request.form.get(key)
 
     if not oid:
-        raise ValueError('missing id')
+        raise ValueError(f'missing {key}')
 
-    return activitypub.parse_activity(OBJECT_SERVICE.get(oid), expected=ActivityType.NOTE)
+    return oid
+
+
+def _user_api_get_note(from_outbox: bool = False):
+    oid = _user_api_arg('id')
+    note = activitypub.parse_activity(OBJECT_SERVICE.get(oid), expected=ActivityType.NOTE)
+    if from_outbox and not note.id.startswith(ID):
+        raise NotFromOutboxError(f'cannot delete {note.id}, id must be owned by the server')
+
+    return note
 
 
 def _user_api_response(**kwargs):
@@ -769,64 +784,50 @@ def _user_api_response(**kwargs):
 @api_required
 def api_delete():
     """API endpoint to delete a Note activity."""
-    note = _user_api_get_note()
+    note = _user_api_get_note(from_outbox=True)
+
     delete = note.build_delete()
     delete.post_to_outbox()
 
     return _user_api_response(activity=delete.id)
 
 
-@app.route('/api/boost')
+@app.route('/api/boost', methods=['POST'])
 @api_required
 def api_boost():
-    # FIXME(tsileo): ensure a Note and not a Create is given
-    oid = request.args.get('id')
-    obj = activitypub.parse_activity(OBJECT_SERVICE.get(oid))
-    announce = obj.build_announce()
-    announce.post_to_outbox()
-    if request.args.get('redirect'):
-        return redirect(request.args.get('redirect'))
-    return Response(
-        status=201,
-        headers={'Microblogpub-Created-Activity': announce.id},
-    )
+    note = _user_api_get_note()
 
-@app.route('/api/like')
+    announce = note.build_announce()
+    announce.post_to_outbox()
+
+    return _user_api_response(activity=announce.id)
+
+
+@app.route('/api/like', methods=['POST'])
 @api_required
 def api_like():
-    # FIXME(tsileo): ensure a Note and not a Create is given
-    oid = request.args.get('id')
-    obj = activitypub.parse_activity(OBJECT_SERVICE.get(oid))
-    if not obj:
-        raise ValueError(f'unkown {oid} object')
-    like = obj.build_like()
+    note = _user_api_get_note()
+
+    like = note.build_like()
     like.post_to_outbox()
-    if request.args.get('redirect'):
-        return redirect(request.args.get('redirect'))
-    return Response(
-        status=201,
-        headers={'Microblogpub-Created-Activity': like.id},
-    )
+
+    return _user_api_response(activity=like.id)
 
 
-@app.route('/api/undo', methods=['GET', 'POST'])
+@app.route('/api/undo', methods=['POST'])
 @api_required
 def api_undo():
-    oid = request.args.get('id')
+    oid = _user_api_arg('id')
     doc = DB.outbox.find_one({'$or': [{'id': oid}, {'remote_id': oid}]})
-    undo_id = None
-    if doc:
-        obj = activitypub.parse_activity(doc.get('activity'))
-        # FIXME(tsileo): detect already undo-ed and make this API call idempotent
-        undo = obj.build_undo()
-        undo.post_to_outbox()
-        undo_id = undo.id
-    if request.args.get('redirect'):
-        return redirect(request.args.get('redirect'))
-    return Response(
-        status=201,
-        headers={'Microblogpub-Created-Activity': undo_id},
-    )
+    if not doc:
+        raise ActivityNotFoundError(f'cannot found {oid}')
+
+    obj = activitypub.parse_activity(doc.get('activity'))
+    # FIXME(tsileo): detect already undo-ed and make this API call idempotent
+    undo = obj.build_undo()
+    undo.post_to_outbox()
+
+    return _user_api_response(activity=undo.id)
 
 
 @app.route('/stream')
@@ -980,22 +981,27 @@ def api_upload():
     )
 
 
-@app.route('/api/new_note')                         
+@app.route('/api/new_note', methods=['POST'])                         
 @api_required                                      
 def api_new_note(): 
-    source = request.args.get('content')
+    source = _user_api_arg('content')
     if not source:
         raise ValueError('missing content')
     
-    reply = None
-    if request.args.get('reply'):
-        reply = activitypub.parse_activity(OBJECT_SERVICE.get(request.args.get('reply')))
-    source = request.args.get('content')
+    _reply, reply = None, None
+    try:
+        _reply = _user_api_arg('reply')
+    except ValueError:
+        pass
+
     content, tags = parse_markdown(source)       
     to = request.args.get('to')
     cc = [ID+'/followers']
-    if reply:
+    
+    if _reply:
+        reply = activitypub.parse_activity(OBJECT_SERVICE.get(_reply))
         cc.append(reply.attributedTo)
+
     for tag in tags:
         if tag['type'] == 'Mention':
             cc.append(tag['href'])
@@ -1003,7 +1009,7 @@ def api_new_note():
     note = activitypub.Note(                                    
         cc=cc,                       
         to=[to if to else config.AS_PUBLIC],
-        content=content,  # TODO(tsileo): handle markdown
+        content=content,
         tag=tags,
         source={'mediaType': 'text/markdown', 'content': source},
         inReplyTo=reply.id if reply else None
@@ -1011,11 +1017,8 @@ def api_new_note():
     create = note.build_create()
     create.post_to_outbox()
 
-    return Response(
-        status=201,
-        response='OK',
-        headers={'Microblogpub-Created-Activity': create.id},
-    )
+    return _user_api_response(activity=create.id)
+
 
 @app.route('/api/stream')
 @api_required
@@ -1026,41 +1029,38 @@ def api_stream():
     )
 
 
-@app.route('/api/block')
+@app.route('/api/block', methods=['POST'])
 @api_required
 def api_block():
-    # FIXME(tsileo): ensure it's a Person ID
-    actor = request.args.get('actor')
-    if not actor:
-        raise ValueError('missing actor')
-    if DB.outbox.find_one({'type': ActivityType.BLOCK.value,
-                           'activity.object': actor,
-                           'meta.undo': False}):
-        return Response(status=201)
+    actor = _user_api_arg('actor')
+
+    existing = DB.outbox.find_one({
+        'type': ActivityType.BLOCK.value,
+        'activity.object': actor,
+        'meta.undo': False,
+    })
+    if existing:
+        return _user_api_response(activity=existing['activity']['id'])
 
     block = activitypub.Block(object=actor)
     block.post_to_outbox()
-    return Response(
-        status=201,
-        headers={'Microblogpub-Created-Activity': block.id},
-    )
+
+    return _user_api_response(activity=block.id)
 
 
-@app.route('/api/follow')
+@app.route('/api/follow', methods=['POST'])
 @api_required
 def api_follow():
-    actor = request.args.get('actor')
-    if not actor:
-        raise ValueError('missing actor')
-    if DB.following.find({'remote_actor': actor}).count() > 0:
-        return Response(status=201)
+    actor = _user_api_arg('actor')
+
+    existing = DB.following.find_one({'remote_actor': actor})
+    if existing:
+        return _user_api_response(activity=existing['activity']['id'])
 
     follow = activitypub.Follow(object=actor)
     follow.post_to_outbox()
-    return Response(
-        status=201,
-        headers={'Microblogpub-Created-Activity': follow.id},
-    )
+
+    return _user_api_response(activity=follow.id)
 
 
 @app.route('/followers')                            
