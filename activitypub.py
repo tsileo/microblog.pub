@@ -293,7 +293,8 @@ class BaseActivity(object):
     def _should_purge_cache(self) -> bool:
         raise NotImplementedError
 
-    # FIXME(tsileo): _pre_process_from_inbox, _pre_post_to_outbox, allow to prevent saving, check for undo, delete, update both inbox and outbox
+    # FIXME(tsileo): _pre_process_from_inbox, _pre_post_to_outbox, allow to prevent saving,
+    # check for undo, delete, update both inbox and outbox
 
     def process_from_inbox(self) -> None:
         logger.debug(f'calling main process from inbox hook for {self}')
