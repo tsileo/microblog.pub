@@ -10,7 +10,9 @@ from html2text import html2text
 from feedgen.feed import FeedGenerator
 
 from utils.actor_service import NotAnActorError
-from utils.errors import BadActivityError, UnexpectedActivityTypeError
+from utils.errors import BadActivityError
+from utils.errors import UnexpectedActivityTypeError
+from utils.errors import NotFromOutboxError
 from utils import activitypub_utils
 from config import USERNAME, BASE_URL, ID
 from config import CTX_AS, CTX_SECURITY, AS_PUBLIC
@@ -94,18 +96,25 @@ class BaseActivity(object):
 
     ACTIVITY_TYPE: Optional[ActivityType] = None
     ALLOWED_OBJECT_TYPES: List[ActivityType] = []
+    OBJECT_REQUIRED = False
 
     def __init__(self, **kwargs) -> None:
         # Ensure the class has an activity type defined
         if not self.ACTIVITY_TYPE:
             raise BadActivityError('Missing ACTIVITY_TYPE')
 
+        # XXX(tsileo): what to do about this check?
         # Ensure the activity has a type and a valid one
-        if kwargs.get('type') is not None and kwargs.pop('type') != self.ACTIVITY_TYPE.value:
-            raise UnexpectedActivityTypeError('Expect the type to be {}'.format(self.ACTIVITY_TYPE))
+        # if kwargs.get('type') is None:
+        #     raise BadActivityError('missing activity type')
+
+        if kwargs.get('type') and kwargs.pop('type') != self.ACTIVITY_TYPE.value:
+            raise UnexpectedActivityTypeError(f'Expect the type to be {self.ACTIVITY_TYPE.value!r}')
 
         # Initialize the object
-        self._data: Dict[str, Any] = {'type': self.ACTIVITY_TYPE.value}
+        self._data: Dict[str, Any] = {
+            'type': self.ACTIVITY_TYPE.value
+        }
         logger.debug(f'initializing a {self.ACTIVITY_TYPE.value} activity: {kwargs}')
 
         if 'id' in kwargs:
@@ -118,6 +127,7 @@ class BaseActivity(object):
                 actor = self._validate_person(actor)
                 self._data['actor'] = actor
             else:
+                # FIXME(tsileo): uses a special method to set the actor as "the instance"
                 if not self.NO_CONTEXT and self.ACTIVITY_TYPE != ActivityType.TOMBSTONE:
                     actor = ID
                     self._data['actor'] = actor
@@ -166,7 +176,7 @@ class BaseActivity(object):
             # Allows an extra to (like for Accept and Follow)
             kwargs.pop('to', None)
             if len(set(kwargs.keys()) - set(allowed_keys)) > 0:
-                raise BadActivityError('extra data left: {}'.format(kwargs))
+                raise BadActivityError(f'extra data left: {kwargs!r}')
         else:
             # Remove keys with `None` value
             valid_kwargs = {}
@@ -183,6 +193,10 @@ class BaseActivity(object):
         raise NotImplementedError
 
     def verify(self) -> None:
+        """Verifies that the activity is valid."""
+        if self.OBJECT_REQUIRED and 'object' not in self._data:
+            raise BadActivityError('activity must have an "object"')
+
         try:
             self._verify()
         except NotImplementedError:
@@ -275,10 +289,16 @@ class BaseActivity(object):
         actor_id = self._actor_id(actor)
         return Person(**ACTOR_SERVICE.get(actor_id))
 
+    def _pre_post_to_outbox(self) -> None:
+        raise NotImplementedError
+
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
         raise NotImplementedError
 
     def _undo_outbox(self) -> None:
+        raise NotImplementedError
+
+    def _pre_process_from_inbox(self) -> None:
         raise NotImplementedError
 
     def _process_from_inbox(self) -> None:
@@ -292,9 +312,6 @@ class BaseActivity(object):
 
     def _should_purge_cache(self) -> bool:
         raise NotImplementedError
-
-    # FIXME(tsileo): _pre_process_from_inbox, _pre_post_to_outbox, allow to prevent saving,
-    # check for undo, delete, update both inbox and outbox
 
     def process_from_inbox(self) -> None:
         logger.debug(f'calling main process from inbox hook for {self}')
@@ -312,6 +329,12 @@ class BaseActivity(object):
             # The activity is already in the inbox
             logger.info(f'received duplicate activity {self}, dropping it')
             return
+
+        try:
+            self._pre_process_from_inbox()
+            logger.debug('called pre process from inbox hook')
+        except NotImplementedError:
+            logger.debug('pre process from inbox hook not implemented')
 
         activity = self.to_dict()
         DB.inbox.insert_one({
@@ -333,6 +356,13 @@ class BaseActivity(object):
         obj_id = random_object_id()
         self.set_id(f'{ID}/outbox/{obj_id}', obj_id)
         self.verify()
+
+        try:
+            self._pre_post_to_outbox()
+            logger.debug(f'called pre post to outbox hook')
+        except NotImplementedError:
+            logger.debug('pre post to outbox hook not implemented')
+
         activity = self.to_dict()
         DB.outbox.insert_one({
             'id': obj_id,
@@ -434,6 +464,7 @@ class Person(BaseActivity):
 
 class Block(BaseActivity):
     ACTIVITY_TYPE = ActivityType.BLOCK
+    OBJECT_REQUIRED = True
 
 
 class Collection(BaseActivity):
@@ -456,6 +487,7 @@ class Image(BaseActivity):
 class Follow(BaseActivity):
     ACTIVITY_TYPE = ActivityType.FOLLOW
     ALLOWED_OBJECT_TYPES = [ActivityType.PERSON]
+    OBJECT_REQUIRED = True
 
     def _build_reply(self, reply_type: ActivityType) -> BaseActivity:
         if reply_type == ActivityType.ACCEPT:
@@ -515,6 +547,7 @@ class Accept(BaseActivity):
 class Undo(BaseActivity):
     ACTIVITY_TYPE = ActivityType.UNDO
     ALLOWED_OBJECT_TYPES = [ActivityType.FOLLOW, ActivityType.LIKE, ActivityType.ANNOUNCE]
+    OBJECT_REQUIRED = True
 
     def _recipients(self) -> List[str]:
         obj = self.get_object()
@@ -524,6 +557,13 @@ class Undo(BaseActivity):
             return [obj.get_object().get_actor().id]
             # TODO(tsileo): handle like and announce
             raise Exception('TODO')
+
+    def _pre_process_from_inbox(self) -> None:
+        """Ensures an Undo activity comes from the same actor as the updated activity."""
+        obj = self.get_object()
+        actor = self.get_actor()
+        if actor.id != obj.get_actor().id:
+            raise BadActivityError(f'{actor!r} cannot update {obj!r}')
 
     def _process_from_inbox(self) -> None:
         obj = self.get_object()
@@ -545,6 +585,12 @@ class Undo(BaseActivity):
 
         return False
 
+    def _pre_post_to_outbox(self) -> None:
+        """Ensures an Undo activity references an activity owned by the instance."""
+        obj = self.get_object()
+        if not obj.id.startswith(ID):
+            raise NotFromOutboxError(f'object {obj["id"]} is not owned by this instance')
+
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
         logger.debug('processing undo to outbox')
         logger.debug('self={}'.format(self))
@@ -563,6 +609,7 @@ class Undo(BaseActivity):
 class Like(BaseActivity):
     ACTIVITY_TYPE = ActivityType.LIKE
     ALLOWED_OBJECT_TYPES = [ActivityType.NOTE]
+    OBJECT_REQUIRED = True
 
     def _recipients(self) -> List[str]:
         return [self.get_object().get_actor().id]
@@ -680,6 +727,7 @@ class Announce(BaseActivity):
 class Delete(BaseActivity):
     ACTIVITY_TYPE = ActivityType.DELETE
     ALLOWED_OBJECT_TYPES = [ActivityType.NOTE, ActivityType.TOMBSTONE]
+    OBJECT_REQUIRED = True
 
     def _get_actual_object(self) -> BaseActivity:
         obj = self.get_object()
@@ -691,6 +739,13 @@ class Delete(BaseActivity):
         obj = self._get_actual_object()
         return obj._recipients()
 
+    def _pre_process_from_inbox(self) -> None:
+        """Ensures a Delete activity comes from the same actor as the deleted activity."""
+        obj = self._get_actual_object()
+        actor = self.get_actor()
+        if actor.id != obj.get_actor().id:
+            raise BadActivityError(f'{actor!r} cannot delete {obj!r}')
+
     def _process_from_inbox(self) -> None:
         DB.inbox.update_one({'activity.object.id': self.get_object().id}, {'$set': {'meta.deleted': True}})
         obj = self._get_actual_object()
@@ -699,6 +754,12 @@ class Delete(BaseActivity):
 
         # TODO(tsileo): also purge the cache if it's a reply of a published activity
 
+    def _pre_post_to_outbox(self) -> None:
+        """Ensures the Delete activity references a activity from the outbox (i.e. owned by the instance)."""
+        obj = self._get_actual_object()
+        if not obj.id.startswith(ID):
+            raise NotFromOutboxError(f'object {obj["id"]} is not owned by this instance')
+
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
         DB.outbox.update_one({'activity.object.id': self.get_object().id}, {'$set': {'meta.deleted': True}})
 
@@ -706,9 +767,14 @@ class Delete(BaseActivity):
 class Update(BaseActivity):
     ACTIVITY_TYPE = ActivityType.UPDATE
     ALLOWED_OBJECT_TYPES = [ActivityType.NOTE, ActivityType.PERSON]
+    OBJECT_REQUIRED = True
 
-    # TODO(tsileo): ensure the actor updating is the same as the orinial activity
-    # (ensuring that the Update and its object are of same origin)
+    def _pre_process_from_inbox(self) -> None:
+        """Ensures an Update activity comes from the same actor as the updated activity."""
+        obj = self.get_object()
+        actor = self.get_actor()
+        if actor.id != obj.get_actor().id:
+            raise BadActivityError(f'{actor!r} cannot update {obj!r}')
 
     def _process_from_inbox(self):
         obj = self.get_object()
@@ -720,6 +786,11 @@ class Update(BaseActivity):
         ACTOR_SERVICE.get(obj.id, reload_cache=True)
 
         # TODO(tsileo): implements _should_purge_cache if it's a reply of a published activity (i.e. in the outbox)
+
+    def _pre_post_to_outbox(self) -> None:
+        obj = self.get_object()
+        if not obj.id.startswith(ID):
+            raise NotFromOutboxError(f'object {obj["id"]} is not owned by this instance')
 
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
         obj = self._data['object']
@@ -748,6 +819,7 @@ class Update(BaseActivity):
 class Create(BaseActivity):
     ACTIVITY_TYPE = ActivityType.CREATE
     ALLOWED_OBJECT_TYPES = [ActivityType.NOTE]
+    OBJECT_REQUIRED = True
 
     def _set_id(self, uri: str, obj_id: str) -> None:
         self._data['object']['id'] = uri + '/activity'
