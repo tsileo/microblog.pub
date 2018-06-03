@@ -62,19 +62,32 @@
 <div class="bottom-bar">
 {% if perma %}<span class="perma-item">{{ item.activity.object.published | format_time }}</span> {% endif %}	
 <a class ="bar-item" href="{{ item.activity.object.url }}">permalink</a> 
+
 {% if item.meta.count_reply %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_reply }} replies</a>{% endif %}
 {% if item.meta.count_boost %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_boost }} boosts</a>{% endif %}
 {% if item.meta.count_like %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_like }} likes</a>{% endif %}
+
 {% if ui %}
+
 {% set aid = item.activity.object.id | quote_plus %}
 <a class="bar-item" href="/new?reply={{ aid }}">reply</a>
 
 {% set redir = request.path + "#activity-" + item['_id'].__str__() %}
 
 {% if item.meta.boosted %}
-<a class="bar-item" href="/ui/undo?id={{ item.meta.boosted | quote_plus }}&redirect={{redir | quote_plus }}">unboost</a>
+<form action="/api/undo" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ item.meta.boosted }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">unboost</button>
+</form>
 {% else %}
-<a class="bar-item" href="/ui/boost?id={{ aid }}&redirect={{ redir | quote_plus }}">boost</a>
+<form action="/api/boost" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ item.activity.object.id }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">boost</button>
+</form>
 {% endif %}
 
 {% if item.meta.liked %}
