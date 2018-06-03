@@ -16,6 +16,6 @@
 {% block content %}
 <div id="container">
 {% include "header.html" %}
-{{ utils.display_thread(thread, likes) }}
+{{ utils.display_thread(thread, likes=likes, shares=shares) }}
 </div>
 {% endblock %}

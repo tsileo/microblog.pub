@@ -474,7 +474,15 @@ def note_by_id(note_id):
     }))
     likes = [ACTOR_SERVICE.get(doc['activity']['actor']) for doc in likes]          
 
-    return render_template('note.html', likes=likes, me=ME, thread=thread, note=data)
+    shares = list(DB.inbox.find({
+        'meta.undo': False,
+        'type': ActivityType.ANNOUNCE.value,
+        '$or': [{'activity.object.id': data['activity']['object']['id']},
+                {'activity.object': data['activity']['object']['id']}],
+    }))
+    shares = [ACTOR_SERVICE.get(doc['activity']['actor']) for doc in shares]          
+
+    return render_template('note.html', likes=likes, shares=shares, me=ME, thread=thread, note=data)
 
 
 @app.route('/nodeinfo')
