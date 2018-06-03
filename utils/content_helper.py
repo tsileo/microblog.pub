@@ -40,8 +40,9 @@ def mentionify(content: str) -> Tuple[str, List[Dict[str, str]]]:
         _, username, domain = mention.split('@')
         actor_url = get_actor_url(mention)
         p = ACTOR_SERVICE.get(actor_url)
+        print(p)
         tags.append(dict(type='Mention', href=p['id'], name=mention))
-        link = f'<span class="h-card"><a href="{p.url}" class="u-url mention">@<span>{username}</span></a></span>'
+        link = f'<span class="h-card"><a href="{p["url"]}" class="u-url mention">@<span>{username}</span></a></span>'
         content = content.replace(mention, link)
     return content, tags
 

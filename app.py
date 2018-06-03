@@ -407,6 +407,50 @@ def index():
     )
 
 
+def _build_thread(data, include_children=True):
+    data['_requested'] = True
+    root_id = data['meta'].get('thread_root_parent', data['activity']['object']['id'])
+
+    thread_ids = data['meta'].get('thread_parents', [])
+    if include_children:
+        thread_ids.extend(data['meta'].get('thread_children', []))
+
+    query = {
+        'activity.object.id': {'$in': thread_ids},
+        'type': 'Create',
+        'meta.deleted': False,  # TODO(tsileo): handle Tombstone instead of filtering them
+    }
+    # Fetch the root replies, and the children
+    replies = [data] + list(DB.inbox.find(query)) + list(DB.outbox.find(query))
+
+    # Index all the IDs in order to build a tree
+    idx = {}
+    for rep in replies:
+        rep_id = rep['activity']['object']['id']
+        idx[rep_id] = rep.copy()
+        idx[rep_id]['_nodes'] = []
+
+    # Build the tree
+    for rep in replies:
+        rep_id = rep['activity']['object']['id']
+        if rep_id == root_id:
+            continue
+        reply_of = rep['activity']['object']['inReplyTo']
+        idx[reply_of]['_nodes'].append(rep)
+
+    # Flatten the tree
+    thread = []
+    def _flatten(node, level=0):
+        node['_level'] = level
+        thread.append(node)
+        
+        for snode in sorted(idx[node['activity']['object']['id']]['_nodes'], key=lambda d: d['activity']['object']['published']):
+            _flatten(snode, level=level+1)
+    _flatten(idx[root_id])
+
+    return thread
+
+
 @app.route('/note/<note_id>')                       
 def note_by_id(note_id):                            
     data = DB.outbox.find_one({'id': note_id})
@@ -414,39 +458,8 @@ def note_by_id(note_id):
         abort(404)
     if data['meta'].get('deleted', False):
         abort(410)
-
-    replies = list(DB.inbox.find({                       
-        'type': 'Create',                           
-        'activity.object.inReplyTo': data['activity']['object']['id'],                                   
-        'meta.deleted': False,                      
-    }))
-
-    # Check for "replies of replies"
-    others = []
-    for rep in replies:
-        for rep_reply in rep.get('meta', {}).get('replies', []):
-            others.append(rep_reply['id'])
-
-    if others:
-        # Fetch the latest versions of the "replies of replies"
-        replies2 = list(DB.inbox.find({
-            'activity.id': {'$in': others},    
-        }))
-        
-        replies.extend(replies2)
-
-        replies2 = list(DB.outbox.find({
-            'activity.id': {'$in': others},    
-        }))
-        
-        replies.extend(replies2)
-
-
-        # Re-sort everything
-        replies = sorted(replies, key=lambda o: o['activity']['object']['published'])
-
-
-    return render_template('note.html', me=ME, note=data, replies=replies)                
+    thread = _build_thread(data)
+    return render_template('note.html', me=ME, thread=thread, note=data)
 
 
 @app.route('/nodeinfo')
@@ -707,14 +720,33 @@ def admin():
 def new():
     reply_id = None
     content = ''
+    thread = []
     if request.args.get('reply'):
-        reply = activitypub.parse_activity(OBJECT_SERVICE.get(request.args.get('reply')))
+        data = DB.inbox.find_one({'activity.object.id': request.args.get('reply')})
+        if not data:
+            data = DB.outbox.find_one({'activity.object.id': request.args.get('reply')})
+            if not data:
+                abort(400)
+
+        reply = activitypub.parse_activity(data['activity'])
         reply_id = reply.id
+        if reply.type_enum == ActivityType.CREATE:
+            reply_id = reply.get_object().id
         actor = reply.get_actor()
         domain = urlparse(actor.id).netloc
+        # FIXME(tsileo): if reply of reply, fetch all participants
         content = f'@{actor.preferredUsername}@{domain} '
+        thread = _build_thread(
+            data,
+            include_children=False,
+        )
 
-    return render_template('new.html', reply=reply_id, content=content)
+    return render_template(
+        'new.html',
+        reply=reply_id,
+        content=content,
+        thread=thread,
+    )
 
 
 @app.route('/notifications')

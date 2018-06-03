@@ -958,12 +958,15 @@ class Note(BaseActivity):
                     'meta.count_reply': -1,
                     'meta.count_direct_reply': direct_reply,
                 },
+                '$pull': {'meta.thread_children': self.id},
+
             }):
                 DB.outbox.update_one({'activity.object.id': reply.id}, {
                     '$inc': {
                         'meta.count_reply': 1,
                         'meta.count_direct_reply': direct_reply,
                     },
+                    '$pull': {'meta.thread_children': self.id},
                 })
 
             direct_reply = 0

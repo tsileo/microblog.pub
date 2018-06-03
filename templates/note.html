@@ -16,9 +16,7 @@
 {% block content %}
 <div id="container">
 {% include "header.html" %}
-{{ utils.display_note(note, perma=True) }}
-{% for reply in replies %}
-{{ utils.display_note(reply, perma=False) }}
-{% endfor %}
+{{ thread }}
+{{ utils.display_thread(thread) }}
 </div>
 {% endblock %}

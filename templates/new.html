@@ -5,6 +5,12 @@
 <div id="container">
 {% include "header.html" %}
 <div id="new">
+{% if thread %}
+<h3 style="padding-bottom: 30px">Replying to {{ content }}</h3>
+{{ utils.display_thread(thread) }}
+{% else %}
+<h3 style="padding-bottom:20px;">New note</h3>
+{% endif %}
 <form action="/api/new_note" method="POST">
 <input type="hidden" name="redirect" value="/">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

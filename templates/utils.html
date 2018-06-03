@@ -67,7 +67,7 @@
 {% if item.meta.count_boost %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_boost }} boosts</a>{% endif %}
 {% if item.meta.count_like %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_like }} likes</a>{% endif %}
 
-{% if ui %}
+{% if ui and session.logged_in %}
 
 {% set aid = item.activity.object.id | quote_plus %}
 <a class="bar-item" href="/new?reply={{ aid }}">reply</a>
@@ -112,3 +112,13 @@
 
 </div>                       
 {%- endmacro %}
+
+{% macro display_thread(thread) -%}
+{% for reply in thread %}
+{% if reply._requested %}
+{{ display_note(reply, perma=True, ui=False) }}
+{% else %}
+{{ display_note(reply, perma=False, ui=True) }}
+{% endif %}
+{% endfor %}
+{% endmacro -%}
