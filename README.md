@@ -65,6 +65,20 @@ $ cp -r config/me.sample.yml config/me.yml
 
 ```shell
 $ make password
+Password: <enter a password; nothing will show on screen>
+$2b$12$iW497g...
+```
+
+Edit `config/me.yml` to add the above-generated password, like so:
+
+```
+username: 'username'
+name: 'You Name'
+icon_url: 'https://you-avatar-url'
+domain: 'your-domain.tld'
+summary: 'your summary'
+https: true
+pass: $2b$12$iW497g...
 ```
 
 ### Deployment
