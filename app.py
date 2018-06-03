@@ -757,7 +757,7 @@ def api_user_key():
     return flask_jsonify(api_key=ADMIN_API_KEY)
 
 
-def _user_api_arg(key: str) -> str:
+def _user_api_arg(key: str, **kwargs: Dict[str, Any]) -> str:
     """Try to get the given key from the requests, try JSON body, form data and query arg."""
     if request.is_json:
         oid = request.json.get(key)
@@ -765,6 +765,9 @@ def _user_api_arg(key: str) -> str:
         oid = request.args.get(key) or request.form.get(key)
 
     if not oid:
+        if 'default' in kwargs:
+            return kwargs.get('default')
+
         raise ValueError(f'missing {key}')
 
     return oid
@@ -780,7 +783,7 @@ def _user_api_get_note(from_outbox: bool = False):
 
 
 def _user_api_response(**kwargs):
-    _redirect =  _user_api_arg('redirect')
+    _redirect =  _user_api_arg('redirect', default=None)
     if _redirect:
         return redirect(_redirect)
 
