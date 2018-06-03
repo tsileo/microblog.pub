@@ -75,7 +75,7 @@ Edit `config/me.yml` to add the above-generated password, like so:
 
 ```
 username: 'username'
-name: 'You Name'
+name: 'Your Name'
 icon_url: 'https://you-avatar-url'
 domain: 'your-domain.tld'
 summary: 'your summary'
@@ -84,6 +84,8 @@ pass: $2b$12$iW497g...
 ```
 
 ### Deployment
+
+Note: some of the docker yml files use version 3 of [docker-compose](https://docs.docker.com/compose/install/).
 
 ```shell
 $ docker-compose up -d
@@ -100,7 +102,7 @@ $ pip install -r requirements.txt
 # Start the Celery worker, RabbitMQ and MongoDB
 $ docker-compose -f docker-compose-dev.yml up -d
 # Run the server locally
-$ MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py flask run -p 5005 --with-threads
+$ FLASK_DEBUG=1 MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py flask run -p 5005 --with-threads
 ```
 
 ## ActivityPub API
