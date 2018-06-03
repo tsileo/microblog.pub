@@ -78,9 +78,19 @@
 {% endif %}
 
 {% if item.meta.liked %}
-<a class="bar-item" href="/ui/undo?id={{ item.meta.liked | quote_plus }}&redirect={{ redir | quote_plus }}">unlike</a>
+<form action="/api/undo" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ item.meta.liked }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">unlike</button>
+</form>
 {% else %}
-<a class="bar-item" href="/ui/like?id={{ aid }}&redirect={{ redir | quote_plus }}">like</a>
+<form action="/api/like" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ item.activity.object.id }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">like</button>
+</form>
 {% endif %}
 
 {% endif %}

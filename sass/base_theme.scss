@@ -159,7 +159,12 @@ a:hover {
   margin-right:5px;
   border-radius:2px;
 }
-
+button.bar-item {
+  border: 0
+}
+form.action-form {
+  display: inline;
+}
 .bottom-bar .perma-item {
   margin-right:5px;
 }
