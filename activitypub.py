@@ -1017,13 +1017,12 @@ class Note(BaseActivity):
     def build_delete(self) -> BaseActivity:
         return Delete(object=Tombstone(id=self.id).to_dict(embed=True))
 
-
     def get_tombstone(self, deleted: Optional[str]) -> BaseActivity:
         return Tombstone(
             id=self.id,
             published=self.published,
             deleted=deleted,
-            updated=updated,
+            updated=deleted,
         )
 
 
