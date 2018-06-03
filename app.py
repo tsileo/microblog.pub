@@ -75,15 +75,13 @@ app.config.update(
 )
 csrf = CSRFProtect(app)
 
-logging.basicConfig(level=logging.DEBUG)
-
 logger = logging.getLogger(__name__)
 
 # Hook up Flask logging with gunicorn
-# gunicorn_logger = logging.getLogger('gunicorn.error')
-# root_logger = logging.getLogger()
-# root_logger.handlers = gunicorn_logger.handlers
-# root_logger.setLevel(gunicorn_logger.level)
+gunicorn_logger = logging.getLogger('gunicorn.error')
+root_logger = logging.getLogger()
+root_logger.handlers = gunicorn_logger.handlers
+root_logger.setLevel(gunicorn_logger.level)
 
 SIG_AUTH = HTTPSigAuth(ID+'#main-key', KEY.privkey)
 
