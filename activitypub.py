@@ -866,21 +866,21 @@ class Create(BaseActivity):
                     'meta.count_reply': 1,
                     'meta.count_direct_reply': direct_reply,
                 },
+                '$addToSet': {'meta.thread_children': obj.id},
             }):
                 DB.outbox.update_one({'activity.object.id': reply.id}, {
                     '$inc': {
                         'meta.count_reply': 1,
                         'meta.count_direct_reply': direct_reply,
                     },
+                    '$addToSet': {'meta.thread_children': obj.id},
                 })
 
             direct_reply = 0
             reply_id = reply.id
             reply = reply.get_local_reply()
             logger.debug(f'next_reply={reply}')
-            if reply:
-                # Only append to threads if it's not the root
-                threads.append(reply_id)
+            threads.append(reply_id)
 
         if reply_id:
             if not DB.inbox.find_one_and_update({'activity.object.id': obj.id}, {
@@ -1016,6 +1016,15 @@ class Note(BaseActivity):
 
     def build_delete(self) -> BaseActivity:
         return Delete(object=Tombstone(id=self.id).to_dict(embed=True))
+
+
+    def get_tombstone(self, deleted: Optional[str]) -> BaseActivity:
+        return Tombstone(
+            id=self.id,
+            published=self.published,
+            deleted=deleted,
+            updated=updated,
+        )
 
 
 _ACTIVITY_TYPE_TO_CLS = {

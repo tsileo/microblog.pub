@@ -409,9 +409,11 @@ def index():
 
 @app.route('/note/<note_id>')                       
 def note_by_id(note_id):                            
-    data = DB.outbox.find_one({'id': note_id, 'meta.deleted': False})                                    
+    data = DB.outbox.find_one({'id': note_id})
     if not data:                                    
-        return Response(status=404)                 
+        abort(404)
+    if data['meta'].get('deleted', False):
+        abort(410)
 
     replies = list(DB.inbox.find({                       
         'type': 'Create',                           
@@ -570,12 +572,18 @@ def outbox():
 
 @app.route('/outbox/<item_id>')
 def outbox_detail(item_id):
-    doc = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
+    doc = DB.outbox.find_one({'id': item_id})
+    if doc['meta'].get('deleted', False):
+        obj = activitypub.parse_activity(doc['activity'])
+        resp = jsonify(**obj.get_object().get_tombstone())
+        resp.status_code = 410
+        return resp
     return jsonify(**activity_from_doc(doc))
 
 
 @app.route('/outbox/<item_id>/activity')
 def outbox_activity(item_id):
+    # TODO(tsileo): handle Tombstone
     data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
     if not data:
         abort(404)
@@ -587,6 +595,7 @@ def outbox_activity(item_id):
 
 @app.route('/outbox/<item_id>/replies')
 def outbox_activity_replies(item_id):
+    # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
     data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
@@ -614,6 +623,7 @@ def outbox_activity_replies(item_id):
 
 @app.route('/outbox/<item_id>/likes')
 def outbox_activity_likes(item_id):
+    # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
     data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
@@ -642,6 +652,7 @@ def outbox_activity_likes(item_id):
 
 @app.route('/outbox/<item_id>/shares')
 def outbox_activity_shares(item_id):
+    # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
     data = DB.outbox.find_one({'id': item_id, 'meta.deleted': False})
@@ -755,7 +766,7 @@ def api_user_key():
     return flask_jsonify(api_key=ADMIN_API_KEY)
 
 
-def _user_api_arg(key: str, **kwargs: Dict[str, Any]) -> str:
+def _user_api_arg(key: str, **kwargs):
     """Try to get the given key from the requests, try JSON body, form data and query arg."""
     if request.is_json:
         oid = request.json.get(key)
