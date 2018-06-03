@@ -447,8 +447,39 @@ def note_by_id(note_id):
     return render_template('note.html', me=ME, note=data, replies=replies)                
 
 
+@app.route('/nodeinfo')
+def nodeinfo():
+    return Response(
+        headers={'Content-Type': 'application/json; profile=http://nodeinfo.diaspora.software/ns/schema/2.0#'},
+        response=json.dumps({
+            'version': '2.0',
+            'software': {'name': 'microblogpub', 'version': f'Microblog.pub {VERSION}'},
+            'protocols': ['activitypub'],
+            'services': {'inbound': [], 'outbound': []},
+            'openRegistrations': False,
+            'usage': {'users': {'total': 1}, 'localPosts': DB.outbox.count()},
+            'metadata': {
+                'sourceCode': 'https://github.com/tsileo/microblog.pub',    
+            },
+        }),
+    )
+
+
+@app.route('/.well-known/nodeinfo')
+def wellknown_nodeinfo():
+    return flask_jsonify(
+        links=[
+            {
+                'rel': 'http://nodeinfo.diaspora.software/ns/schema/2.0',
+                'href': f'{ID}/nodeinfo',
+            }
+            
+        ],
+    )
+
+
 @app.route('/.well-known/webfinger')
-def webfinger():
+def wellknown_webfinger():
     """Enable WebFinger support, required for Mastodon interopability."""
     resource = request.args.get('resource')
     if resource not in ["acct:"+USERNAME+"@"+DOMAIN, ID]:
