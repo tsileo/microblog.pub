@@ -56,7 +56,9 @@ Activities are verified using HTTP Signatures or by fetching the content on the 
 ### Installation
 
 ```shell
-$ git clone
+$ git clone https://github.com/tsileo/microblog.pub
+$ cd microblog.pub
+$ pip install -r requirements.txt
 $ make css
 $ cp -r config/me.sample.yml config/me.yml
 ``` 
