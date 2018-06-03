@@ -19,7 +19,6 @@ from utils.linked_data_sig import generate_signature
 
 log = logging.getLogger(__name__)
 app = Celery('tasks', broker=os.getenv('MICROBLOGPUB_AMQP_BROKER', 'pyamqp://guest@localhost//'))
-# app = Celery('tasks', broker='pyamqp://guest@rabbitmq//')
 SigAuth = HTTPSigAuth(ID+'#main-key', KEY.privkey)
 
 

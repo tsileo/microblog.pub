@@ -75,13 +75,15 @@ app.config.update(
 )
 csrf = CSRFProtect(app)
 
+logging.basicConfig(level=logging.DEBUG)
+
 logger = logging.getLogger(__name__)
 
 # Hook up Flask logging with gunicorn
-gunicorn_logger = logging.getLogger('gunicorn.error')
-root_logger = logging.getLogger()
-root_logger.handlers = gunicorn_logger.handlers
-root_logger.setLevel(gunicorn_logger.level)
+# gunicorn_logger = logging.getLogger('gunicorn.error')
+# root_logger = logging.getLogger()
+# root_logger.handlers = gunicorn_logger.handlers
+# root_logger.setLevel(gunicorn_logger.level)
 
 SIG_AUTH = HTTPSigAuth(ID+'#main-key', KEY.privkey)
 
@@ -460,6 +462,7 @@ def nodeinfo():
             'usage': {'users': {'total': 1}, 'localPosts': DB.outbox.count()},
             'metadata': {
                 'sourceCode': 'https://github.com/tsileo/microblog.pub',    
+                'nodeName': f'@{USERNAME}@{DOMAIN}',
             },
         }),
     )
@@ -482,16 +485,16 @@ def wellknown_nodeinfo():
 def wellknown_webfinger():
     """Enable WebFinger support, required for Mastodon interopability."""
     resource = request.args.get('resource')
-    if resource not in ["acct:"+USERNAME+"@"+DOMAIN, ID]:
+    if resource not in [f'acct:{USERNAME}@{DOMAIN}', ID]:
         abort(404)
 
     out = {
-        "subject": "acct:"+USERNAME+"@"+DOMAIN,
+        "subject": f'acct:{USERNAME}@{DOMAIN}',
         "aliases": [ID],
         "links": [
             {"rel": "http://webfinger.net/rel/profile-page", "type": "text/html", "href": BASE_URL},
             {"rel": "self", "type": "application/activity+json", "href": ID},
-            {"rel":"http://ostatus.org/schema/1.0/subscribe","template": BASE_URL+"/authorize_follow?profile={uri}"},
+            {"rel":"http://ostatus.org/schema/1.0/subscribe", "template": BASE_URL+"/authorize_follow?profile={uri}"},
         ],
     }
 
@@ -690,36 +693,9 @@ def admin():
     )
  
 
-@app.route('/new', methods=['GET', 'POST'])
+@app.route('/new', methods=['GET'])
 @login_required
 def new():
-    if request.method == 'POST':
-        reply = None
-        if request.form.get('reply'):
-            reply = activitypub.parse_activity(OBJECT_SERVICE.get(request.form.get('reply')))
-        source = request.form.get('content')
-        content, tags = parse_markdown(source)       
-        to = request.form.get('to')
-        cc = [ID+'/followers']
-        if reply:
-            cc.append(reply.attributedTo)
-        for tag in tags:
-            if tag['type'] == 'Mention':
-                cc.append(tag['href'])
-
-        note = activitypub.Note(                                    
-            cc=cc,                       
-            to=[to if to else config.AS_PUBLIC],
-            content=content,  # TODO(tsileo): handle markdown
-            tag=tags,
-            source={'mediaType': 'text/markdown', 'content': source},
-            inReplyTo=reply.id if reply else None
-        )
-
-        create = note.build_create()
-        print(create.to_dict())
-        create.post_to_outbox()
-    
     reply_id = None
     content = ''
     if request.args.get('reply'):
@@ -804,8 +780,9 @@ def _user_api_get_note(from_outbox: bool = False):
 
 
 def _user_api_response(**kwargs):
-    if request.args.get('redirect'):
-        return redirect(request.args.get('redirect'))
+    _redirect =  _user_api_arg('redirect')
+    if _redirect:
+        return redirect(_redirect)
 
     resp = flask_jsonify(**kwargs)
     resp.status_code = 201

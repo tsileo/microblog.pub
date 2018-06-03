@@ -182,7 +182,7 @@ class BaseActivity(object):
             valid_kwargs = {}
             for k, v in kwargs.items():
                 if v is None:
-                    break
+                    continue
                 valid_kwargs[k] = v
             self._data.update(**valid_kwargs)
 

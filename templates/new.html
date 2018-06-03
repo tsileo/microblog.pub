@@ -5,7 +5,9 @@
 <div id="container">
 {% include "header.html" %}
 <div id="new">
-<form action="" method="POST">
+<form action="/api/new_note" method="POST">
+<input type="hidden" name="redirect" value="/">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% if reply %}<input type="hidden" name="reply" value="{{reply}}">{% endif %}
 <textarea name="content" rows="10" cols="50" autofocus="autofocus">{{ content }}</textarea>
 <div style="margin-top:20px;">
