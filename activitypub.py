@@ -246,6 +246,9 @@ class BaseActivity(object):
             raise ValueError('Invalid actor')
         return actor['id']
 
+    def reset_object_cache(self) -> None:
+        self.__obj = None
+
     def get_object(self) -> 'BaseActivity':
         if self.__obj:
             return self.__obj
@@ -824,6 +827,7 @@ class Create(BaseActivity):
     def _set_id(self, uri: str, obj_id: str) -> None:
         self._data['object']['id'] = uri + '/activity'
         self._data['object']['url'] = ID + '/' + self.get_object().type.lower() + '/' + obj_id
+        self.reset_object_cache()
 
     def _init(self, **kwargs):
         obj = self.get_object()
@@ -857,6 +861,8 @@ class Create(BaseActivity):
 
         threads = []
         reply = obj.get_local_reply()
+        print(f'initial_reply={reply}')
+        print(f'{obj}')
         logger.debug(f'initial_reply={reply}')
         reply_id = None
         direct_reply = 1
@@ -881,6 +887,8 @@ class Create(BaseActivity):
             reply = reply.get_local_reply()
             logger.debug(f'next_reply={reply}')
             threads.append(reply_id)
+        # FIXME(tsileo): obj.id is None!!
+        print(f'reply_id={reply_id} {obj.id} {obj._data} {self.id}')
 
         if reply_id:
             if not DB.inbox.find_one_and_update({'activity.object.id': obj.id}, {

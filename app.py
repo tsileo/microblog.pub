@@ -78,10 +78,14 @@ csrf = CSRFProtect(app)
 logger = logging.getLogger(__name__)
 
 # Hook up Flask logging with gunicorn
-gunicorn_logger = logging.getLogger('gunicorn.error')
 root_logger = logging.getLogger()
-root_logger.handlers = gunicorn_logger.handlers
-root_logger.setLevel(gunicorn_logger.level)
+if os.getenv('FLASK_DEBUG'):
+    logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.DEBUG)
+else:
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    root_logger.handlers = gunicorn_logger.handlers
+    root_logger.setLevel(gunicorn_logger.level)
 
 SIG_AUTH = HTTPSigAuth(ID+'#main-key', KEY.privkey)
 
@@ -378,6 +382,7 @@ def index():
     q = {
         'type': 'Create',
         'activity.object.type': 'Note',
+        'activity.object.inReplyTo': None,
         'meta.deleted': False,
     }
     c = request.args.get('cursor')
