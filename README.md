@@ -103,6 +103,10 @@ $ docker-compose -f docker-compose-dev.yml up -d
 $ MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py flask run -p 5005 --with-threads
 ```
 
+## API
+
+Your admin API key can be found at `config/admin_api_key.key`.
+
 ## ActivityPub API
 
 ### GET /
