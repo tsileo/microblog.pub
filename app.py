@@ -464,7 +464,17 @@ def note_by_id(note_id):
     if data['meta'].get('deleted', False):
         abort(410)
     thread = _build_thread(data)
-    return render_template('note.html', me=ME, thread=thread, note=data)
+
+
+    likes = list(DB.inbox.find({
+        'meta.undo': False,
+        'type': ActivityType.LIKE.value,
+        '$or': [{'activity.object.id': data['activity']['object']['id']},
+                {'activity.object': data['activity']['object']['id']}],
+    }))
+    likes = [ACTOR_SERVICE.get(doc['activity']['actor']) for doc in likes]          
+
+    return render_template('note.html', likes=likes, me=ME, thread=thread, note=data)
 
 
 @app.route('/nodeinfo')

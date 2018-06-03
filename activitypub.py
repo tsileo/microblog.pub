@@ -246,9 +246,6 @@ class BaseActivity(object):
             raise ValueError('Invalid actor')
         return actor['id']
 
-    def reset_object_cache(self) -> None:
-        self.__obj = None
-
     def get_object(self) -> 'BaseActivity':
         if self.__obj:
             return self.__obj
@@ -264,8 +261,11 @@ class BaseActivity(object):
 
                 p = parse_activity(obj)
 
-        self.__obj: BaseActivity = p
+        self.__obj: Optional[BaseActivity] = p
         return p
+
+    def reset_object_cache(self) -> None:
+        self.__obj = None
 
     def to_dict(self, embed: bool = False, embed_object_id_only: bool = False) -> ObjectType:
         data = dict(self._data)

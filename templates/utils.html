@@ -1,3 +1,19 @@
+{% macro display_actor_inline(follower) -%}
+<a class="actor-box" href="{{follower.url}}" style="clear:both;">
+<span style="float:left;padding-right:15px;">
+{% if not follower.icon %}
+<img class="actor-icon" src="/static/nopic.png" style="width:50px">
+{% else %}
+<img class="actor-icon" src="{{ follower.icon.url }}" style="width:50px;">{% endif %}
+</span>
+<div>
+<div style="font-weight:bold">{{ follower.name or follower.preferredUsername }}</div>
+<small>@{{ follower.preferredUsername }}@{{ follower.url | domain }}</small>
+</div>
+</a>
+{%- endmacro %}
+
+
 {% macro display_actor(follower) -%}
 <a class="actor-box" href="{{follower.url}}">
 <div class="pure-g"> 
@@ -16,7 +32,7 @@
 </a>
 {%- endmacro %}
 
-{% macro display_note(item, perma=False, ui=False) -%}
+{% macro display_note(item, perma=False, ui=False, likes=[]) -%}
 {% set actor = item.activity.object.attributedTo | get_actor  %}
 <div class="note h-entry" id="activity-{{ item['_id'].__str__() }}">
 
@@ -111,12 +127,20 @@
 </div>
 
 </div>                       
+{% if likes %}
+<div style="padding-bottom:40px;">
+<h4 style="font-weight:normal">Liked by</h4>{% for like in likes %}
+{{ display_actor_inline(like) }}
+{% endfor %}
+</div>
+{% endif %}
+
 {%- endmacro %}
 
-{% macro display_thread(thread) -%}
+{% macro display_thread(thread, likes=[]) -%}
 {% for reply in thread %}
 {% if reply._requested %}
-{{ display_note(reply, perma=True, ui=False) }}
+{{ display_note(reply, perma=True, ui=False, likes=likes) }}
 {% else %}
 {{ display_note(reply, perma=False, ui=True) }}
 {% endif %}
