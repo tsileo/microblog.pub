@@ -30,14 +30,15 @@ ObjectType = Dict[str, Any]
 ObjectOrIDType = Union[str, ObjectType]
 
 
-COLLECTION_CTX = [                      
+COLLECTION_CTX = [
     "https://www.w3.org/ns/activitystreams",
-    "https://w3id.org/security/v1",              
+    "https://w3id.org/security/v1",
     {
         "Hashtag": "as:Hashtag",
         "sensitive": "as:sensitive",
     }
 ]
+
 
 class ActivityType(Enum):
     """Supported activity `type`."""
@@ -1205,7 +1206,7 @@ def build_ordered_collection(col, q=None, cursor=None, map_func=None, limit=50, 
     data = [_remove_id(doc) for doc in data]
     if map_func:
         data = [map_func(doc) for doc in data]
-      
+
     # No cursor, this is the first page and we return an OrderedCollection
     if not cursor:
         resp = {
