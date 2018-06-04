@@ -601,9 +601,19 @@ def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
     return raw_doc
 
 
-def activity_from_doc(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
+def remove_context(activity: Dict[str, Any]) -> Dict[str, Any]:
+    if '@context' in activity:
+        del activity['@context']
+    return activity
+
+
+def activity_from_doc(raw_doc: Dict[str, Any], embed: bool = False) -> Dict[str, Any]:
     raw_doc = add_extra_collection(raw_doc)
-    return clean_activity(raw_doc['activity'])
+    activity = clean_activity(raw_doc['activity'])
+    if embed:
+        return remove_context(activity)
+    return activity
+
 
 
 @app.route('/outbox', methods=['GET', 'POST'])      
@@ -621,7 +631,7 @@ def outbox():
             DB.outbox,
             q=q,
             cursor=request.args.get('cursor'),
-            map_func=lambda doc: activity_from_doc(doc),
+            map_func=lambda doc: activity_from_doc(doc, embed=True),
         ))
 
     # Handle POST request
@@ -719,7 +729,7 @@ def outbox_activity_likes(item_id):
         DB.inbox,
         q=q,
         cursor=request.args.get('cursor'),
-        map_func=lambda doc: doc['activity'],
+        map_func=lambda doc: remove_context(doc['activity']),
         col_name=f'outbox/{item_id}/likes',
         first_page=request.args.get('page') == 'first',
     ))
@@ -748,7 +758,7 @@ def outbox_activity_shares(item_id):
         DB.inbox,
         q=q,
         cursor=request.args.get('cursor'),
-        map_func=lambda doc: doc['activity'],
+        map_func=lambda doc: remove_context(doc['activity']),
         col_name=f'outbox/{item_id}/shares',
         first_page=request.args.get('page') == 'first',
     ))
@@ -1008,7 +1018,7 @@ def inbox():
             DB.inbox,                               
             q={'meta.deleted': False},              
             cursor=request.args.get('cursor'),      
-            map_func=lambda doc: doc['activity'],   
+            map_func=lambda doc: remove_context(doc['activity']),   
         ))                                          
 
     data = request.get_json(force=True)             
