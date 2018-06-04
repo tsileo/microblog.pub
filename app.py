@@ -211,9 +211,9 @@ def login_required(f):
 
 def _api_required():
     if session.get('logged_in'):
-        #if request.method not in ['GET', 'HEAD']:
-        #    # If a standard API request is made with a "login session", it must havw a CSRF token
-        #    csrf.protect()
+        if request.method not in ['GET', 'HEAD']:
+            # If a standard API request is made with a "login session", it must havw a CSRF token
+            csrf.protect()
         return
 
     # Token verification
@@ -325,12 +325,12 @@ def login():
 
 
 @app.route('/remote_follow', methods=['GET', 'POST'])
-@login_required
 def remote_follow():
     if request.method == 'GET':
         return render_template('remote_follow.html')
 
-    return redirect(get_remote_follow_template('@'+request.form.get('profile')).format(uri=ID))
+    csrf.protect()
+    return redirect(get_remote_follow_template('@'+request.form.get('profile')).format(uri=f'{USERNAME}@{DOMAIN}'))
 
 
 @app.route('/authorize_follow', methods=['GET', 'POST'])
@@ -373,7 +373,6 @@ def u2f_register():
 
 @app.route('/')
 def index():
-    print(request.headers.get('Accept'))
     if is_api_request():
         return jsonify(**ME)
 
@@ -383,6 +382,41 @@ def index():
         'type': 'Create',
         'activity.object.type': 'Note',
         'activity.object.inReplyTo': None,
+        'meta.deleted': False,
+    }
+    c = request.args.get('cursor')
+    if c:
+        q['_id'] = {'$lt': ObjectId(c)}
+
+    outbox_data = list(DB.outbox.find({'$or': [q, {'type': 'Announce', 'meta.undo': False}]}, limit=limit).sort('_id', -1))
+    cursor = None
+    if outbox_data and len(outbox_data) == limit:
+        cursor = str(outbox_data[-1]['_id'])
+
+    for data in outbox_data:
+        if data['type'] == 'Announce':
+            print(data)
+            if data['activity']['object'].startswith('http'):
+                data['ref'] = {'activity': {'object': OBJECT_SERVICE.get(data['activity']['object'])}, 'meta': {}}
+
+
+    return render_template(
+        'index.html',
+        me=ME,
+        notes=DB.inbox.find({'type': 'Create', 'activity.object.type': 'Note', 'meta.deleted': False}).count(),
+        followers=DB.followers.count(),
+        following=DB.following.count(),
+        outbox_data=outbox_data,
+        cursor=cursor,
+    )
+
+
+@app.route('/with_replies')
+def with_replies():
+    limit = 50
+    q = {
+        'type': 'Create',
+        'activity.object.type': 'Note',
         'meta.deleted': False,
     }
     c = request.args.get('cursor')

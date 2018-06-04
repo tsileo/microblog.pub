@@ -11,6 +11,7 @@
 <div class="menu">
 <ul>
 <li><a href="/" {% if request.path == "/" %}class="selected"{% endif %}>/</a></li>
+<li><a href="/with_replies" {% if request.path == "/with_replies" %}class="selected"{% endif %}>/with_replies</a></li>
 <li><a href="/followers"{% if request.path == "/followers" %} class="selected" {% endif %}>/followers</a></li>
 <li><a href="/following"{% if request.path == "/following" %} class="selected" {% endif %}>/following</a></li>
 <!-- <li><a href="/about"{% if request.path == "/about" %} class="selected" {% endif %}>/about</a></li>
@@ -22,8 +23,7 @@
 <li><a href="/admin"{% if request.path == "/admin" %} class="selected" {% endif %}>/admin</a></li>
 <li><a href="/logout">/logout</a></li>
 {% else %}
-<!-- <li><a href="/remote_follow"{% if request.path == "/remote_follow" %} class="selected" {% endif %}>/remote_follow</a></li>
-!-->
+<li><a href="/remote_follow"{% if request.path == "/remote_follow" %} class="selected" {% endif %}>/remote_follow</a></li>
 {% endif %}
 </ul>
 </div>
