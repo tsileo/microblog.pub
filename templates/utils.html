@@ -125,6 +125,26 @@
 {% endif %}
 
 {% endif %}
+
+{% if session.logged_in %}
+{% if item.activity.id | is_from_outbox %}
+<form action="/api/note/delete" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ item.activity.object.id }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">delete</button>
+</form>
+{% else %}
+<form action="/api/block" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="actor" value="{{ item.activity.actor }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">block</button>
+</form>
+{% endif %}
+{% endif %}
+
+
 </div>
 
 {% if likes or shares %}

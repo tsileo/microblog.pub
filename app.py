@@ -143,6 +143,11 @@ def quote_plus(t):
 
 
 @app.template_filter()                              
+def is_from_outbox(t):                  
+    return t.startswith(ID)
+
+
+@app.template_filter()                              
 def clean(html):                                    
     return clean_html(html)                         
 
