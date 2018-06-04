@@ -1122,7 +1122,7 @@ def api_new_note():
             cc.append(tag['href'])
 
     note = activitypub.Note(                                    
-        cc=cc,                       
+        cc=list(set(cc)),                       
         to=[to if to else config.AS_PUBLIC],
         content=content,
         tag=tags,
