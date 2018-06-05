@@ -1354,9 +1354,8 @@ def indieauth_flow():
     return redirect(red)
 
 
-@app.route('/indieauth', methods=['GET', 'POST'])   
+# @app.route('/indieauth', methods=['GET', 'POST'])   
 def indieauth_endpoint():                           
-    session['logged_in'] = True                     
     if request.method == 'GET':                     
         if not session.get('logged_in'):            
             return redirect(url_for('login', next=request.url))                                          
@@ -1398,6 +1397,7 @@ def indieauth_endpoint():
         abort(403)
         return
 
+    session['logged_in'] = True                     
     me = auth['me']
     state = auth['state']
     scope = ' '.join(auth['scope'])
