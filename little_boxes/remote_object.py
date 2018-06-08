@@ -2,12 +2,9 @@ import logging
 from typing import Any
 
 import requests
-from urllib.parse import urlparse
-from Crypto.PublicKey import RSA
 
 from .urlutils import check_url
 from .errors import ActivityNotFoundError
-from .errors import UnexpectedActivityTypeError
 
 logger = logging.getLogger(__name__)
 
@@ -21,19 +18,22 @@ class DefaultRemoteObjectFetcher(object):
     def fetch(self, iri):
         check_url(iri)
 
-        resp = requests.get(actor_url, headers={
+        resp = requests.get(iri, headers={
             'Accept': 'application/activity+json',
-            'User-Agent': self._user_agent,    
+            'User-Agent': self._user_agent,
         })
 
         if resp.status_code == 404:
-            raise ActivityNotFoundError(f'{actor_url} cannot be fetched, 404 not found error')
+            raise ActivityNotFoundError(f'{iri} cannot be fetched, 404 not found error')
 
         resp.raise_for_status()
-        
+
         return resp.json()
+
 
 OBJECT_FETCHER = DefaultRemoteObjectFetcher()
 
+
 def set_object_fetcher(object_fetcher: Any):
+    global OBJECT_FETCHER
     OBJECT_FETCHER = object_fetcher

@@ -4,7 +4,6 @@ from typing import Dict
 from typing import List
 from typing import Any
 
-import requests
 
 from .errors import RecursionLimitExceededError
 from .errors import UnexpectedActivityTypeError
@@ -21,10 +20,6 @@ def parse_collection(
         raise RecursionLimitExceededError('recursion limit exceeded')
 
     # Go through all the pages
-    headers = {'Accept': 'application/activity+json'}
-    if user_agent:
-        headers['User-Agent'] = user_agent
-
     out: List[Any] = []
     if url:
         payload = OBJECT_FETCHER.fetch(url)
