@@ -41,6 +41,12 @@ COLLECTION_CTX = [
 # Will be used to keep track of all the defined activities
 _ACTIVITY_CLS: Dict['ActivityTypeEnum', Type['_BaseActivity']] = {}
 
+BACKEND = None
+
+def use_backend(backend_instance):
+    global BACKEND
+    BACKEND = backend_instance
+
 
 class ActivityType(Enum):
     """Supported activity `type`."""
@@ -109,14 +115,16 @@ def _get_actor_id(actor: ObjectOrIDType) -> str:
     return actor
 
 
-class Actions(object):
-    def outbox_is_blocked(self, actor_id: str) -> bool:
-        return False
+class BaseBackend(object):
 
-    def inbox_get_by_iri(self, iri: str) -> 'BaseActivity':
+    def outbox_is_blocked(self, as_actor: 'Person', actor_id: str) -> bool:
+        """Returns True if `as_actor` has blocked `actor_id`."""
         pass
 
-    def inbox_new(self, activity: 'BaseActivity') -> None:
+    def inbox_get_by_iri(self, as_actor: 'Person', iri: str) -> 'BaseActivity':
+        pass
+
+    def inbox_new(self, as_actor: 'Person', activity: 'BaseActivity') -> None:
         pass
 
     def activity_url(self, obj_id: str) -> str:
@@ -404,31 +412,29 @@ class BaseActivity(object, metaclass=_ActivityMeta):
     def _undo_inbox(self) -> None:
         raise NotImplementedError
 
-    def process_from_inbox(self) -> None:
+    def process_from_inbox(self, as_actor: 'Person') -> None:
+        """Process the message posted to `as_actor` inbox."""
         logger.debug(f'calling main process from inbox hook for {self}')
         actor = self.get_actor()
 
         # Check for Block activity
-        # ABC
-        if self.outbox_is_blocked(actor.id):
+        if BACKEND.outbox_is_blocked(as_actor, actor.id):
             # TODO(tsileo): raise ActorBlockedError?
             logger.info(f'actor {actor!r} is blocked, dropping the received activity {self!r}')
             return
 
-        # ABC
-        if self.inbox_get_by_iri(self.id):
+        if BACKEND.inbox_get_by_iri(as_actor, self.id):
             # The activity is already in the inbox
             logger.info(f'received duplicate activity {self}, dropping it')
             return
 
         try:
-            self._pre_process_from_inbox()
+            self._pre_process_from_inbox(as_actor)
             logger.debug('called pre process from inbox hook')
         except NotImplementedError:
             logger.debug('pre process from inbox hook not implemented')
 
-        # ABC
-        self.inbox_new(self)
+        BACKEND.inbox_new(as_actor, self)
         logger.info('activity {self!r} saved')
 
         try:
@@ -707,7 +713,10 @@ class Like(BaseActivity):
         self.outbox_undo_like(self)
 
     def build_undo(self) -> BaseActivity:
-        return Undo(object=self.to_dict(embed=True, embed_object_id_only=True))
+        return Undo(
+            object=self.to_dict(embed=True, embed_object_id_only=True),
+            actor=self.get_actor().id,
+        )
 
 
 class Announce(BaseActivity):
@@ -932,3 +941,30 @@ class Note(BaseActivity):
             deleted=deleted,
             updated=deleted,
         )
+
+
+class Box(object):
+    def __init__(self, actor: Person):
+        self.actor = actor
+
+
+class Outbox(Box):
+    
+    def post(self, activity: BaseActivity) -> None:
+        if activity.get_actor().id != self.actor.id:
+            raise ValueError(f'{activity.get_actor()!r} cannot post into {self.actor!r} outbox')
+
+        activity.post_to_outbox()
+
+    def get(self, activity_iri: str) -> BaseActivity:
+        pass
+
+    def collection(self):
+        # TODO(tsileo): figure out an API
+
+
+class Inbox(Box):
+
+    def post(self, activity: BaseActivity) -> None:
+
+        activity.process_from_inbox(self.actor)
