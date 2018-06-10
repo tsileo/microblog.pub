@@ -5,11 +5,7 @@ Tiny ActivityPub framework written in Python, both database and server agnostic.
 ## Getting Started
 
 ```python
-from little_boxes.activitypub import BaseBackend
-from little_boxes.activitypub import use_backend
-from little_boxes.activitypub import Outbox
-from little_boxes.activitypub import Person
-from little_boxes.activitypub import Follow
+from little_boxes import activitypub as ap
 
 from mydb import db_client
 
@@ -31,11 +27,11 @@ class MyBackend(BaseBackend):
 db_con = db_client()
 my_backend = MyBackend(db_con)
 
-use_backend(my_backend)
+ap.use_backend(my_backend)
 
-me = Person({})  # Init an actor
-outbox = Outbox(me)
+me = ap.Person({})  # Init an actor
+outbox = ap.Outbox(me)
 
-follow = Follow(actor=me, object='http://iri-i-want-follow')
+follow = ap.Follow(actor=me, object='http://iri-i-want-follow')
 outbox.post(follow)
 ```
