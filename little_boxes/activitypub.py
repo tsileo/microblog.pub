@@ -9,8 +9,9 @@ from enum import Enum
 from .errors import BadActivityError
 from .errors import UnexpectedActivityTypeError
 from .errors import NotFromOutboxError
+from .errors import ActivityNotFoundError
+from .urlutils import check_url
 from .utils import parse_collection
-from .remote_object import OBJECT_FETCHER
 
 from typing import List
 from typing import Optional
@@ -18,6 +19,9 @@ from typing import Dict
 from typing import Any
 from typing import Union
 from typing import Type
+
+import requests
+
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +50,30 @@ BACKEND = None
 def use_backend(backend_instance):
     global BACKEND
     BACKEND = backend_instance
+
+
+
+class DefaultRemoteObjectFetcher(object):
+    """Not meant to be used on production, a caching layer, and DB shortcut fox inbox/outbox should be hooked."""
+
+    def __init__(self):
+        self._user_agent = 'Little Boxes (+https://github.com/tsileo/little_boxes)'
+
+    def fetch(self, iri):
+        print('OLD FETCHER')
+        check_url(iri)
+
+        resp = requests.get(iri, headers={
+            'Accept': 'application/activity+json',
+            'User-Agent': self._user_agent,
+        })
+
+        if resp.status_code == 404:
+            raise ActivityNotFoundError(f'{iri} cannot be fetched, 404 not found error')
+
+        resp.raise_for_status()
+
+        return resp.json()
 
 
 class ActivityType(Enum):
@@ -116,38 +144,95 @@ def _get_actor_id(actor: ObjectOrIDType) -> str:
 
 
 class BaseBackend(object):
+    """In-memory backend meant to be used for the test suite."""
+    DB = {}
+    USERS = {}
+    FETCH_MOCK = {}
+    INBOX_IDX = {}
+    OUTBOX_IDX = {}
+    FOLLOWERS = {}
+    FOLLOWING = {}
+
+    def __init__(self):
+        self._setup_user('Thomas2', 'tom2')
+        self._setup_user('Thomas', 'tom')
+
+    def _setup_user(self, name, pusername):
+        p = Person(
+            name=name,
+            preferredUsername=pusername,
+            summary='Hello',
+            id=f'https://lol.com/{pusername}',
+            inbox=f'https://lol.com/{pusername}/inbox',
+        )
+ 
+        self.USERS[p.preferredUsername] = p
+        self.DB[p.id] = {
+            'inbox': [],
+            'outbox': [],
+        }
+        self.INBOX_IDX[p.id] = {}
+        self.OUTBOX_IDX[p.id] = {}
+        self.FOLLOWERS[p.id] = []
+        self.FOLLOWING[p.id] = []
+        self.FETCH_MOCK[p.id] = p.to_dict()
+
+    def fetch_iri(self, iri: str):
+        return self.FETCH_MOCK[iri]
+    
+    def get_user(self, username: str) -> 'Person':
+        if username in self.USERS:
+            return self.USERS[username]
+        else:
+            raise ValueError(f'bad username {username}')
 
     def outbox_is_blocked(self, as_actor: 'Person', actor_id: str) -> bool:
         """Returns True if `as_actor` has blocked `actor_id`."""
-        pass
+        for activity in self.DB[as_actor.id]['outbox']:
+            if activity.ACTIVITY_TYPE == ActivityType.BLOCK:
+                return True
+        return False
 
     def inbox_get_by_iri(self, as_actor: 'Person', iri: str) -> 'BaseActivity':
-        pass
+        for activity in self.DB[as_actor.id]['inbox']:
+            if activity.id == iri:
+                return activity
+
+        raise ActivityNotFoundError()
 
     def inbox_new(self, as_actor: 'Person', activity: 'BaseActivity') -> None:
-        pass
+        if activity.id in self.INBOX_IDX[as_actor.id]:
+            return
+        self.DB[as_actor.id]['inbox'].append(activity)
+        self.INBOX_IDX[as_actor.id][activity.id] = activity
 
     def activity_url(self, obj_id: str) -> str:
         # from the random hex ID
         return 'TODO'
 
     def outbox_new(self, activity: 'BaseActivity') -> None:
-        pass
+        print(f'saving {activity!r} to DB')
+        actor_id = activity.get_actor().id
+        if activity.id in self.OUTBOX_IDX[actor_id]:
+            return
+        self.DB[actor_id]['outbox'].append(activity)
+        self.OUTBOX_IDX[actor_id][activity.id] = activity
 
-    def new_follower(self, actor: 'Person') -> None:
+    def new_follower(self, as_actor: 'Person', actor: 'Person') -> None:
         pass
 
     def undo_new_follower(self, actor: 'Person') -> None:
         pass
 
-    def new_following(self, actor: 'Person') -> None:
-        pass
+    def new_following(self, as_actor: 'Person', actor: 'Person') -> None:
+        print(f'new following {actor!r}')
+        self.FOLLOWING[as_actor.id].append(actor)
 
     def undo_new_following(self, actor: 'Person') -> None:
         pass
 
     def post_to_remote_inbox(self, payload: ObjectType, recp: str) -> None:
-        pass
+        print(f'post_to_remote_inbox {payload} {recp}')
 
     def is_from_outbox(self, activity: 'BaseActivity') -> None:
         pass
@@ -201,7 +286,7 @@ class _ActivityMeta(type):
         cls = type.__new__(meta, name, bases, class_dict)
 
         # Ensure the class has an activity type defined
-        if not cls.ACTIVITY_TYPE:
+        if name != 'BaseActivity' and not cls.ACTIVITY_TYPE:
             raise ValueError(f'class {name} has no ACTIVITY_TYPE')
 
         # Register it
@@ -321,7 +406,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         logger.debug(f'setting ID {uri} / {obj_id}')
         self._data['id'] = uri
         try:
-            self._set_id(uri, obj_id)
+            self._outbox_set_id(uri, obj_id)
         except NotImplementedError:
             pass
 
@@ -339,7 +424,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
     def _validate_person(self, obj: ObjectOrIDType) -> str:
         obj_id = self._actor_id(obj)
         try:
-            actor = OBJECT_FETCHER.fetch(obj_id)
+            actor = BACKEND.fetch_iri(obj_id)
         except Exception:
             raise BadActivityError(f'failed to validate actor {obj!r}')
 
@@ -355,10 +440,10 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         if isinstance(self._data['object'], dict):
             p = parse_activity(self._data['object'])
         else:
-            obj = OBJECT_FETCHER.fetch(self._data['object'])
+            obj = BACKEND.fetch_iri(self._data['object'])
             if ActivityType(obj.get('type')) not in self.ALLOWED_OBJECT_TYPES:
                 raise UnexpectedActivityTypeError(f'invalid object type {obj.get("type")!r}')
-                p = parse_activity(obj)
+            p = parse_activity(obj)
 
         self.__obj: Optional['BaseActivity'] = p
         return p
@@ -392,7 +477,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                 raise BadActivityError(f'failed to fetch actor: {self._data!r}')
 
         actor_id = self._actor_id(actor)
-        return Person(**OBJECT_FETCHER.fetch(actor_id))
+        return Person(**BACKEND.fetch_iri(actor_id))
 
     def _pre_post_to_outbox(self) -> None:
         raise NotImplementedError
@@ -449,7 +534,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         # Assign create a random ID
         obj_id = random_object_id()
         # ABC
-        self.set_id(self.activity_url(obj_id), obj_id)
+        self.outbox_set_id(BACKEND.activity_url(obj_id), obj_id)
 
         try:
             self._pre_post_to_outbox()
@@ -457,8 +542,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         except NotImplementedError:
             logger.debug('pre post to outbox hook not implemented')
 
-        # ABC
-        self.outbox_new(self)
+        BACKEND.outbox_new(self)
 
         recipients = self.recipients()
         logger.info(f'recipients={recipients}')
@@ -475,7 +559,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
             logger.debug(f'posting to {recp}')
 
             # ABC
-            self.post_to_remote_inbox(payload, recp)
+            BACKEND.post_to_remote_inbox(payload, recp)
 
     def _recipients(self) -> List[str]:
         return []
@@ -497,8 +581,8 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                     continue
                 actor = recipient
             else:
-                raw_actor = OBJECT_FETCHER.fetch(recipient)
-                if raw_actor['type'] == ActivityType.PERSON.name:
+                raw_actor = BACKEND.fetch_iri(recipient)
+                if raw_actor['type'] == ActivityType.PERSON.value:
                     actor = Person(**raw_actor)
 
                     if actor.endpoints:
@@ -517,7 +601,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                             if item in [actor_id, AS_PUBLIC]:
                                 continue
                             try:
-                                col_actor = Person(**OBJECT_FETCHER.fetch(item))
+                                col_actor = Person(**BACKEND.fetch_iri(item))
                             except UnexpectedActivityTypeError:
                                 logger.exception(f'failed to fetch actor {item!r}')
 
@@ -598,6 +682,9 @@ class Follow(BaseActivity):
 
         # ABC
         self.new_follower(remote_actor)
+
+    def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
+        BACKEND.new_following(self.get_actor(), self.get_object())
 
     def _undo_inbox(self) -> None:
         # ABC
@@ -770,7 +857,7 @@ class Delete(BaseActivity):
         # FIXME(tsileo): overrides get_object instead?
         obj = self.get_object()
         if obj.type_enum == ActivityType.TOMBSTONE:
-            obj = parse_activity(OBJECT_FETCHER.fetch(obj.id))
+            obj = parse_activity(BACKEND.fetch_iri(obj.id))
         return obj
 
     def _recipients(self) -> List[str]:
@@ -961,10 +1048,10 @@ class Outbox(Box):
 
     def collection(self):
         # TODO(tsileo): figure out an API
+        pass
 
 
 class Inbox(Box):
 
     def post(self, activity: BaseActivity) -> None:
-
         activity.process_from_inbox(self.actor)

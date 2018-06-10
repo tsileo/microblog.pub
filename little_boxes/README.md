@@ -1,6 +1,6 @@
 # Little Boxes
 
-Tiny ActivityPub framework.
+Tiny ActivityPub framework written in Python, both database and server agnostic.
 
 ## Getting Started
 
