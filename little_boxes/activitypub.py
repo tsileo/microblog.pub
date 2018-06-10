@@ -153,11 +153,8 @@ class BaseBackend(object):
     FOLLOWERS = {}
     FOLLOWING = {}
 
-    def __init__(self):
-        self._setup_user('Thomas2', 'tom2')
-        self._setup_user('Thomas', 'tom')
-
-    def _setup_user(self, name, pusername):
+    def setup_actor(self, name, pusername):
+        """Create a new actor in this backend."""
         p = Person(
             name=name,
             preferredUsername=pusername,
@@ -176,6 +173,7 @@ class BaseBackend(object):
         self.FOLLOWERS[p.id] = []
         self.FOLLOWING[p.id] = []
         self.FETCH_MOCK[p.id] = p.to_dict()
+        return p
 
     def fetch_iri(self, iri: str):
         return self.FETCH_MOCK[iri]
@@ -193,12 +191,12 @@ class BaseBackend(object):
                 return True
         return False
 
-    def inbox_get_by_iri(self, as_actor: 'Person', iri: str) -> 'BaseActivity':
+    def inbox_get_by_iri(self, as_actor: 'Person', iri: str) -> Optional['BaseActivity']:
         for activity in self.DB[as_actor.id]['inbox']:
             if activity.id == iri:
                 return activity
 
-        raise ActivityNotFoundError()
+        return None
 
     def inbox_new(self, as_actor: 'Person', activity: 'BaseActivity') -> None:
         if activity.id in self.INBOX_IDX[as_actor.id]:
@@ -219,20 +217,30 @@ class BaseBackend(object):
         self.OUTBOX_IDX[actor_id][activity.id] = activity
 
     def new_follower(self, as_actor: 'Person', actor: 'Person') -> None:
-        pass
+        self.FOLLOWERS[as_actor.id].append(actor.id)
 
     def undo_new_follower(self, actor: 'Person') -> None:
         pass
 
     def new_following(self, as_actor: 'Person', actor: 'Person') -> None:
         print(f'new following {actor!r}')
-        self.FOLLOWING[as_actor.id].append(actor)
+        self.FOLLOWING[as_actor.id].append(actor.id)
 
     def undo_new_following(self, actor: 'Person') -> None:
         pass
 
-    def post_to_remote_inbox(self, payload: ObjectType, recp: str) -> None:
+    def followers(self, as_actor: 'Person') -> List[str]:
+        return self.FOLLOWERS[as_actor.id]
+
+    def following(self, as_actor: 'Person') -> List[str]:
+        return self.FOLLOWING[as_actor.id]
+
+    def post_to_remote_inbox(self, payload_encoded: str, recp: str) -> None:
+        payload = json.loads(payload_encoded)
         print(f'post_to_remote_inbox {payload} {recp}')
+        act = parse_activity(payload)
+        as_actor = parse_activity(self.fetch_iri(recp.replace('/inbox', '')))
+        act.process_from_inbox(as_actor)
 
     def is_from_outbox(self, activity: 'BaseActivity') -> None:
         pass
@@ -312,6 +320,9 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         }
         logger.debug(f'initializing a {self.ACTIVITY_TYPE.value} activity: {kwargs!r}')
 
+        # A place to set ephemeral data
+        self.__ctx = {}
+
         # The id may not be present for new activities
         if 'id' in kwargs:
             self._data['id'] = kwargs.pop('id')
@@ -379,6 +390,12 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                     continue
                 valid_kwargs[k] = v
             self._data.update(**valid_kwargs)
+
+    def ctx(self) -> Dict[str, Any]:
+        return self.__ctx
+
+    def set_ctx(self, ctx: Dict[str, Any]) -> None:
+        self.__ctx = ctx
 
     def _init(self, **kwargs) -> Optional[List[str]]:
         """Optional init callback that may returns a list of allowed keys."""
@@ -488,10 +505,10 @@ class BaseActivity(object, metaclass=_ActivityMeta):
     def _undo_outbox(self) -> None:
         raise NotImplementedError
 
-    def _pre_process_from_inbox(self) -> None:
+    def _pre_process_from_inbox(self, as_actor: 'Person') -> None:
         raise NotImplementedError
 
-    def _process_from_inbox(self) -> None:
+    def _process_from_inbox(self, as_actor: 'Person') -> None:
         raise NotImplementedError
 
     def _undo_inbox(self) -> None:
@@ -523,7 +540,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         logger.info('activity {self!r} saved')
 
         try:
-            self._process_from_inbox()
+            self._process_from_inbox(as_actor)
             logger.debug('called process from inbox hook')
         except NotImplementedError:
             logger.debug('process from inbox hook not implemented')
@@ -533,7 +550,6 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
         # Assign create a random ID
         obj_id = random_object_id()
-        # ABC
         self.outbox_set_id(BACKEND.activity_url(obj_id), obj_id)
 
         try:
@@ -558,7 +574,6 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         for recp in recipients:
             logger.debug(f'posting to {recp}')
 
-            # ABC
             BACKEND.post_to_remote_inbox(payload, recp)
 
     def _recipients(self) -> List[str]:
@@ -665,6 +680,7 @@ class Follow(BaseActivity):
     def _build_reply(self, reply_type: ActivityType) -> BaseActivity:
         if reply_type == ActivityType.ACCEPT:
             return Accept(
+                actor=self.get_object().id,
                 object=self.to_dict(embed=True),
             )
 
@@ -673,7 +689,7 @@ class Follow(BaseActivity):
     def _recipients(self) -> List[str]:
         return [self.get_object().id]
 
-    def _process_from_inbox(self) -> None:
+    def _process_from_inbox(self, as_actor: 'Person') -> None:
         """Receiving a Follow should trigger an Accept."""
         accept = self.build_accept()
         accept.post_to_outbox()
@@ -681,10 +697,11 @@ class Follow(BaseActivity):
         remote_actor = self.get_actor()
 
         # ABC
-        self.new_follower(remote_actor)
+        BACKEND.new_follower(as_actor, remote_actor)
 
     def _post_to_outbox(self, obj_id: str, activity: ObjectType, recipients: List[str]) -> None:
-        BACKEND.new_following(self.get_actor(), self.get_object())
+        # XXX The new_following event will be triggered by Accept
+        pass
 
     def _undo_inbox(self) -> None:
         # ABC
@@ -710,13 +727,12 @@ class Accept(BaseActivity):
     def _recipients(self) -> List[str]:
         return [self.get_object().get_actor().id]
 
-    def _pre_process_from_inbox(self) -> None:
+    def _pre_process_from_inbox(self, as_actor: 'Person') -> None:
         # FIXME(tsileo): ensure the actor match the object actor
         pass
 
-    def _process_from_inbox(self) -> None:
-        # ABC
-        self.new_following(self.get_actor().id)
+    def _process_from_inbox(self, as_actor: 'Person') -> None:
+        BACKEND.new_following(as_actor, self.get_actor())
 
 
 class Undo(BaseActivity):
@@ -734,14 +750,14 @@ class Undo(BaseActivity):
             # TODO(tsileo): handle like and announce
             raise Exception('TODO')
 
-    def _pre_process_from_inbox(self) -> None:
+    def _pre_process_from_inbox(self, as_actor: 'Person') -> None:
         """Ensures an Undo activity comes from the same actor as the updated activity."""
         obj = self.get_object()
         actor = self.get_actor()
         if actor.id != obj.get_actor().id:
             raise BadActivityError(f'{actor!r} cannot update {obj!r}')
 
-    def _process_from_inbox(self) -> None:
+    def _process_from_inbox(self, as_actor: 'Person') -> None:
         obj = self.get_object()
         # FIXME(tsileo): move this to _undo_inbox impl
         # DB.inbox.update_one({'remote_id': obj.id}, {'$set': {'meta.undo': True}})
@@ -783,7 +799,7 @@ class Like(BaseActivity):
     def _recipients(self) -> List[str]:
         return [self.get_object().get_actor().id]
 
-    def _process_from_inbox(self):
+    def _process_from_inbox(self, as_actor: 'Person') -> None:
         # ABC
         self.inbox_like(self)
 
@@ -821,7 +837,7 @@ class Announce(BaseActivity):
 
         return recipients
 
-    def _process_from_inbox(self) -> None:
+    def _process_from_inbox(self, as_actor: 'Person') -> None:
         if isinstance(self._data['object'], str) and not self._data['object'].startswith('http'):
             # TODO(tsileo): actually drop it without storing it and better logging, also move the check somewhere else
             logger.warn(
@@ -864,14 +880,14 @@ class Delete(BaseActivity):
         obj = self._get_actual_object()
         return obj._recipients()
 
-    def _pre_process_from_inbox(self) -> None:
+    def _pre_process_from_inbox(self, as_actor: 'Person') -> None:
         """Ensures a Delete activity comes from the same actor as the deleted activity."""
         obj = self._get_actual_object()
         actor = self.get_actor()
         if actor.id != obj.get_actor().id:
             raise BadActivityError(f'{actor!r} cannot delete {obj!r}')
 
-    def _process_from_inbox(self) -> None:
+    def _process_from_inbox(self, as_actor: 'Person') -> None:
         # ABC
         self.inbox_delete(self)
         # FIXME(tsileo): handle the delete_threads here?
@@ -894,14 +910,14 @@ class Update(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _pre_process_from_inbox(self) -> None:
+    def _pre_process_from_inbox(self, as_actor: 'Person') -> None:
         """Ensures an Update activity comes from the same actor as the updated activity."""
         obj = self.get_object()
         actor = self.get_actor()
         if actor.id != obj.get_actor().id:
             raise BadActivityError(f'{actor!r} cannot update {obj!r}')
 
-    def _process_from_inbox(self):
+    def _process_from_inbox(self, as_actor: 'Person') -> None:
         # ABC
         self.inbox_update(self)
 
@@ -950,7 +966,7 @@ class Create(BaseActivity):
 
         return recipients
 
-    def _process_from_inbox(self) -> None:
+    def _process_from_inbox(self, as_actor: 'Person') -> None:
         # ABC
         self.inbox_create(self)
 
