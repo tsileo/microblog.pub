@@ -6,10 +6,9 @@ import requests
 from itsdangerous import JSONWebSignatureSerializer
 from datetime import datetime
 
-from utils import strtobool
-from utils.key import Key, KEY_DIR, get_secret_key
-from utils.actor_service import ActorService
-from utils.object_service import ObjectService
+from little_boxes.utils import strtobool
+from utils.key import KEY_DIR, get_key, get_secret_key
+
 
 def noop():
     pass
@@ -17,7 +16,7 @@ def noop():
 
 CUSTOM_CACHE_HOOKS = False
 try:
-     from cache_hooks import purge as custom_cache_purge_hook
+    from cache_hooks import purge as custom_cache_purge_hook
 except ModuleNotFoundError:
     custom_cache_purge_hook = noop
 
@@ -58,8 +57,6 @@ USER_AGENT = (
         f'(microblog.pub/{VERSION}; +{BASE_URL})'
 )
 
-# TODO(tsileo): use 'mongo:27017;
-# mongo_client = MongoClient(host=['mongo:27017'])
 mongo_client = MongoClient(
         host=[os.getenv('MICROBLOGPUB_MONGODB_HOST', 'localhost:27017')],
 )
@@ -67,23 +64,26 @@ mongo_client = MongoClient(
 DB_NAME = '{}_{}'.format(USERNAME, DOMAIN.replace('.', '_'))
 DB = mongo_client[DB_NAME]
 
+
 def _drop_db():
     if not DEBUG_MODE:
         return
 
     mongo_client.drop_database(DB_NAME)
 
-KEY = Key(USERNAME, DOMAIN, create=True)
+
+KEY = get_key(ID, USERNAME, DOMAIN)
 
 
 JWT_SECRET = get_secret_key('jwt')
 JWT = JSONWebSignatureSerializer(JWT_SECRET)
 
+
 def _admin_jwt_token() -> str:
     return JWT.dumps({'me': 'ADMIN', 'ts': datetime.now().timestamp()}).decode('utf-8')  # type: ignore
 
-ADMIN_API_KEY = get_secret_key('admin_api_key', _admin_jwt_token)
 
+ADMIN_API_KEY = get_secret_key('admin_api_key', _admin_jwt_token)
 
 ME = {
     "@context": [
@@ -107,13 +107,5 @@ ME = {
         "type": "Image",
         "url": ICON_URL,
     },
-    "publicKey": {
-        "id": ID+"#main-key",
-        "owner": ID,
-        "publicKeyPem": KEY.pubkey_pem,
-    },
+    "publicKey": KEY.to_dict(),
 }
-print(ME)
-
-ACTOR_SERVICE = ActorService(USER_AGENT, DB.actors_cache, ID, ME, DB.instances)
-OBJECT_SERVICE = ObjectService(USER_AGENT, DB.objects_cache, DB.inbox, DB.outbox, DB.instances)

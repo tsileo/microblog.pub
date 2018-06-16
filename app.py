@@ -67,7 +67,7 @@ from utils.errors import ActivityNotFoundError
 
 
 from typing import Dict, Any
- 
+
 app = Flask(__name__)
 app.secret_key = get_secret_key('flask')
 app.config.update(
@@ -137,23 +137,23 @@ def clean_html(html):
     return bleach.clean(html, tags=ALLOWED_TAGS)
 
 
-@app.template_filter()                              
-def quote_plus(t):                  
-    return urllib.parse.quote_plus(t)                         
+@app.template_filter()
+def quote_plus(t):
+    return urllib.parse.quote_plus(t)
 
 
-@app.template_filter()                              
-def is_from_outbox(t):                  
+@app.template_filter()
+def is_from_outbox(t):
     return t.startswith(ID)
 
 
-@app.template_filter()                              
-def clean(html):                                    
-    return clean_html(html)                         
+@app.template_filter()
+def clean(html):
+    return clean_html(html)
 
 
-@app.template_filter()                              
-def html2plaintext(body):                           
+@app.template_filter()
+def html2plaintext(body):
     return html2text(body)
 
 
@@ -183,7 +183,7 @@ def format_timeago(val):
             return timeago.format(datetime.strptime(val, '%Y-%m-%dT%H:%M:%SZ'), datetime.utcnow())
         except:
             return timeago.format(datetime.strptime(val, '%Y-%m-%dT%H:%M:%S.%fZ'), datetime.utcnow())
-            
+
     return val
 
 def _is_img(filename):
@@ -279,7 +279,7 @@ def handle_activitypub_error(error):
     return response
 
 
-# App routes 
+# App routes
 
 #######
 # Login
@@ -487,7 +487,7 @@ def _build_thread(data, include_children=True):
     def _flatten(node, level=0):
         node['_level'] = level
         thread.append(node)
-        
+
         for snode in sorted(idx[node['activity']['object']['id']]['_nodes'], key=lambda d: d['activity']['object']['published']):
             _flatten(snode, level=level+1)
     _flatten(idx[root_id])
@@ -495,10 +495,10 @@ def _build_thread(data, include_children=True):
     return thread
 
 
-@app.route('/note/<note_id>')                       
-def note_by_id(note_id):                            
+@app.route('/note/<note_id>')
+def note_by_id(note_id):
     data = DB.outbox.find_one({'id': note_id})
-    if not data:                                    
+    if not data:
         abort(404)
     if data['meta'].get('deleted', False):
         abort(410)
@@ -511,7 +511,7 @@ def note_by_id(note_id):
         '$or': [{'activity.object.id': data['activity']['object']['id']},
                 {'activity.object': data['activity']['object']['id']}],
     }))
-    likes = [ACTOR_SERVICE.get(doc['activity']['actor']) for doc in likes]          
+    likes = [ACTOR_SERVICE.get(doc['activity']['actor']) for doc in likes]
 
     shares = list(DB.inbox.find({
         'meta.undo': False,
@@ -519,7 +519,7 @@ def note_by_id(note_id):
         '$or': [{'activity.object.id': data['activity']['object']['id']},
                 {'activity.object': data['activity']['object']['id']}],
     }))
-    shares = [ACTOR_SERVICE.get(doc['activity']['actor']) for doc in shares]          
+    shares = [ACTOR_SERVICE.get(doc['activity']['actor']) for doc in shares]
 
     return render_template('note.html', likes=likes, shares=shares, me=ME, thread=thread, note=data)
 
@@ -536,7 +536,7 @@ def nodeinfo():
             'openRegistrations': False,
             'usage': {'users': {'total': 1}, 'localPosts': DB.outbox.count()},
             'metadata': {
-                'sourceCode': 'https://github.com/tsileo/microblog.pub',    
+                'sourceCode': 'https://github.com/tsileo/microblog.pub',
                 'nodeName': f'@{USERNAME}@{DOMAIN}',
             },
         }),
@@ -551,7 +551,7 @@ def wellknown_nodeinfo():
                 'rel': 'http://nodeinfo.diaspora.software/ns/schema/2.0',
                 'href': f'{ID}/nodeinfo',
             }
-            
+
         ],
     )
 
@@ -616,11 +616,11 @@ def activity_from_doc(raw_doc: Dict[str, Any], embed: bool = False) -> Dict[str,
 
 
 
-@app.route('/outbox', methods=['GET', 'POST'])      
-def outbox():                                       
-    if request.method == 'GET':                     
-        if not is_api_request():                    
-            abort(404)                              
+@app.route('/outbox', methods=['GET', 'POST'])
+def outbox():
+    if request.method == 'GET':
+        if not is_api_request():
+            abort(404)
         # TODO(tsileo): filter the outbox if not authenticated
         # FIXME(tsileo): filter deleted, add query support for build_ordered_collection
         q = {
@@ -639,7 +639,7 @@ def outbox():
         _api_required()
     except BadSignature:
         abort(401)
- 
+
     data = request.get_json(force=True)
     print(data)
     activity = activitypub.parse_activity(data)
@@ -785,7 +785,7 @@ def admin():
             col_followers=DB.followers.count(),
             col_following=DB.following.count(),
     )
- 
+
 
 @app.route('/new', methods=['GET'])
 @login_required
@@ -833,7 +833,7 @@ def notifications():
         'meta.deleted': False,
     }
     # TODO(tsileo): also include replies via regex on Create replyTo
-    q = {'$or': [q, {'type': 'Follow'}, {'type': 'Accept'}, {'type': 'Undo', 'activity.object.type': 'Follow'}, 
+    q = {'$or': [q, {'type': 'Follow'}, {'type': 'Accept'}, {'type': 'Undo', 'activity.object.type': 'Follow'},
         {'type': 'Announce', 'activity.object': {'$regex': f'^{BASE_URL}'}},
         {'type': 'Create', 'activity.object.inReplyTo': {'$regex': f'^{BASE_URL}'}},
         ]}
@@ -1004,27 +1004,27 @@ def stream():
     )
 
 
-@app.route('/inbox', methods=['GET', 'POST'])       
-def inbox():                                        
-    if request.method == 'GET':                     
-        if not is_api_request():                    
-            abort(404)                              
+@app.route('/inbox', methods=['GET', 'POST'])
+def inbox():
+    if request.method == 'GET':
+        if not is_api_request():
+            abort(404)
         try:
             _api_required()
         except BadSignature:
             abort(404)
 
-        return jsonify(**activitypub.build_ordered_collection(  
-            DB.inbox,                               
-            q={'meta.deleted': False},              
-            cursor=request.args.get('cursor'),      
-            map_func=lambda doc: remove_context(doc['activity']),   
-        ))                                          
+        return jsonify(**activitypub.build_ordered_collection(
+            DB.inbox,
+            q={'meta.deleted': False},
+            cursor=request.args.get('cursor'),
+            map_func=lambda doc: remove_context(doc['activity']),
+        ))
 
-    data = request.get_json(force=True)             
+    data = request.get_json(force=True)
     logger.debug(f'req_headers={request.headers}')
     logger.debug(f'raw_data={data}')
-    try:                                            
+    try:
         if not verify_request(ACTOR_SERVICE):
             raise Exception('failed to verify request')
     except Exception:
@@ -1039,13 +1039,13 @@ def inbox():
                 response=json.dumps({'error': 'failed to verify request (using HTTP signatures or fetching the IRI)'}),
             )
 
-    activity = activitypub.parse_activity(data)                 
-    logger.debug(f'inbox activity={activity}/{data}')                                 
-    activity.process_from_inbox()                   
+    activity = activitypub.parse_activity(data)
+    logger.debug(f'inbox activity={activity}/{data}')
+    activity.process_from_inbox()
 
-    return Response(                                
-        status=201,                                 
-    )                                               
+    return Response(
+        status=201,
+    )
 
 
 @app.route('/api/debug', methods=['GET', 'DELETE'])
@@ -1082,17 +1082,17 @@ def api_upload():
     print('upload OK')
     print(filename)
     attachment = [
-        {'mediaType': mtype,         
-         'name': rfilename,                                    
-         'type': 'Document',                              
+        {'mediaType': mtype,
+         'name': rfilename,
+         'type': 'Document',
          'url': BASE_URL + f'/static/media/{filename}'
          },
     ]
     print(attachment)
-    content = request.args.get('content')           
-    to = request.args.get('to')                     
-    note = activitypub.Note(                                    
-        cc=[ID+'/followers'],                       
+    content = request.args.get('content')
+    to = request.args.get('to')
+    note = activitypub.Note(
+        cc=[ID+'/followers'],
         to=[to if to else config.AS_PUBLIC],
         content=content,  # TODO(tsileo): handle markdown
         attachment=attachment,
@@ -1104,30 +1104,30 @@ def api_upload():
     print(create.to_dict())
     create.post_to_outbox()
     print('posted')
-    
+
     return Response(
         status=201,
         response='OK',
     )
 
 
-@app.route('/api/new_note', methods=['POST'])                         
-@api_required                                      
-def api_new_note(): 
+@app.route('/api/new_note', methods=['POST'])
+@api_required
+def api_new_note():
     source = _user_api_arg('content')
     if not source:
         raise ValueError('missing content')
-    
+
     _reply, reply = None, None
     try:
         _reply = _user_api_arg('reply')
     except ValueError:
         pass
 
-    content, tags = parse_markdown(source)       
+    content, tags = parse_markdown(source)
     to = request.args.get('to')
     cc = [ID+'/followers']
-    
+
     if _reply:
         reply = activitypub.parse_activity(OBJECT_SERVICE.get(_reply))
         cc.append(reply.attributedTo)
@@ -1136,8 +1136,8 @@ def api_new_note():
         if tag['type'] == 'Mention':
             cc.append(tag['href'])
 
-    note = activitypub.Note(                                    
-        cc=list(set(cc)),                       
+    note = activitypub.Note(
+        cc=list(set(cc)),
         to=[to if to else config.AS_PUBLIC],
         content=content,
         tag=tags,
@@ -1193,20 +1193,20 @@ def api_follow():
     return _user_api_response(activity=follow.id)
 
 
-@app.route('/followers')                            
-def followers():                                    
-    if is_api_request():                            
+@app.route('/followers')
+def followers():
+    if is_api_request():
         return jsonify(
             **activitypub.build_ordered_collection(
                 DB.followers,
                 cursor=request.args.get('cursor'),
                 map_func=lambda doc: doc['remote_actor'],
             )
-        )                                                                      
+        )
 
-    followers = [ACTOR_SERVICE.get(doc['remote_actor']) for doc in DB.followers.find(limit=50)]          
-    return render_template(                         
-        'followers.html',                           
+    followers = [ACTOR_SERVICE.get(doc['remote_actor']) for doc in DB.followers.find(limit=50)]
+    return render_template(
+        'followers.html',
         me=ME,
         notes=DB.inbox.find({'object.object.type': 'Note'}).count(),
         followers=DB.followers.count(),
@@ -1225,7 +1225,7 @@ def following():
                 map_func=lambda doc: doc['remote_actor'],
             ),
         )
-    
+
     following = [ACTOR_SERVICE.get(doc['remote_actor']) for doc in DB.following.find(limit=50)]
     return render_template(
         'following.html',
@@ -1327,13 +1327,13 @@ def get_client_id_data(url):
 
 
 @app.route('/indieauth/flow', methods=['POST'])
-@login_required                                     
-def indieauth_flow():                               
-    auth = dict(                                    
-        scope=' '.join(request.form.getlist('scopes')),                                                  
-        me=request.form.get('me'),                  
-        client_id=request.form.get('client_id'),    
-        state=request.form.get('state'),            
+@login_required
+def indieauth_flow():
+    auth = dict(
+        scope=' '.join(request.form.getlist('scopes')),
+        me=request.form.get('me'),
+        client_id=request.form.get('client_id'),
+        state=request.form.get('state'),
         redirect_uri=request.form.get('redirect_uri'),
         response_type=request.form.get('response_type'),
     )
@@ -1354,14 +1354,14 @@ def indieauth_flow():
     return redirect(red)
 
 
-# @app.route('/indieauth', methods=['GET', 'POST'])   
-def indieauth_endpoint():                           
-    if request.method == 'GET':                     
-        if not session.get('logged_in'):            
-            return redirect(url_for('login', next=request.url))                                          
+# @app.route('/indieauth', methods=['GET', 'POST'])
+def indieauth_endpoint():
+    if request.method == 'GET':
+        if not session.get('logged_in'):
+            return redirect(url_for('login', next=request.url))
 
-        me = request.args.get('me')                 
-        # FIXME(tsileo): ensure me == ID            
+        me = request.args.get('me')
+        # FIXME(tsileo): ensure me == ID
         client_id = request.args.get('client_id')
         redirect_uri = request.args.get('redirect_uri')
         state = request.args.get('state', '')
@@ -1397,7 +1397,7 @@ def indieauth_endpoint():
         abort(403)
         return
 
-    session['logged_in'] = True                     
+    session['logged_in'] = True
     me = auth['me']
     state = auth['state']
     scope = ' '.join(auth['scope'])
