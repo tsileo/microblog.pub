@@ -1,11 +1,12 @@
+import ipaddress
 from urllib.parse import urlparse
 
-import ipaddress
 import opengraph
 import requests
 from bs4 import BeautifulSoup
 
-from .urlutils import is_url_valid, check_url
+from .urlutils import check_url
+from .urlutils import is_url_valid
 
 
 def links_from_note(note):

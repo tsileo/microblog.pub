@@ -1,14 +1,21 @@
-import typing                                       
-import re                                           
+import re
+import typing
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Type
+from typing import Union
 
-from bleach.linkifier import Linker                 
-from markdown import markdown                       
+from bleach.linkifier import Linker
+from markdown import markdown
 
-from utils.webfinger import get_actor_url           
-from config import USERNAME, BASE_URL, ID           
-from config import ACTOR_SERVICE       
-
-from typing import List, Optional, Tuple, Dict, Any, Union, Type                                         
+from config import ACTOR_SERVICE
+from config import BASE_URL
+from config import ID
+from config import USERNAME
+from utils.webfinger import get_actor_url
 
 
 def set_attrs(attrs, new=False):                    

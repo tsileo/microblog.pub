@@ -1,12 +1,12 @@
-import time
 import os
+import time
+from typing import List
+from typing import Tuple
 
 import requests
 from html2text import html2text
-from utils import activitypub_utils
 
-from typing import Tuple
-from typing import List
+from utils import activitypub_utils
 
 
 def resp2plaintext(resp):

@@ -1,13 +1,12 @@
-from pyld import jsonld
+import base64
 import hashlib
 from datetime import datetime
+from typing import Any
+from typing import Dict
 
-from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
-import base64
-
-from typing import Any, Dict
-
+from Crypto.Signature import PKCS1_v1_5
+from pyld import jsonld
 
 # cache the downloaded "schemas", otherwise the library is super slow
 # (https://github.com/digitalbazaar/pyld/issues/70)

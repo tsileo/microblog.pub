@@ -1,8 +1,9 @@
-import requests
 from urllib.parse import urlparse
 
-from .urlutils import check_url
+import requests
+
 from .errors import ActivityNotFoundError
+from .urlutils import check_url
 
 
 class ObjectService(object):

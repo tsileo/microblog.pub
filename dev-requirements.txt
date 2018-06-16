@@ -4,3 +4,4 @@ html2text
 pyyaml
 flake8
 mypy
+black

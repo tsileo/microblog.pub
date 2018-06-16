@@ -1,22 +1,29 @@
 import logging
-
 from datetime import datetime
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Union
 
 from bson.objectid import ObjectId
-from html2text import html2text
 from feedgen.feed import FeedGenerator
+from html2text import html2text
 
+import tasks
+from config import BASE_URL
+from config import DB
+from config import ID
+from config import ME
+from config import USER_AGENT
+from config import USERNAME
 from little_boxes import activitypub as ap
 from little_boxes.backend import Backend
 from little_boxes.collection import parse_collection as ap_parse_collection
 
-from config import USERNAME, BASE_URL, ID
-from config import DB, ME
-import tasks
-
-from typing import List, Optional, Dict, Any, Union
-
 logger = logging.getLogger(__name__)
+
+MY_PERSON = ap.Person(**ME)
 
 
 def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
@@ -35,6 +42,9 @@ def _to_list(data: Union[List[Any], Any]) -> List[Any]:
 
 
 class MicroblogPubBackend(Backend):
+    def user_agent(self) -> str:
+        return USER_AGENT
+
     def base_url(self) -> str:
         return BASE_URL
 

@@ -1,12 +1,12 @@
-from urllib.parse import urlparse
-from typing import Dict, Any
-from typing import Optional
 import logging
+from typing import Any
+from typing import Dict
+from typing import Optional
+from urllib.parse import urlparse
 
 import requests
 
 from .urlutils import check_url
-
 
 logger = logging.getLogger(__name__)
 

@@ -3,18 +3,19 @@
 Mastodon instances won't accept requests that are not signed using this scheme.
 
 """
-from datetime import datetime
-from urllib.parse import urlparse
-from typing import Any, Dict, Optional
 import base64
 import hashlib
 import logging
+from datetime import datetime
+from typing import Any
+from typing import Dict
+from typing import Optional
+from urllib.parse import urlparse
 
+from Crypto.Hash import SHA256
+from Crypto.Signature import PKCS1_v1_5
 from flask import request
 from requests.auth import AuthBase
-
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
 
 logger = logging.getLogger(__name__)
 

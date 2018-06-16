@@ -1,11 +1,11 @@
 import logging
+from urllib.parse import urlparse
 
 import requests
-from urllib.parse import urlparse
 from Crypto.PublicKey import RSA
 
-from .urlutils import check_url
 from .errors import ActivityNotFoundError
+from .urlutils import check_url
 
 logger = logging.getLogger(__name__)
 

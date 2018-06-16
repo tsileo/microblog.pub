@@ -1,7 +1,7 @@
+import ipaddress
 import logging
 import os
 import socket
-import ipaddress
 from urllib.parse import urlparse
 
 from . import strtobool

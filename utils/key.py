@@ -1,6 +1,5 @@
-import os
 import binascii
-
+import os
 from typing import Callable
 
 from little_boxes.key import Key
