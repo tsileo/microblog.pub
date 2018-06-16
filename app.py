@@ -38,6 +38,7 @@ from werkzeug.utils import secure_filename
 import activitypub
 import config
 from activitypub import embed_collection
+from activitypub import MY_PERSON
 from config import ACTOR_SERVICE
 from config import ADMIN_API_KEY
 from config import BASE_URL
@@ -55,6 +56,7 @@ from config import USERNAME
 from config import VERSION
 from config import _drop_db
 from config import custom_cache_purge_hook
+from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
 from little_boxes.activitypub import clean_activity
 from little_boxes.errors import BadActivityError
@@ -87,6 +89,8 @@ else:
     root_logger.setLevel(gunicorn_logger.level)
 
 SIG_AUTH = HTTPSigAuth(KEY)
+
+OUTBOX = ap.Outbox(MY_PERSON)
 
 
 def verify_pass(pwd):
@@ -377,8 +381,9 @@ def authorize_follow():
     if DB.following.find({"remote_actor": actor}).count() > 0:
         return redirect("/following")
 
-    follow = activitypub.Follow(object=actor)
-    follow.post_to_outbox()
+    follow = activitypub.Follow(actor=MY_PERSON, object=actor)
+    OUTBOX.post(follow)
+
     return redirect("/following")
 
 
@@ -400,6 +405,7 @@ def u2f_register():
 
 #######
 # Activity pub routes
+# FIXME(tsileo); continue here
 
 
 @app.route("/")

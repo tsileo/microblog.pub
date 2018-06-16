@@ -9,18 +9,17 @@ from requests.exceptions import HTTPError
 
 from config import DB
 from config import HEADERS
-from config import ID
 from config import KEY
 from config import USER_AGENT
-from utils.httpsig import HTTPSigAuth
-from utils.linked_data_sig import generate_signature
+from little_boxes.httpsig import HTTPSigAuth
+from little_boxes.linked_data_sig import generate_signature
 from utils.opengraph import fetch_og_metadata
 
 log = logging.getLogger(__name__)
 app = Celery(
     "tasks", broker=os.getenv("MICROBLOGPUB_AMQP_BROKER", "pyamqp://guest@localhost//")
 )
-SigAuth = HTTPSigAuth(ID + "#main-key", KEY.privkey)
+SigAuth = HTTPSigAuth(KEY)
 
 
 @app.task(bind=True, max_retries=12)
@@ -29,7 +28,7 @@ def post_to_inbox(self, payload: str, to: str) -> None:
         log.info("payload=%s", payload)
         log.info("generating sig")
         signed_payload = json.loads(payload)
-        generate_signature(signed_payload, KEY.privkey)
+        generate_signature(signed_payload, KEY)
         log.info("to=%s", to)
         resp = requests.post(
             to,

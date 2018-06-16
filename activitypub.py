@@ -20,6 +20,8 @@ from config import USERNAME
 from little_boxes import activitypub as ap
 from little_boxes.backend import Backend
 from little_boxes.collection import parse_collection as ap_parse_collection
+from little_boxes.errors import Error
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,15 @@ def _to_list(data: Union[List[Any], Any]) -> List[Any]:
     return [data]
 
 
+def ensure_it_is_me(f):
+    """Method decorator used to track the events fired during tests."""
+    def wrapper(*args, **kwargs):
+        if args[1].id != MY_PERSON.id:
+            raise Error('unexpected actor')
+        return f(*args, **kwargs)
+    return wrapper
+
+
 class MicroblogPubBackend(Backend):
     def user_agent(self) -> str:
         return USER_AGENT
@@ -51,6 +62,7 @@ class MicroblogPubBackend(Backend):
     def activity_url(self, obj_id):
         return f"{BASE_URL}/outbox/{obj_id}"
 
+    @ensure_it_is_me
     def outbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
         DB.outbox.insert_one(
             {
@@ -61,6 +73,7 @@ class MicroblogPubBackend(Backend):
             }
         )
 
+    @ensure_it_is_me
     def outbox_is_blocked(self, as_actor: ap.Person, actor_id: str) -> bool:
         return bool(
             DB.outbox.find_one(
@@ -73,11 +86,14 @@ class MicroblogPubBackend(Backend):
         )
 
     def fetch_iri(self, iri: str) -> ap.ObjectType:
-        pass
+        # FIXME(tsileo): implements caching
+        return super().fetch_iri(iri)
 
+    @ensure_it_is_me
     def inbox_check_duplicate(self, as_actor: ap.Person, iri: str) -> bool:
         return bool(DB.inbox.find_one({"remote_id": iri}))
 
+    @ensure_it_is_me
     def inbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
         DB.inbox.insert_one(
             {
@@ -88,28 +104,34 @@ class MicroblogPubBackend(Backend):
             }
         )
 
+    @ensure_it_is_me
     def post_to_remote_inbox(self, as_actor: ap.Person, payload: str, to: str) -> None:
         tasks.post_to_inbox.delay(payload, to)
 
+    @ensure_it_is_me
     def new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
         remote_actor = follow.get_actor().id
 
         if DB.followers.find({"remote_actor": remote_actor}).count() == 0:
             DB.followers.insert_one({"remote_actor": remote_actor})
 
+    @ensure_it_is_me
     def undo_new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
         # TODO(tsileo): update the follow to set undo
         DB.followers.delete_one({"remote_actor": follow.get_actor().id})
 
+    @ensure_it_is_me
     def undo_new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
         # TODO(tsileo): update the follow to set undo
         DB.following.delete_one({"remote_actor": follow.get_object().id})
 
+    @ensure_it_is_me
     def new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
         remote_actor = follow.get_actor().id
         if DB.following.find({"remote_actor": remote_actor}).count() == 0:
             DB.following.insert_one({"remote_actor": remote_actor})
 
+    @ensure_it_is_me
     def inbox_like(self, as_actor: ap.Person, like: ap.Like) -> None:
         obj = like.get_object()
         # Update the meta counter if the object is published by the server
@@ -117,6 +139,7 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": obj.id}, {"$inc": {"meta.count_like": 1}}
         )
 
+    @ensure_it_is_me
     def inbox_undo_like(self, as_actor: ap.Person, like: ap.Like) -> None:
         obj = like.get_object()
         # Update the meta counter if the object is published by the server
@@ -124,6 +147,7 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": obj.id}, {"$inc": {"meta.count_like": -1}}
         )
 
+    @ensure_it_is_me
     def outobx_like(self, as_actor: ap.Person, like: ap.Like) -> None:
         obj = like.get_object()
         # Unlikely, but an actor can like it's own post
@@ -136,6 +160,7 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": obj.id}, {"$set": {"meta.liked": like.id}}
         )
 
+    @ensure_it_is_me
     def outbox_undo_like(self, as_actor: ap.Person, like: ap.Like) -> None:
         obj = like.get_object()
         # Unlikely, but an actor can like it's own post
@@ -147,6 +172,7 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": obj.id}, {"$set": {"meta.liked": False}}
         )
 
+    @ensure_it_is_me
     def inbox_announce(self, as_actor: ap.Person, announce: ap.Announce) -> None:
         if isinstance(announce._data["object"], str) and not announce._data[
             "object"
@@ -166,6 +192,7 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": obj_iri}, {"$inc": {"meta.count_boost": 1}}
         )
 
+    @ensure_it_is_me
     def inbox_undo_announce(self, as_actor: ap.Person, announce: ap.Announce) -> None:
         obj = announce.get_object()
         # Update the meta counter if the object is published by the server
@@ -173,18 +200,21 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": obj.id}, {"$inc": {"meta.count_boost": -1}}
         )
 
+    @ensure_it_is_me
     def outbox_announce(self, as_actor: ap.Person, announce: ap.Announce) -> None:
         obj = announce.get_object()
         DB.inbox.update_one(
             {"activity.object.id": obj.id}, {"$set": {"meta.boosted": announce.id}}
         )
 
+    @ensure_it_is_me
     def outbox_undo_announce(self, as_actor: ap.Person, announce: ap.Announce) -> None:
         obj = announce.get_object()
         DB.inbox.update_one(
             {"activity.object.id": obj.id}, {"$set": {"meta.boosted": False}}
         )
 
+    @ensure_it_is_me
     def inbox_delete(self, as_actor: ap.Person, delete: ap.Delete) -> None:
         DB.inbox.update_one(
             {"activity.object.id": delete.get_object().id},
@@ -197,12 +227,14 @@ class MicroblogPubBackend(Backend):
 
         # TODO(tsileo): also purge the cache if it's a reply of a published activity
 
+    @ensure_it_is_me
     def outbox_delete(self, as_actor: ap.Person, delete: ap.Delete) -> None:
         DB.outbox.update_one(
             {"activity.object.id": delete.get_object().id},
             {"$set": {"meta.deleted": True}},
         )
 
+    @ensure_it_is_me
     def inbox_update(self, as_actor: ap.Person, update: ap.Update) -> None:
         obj = update.get_object()
         if obj.ACTIVITY_TYPE == ap.ActivityType.NOTE:
@@ -214,6 +246,7 @@ class MicroblogPubBackend(Backend):
 
         # FIXME(tsileo): handle update actor amd inbox_update_note/inbox_update_actor
 
+    @ensure_it_is_me
     def outbox_update(self, as_actor: ap.Person, update: ap.Update) -> None:
         obj = update._data["object"]
 
