@@ -21,10 +21,9 @@ from little_boxes import activitypub as ap
 from little_boxes.backend import Backend
 from little_boxes.collection import parse_collection as ap_parse_collection
 from little_boxes.errors import Error
+from little_boxes.errors import ActivityNotFoundError
 
 logger = logging.getLogger(__name__)
-
-MY_PERSON = ap.Person(**ME)
 
 
 def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
@@ -46,7 +45,7 @@ def ensure_it_is_me(f):
     """Method decorator used to track the events fired during tests."""
 
     def wrapper(*args, **kwargs):
-        if args[1].id != MY_PERSON.id:
+        if args[1].id != ME["id"]:
             raise Error("unexpected actor")
         return f(*args, **kwargs)
 
@@ -87,7 +86,22 @@ class MicroblogPubBackend(Backend):
         )
 
     def fetch_iri(self, iri: str) -> ap.ObjectType:
-        # FIXME(tsileo): implements caching
+        if iri == ME["id"]:
+            return ME
+
+        # Check if the activity is owned by this server
+        if iri.startswith(BASE_URL):
+            data = DB.outbox.find_one({"remote_id": iri})
+            if not data:
+                raise ActivityNotFoundError(f"{iri} not found on this server")
+            return data["activity"]
+
+        # Check if the activity is stored in the inbox
+        data = DB.inbox.find_one({"remote_id": iri})
+        if data:
+            return data["activity"]
+
+        # Fetch the URL via HTTP
         return super().fetch_iri(iri)
 
     @ensure_it_is_me
@@ -149,7 +163,7 @@ class MicroblogPubBackend(Backend):
         )
 
     @ensure_it_is_me
-    def outobx_like(self, as_actor: ap.Person, like: ap.Like) -> None:
+    def outbox_like(self, as_actor: ap.Person, like: ap.Like) -> None:
         obj = like.get_object()
         # Unlikely, but an actor can like it's own post
         DB.outbox.update_one(
@@ -272,6 +286,12 @@ class MicroblogPubBackend(Backend):
         DB.outbox.update_one({"activity.object.id": obj["id"]}, update)
         # FIXME(tsileo): should send an Update (but not a partial one, to all the note's recipients
         # (create a new Update with the result of the update, and send it without saving it?)
+
+    def outbox_create(self, as_actor: ap.Person, create: ap.Create) -> None:
+        pass
+
+    def inbox_create(self, as_actor: ap.Person, create: ap.Create) -> None:
+        pass
 
 
 def gen_feed():
