@@ -384,7 +384,7 @@ def authorize_follow():
     if DB.following.find({"remote_actor": actor}).count() > 0:
         return redirect("/following")
 
-    follow = activitypub.Follow(actor=MY_PERSON, object=actor)
+    follow = activitypub.Follow(actor=MY_PERSON.id, object=actor)
     OUTBOX.post(follow)
 
     return redirect("/following")
@@ -1182,7 +1182,7 @@ def api_upload():
     content = request.args.get("content")
     to = request.args.get("to")
     note = ap.Note(
-        actor=MY_PERSON,
+        attributedTo=MY_PERSON.id,
         cc=[ID + "/followers"],
         to=[to if to else ap.AS_PUBLIC],
         content=content,  # TODO(tsileo): handle markdown
@@ -1225,7 +1225,7 @@ def api_new_note():
             cc.append(tag["href"])
 
     note = ap.Note(
-        actor=MY_PERSON,
+        attributedTo=MY_PERSON.id,
         cc=list(set(cc)),
         to=[to if to else ap.AS_PUBLIC],
         content=content,
@@ -1261,7 +1261,7 @@ def api_block():
     if existing:
         return _user_api_response(activity=existing["activity"]["id"])
 
-    block = ap.Block(actor=MY_PERSON, object=actor)
+    block = ap.Block(actor=MY_PERSON.id, object=actor)
     OUTBOX.post(block)
 
     return _user_api_response(activity=block.id)
@@ -1276,7 +1276,7 @@ def api_follow():
     if existing:
         return _user_api_response(activity=existing["activity"]["id"])
 
-    follow = ap.Follow(actor=MY_PERSON, object=actor)
+    follow = ap.Follow(actor=MY_PERSON.id, object=actor)
     OUTBOX.post(follow)
 
     return _user_api_response(activity=follow.id)

@@ -79,7 +79,7 @@ class MicroblogPubBackend(Backend):
             DB.outbox.find_one(
                 {
                     "type": ap.ActivityType.BLOCK.value,
-                    "activity.object": as_actor.id,
+                    "activity.object": actor_id,
                     "meta.undo": False,
                 }
             )
@@ -92,14 +92,13 @@ class MicroblogPubBackend(Backend):
         # Check if the activity is owned by this server
         if iri.startswith(BASE_URL):
             data = DB.outbox.find_one({"remote_id": iri})
-            if not data:
-                raise ActivityNotFoundError(f"{iri} not found on this server")
-            return data["activity"]
-
-        # Check if the activity is stored in the inbox
-        data = DB.inbox.find_one({"remote_id": iri})
-        if data:
-            return data["activity"]
+            if data:
+                return data["activity"]
+        else:
+            # Check if the activity is stored in the inbox
+            data = DB.inbox.find_one({"remote_id": iri})
+            if data:
+                return data["activity"]
 
         # Fetch the URL via HTTP
         return super().fetch_iri(iri)
@@ -142,7 +141,7 @@ class MicroblogPubBackend(Backend):
 
     @ensure_it_is_me
     def new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        remote_actor = follow.get_actor().id
+        remote_actor = follow.get_object().id
         if DB.following.find({"remote_actor": remote_actor}).count() == 0:
             DB.following.insert_one({"remote_actor": remote_actor})
 
