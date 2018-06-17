@@ -22,7 +22,6 @@ from little_boxes.backend import Backend
 from little_boxes.collection import parse_collection as ap_parse_collection
 from little_boxes.errors import Error
 
-
 logger = logging.getLogger(__name__)
 
 MY_PERSON = ap.Person(**ME)
@@ -45,10 +44,12 @@ def _to_list(data: Union[List[Any], Any]) -> List[Any]:
 
 def ensure_it_is_me(f):
     """Method decorator used to track the events fired during tests."""
+
     def wrapper(*args, **kwargs):
         if args[1].id != MY_PERSON.id:
-            raise Error('unexpected actor')
+            raise Error("unexpected actor")
         return f(*args, **kwargs)
+
     return wrapper
 
 
@@ -247,8 +248,8 @@ class MicroblogPubBackend(Backend):
         # FIXME(tsileo): handle update actor amd inbox_update_note/inbox_update_actor
 
     @ensure_it_is_me
-    def outbox_update(self, as_actor: ap.Person, update: ap.Update) -> None:
-        obj = update._data["object"]
+    def outbox_update(self, as_actor: ap.Person, _update: ap.Update) -> None:
+        obj = _update._data["object"]
 
         update_prefix = "activity.object."
         update: Dict[str, Any] = {"$set": dict(), "$unset": dict()}

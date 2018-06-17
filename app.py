@@ -30,15 +30,14 @@ from flask import url_for
 from flask_wtf.csrf import CSRFProtect
 from html2text import html2text
 from itsdangerous import BadSignature
-from itsdangerous import JSONWebSignatureSerializer
 from passlib.hash import bcrypt
 from u2flib_server import u2f
 from werkzeug.utils import secure_filename
 
 import activitypub
 import config
-from activitypub import embed_collection
 from activitypub import MY_PERSON
+from activitypub import embed_collection
 from config import ACTOR_SERVICE
 from config import ADMIN_API_KEY
 from config import BASE_URL
@@ -59,16 +58,14 @@ from config import custom_cache_purge_hook
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
 from little_boxes.activitypub import clean_activity
-from little_boxes.errors import BadActivityError
+from little_boxes.content_helper import parse_markdown
+from little_boxes.errors import ActivityNotFoundError
 from little_boxes.errors import Error
-from little_boxes.errors import UnexpectedActivityTypeError
+from little_boxes.errors import NotFromOutboxError
 from little_boxes.httpsig import HTTPSigAuth
 from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
-from utils.content_helper import parse_markdown
-from utils.errors import ActivityNotFoundError
-from utils.errors import NotFromOutboxError
 from utils.key import get_secret_key
 
 app = Flask(__name__)
@@ -91,6 +88,7 @@ else:
 SIG_AUTH = HTTPSigAuth(KEY)
 
 OUTBOX = ap.Outbox(MY_PERSON)
+INBOX = ap.Inbox(MY_PERSON)
 
 
 def verify_pass(pwd):
@@ -405,7 +403,6 @@ def u2f_register():
 
 #######
 # Activity pub routes
-# FIXME(tsileo); continue here
 
 
 @app.route("/")
@@ -726,12 +723,8 @@ def outbox():
 
     data = request.get_json(force=True)
     print(data)
-    activity = activitypub.parse_activity(data)
-
-    if activity.type_enum == ActivityType.NOTE:
-        activity = activity.build_create()
-
-    activity.post_to_outbox()
+    activity = ap.parse_activity(data)
+    OUTBOX.post(activity)
 
     # Purge the cache if a custom hook is set, as new content was published
     custom_cache_purge_hook()
@@ -743,7 +736,7 @@ def outbox():
 def outbox_detail(item_id):
     doc = DB.outbox.find_one({"id": item_id})
     if doc["meta"].get("deleted", False):
-        obj = activitypub.parse_activity(doc["activity"])
+        obj = ap.parse_activity(doc["activity"])
         resp = jsonify(**obj.get_object().get_tombstone())
         resp.status_code = 410
         return resp
@@ -770,8 +763,8 @@ def outbox_activity_replies(item_id):
     data = DB.outbox.find_one({"id": item_id, "meta.deleted": False})
     if not data:
         abort(404)
-    obj = activitypub.parse_activity(data["activity"])
-    if obj.type_enum != ActivityType.CREATE:
+    obj = ap.parse_activity(data["activity"])
+    if obj.ACTIVITY_TYPE != ActivityType.CREATE:
         abort(404)
 
     q = {
@@ -800,8 +793,8 @@ def outbox_activity_likes(item_id):
     data = DB.outbox.find_one({"id": item_id, "meta.deleted": False})
     if not data:
         abort(404)
-    obj = activitypub.parse_activity(data["activity"])
-    if obj.type_enum != ActivityType.CREATE:
+    obj = ap.parse_activity(data["activity"])
+    if obj.ACTIVITY_TYPE != ActivityType.CREATE:
         abort(404)
 
     q = {
@@ -833,8 +826,8 @@ def outbox_activity_shares(item_id):
     data = DB.outbox.find_one({"id": item_id, "meta.deleted": False})
     if not data:
         abort(404)
-    obj = activitypub.parse_activity(data["activity"])
-    if obj.type_enum != ActivityType.CREATE:
+    obj = ap.parse_activity(data["activity"])
+    if obj.ACTIVITY_TYPE != ActivityType.CREATE:
         abort(404)
 
     q = {
@@ -890,9 +883,9 @@ def new():
             if not data:
                 abort(400)
 
-        reply = activitypub.parse_activity(data["activity"])
+        reply = ap.parse_activity(data["activity"])
         reply_id = reply.id
-        if reply.type_enum == ActivityType.CREATE:
+        if reply.ACTIVITY_TYPE == ActivityType.CREATE:
             reply_id = reply.get_object().id
         actor = reply.get_actor()
         domain = urlparse(actor.id).netloc
@@ -972,12 +965,10 @@ def _user_api_arg(key: str, **kwargs):
 
 def _user_api_get_note(from_outbox: bool = False):
     oid = _user_api_arg("id")
-    note = activitypub.parse_activity(
-        OBJECT_SERVICE.get(oid), expected=ActivityType.NOTE
-    )
+    note = ap.parse_activity(OBJECT_SERVICE.get(oid), expected=ActivityType.NOTE)
     if from_outbox and not note.id.startswith(ID):
         raise NotFromOutboxError(
-            f"cannot delete {note.id}, id must be owned by the server"
+            f"cannot load {note.id}, id must be owned by the server"
         )
 
     return note
@@ -1000,7 +991,7 @@ def api_delete():
     note = _user_api_get_note(from_outbox=True)
 
     delete = note.build_delete()
-    delete.post_to_outbox()
+    OUTBOX.post(delete)
 
     return _user_api_response(activity=delete.id)
 
@@ -1011,7 +1002,7 @@ def api_boost():
     note = _user_api_get_note()
 
     announce = note.build_announce()
-    announce.post_to_outbox()
+    OUTBOX.post(announce)
 
     return _user_api_response(activity=announce.id)
 
@@ -1022,7 +1013,7 @@ def api_like():
     note = _user_api_get_note()
 
     like = note.build_like()
-    like.post_to_outbox()
+    OUTBOX.post(like)
 
     return _user_api_response(activity=like.id)
 
@@ -1035,10 +1026,10 @@ def api_undo():
     if not doc:
         raise ActivityNotFoundError(f"cannot found {oid}")
 
-    obj = activitypub.parse_activity(doc.get("activity"))
+    obj = ap.parse_activity(doc.get("activity"))
     # FIXME(tsileo): detect already undo-ed and make this API call idempotent
     undo = obj.build_undo()
-    undo.post_to_outbox()
+    OUTBOX.post(undo)
 
     return _user_api_response(activity=undo.id)
 
@@ -1116,7 +1107,7 @@ def inbox():
     data = request.get_json(force=True)
     logger.debug(f"req_headers={request.headers}")
     logger.debug(f"raw_data={data}")
-    try:
+    """try:
         if not verify_request(ACTOR_SERVICE):
             raise Exception("failed to verify request")
     except Exception:
@@ -1136,10 +1127,10 @@ def inbox():
                     }
                 ),
             )
-
-    activity = activitypub.parse_activity(data)
+    """
+    activity = ap.parse_activity(data)
     logger.debug(f"inbox activity={activity}/{data}")
-    activity.process_from_inbox()
+    INBOX.post(activity)
 
     return Response(status=201)
 
@@ -1185,9 +1176,10 @@ def api_upload():
     print(attachment)
     content = request.args.get("content")
     to = request.args.get("to")
-    note = activitypub.Note(
+    note = ap.Note(
+        actor=MY_PERSON,
         cc=[ID + "/followers"],
-        to=[to if to else config.AS_PUBLIC],
+        to=[to if to else ap.AS_PUBLIC],
         content=content,  # TODO(tsileo): handle markdown
         attachment=attachment,
     )
@@ -1196,7 +1188,7 @@ def api_upload():
     create = note.build_create()
     print(create)
     print(create.to_dict())
-    create.post_to_outbox()
+    OUTBOX.post(create)
     print("posted")
 
     return Response(status=201, response="OK")
@@ -1220,23 +1212,24 @@ def api_new_note():
     cc = [ID + "/followers"]
 
     if _reply:
-        reply = activitypub.parse_activity(OBJECT_SERVICE.get(_reply))
+        reply = ap.parse_activity(OBJECT_SERVICE.get(_reply))
         cc.append(reply.attributedTo)
 
     for tag in tags:
         if tag["type"] == "Mention":
             cc.append(tag["href"])
 
-    note = activitypub.Note(
+    note = ap.Note(
+        actor=MY_PERSON,
         cc=list(set(cc)),
-        to=[to if to else config.AS_PUBLIC],
+        to=[to if to else ap.AS_PUBLIC],
         content=content,
         tag=tags,
         source={"mediaType": "text/markdown", "content": source},
         inReplyTo=reply.id if reply else None,
     )
     create = note.build_create()
-    create.post_to_outbox()
+    OUTBOX.post(create)
 
     return _user_api_response(activity=create.id)
 
@@ -1263,8 +1256,8 @@ def api_block():
     if existing:
         return _user_api_response(activity=existing["activity"]["id"])
 
-    block = activitypub.Block(object=actor)
-    block.post_to_outbox()
+    block = ap.Block(actor=MY_PERSON, object=actor)
+    OUTBOX.post(block)
 
     return _user_api_response(activity=block.id)
 
@@ -1278,8 +1271,8 @@ def api_follow():
     if existing:
         return _user_api_response(activity=existing["activity"]["id"])
 
-    follow = activitypub.Follow(object=actor)
-    follow.post_to_outbox()
+    follow = ap.Follow(actor=MY_PERSON, object=actor)
+    OUTBOX.post(follow)
 
     return _user_api_response(activity=follow.id)
 
