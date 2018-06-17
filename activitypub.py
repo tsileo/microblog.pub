@@ -21,7 +21,6 @@ from little_boxes import activitypub as ap
 from little_boxes.backend import Backend
 from little_boxes.collection import parse_collection as ap_parse_collection
 from little_boxes.errors import Error
-from little_boxes.errors import ActivityNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +90,14 @@ class MicroblogPubBackend(Backend):
 
         # Check if the activity is owned by this server
         if iri.startswith(BASE_URL):
+            is_a_note = False
+            if iri.endswith('/activity'):
+                iri = iri.replace('/activity', '')
+                is_a_note = True
             data = DB.outbox.find_one({"remote_id": iri})
             if data:
+                if is_a_note:
+                    return data['activity']['object']
                 return data["activity"]
         else:
             # Check if the activity is stored in the inbox

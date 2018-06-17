@@ -60,6 +60,7 @@ from little_boxes.errors import ActivityNotFoundError
 from little_boxes.errors import Error
 from little_boxes.errors import NotFromOutboxError
 from little_boxes.httpsig import HTTPSigAuth
+
 # from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
