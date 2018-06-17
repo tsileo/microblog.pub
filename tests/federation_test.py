@@ -6,7 +6,7 @@ from typing import Tuple
 import requests
 from html2text import html2text
 
-from utils import activitypub_utils
+from little_boxes.collection import parse_collection
 
 
 def resp2plaintext(resp):
@@ -33,14 +33,14 @@ class Instance(object):
     def _do_req(self, url, headers):
         """Used to parse collection."""
         url = url.replace(self.docker_url, self.host_url)
-        resp = requests.get(url, headers=headers)
+        resp = requests.get(url, headers={'Accept': 'application/actiivty+json'})
         resp.raise_for_status()
         return resp.json()
 
     def _parse_collection(self, payload=None, url=None):
         """Parses a collection (go through all the pages)."""
-        return activitypub_utils.parse_collection(
-            url=url, payload=payload, do_req=self._do_req
+        return parse_collection(
+            url=url, payload=payload, fetcher=self._do_req,
         )
 
     def ping(self):
