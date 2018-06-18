@@ -241,8 +241,16 @@ class MicroblogPubBackend(Backend):
         )
         obj = delete.get_object()
         if obj.ACTIVITY_TYPE != ap.ActivityType.NOTE:
-            obj = self.fetch_iri(delete.get_object().id)
-        self._handle_replies_delete(as_actor, obj)
+            obj = DB.inbox.find_one(
+                {
+                    "activity.object.id": delete.get_object().id,
+                    "type": ap.ActivityType.CREATE.value,
+                }
+            )
+
+        logger.info(f"inbox_delete handle_replies obj={obj!r}")
+        if obj:
+            self._handle_replies_delete(as_actor, obj)
 
         # FIXME(tsileo): handle threads
         # obj = delete._get_actual_object()
@@ -257,6 +265,18 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": delete.get_object().id},
             {"$set": {"meta.deleted": True}},
         )
+        obj = delete.get_object()
+        if delete.get_object().ACTIVITY_TYPE != ap.ActivityType.NOTE:
+            obj = ap.parse_activity(
+                DB.outbox.find_one(
+                    {
+                        "activity.object.id": delete.get_object().id,
+                        "type": ap.ActivityType.CREATE.value,
+                    }
+                )
+            ).get_object()
+
+        self._handle_replies_delete(as_actor, obj)
 
     @ensure_it_is_me
     def inbox_update(self, as_actor: ap.Person, update: ap.Update) -> None:
@@ -305,7 +325,7 @@ class MicroblogPubBackend(Backend):
         self._handle_replies(as_actor, create)
 
     @ensure_it_is_me
-    def _handle_replies_delete(self, as_actor: ap.Person, note: ap.Create) -> None:
+    def _handle_replies_delete(self, as_actor: ap.Person, note: ap.Note) -> None:
         in_reply_to = note.inReplyTo
         if not in_reply_to:
             pass
