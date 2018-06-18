@@ -84,7 +84,7 @@ JWT = JSONWebSignatureSerializer(JWT_SECRET)
 
 
 def _admin_jwt_token() -> str:
-    return JWT.dumps(
+    return JWT.dumps(  # type: ignore
         {"me": "ADMIN", "ts": datetime.now().timestamp()}
     ).decode(  # type: ignore
         "utf-8"

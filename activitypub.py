@@ -240,7 +240,7 @@ class MicroblogPubBackend(Backend):
             {"$set": {"meta.deleted": True}},
         )
         obj = delete.get_object()
-        if obj.ACTIVITY_TYPE != ActivityType.NOTE:
+        if obj.ACTIVITY_TYPE != ap.ActivityType.NOTE:
             obj = self.fetch_iri(delete.get_object().id)
         self._handle_replies_delete(as_actor, obj)
 
