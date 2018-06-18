@@ -30,10 +30,10 @@ class Instance(object):
             api_key = f.read()
         self._auth_headers = {"Authorization": f"Bearer {api_key}"}
 
-    def _do_req(self, url, headers):
+    def _do_req(self, url):
         """Used to parse collection."""
         url = url.replace(self.docker_url, self.host_url)
-        resp = requests.get(url, headers={'Accept': 'application/actiivty+json'})
+        resp = requests.get(url, headers={'Accept': 'application/activity+json'})
         resp.raise_for_status()
         return resp.json()
 

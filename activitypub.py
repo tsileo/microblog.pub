@@ -91,13 +91,13 @@ class MicroblogPubBackend(Backend):
         # Check if the activity is owned by this server
         if iri.startswith(BASE_URL):
             is_a_note = False
-            if iri.endswith('/activity'):
-                iri = iri.replace('/activity', '')
+            if iri.endswith("/activity"):
+                iri = iri.replace("/activity", "")
                 is_a_note = True
             data = DB.outbox.find_one({"remote_id": iri})
             if data:
                 if is_a_note:
-                    return data['activity']['object']
+                    return data["activity"]["object"]
                 return data["activity"]
         else:
             # Check if the activity is stored in the inbox
@@ -239,6 +239,11 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": delete.get_object().id},
             {"$set": {"meta.deleted": True}},
         )
+        obj = delete.get_object()
+        if obj.ACTIVITY_TYPE != ActivityType.NOTE:
+            obj = self.fetch_iri(delete.get_object().id)
+        self._handle_replies_delete(as_actor, obj)
+
         # FIXME(tsileo): handle threads
         # obj = delete._get_actual_object()
         # if obj.type_enum == ActivityType.NOTE:
@@ -291,11 +296,43 @@ class MicroblogPubBackend(Backend):
         # FIXME(tsileo): should send an Update (but not a partial one, to all the note's recipients
         # (create a new Update with the result of the update, and send it without saving it?)
 
+    @ensure_it_is_me
     def outbox_create(self, as_actor: ap.Person, create: ap.Create) -> None:
-        pass
+        self._handle_replies(as_actor, create)
 
+    @ensure_it_is_me
     def inbox_create(self, as_actor: ap.Person, create: ap.Create) -> None:
-        pass
+        self._handle_replies(as_actor, create)
+
+    @ensure_it_is_me
+    def _handle_replies_delete(self, as_actor: ap.Person, note: ap.Create) -> None:
+        in_reply_to = note.inReplyTo
+        if not in_reply_to:
+            pass
+
+        if not DB.inbox.find_one_and_update(
+            {"activity.object.id": in_reply_to},
+            {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
+        ):
+            DB.outbox.update_one(
+                {"activity.object.id": in_reply_to},
+                {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
+            )
+
+    @ensure_it_is_me
+    def _handle_replies(self, as_actor: ap.Person, create: ap.Create) -> None:
+        in_reply_to = create.get_object().inReplyTo
+        if not in_reply_to:
+            pass
+
+        if not DB.inbox.find_one_and_update(
+            {"activity.object.id": in_reply_to},
+            {"$inc": {"meta.count_reply": 1, "meta.count_direct_reply": 1}},
+        ):
+            DB.outbox.update_one(
+                {"activity.object.id": in_reply_to},
+                {"$inc": {"meta.count_reply": 1, "meta.count_direct_reply": 1}},
+            )
 
 
 def gen_feed():

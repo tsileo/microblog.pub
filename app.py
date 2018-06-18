@@ -553,7 +553,7 @@ def _build_thread(data, include_children=True):
 
 @app.route("/note/<note_id>")
 def note_by_id(note_id):
-    data = DB.outbox.find_one({"id": note_id})
+    data = DB.outbox.find_one({"remote_id": back.activity_url(note_id)})
     if not data:
         abort(404)
     if data["meta"].get("deleted", False):
@@ -671,17 +671,15 @@ def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
 
     raw_doc["activity"]["object"]["replies"] = embed_collection(
         raw_doc.get("meta", {}).get("count_direct_reply", 0),
-        f'{ID}/outbox/{raw_doc["id"]}/replies',
+        f'{raw_doc["remote_id"]}/replies',
     )
 
     raw_doc["activity"]["object"]["likes"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_like", 0),
-        f'{ID}/outbox/{raw_doc["id"]}/likes',
+        raw_doc.get("meta", {}).get("count_like", 0), f'{raw_doc["remote_id"]}/likes'
     )
 
     raw_doc["activity"]["object"]["shares"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_boost", 0),
-        f'{ID}/outbox/{raw_doc["id"]}/shares',
+        raw_doc.get("meta", {}).get("count_boost", 0), f'{raw_doc["remote_id"]}/shares'
     )
 
     return raw_doc
@@ -740,7 +738,7 @@ def outbox():
 
 @app.route("/outbox/<item_id>")
 def outbox_detail(item_id):
-    doc = DB.outbox.find_one({"id": item_id})
+    doc = DB.outbox.find_one({"remote_id": back.activity_url(item_id)})
     if doc["meta"].get("deleted", False):
         obj = ap.parse_activity(doc["activity"])
         resp = jsonify(**obj.get_object().get_tombstone())
@@ -752,7 +750,9 @@ def outbox_detail(item_id):
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
     # TODO(tsileo): handle Tombstone
-    data = DB.outbox.find_one({"id": item_id, "meta.deleted": False})
+    data = DB.outbox.find_one(
+        {"remote_id": back.activity_url(item_id), "meta.deleted": False}
+    )
     if not data:
         abort(404)
     obj = activity_from_doc(data)
@@ -766,7 +766,9 @@ def outbox_activity_replies(item_id):
     # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
-    data = DB.outbox.find_one({"id": item_id, "meta.deleted": False})
+    data = DB.outbox.find_one(
+        {"remote_id": back.activity_url(item_id), "meta.deleted": False}
+    )
     if not data:
         abort(404)
     obj = ap.parse_activity(data["activity"])
@@ -796,7 +798,9 @@ def outbox_activity_likes(item_id):
     # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
-    data = DB.outbox.find_one({"id": item_id, "meta.deleted": False})
+    data = DB.outbox.find_one(
+        {"remote_id": back.activity_url(item_id), "meta.deleted": False}
+    )
     if not data:
         abort(404)
     obj = ap.parse_activity(data["activity"])
@@ -829,7 +833,9 @@ def outbox_activity_shares(item_id):
     # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
-    data = DB.outbox.find_one({"id": item_id, "meta.deleted": False})
+    data = DB.outbox.find_one(
+        {"remote_id": back.activity_url(item_id), "meta.deleted": False}
+    )
     if not data:
         abort(404)
     obj = ap.parse_activity(data["activity"])
@@ -1007,7 +1013,7 @@ def api_delete():
 def api_boost():
     note = _user_api_get_note()
 
-    announce = note.build_announce()
+    announce = note.build_announce(MY_PERSON)
     OUTBOX.post(announce)
 
     return _user_api_response(activity=announce.id)
@@ -1018,7 +1024,7 @@ def api_boost():
 def api_like():
     note = _user_api_get_note()
 
-    like = note.build_like()
+    like = note.build_like(MY_PERSON)
     OUTBOX.post(like)
 
     return _user_api_response(activity=like.id)
@@ -1028,7 +1034,9 @@ def api_like():
 @api_required
 def api_undo():
     oid = _user_api_arg("id")
-    doc = DB.outbox.find_one({"$or": [{"id": oid}, {"remote_id": oid}]})
+    doc = DB.outbox.find_one(
+        {"$or": [{"remote_id": back.activity_url(oid)}, {"remote_id": oid}]}
+    )
     if not doc:
         raise ActivityNotFoundError(f"cannot found {oid}")
 
@@ -1141,6 +1149,15 @@ def inbox():
     return Response(status=201)
 
 
+def without_id(l):
+    out = []
+    for d in l:
+        if "_id" in d:
+            del d["_id"]
+        out.append(d)
+    return out
+
+
 @app.route("/api/debug", methods=["GET", "DELETE"])
 @api_required
 def api_debug():
@@ -1152,7 +1169,11 @@ def api_debug():
         _drop_db()
         return flask_jsonify(message="DB dropped")
 
-    return flask_jsonify(inbox=DB.inbox.count(), outbox=DB.outbox.count())
+    return flask_jsonify(
+        inbox=DB.inbox.count(),
+        outbox=DB.outbox.count(),
+        outbox_data=without_id(DB.outbox.find()),
+    )
 
 
 @app.route("/api/upload", methods=["POST"])
