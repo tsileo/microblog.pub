@@ -241,12 +241,14 @@ class MicroblogPubBackend(Backend):
         )
         obj = delete.get_object()
         if obj.ACTIVITY_TYPE != ap.ActivityType.NOTE:
-            obj = DB.inbox.find_one(
-                {
-                    "activity.object.id": delete.get_object().id,
-                    "type": ap.ActivityType.CREATE.value,
-                }
-            )
+            obj = ap.parse_activity(
+                DB.inbox.find_one(
+                    {
+                        "activity.object.id": delete.get_object().id,
+                        "type": ap.ActivityType.CREATE.value,
+                    }
+                )["activity"]
+            ).get_object()
 
         logger.info(f"inbox_delete handle_replies obj={obj!r}")
         if obj:
@@ -273,7 +275,7 @@ class MicroblogPubBackend(Backend):
                         "activity.object.id": delete.get_object().id,
                         "type": ap.ActivityType.CREATE.value,
                     }
-                )
+                )["activity"]
             ).get_object()
 
         self._handle_replies_delete(as_actor, obj)
