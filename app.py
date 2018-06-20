@@ -55,13 +55,13 @@ from config import custom_cache_purge_hook
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
 from little_boxes.activitypub import clean_activity
+from little_boxes.activitypub import get_backend
 from little_boxes.content_helper import parse_markdown
 from little_boxes.errors import ActivityNotFoundError
 from little_boxes.errors import Error
 from little_boxes.errors import NotFromOutboxError
 from little_boxes.httpsig import HTTPSigAuth
-
-# from little_boxes.httpsig import verify_request
+from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
 from utils.key import get_secret_key
@@ -1121,15 +1121,17 @@ def inbox():
     data = request.get_json(force=True)
     logger.debug(f"req_headers={request.headers}")
     logger.debug(f"raw_data={data}")
-    """try:
-        if not verify_request(ACTOR_SERVICE):
+    try:
+        if not verify_request(
+            request.method, request.path, request.headers, request.data
+        ):
             raise Exception("failed to verify request")
     except Exception:
         logger.exception(
             "failed to verify request, trying to verify the payload by fetching the remote"
         )
         try:
-            data = OBJECT_SERVICE.get(data["id"])
+            data = get_backend().fetch_iri(data["id"])
         except Exception:
             logger.exception(f'failed to fetch remote id at {data["id"]}')
             return Response(
@@ -1141,7 +1143,6 @@ def inbox():
                     }
                 ),
             )
-    """
     activity = ap.parse_activity(data)
     logger.debug(f"inbox activity={activity}/{data}")
     INBOX.post(activity)
