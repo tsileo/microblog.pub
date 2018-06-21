@@ -23,23 +23,25 @@
  - Implements [IndieAuth](https://indieauth.spec.indieweb.org/) endpoints (authorization and token endpoint)
    - U2F support
    - You can use your ActivityPub identity to login to other websites/app
- - Admin UI with notifications and the stream of people you follow
+ - Comes with an admin UI with notifications and the stream of people you follow
  - Allows you to attach files to your notes
    - Privacy-aware image upload endpoint that strip EXIF meta data before storing the file
- - No JavaScript, that's it, even the admin UI is pure HTML/CSS
+ - No JavaScript, **that's it**. Even the admin UI is pure HTML/CSS
  - Easy to customize (the theme is written Sass)
    - mobile-friendly theme
    - with dark and light version
  - Microformats aware (exports `h-feed`, `h-entry`, `h-cards`, ...)
- - Exports RSS/Atom feeds
- - Comes with a tiny HTTP API to help posting new content and performing basic actions
+ - Exports RSS/Atom/[JSON](https://jsonfeed.org/) feeds
+    - You stream/timeline is also available in an (authenticated) JSON feed
+ - Comes with a tiny HTTP API to help posting new content and and read your inbox/notifications
  - Easy to "cache" (the external/public-facing microblog part)
    - With a good setup, cached content can be served most of the time
    - You can setup a "purge" hook to let you invalidate cache when the microblog was updated
  - Deployable with Docker (Docker compose for everything: dev, test and deployment)
- - Focus on testing
-   - Tested against the [official ActivityPub test suite](https://test.activitypub.rocks/) ([ ] TODO submit the report)
-   - CI runs some local "federation" tests
+ - Focused on testing
+   - The core ActivityPub code/tests are in [Little Boxes](https://github.com/tsileo/little-boxes)
+   - Tested against the [official ActivityPub test suite](https://test.activitypub.rocks/) ([report submitted](https://github.com/w3c/activitypub/issues/308))
+   - CI runs "federation" tests against two instances
    - Manually tested against [Mastodon](https://github.com/tootsuite/mastodon)
    - Project is running an up-to-date instance
 
