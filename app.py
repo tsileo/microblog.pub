@@ -364,10 +364,11 @@ def remote_follow():
         return render_template("remote_follow.html")
 
     csrf.protect()
+    profile = request.form.get("profile")
+    if not profile.startswith("@"):
+        profile = f"@{profile}"
     return redirect(
-        get_remote_follow_template("@" + request.form.get("profile")).format(
-            uri=f"{USERNAME}@{DOMAIN}"
-        )
+        get_remote_follow_template(profile).format(uri=f"{USERNAME}@{DOMAIN}")
     )
 
 
