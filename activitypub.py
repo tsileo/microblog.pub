@@ -52,13 +52,19 @@ def ensure_it_is_me(f):
 
 
 class MicroblogPubBackend(Backend):
+    """Implements a Little Boxes backend, backed by MongoDB."""
+
     def user_agent(self) -> str:
+        """Setup a custom user agent."""
         return USER_AGENT
 
     def base_url(self) -> str:
+        """Base URL config."""
         return BASE_URL
 
     def activity_url(self, obj_id):
+        """URL for activity link."""
+        # FIXME(tsileo): what about note `url`?
         return f"{BASE_URL}/outbox/{obj_id}"
 
     @ensure_it_is_me
@@ -410,6 +416,7 @@ def json_feed(path: str) -> Dict[str, Any]:
 def build_inbox_json_feed(
     path: str, request_cursor: Optional[str] = None
 ) -> Dict[str, Any]:
+    """Build a JSON feed from the inbox activities."""
     data = []
     cursor = None
 
@@ -463,6 +470,7 @@ def parse_collection(
 
 
 def embed_collection(total_items, first_page_id):
+    """Helper creating a root OrderedCollection with a link to the first page."""
     return {
         "type": ap.ActivityType.ORDERED_COLLECTION.value,
         "totalItems": total_items,
@@ -474,6 +482,7 @@ def embed_collection(total_items, first_page_id):
 def build_ordered_collection(
     col, q=None, cursor=None, map_func=None, limit=50, col_name=None, first_page=False
 ):
+    """Helper for building an OrderedCollection from a MongoDB query (with pagination support)."""
     col_name = col_name or col.name
     if q is None:
         q = {}
