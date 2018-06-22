@@ -51,7 +51,7 @@ a:hover {
 }
 
 #header {
-  margin-bottom: 40px;
+  margin-bottom: 60px;
 
   .title {
     font-size: 1.2em;
@@ -91,6 +91,11 @@ a:hover {
       background: $primary-color;
       color: $background-color;
       border-radius:2px;
+      .badge {
+        color: $primary-color;
+        background: $background-color;
+      }
+
     }
     a:hover {
       background: $primary-color;
@@ -220,7 +225,7 @@ form.action-form {
 .summary {
   color: $color-summary;
   font-size: 1.3em;
-  margin-top: 60px;
+  margin-top: 10px;
   margin-bottom: 50px;
 }
 .summary a, .summay a:hover {
