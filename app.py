@@ -6,6 +6,7 @@ import mimetypes
 import os
 import urllib
 from datetime import datetime
+from datetime import timezone
 from functools import wraps
 from typing import Any
 from typing import Dict
@@ -18,6 +19,7 @@ import piexif
 import pymongo
 import timeago
 from bson.objectid import ObjectId
+from dateutil import parser
 from flask import Flask
 from flask import Response
 from flask import abort
@@ -103,10 +105,27 @@ def verify_pass(pwd):
 
 @app.context_processor
 def inject_config():
+    q = {
+        "type": "Create",
+        "activity.object.type": "Note",
+        "activity.object.inReplyTo": None,
+        "meta.deleted": False,
+    }
+    notes_count = DB.outbox.find(
+        {"$or": [q, {"type": "Announce", "meta.undo": False}]}
+    ).count()
+    q = {"type": "Create", "activity.object.type": "Note", "meta.deleted": False}
+    with_replies_count = DB.outbox.find(
+        {"$or": [q, {"type": "Announce", "meta.undo": False}]}
+    ).count()
     return dict(
         microblogpub_version=VERSION,
         config=config,
         logged_in=session.get("logged_in", False),
+        followers_count=DB.followers.count(),
+        following_count=DB.following.count(),
+        notes_count=notes_count,
+        with_replies_count=with_replies_count,
     )
 
 
@@ -183,24 +202,16 @@ def get_actor(url):
 @app.template_filter()
 def format_time(val):
     if val:
-        return datetime.strftime(
-            datetime.strptime(val, "%Y-%m-%dT%H:%M:%SZ"), "%B %d, %Y, %H:%M %p"
-        )
+        dt = parser.parse(val)
+        return datetime.strftime(dt, "%B %d, %Y, %H:%M %p")
     return val
 
 
 @app.template_filter()
 def format_timeago(val):
     if val:
-        try:
-            return timeago.format(
-                datetime.strptime(val, "%Y-%m-%dT%H:%M:%SZ"), datetime.utcnow()
-            )
-        except Exception:
-            return timeago.format(
-                datetime.strptime(val, "%Y-%m-%dT%H:%M:%S.%fZ"), datetime.utcnow()
-            )
-
+        dt = parser.parse(val)
+        return timeago.format(dt, datetime.now(timezone.utc))
     return val
 
 

@@ -77,7 +77,15 @@ a:hover {
       }
     }
     a {
-      padding: 2px 7px;
+      padding: 5px 10px;
+        small.badge {
+          background-color: $color-menu-background;
+          color: $color-light;
+          border-radius: 2px;
+          margin-left: 5px;
+          padding: 3px 5px 0px 5px;
+          font-weight: bold;
+        }
     }
     a.selected {
       background: $primary-color;
@@ -88,6 +96,11 @@ a:hover {
       background: $primary-color;
       color: $background-color;
       text-decoration: none;
+      border-radius: 2px;
+      .badge {
+        color: $primary-color;
+        background: $background-color;
+      }
     }
   }
 }
@@ -105,7 +118,7 @@ a:hover {
   margin-bottom: 40px;
 
   .actor-icon {
-    width:120px;
+    width: 120px;
     border-radius:2px;
   }
 
@@ -117,7 +130,7 @@ a:hover {
     overflow: hidden;
   }
 }
-.actor-box {
+.actor-box-big {
   display: block;
   text-decoration: none;
 
@@ -206,19 +219,19 @@ form.action-form {
 }
 .summary {
   color: $color-summary;
-  font-size:1.3em;
-  margin-top:50px;
-  margin-bottom:70px;
+  font-size: 1.3em;
+  margin-top: 60px;
+  margin-bottom: 50px;
 }
 .summary a, .summay a:hover {
   color: $color-summary;
-  text-decoration:underline;
+  text-decoration: underline;
 }
 #followers, #following, #new {
-  margin-top:50px;
+  margin-top: 50px;
 }
 #admin {
-  margin-top:50px;
+  margin-top: 50px;
 }
 textarea, input {
   background: $color-menu-background;
