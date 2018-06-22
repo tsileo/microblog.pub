@@ -241,10 +241,15 @@ class MicroblogPubBackend(Backend):
 
     @ensure_it_is_me
     def inbox_delete(self, as_actor: ap.Person, delete: ap.Delete) -> None:
-        DB.inbox.update_one(
+        if not DB.inbox.find_one_and_update(
             {"activity.object.id": delete.get_object().id},
             {"$set": {"meta.deleted": True}},
-        )
+        ):
+            DB.threads.update_one(
+                {"activity.object.id": delete.get_object().id},
+                {"$set": {"meta.deleted": True}},
+            )
+
         obj = delete.get_object()
         if obj.ACTIVITY_TYPE != ap.ActivityType.NOTE:
             obj = ap.parse_activity(
@@ -290,11 +295,14 @@ class MicroblogPubBackend(Backend):
     def inbox_update(self, as_actor: ap.Person, update: ap.Update) -> None:
         obj = update.get_object()
         if obj.ACTIVITY_TYPE == ap.ActivityType.NOTE:
-            DB.inbox.update_one(
+            if not DB.inbox.find_one_and_update(
                 {"activity.object.id": obj.id},
                 {"$set": {"activity.object": obj.to_dict()}},
-            )
-            return
+            ):
+                DB.threads.update_one(
+                    {"activity.object.id": obj.id},
+                    {"$set": {"activity.object": obj.to_dict()}},
+                )
 
         # FIXME(tsileo): handle update actor amd inbox_update_note/inbox_update_actor
 
@@ -342,25 +350,74 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": in_reply_to},
             {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
         ):
-            DB.outbox.update_one(
+            if not DB.outbox.find_one_and_update(
                 {"activity.object.id": in_reply_to},
                 {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
-            )
+            ):
+                DB.threads.update_one(
+                    {"activity.object.id": in_reply_to},
+                    {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
+                )
 
     @ensure_it_is_me
     def _handle_replies(self, as_actor: ap.Person, create: ap.Create) -> None:
+        """Go up to the root reply, store unknown replies in the `threads` DB and set the "meta.thread_root_parent"
+        key to make it easy to query a whole thread."""
         in_reply_to = create.get_object().inReplyTo
         if not in_reply_to:
             pass
+
+        new_threads = []
+        root_reply = in_reply_to
+        reply = ap.fetch_remote_activity(root_reply, expected=ap.ActivityType.NOTE)
 
         if not DB.inbox.find_one_and_update(
             {"activity.object.id": in_reply_to},
             {"$inc": {"meta.count_reply": 1, "meta.count_direct_reply": 1}},
         ):
-            DB.outbox.update_one(
+            if not DB.outbox.find_one_and_update(
                 {"activity.object.id": in_reply_to},
                 {"$inc": {"meta.count_reply": 1, "meta.count_direct_reply": 1}},
-            )
+            ):
+                # It means the activity is not in the inbox, and not in the outbox, we want to save it
+                DB.threads.insert_one(
+                    {
+                        "activity": reply.to_dict(),
+                        "type": reply.type,
+                        "remote_id": reply.id,
+                        "meta": {"undo": False, "deleted": False},
+                    }
+                )
+                new_threads.append(reply.id)
+
+        while reply is not None:
+            in_reply_to = reply.inReplyTo
+            if not in_reply_to:
+                break
+            root_reply = in_reply_to
+            reply = ap.fetch_remote_activity(root_reply, expected=ap.ActivityType.NOTE)
+            q = {"activity.object.id": root_reply}
+            if not DB.inbox.count(q) and not DB.outbox.count(q):
+                DB.threads.insert_one(
+                    {
+                        "activity": reply.to_dict(),
+                        "type": reply.type,
+                        "remote_id": reply.id,
+                        "meta": {"undo": False, "deleted": False},
+                    }
+                )
+                new_threads.append(reply.id)
+
+        q = {"remote_id": create.id}
+        if not DB.inbox.find_one_and_update(
+            q, {"$set": {"meta.thread_root_parent": root_reply}}
+        ):
+            DB.outbox.update_one(q, {"$set": {"meta.thread_root_parent": root_reply}})
+
+        DB.threads.update(
+            {"remote_id": {"$in": new_threads}},
+            {"$set": {"meta.thread_root_parent": root_reply}},
+        )
 
 
 def gen_feed():

@@ -58,7 +58,7 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
     THEME_COLOR = conf.get("theme_color")
 
 USER_AGENT = (
-    f"{requests.utils.default_user_agent()} " f"(microblog.pub/{VERSION}; +{BASE_URL})"
+    f"{requests.utils.default_user_agent()} (microblog.pub/{VERSION}; +{BASE_URL})"
 )
 
 mongo_client = MongoClient(
