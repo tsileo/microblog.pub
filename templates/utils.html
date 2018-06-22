@@ -6,7 +6,7 @@
 {% else %}
 <img class="actor-icon" src="{{ follower.icon.url }}" style="width:50px;">{% endif %}
 </span>
-<div>
+<div class="actor-inline">
 <div style="font-weight:bold">{{ follower.name or follower.preferredUsername }}</div>
 <small>@{{ follower.preferredUsername }}@{{ follower.url | domain }}</small>
 </div>
