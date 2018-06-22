@@ -103,7 +103,6 @@ a:hover {
   display: block;
   text-decoration: none;
   margin-bottom: 40px;
-  white-space: nowrap;
 
   .actor-icon {
     width:120px;
@@ -116,6 +115,21 @@ a:hover {
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
+  }
+}
+.actor-box {
+  display: block;
+  text-decoration: none;
+
+  .actor-box-wrapper {
+    margin-bottom:40px;
+
+    .actor-icon {
+      width:120px;
+      border-radius:2px;
+    }
+
+    h3 { margin: 0; }
   }
 }
 .note {

@@ -15,8 +15,8 @@
 
 
 {% macro display_actor(follower) -%}
-<a class="actor-box" href="{{follower.url}}">
-<div class="pure-g"> 
+<a class="actor-box-big" href="{{follower.url}}">
+<div class="pure-g actor-box-wrapper"> 
 <div class="pure-u-1-5">
 {% if not follower.icon %}
 <img class="actor-icon" src="/static/nopic.png">
