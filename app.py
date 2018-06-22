@@ -516,29 +516,34 @@ def with_replies():
 
 def _build_thread(data, include_children=True):
     data["_requested"] = True
+    print(data)
     root_id = data["meta"].get("thread_root_parent", data["activity"]["object"]["id"])
 
-    thread_ids = data["meta"].get("thread_parents", [])
-    if include_children:
-        thread_ids.extend(data["meta"].get("thread_children", []))
+    query = {"$or": [{"meta.thread_root_parent": root_id, "type": "Create"}]}
+    if data['activity']['object'].get('inReplyTo'):
+        query['$or'].append({'activity.object.id': data['activity']['object']['inReplyTo']})
 
-    query = {
-        "activity.object.id": {"$in": thread_ids},
-        "type": "Create",
-        "meta.deleted": False,  # TODO(tsileo): handle Tombstone instead of filtering them
-    }
     # Fetch the root replies, and the children
-    replies = [data] + list(DB.inbox.find(query)) + list(DB.outbox.find(query))
-
+    replies = (
+        [data]
+        + list(DB.inbox.find(query))
+        + list(DB.outbox.find(query))
+        + list(DB.threads.find(query))
+    )
+    replies = sorted(replies, key=lambda d: d["activity"]["object"]["published"])
     # Index all the IDs in order to build a tree
     idx = {}
+    replies2 = []
     for rep in replies:
         rep_id = rep["activity"]["object"]["id"]
+        if rep_id in idx:
+            continue
         idx[rep_id] = rep.copy()
         idx[rep_id]["_nodes"] = []
+        replies2.append(rep)
 
     # Build the tree
-    for rep in replies:
+    for rep in replies2:
         rep_id = rep["activity"]["object"]["id"]
         if rep_id == root_id:
             continue

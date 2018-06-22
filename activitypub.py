@@ -365,7 +365,7 @@ class MicroblogPubBackend(Backend):
         key to make it easy to query a whole thread."""
         in_reply_to = create.get_object().inReplyTo
         if not in_reply_to:
-            pass
+            return
 
         new_threads = []
         root_reply = in_reply_to
