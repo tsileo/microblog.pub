@@ -64,8 +64,11 @@ class MicroblogPubBackend(Backend):
 
     def activity_url(self, obj_id):
         """URL for activity link."""
-        # FIXME(tsileo): what about note `url`?
         return f"{BASE_URL}/outbox/{obj_id}"
+
+    def note_url(self, obj_id):
+        """URL for activity link."""
+        return f"{BASE_URL}/note/{obj_id}"
 
     @ensure_it_is_me
     def outbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
