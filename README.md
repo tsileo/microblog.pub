@@ -7,6 +7,7 @@
 </p>
 <p align="center">
 <a href="https://travis-ci.org/tsileo/microblog.pub"><img src="https://travis-ci.org/tsileo/microblog.pub.svg?branch=master" alt="Build Status"></a>
+<a href="https://codeclimate.com/github/tsileo/microblog.pub/maintainability"><img src="https://api.codeclimate.com/v1/badges/2bb3ee8c661a1b27e388/maintainability" /></a>
 <a href="https://github.com/tsileo/microblog.pub/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-AGPL_3.0-blue.svg?style=flat" alt="License"></a>
 </p>
 
