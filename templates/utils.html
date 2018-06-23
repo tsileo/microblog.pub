@@ -1,10 +1,10 @@
-{% macro display_actor_inline(follower) -%}
+{% macro display_actor_inline(follower, size=50) -%}
 <a class="actor-box" href="{{follower.url}}" style="clear:both;">
 <span style="float:left;padding-right:15px;">
 {% if not follower.icon %}
-<img class="actor-icon" src="/static/nopic.png" style="width:50px">
+<img class="actor-icon" src="/static/nopic.png" style="width:{{ size }}px">
 {% else %}
-<img class="actor-icon" src="{{ follower.icon.url }}" style="width:50px;">{% endif %}
+<img class="actor-icon" src="{{ follower.icon.url }}" style="width:{{ size }}px;">{% endif %}
 </span>
 <div class="actor-inline">
 <div style="font-weight:bold">{{ follower.name or follower.preferredUsername }}</div>
@@ -80,9 +80,9 @@
 {% else %}	
 <a class ="bar-item" href="{{ item.activity.object.url }}">permalink</a> 
 
-{% if item.meta.count_reply %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_reply }} replies</a>{% endif %}
-{% if item.meta.count_boost %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_boost }} boosts</a>{% endif %}
-{% if item.meta.count_like %}<a class ="bar-item" href="{{ item.activity.object.url }}">{{ item.meta.count_like }} likes</a>{% endif %}
+{% if item.meta.count_reply %}<a class ="bar-item" href="{{ item.activity.object.url }}"><strong>{{ item.meta.count_reply }}</strong> replies</a>{% endif %}
+{% if item.meta.count_boost %}<a class ="bar-item" href="{{ item.activity.object.url }}"><strong>{{ item.meta.count_boost }}</strong> boosts</a>{% endif %}
+{% if item.meta.count_like %}<a class ="bar-item" href="{{ item.activity.object.url }}"><strong>{{ item.meta.count_like }}</strong> likes</a>{% endif %}
 {% endif %}
 
 {% if ui and session.logged_in %}

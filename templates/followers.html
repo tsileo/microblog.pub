@@ -9,8 +9,24 @@
 
 <div id="followers">
 	{% for follower in followers_data %}
-	{{ utils.display_actor(follower) }}
+    <div style="height: 100px;">
+	{{ utils.display_actor_inline(follower, size=80) }}
+    </div>
 	{% endfor %}
+
+	{% for follower in followers_data %}
+    <div style="height: 100px;">
+	{{ utils.display_actor_inline(follower, size=80) }}
+    </div>
+	{% endfor %}
+
+	{% for follower in followers_data %}
+    <div style="height: 100px;">
+	{{ utils.display_actor_inline(follower, size=80) }}
+    </div>
+	{% endfor %}
+
+
 </div>
 
 </div>
