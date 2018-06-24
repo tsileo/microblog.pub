@@ -397,7 +397,7 @@ def authorize_follow():
     if DB.following.find({"remote_actor": actor}).count() > 0:
         return redirect("/following")
 
-    follow = activitypub.Follow(actor=MY_PERSON.id, object=actor)
+    follow = ap.Follow(actor=MY_PERSON.id, object=actor)
     OUTBOX.post(follow)
 
     return redirect("/following")
