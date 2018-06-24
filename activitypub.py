@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime
 from typing import Any
 from typing import Dict
@@ -17,6 +18,7 @@ from config import ID
 from config import ME
 from config import USER_AGENT
 from config import USERNAME
+from little_boxes import strtobool
 from little_boxes import activitypub as ap
 from little_boxes.backend import Backend
 from little_boxes.collection import parse_collection as ap_parse_collection
@@ -53,6 +55,9 @@ def ensure_it_is_me(f):
 
 class MicroblogPubBackend(Backend):
     """Implements a Little Boxes backend, backed by MongoDB."""
+
+    def debug_mode(self) -> bool:
+        return strtobool(os.getenv("MICROBLOGPUB_DEBUG", "false"))
 
     def user_agent(self) -> str:
         """Setup a custom user agent."""
