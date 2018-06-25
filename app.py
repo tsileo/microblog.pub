@@ -118,6 +118,11 @@ def inject_config():
     with_replies_count = DB.outbox.find(
         {"$or": [q, {"type": "Announce", "meta.undo": False}]}
     ).count()
+    liked_count = DB.outbox.count({
+        "meta.deleted": False,
+        "meta.undo": False,
+        "type": ActivityType.LIKE.value,
+    })
     return dict(
         microblogpub_version=VERSION,
         config=config,
@@ -125,6 +130,7 @@ def inject_config():
         followers_count=DB.followers.count(),
         following_count=DB.following.count(),
         notes_count=notes_count,
+        liked_count=liked_count,
         with_replies_count=with_replies_count,
     )
 
@@ -520,8 +526,10 @@ def _build_thread(data, include_children=True):
     root_id = data["meta"].get("thread_root_parent", data["activity"]["object"]["id"])
 
     query = {"$or": [{"meta.thread_root_parent": root_id, "type": "Create"}]}
-    if data['activity']['object'].get('inReplyTo'):
-        query['$or'].append({'activity.object.id': data['activity']['object']['inReplyTo']})
+    if data["activity"]["object"].get("inReplyTo"):
+        query["$or"].append(
+            {"activity.object.id": data["activity"]["object"]["inReplyTo"]}
+        )
 
     # Fetch the root replies, and the children
     replies = (
@@ -1411,7 +1419,18 @@ def tags(tag):
 @app.route("/liked")
 def liked():
     if not is_api_request():
-        abort(404)
+        return render_template(
+            "liked.html",
+            me=ME,
+            liked=DB.outbox.find(
+                {
+                    "type": ActivityType.LIKE.value,
+                    "meta.deleted": False,
+                    "meta.undo": False,
+                }
+            ),
+        )
+
     q = {"meta.deleted": False, "meta.undo": False, "type": ActivityType.LIKE.value}
     return jsonify(
         **activitypub.build_ordered_collection(

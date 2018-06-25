@@ -16,13 +16,9 @@
 {% endblock %}
 {% block content %}
 <div class="h-feed" id="container">
-<data class="p-name" value="{{config.USERNAME}} notes">
+<data class="p-name" value="{{config.USERNAME}} notes"></data>
 
 {% include "header.html" %}
-
-<div class="summary">
-{{ config.SUMMARY | safe }}
-</div>
 
 <div id="notes">
 	{% for item in outbox_data %}

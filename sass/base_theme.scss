@@ -51,7 +51,7 @@ a:hover {
 }
 
 #header {
-  margin-bottom: 60px;
+  margin-bottom: 70px;
 
   .title {
     font-size: 1.2em;
@@ -65,7 +65,8 @@ a:hover {
     color: $color;
   }
   .menu {
-    padding: 20px 0 10px 0;
+    clear: both;
+    padding: 0 0 10px 0;
     ul {
       display: inline;
       list-style-type: none;
@@ -226,7 +227,7 @@ form.action-form {
   color: $color-summary;
   font-size: 1.3em;
   margin-top: 10px;
-  margin-bottom: 50px;
+  margin-bottom: 30px;
 }
 .summary a, .summay a:hover {
   color: $color-summary;

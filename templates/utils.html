@@ -39,7 +39,7 @@
 <div class="h-card p-author">
 <a class="u-url u-uid no-hover" href="{{ actor.url }}"><img class="u-photo" src="{% if not actor.icon %}/static/nopic.png{% else %}{{ actor.icon.url }}{% endif %}">
 </a>
-<data class="p-name" value="{{ actor.name or actor.preferredUsername }}">
+<data class="p-name" value="{{ actor.name or actor.preferredUsername }}"></data>
 </div>
 
 <div class="note-wrapper">
