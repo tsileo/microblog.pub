@@ -457,14 +457,16 @@ def index():
 
     for data in outbox_data:
         if data["type"] == "Announce":
-            print(data)
             if data["activity"]["object"].startswith("http"):
                 data["ref"] = {
                     "activity": {
-                        "object": OBJECT_SERVICE.get(data["activity"]["object"])
+                        "object": OBJECT_SERVICE.get(data["activity"]["object"]),
+                        "id": "NA",
                     },
                     "meta": {},
                 }
+            print(data)
+
 
     return render_template(
         "index.html",
