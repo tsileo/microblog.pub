@@ -273,13 +273,6 @@ class MicroblogPubBackend(Backend):
         if obj:
             self._handle_replies_delete(as_actor, obj)
 
-        # FIXME(tsileo): handle threads
-        # obj = delete._get_actual_object()
-        # if obj.type_enum == ActivityType.NOTE:
-        #    obj._delete_from_threads()
-
-        # TODO(tsileo): also purge the cache if it's a reply of a published activity
-
     @ensure_it_is_me
     def outbox_delete(self, as_actor: ap.Person, delete: ap.Delete) -> None:
         DB.outbox.update_one(

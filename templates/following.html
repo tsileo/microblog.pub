@@ -9,7 +9,9 @@
 
 <div id="following">
 	{% for followed in following_data %}
-	{{ utils.display_actor(followed) }}
+    <div style="height: 100px;">
+	{{ utils.display_actor_inline(followed, size=80) }}
+    </div>
 	{% endfor %}
 </div>
 
