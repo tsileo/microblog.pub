@@ -5,7 +5,6 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Union
 
 from bson.objectid import ObjectId
 from feedgen.feed import FeedGenerator
@@ -23,6 +22,7 @@ from little_boxes import activitypub as ap
 from little_boxes.backend import Backend
 from little_boxes.collection import parse_collection as ap_parse_collection
 from little_boxes.errors import Error
+from little_boxes.activitypub import _to_list
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +33,6 @@ def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
     if "_id" in doc:
         del (doc["_id"])
     return doc
-
-
-def _to_list(data: Union[List[Any], Any]) -> List[Any]:
-    """Helper to convert fields that can be either an object or a list of objects to a list of object."""
-    if isinstance(data, list):
-        return data
-    return [data]
 
 
 def ensure_it_is_me(f):
@@ -80,7 +73,7 @@ class MicroblogPubBackend(Backend):
         DB.outbox.insert_one(
             {
                 "activity": activity.to_dict(),
-                "type": activity.type,
+                "type": _to_list(activity.type),
                 "remote_id": activity.id,
                 "meta": {"undo": False, "deleted": False},
             }
@@ -131,7 +124,7 @@ class MicroblogPubBackend(Backend):
         DB.inbox.insert_one(
             {
                 "activity": activity.to_dict(),
-                "type": activity.type,
+                "type": _to_list(activity.type),
                 "remote_id": activity.id,
                 "meta": {"undo": False, "deleted": False},
             }
@@ -384,7 +377,7 @@ class MicroblogPubBackend(Backend):
                 DB.threads.insert_one(
                     {
                         "activity": reply.to_dict(),
-                        "type": reply.type,
+                        "type": _to_list(reply.type),
                         "remote_id": reply.id,
                         "meta": {"undo": False, "deleted": False},
                     }
@@ -402,7 +395,7 @@ class MicroblogPubBackend(Backend):
                 DB.threads.insert_one(
                     {
                         "activity": reply.to_dict(),
-                        "type": reply.type,
+                        "type": _to_list(reply.type),
                         "remote_id": reply.id,
                         "meta": {"undo": False, "deleted": False},
                     }
