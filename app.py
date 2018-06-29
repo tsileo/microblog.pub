@@ -153,6 +153,7 @@ ALLOWED_TAGS = [
     "abbr",
     "acronym",
     "b",
+    "br",
     "blockquote",
     "code",
     "pre",
