@@ -23,16 +23,15 @@
 <div id="notes">
 	{% for item in outbox_data %}
 
-	{% if item.type == 'Announce' %}
+	{% if item | has_type('Announce') %}
         {% set boost_actor = item.activity.actor | get_actor %}
         <p style="margin-left:65px;padding-bottom:5px;"><span class="bar-item"><a style="color:#808080;" href="{{ boost_actor.url }}">{{ boost_actor.name }}</a> boosted</span></p>
-        {% if item.ref %}
-        {{ utils.display_note(item.ref, ui=False) }}
+        {% if item.meta.object %}
+            {{ utils.display_note(item.meta.object, ui=False) }}
         {% endif %}
-
-	{% elif item.type == 'Create' %}
-	{{ utils.display_note(item) }}
-        {% endif %}
+	{% elif item | has_type('Create') %}
+        {{ utils.display_note(item.activity.object, meta=item.meta) }}
+    {% endif %}
 
 	{% endfor %}
 </div>

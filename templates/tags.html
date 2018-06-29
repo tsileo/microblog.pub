@@ -23,7 +23,7 @@
 <h2>#{{ tag }}</h2>
 <div id="notes">
 	{% for item in outbox_data %}
-	{{ utils.display_note(item) }}
+	{{ utils.display_note(item.activity.object, meta=item.meta) }}
 	{% endfor %}
 </div>
 

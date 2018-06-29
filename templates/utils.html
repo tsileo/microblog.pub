@@ -14,27 +14,10 @@
 {%- endmacro %}
 
 
-{% macro display_actor(follower) -%}
-<a class="actor-box-big" href="{{follower.url}}">
-<div class="pure-g actor-box-wrapper"> 
-<div class="pure-u-1-5">
-{% if not follower.icon %}
-<img class="actor-icon" src="/static/nopic.png">
-{% else %}
-<img class="actor-icon" src="{{ follower.icon.url }}">{% endif %}
-</div>
-<div class="pure-u-4-5">
-<h3>{{ follower.name or follower.preferredUsername }}</h3>
-<small>@{{ follower.preferredUsername }}@{{ follower.url | domain }}</small>
-<div>{{ follower.summary | safe }}</div>
-</div>
-</div>
-</a>
-{%- endmacro %}
 
-{% macro display_note(item, perma=False, ui=False, likes=[], shares=[]) -%}
-{% set actor = item.activity.object.attributedTo | get_actor  %}
-<div class="note h-entry" id="activity-{{ item['_id'].__str__() }}">
+{% macro display_note(obj, perma=False, ui=False, likes=[], shares=[], meta={}) -%}
+{% set actor = obj.attributedTo | get_actor  %}
+<div class="note h-entry" id="activity-{{ obj.id | permalink_id }}">
 
 <div class="h-card p-author">
 <a class="u-url u-uid no-hover" href="{{ actor.url }}"><img class="u-photo" src="{% if not actor.icon %}/static/nopic.png{% else %}{{ actor.icon.url }}{% endif %}">
@@ -47,78 +30,79 @@
 
 	{% if not perma %}
 	<span style="float:right">
-		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ item.activity.object.url }}">
-			<time class="dt-published" title="{{ item.activity.object.published }}" datetime="{{ item.activity.object.published }}">{{ item.activity.object.published | format_timeago }}</time></a>
+		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj.url }}">
+			<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}">{{ obj.published | format_timeago }}</time></a>
 	</span>
 	{% endif %}
-	{% if item.activity.object.summary %}<p class="p-summary">{{ item.activity.object.summary }}</p>{% endif %}
+	{% if obj.summary %}<p class="p-summary">{{ obj.summary | clean }}</p>{% endif %}
 	<div class="note-container{% if perma %} perma{%endif%} p-name e-content">
-	{{ item.activity.object.content | safe }}
+	{{ obj.content | clean | safe }}
 	</div>
 
-	{% if item.activity.object.attachment %}
+	{% if obj.attachment %}
 	<div style="padding:20px 0;">
-	{% if item.activity.object.attachment | not_only_imgs %}
+	{% if obj.attachment | not_only_imgs %}
 	<h3 class="l">Attachment</h3>
 	<ul>
 	{% endif %}
-	{% for a in item.activity.object.attachment %}
+	{% for a in obj.attachment %}
 	{% if a.url | is_img %}
 	<img src="{{a.url}}" class="img-attachment">
 	{% else %}
 	<li><a href="{{a.url}}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
 	{% endif  %}
 	{% endfor %}
-	{% if item.activity.object.attachment | not_only_imgs %}
+	{% if obj.attachment | not_only_imgs %}
 	</ul>
 	{% endif %}
 </div>
 	{% endif %}
 
 <div class="bottom-bar">
-{% if perma %}<span class="perma-item">{{ item.activity.object.published | format_time }}</span>
+{% if perma %}<span class="perma-item">{{ obj.published | format_time }}</span>
 {% else %}	
-<a class ="bar-item" href="{{ item.activity.object.url }}">permalink</a> 
+<a class ="bar-item" href="{{ obj.url }}">permalink</a> 
 
-{% if item.meta.count_reply %}<a class ="bar-item" href="{{ item.activity.object.url }}"><strong>{{ item.meta.count_reply }}</strong> replies</a>{% endif %}
-{% if item.meta.count_boost %}<a class ="bar-item" href="{{ item.activity.object.url }}"><strong>{{ item.meta.count_boost }}</strong> boosts</a>{% endif %}
-{% if item.meta.count_like %}<a class ="bar-item" href="{{ item.activity.object.url }}"><strong>{{ item.meta.count_like }}</strong> likes</a>{% endif %}
+{% if meta.count_reply %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_reply }}</strong> replies</a>{% endif %}
+{% if meta.count_boost %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
+{% if meta.count_like %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
 {% endif %}
 
 {% if ui and session.logged_in %}
 
-{% set aid = item.activity.object.id | quote_plus %}
+{% set aid = obj.id | quote_plus %}
 <a class="bar-item" href="/new?reply={{ aid }}">reply</a>
 
-{% set redir = request.path + "#activity-" + item['_id'].__str__() %}
+{% set perma_id = obj.id | permalink_id %}
+{% set redir = request.path + "#activity-" + perma_id %}
 
-{% if item.meta.boosted %}
+{% if meta.boosted %}
 <form action="/api/undo" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ item.meta.boosted }}">
+<input type="hidden" name="id" value="{{ meta.boosted }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item">unboost</button>
 </form>
 {% else %}
 <form action="/api/boost" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ item.activity.object.id }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item">boost</button>
 </form>
 {% endif %}
 
-{% if item.meta.liked %}
+{% if meta.liked %}
 <form action="/api/undo" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ item.meta.liked }}">
+<input type="hidden" name="id" value="{{ meta.liked }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item">unlike</button>
 </form>
 {% else %}
 <form action="/api/like" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ item.activity.object.id }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item">like</button>
 </form>
@@ -127,17 +111,17 @@
 {% endif %}
 
 {% if session.logged_in %}
-{% if item.activity.id | is_from_outbox %}
+{% if obj.id | is_from_outbox %}
 <form action="/api/note/delete" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ item.activity.object.id }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item">delete</button>
 </form>
 {% else %}
 <form action="/api/block" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="actor" value="{{ item.activity.actor }}">
+<input type="hidden" name="actor" value="{{ actor.id }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item">block</button>
 </form>
@@ -151,14 +135,14 @@
 <div style="padding-top:20px;" class="pure-g">
 {% if likes %}
 <div class="pure-u-1-2">
-<h4 style="font-weight:normal"><strong>{{ item.meta.count_like }}</strong> likes</h4>{% for like in likes %}
+<h4 style="font-weight:normal"><strong>{{ meta.count_like }}</strong> likes</h4>{% for like in likes %}
 {{ display_actor_inline(like) }}
 {% endfor %}
 </div>
 {% endif %}
 {% if shares %}
 <div class="pure-u-1-2">
-<h4 style="font-weight:normal"><strong>{{ item.meta.count_boost }}</strong> boosts</h4>{% for boost in shares %}
+<h4 style="font-weight:normal"><strong>{{ meta.count_boost }}</strong> boosts</h4>{% for boost in shares %}
 {{ display_actor_inline(boost) }}
 {% endfor %}
 </div>
@@ -177,9 +161,9 @@
 {% macro display_thread(thread, likes=[], shares=[]) -%}
 {% for reply in thread %}
 {% if reply._requested %}
-{{ display_note(reply, perma=True, ui=False, likes=likes, shares=shares) }}
+{{ display_note(reply.activity.object, perma=True, ui=False, likes=likes, shares=shares, meta=reply.meta) }}
 {% else %}
-{{ display_note(reply, perma=False, ui=True) }}
+{{ display_note(reply.activity.object, perma=False, ui=True, meta=reply.meta) }}
 {% endif %}
 {% endfor %}
 {% endmacro -%}

@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block content %}
+<div class="h-feed" id="container">
+<data class="p-name" value="{{config.USERNAME}} liked"></data>
+
+{% include "header.html" %}
+
+<div id="notes">
+	{% for item in liked %}
+    {% if item.meta.object %}
+	{{ utils.display_note(item.meta.object) }}
+    {% endif %}
+	{% endfor %}
+</div>
+
+</div>
+{% endblock %}

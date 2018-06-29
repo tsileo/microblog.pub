@@ -38,6 +38,7 @@ from werkzeug.utils import secure_filename
 
 import activitypub
 import config
+from activitypub import Box
 from activitypub import embed_collection
 from config import ADMIN_API_KEY
 from config import BASE_URL
@@ -56,6 +57,7 @@ from config import _drop_db
 from config import custom_cache_purge_hook
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
+from little_boxes.activitypub import _to_list
 from little_boxes.activitypub import clean_activity
 from little_boxes.activitypub import get_backend
 from little_boxes.content_helper import parse_markdown
@@ -111,18 +113,21 @@ def inject_config():
         "activity.object.inReplyTo": None,
         "meta.deleted": False,
     }
-    notes_count = DB.outbox.find(
-        {"$or": [q, {"type": "Announce", "meta.undo": False}]}
+    notes_count = DB.activities.find(
+        {"box": Box.OUTBOX.value, "$or": [q, {"type": "Announce", "meta.undo": False}]}
     ).count()
     q = {"type": "Create", "activity.object.type": "Note", "meta.deleted": False}
-    with_replies_count = DB.outbox.find(
-        {"$or": [q, {"type": "Announce", "meta.undo": False}]}
+    with_replies_count = DB.activities.find(
+        {"box": Box.OUTBOX.value, "$or": [q, {"type": "Announce", "meta.undo": False}]}
     ).count()
-    liked_count = DB.outbox.count({
-        "meta.deleted": False,
-        "meta.undo": False,
-        "type": ActivityType.LIKE.value,
-    })
+    liked_count = DB.activities.count(
+        {
+            "box": Box.OUTBOX.value,
+            "meta.deleted": False,
+            "meta.undo": False,
+            "type": ActivityType.LIKE.value,
+        }
+    )
     return dict(
         microblogpub_version=VERSION,
         config=config,
@@ -132,6 +137,7 @@ def inject_config():
         notes_count=notes_count,
         liked_count=liked_count,
         with_replies_count=with_replies_count,
+        me=ME,
     )
 
 
@@ -170,6 +176,11 @@ ALLOWED_TAGS = [
 
 def clean_html(html):
     return bleach.clean(html, tags=ALLOWED_TAGS)
+
+
+@app.template_filter()
+def permalink_id(val):
+    return str(hash(val))
 
 
 @app.template_filter()
@@ -219,6 +230,13 @@ def format_timeago(val):
         dt = parser.parse(val)
         return timeago.format(dt, datetime.now(timezone.utc))
     return val
+
+
+@app.template_filter()
+def has_type(doc, _type):
+    if _type in _to_list(doc["type"]):
+        return True
+    return False
 
 
 def _is_img(filename):
@@ -370,9 +388,7 @@ def login():
         payload = u2f.begin_authentication(ID, devices)
         session["challenge"] = payload
 
-    return render_template(
-        "login.html", u2f_enabled=u2f_enabled, me=ME, payload=payload
-    )
+    return render_template("login.html", u2f_enabled=u2f_enabled, payload=payload)
 
 
 @app.route("/remote_follow", methods=["GET", "POST"])
@@ -429,6 +445,45 @@ def u2f_register():
 # Activity pub routes
 
 
+@app.route("/migration1_step1")
+@login_required
+def tmp_migrate():
+    for activity in DB.outbox.find():
+        activity["box"] = Box.OUTBOX.value
+        DB.activities.insert_one(activity)
+    for activity in DB.inbox.find():
+        activity["box"] = Box.INBOX.value
+        DB.activities.insert_one(activity)
+    for activity in DB.replies.find():
+        activity["box"] = Box.REPLIES.value
+        DB.activities.insert_one(activity)
+    return "Done"
+
+
+@app.route("/migration1_step2")
+@login_required
+def tmp_migrate2():
+    for activity in DB.activities.find():
+        if (
+            activity["box"] == Box.OUTBOX.value
+            and activity["type"] == ActivityType.LIKE.value
+        ):
+            like = ap.parse_activity(activity["activity"])
+            obj = like.get_object()
+            DB.activities.update_one(
+                {"remote_id": like.id},
+                {"$set": {"meta.object": obj.to_dict(embed=True)}},
+            )
+        elif activity["type"] == ActivityType.ANNOUNCE.value:
+            announce = ap.parse_activity(activity["activity"])
+            obj = announce.get_object()
+            DB.activities.update_one(
+                {"remote_id": announce.id},
+                {"$set": {"meta.object": obj.to_dict(embed=True)}},
+            )
+    return "Done"
+
+
 @app.route("/")
 def index():
     if is_api_request():
@@ -437,89 +492,44 @@ def index():
     # FIXME(tsileo): implements pagination, also for the followers/following page
     limit = 50
     q = {
-        "type": "Create",
-        "activity.object.type": "Note",
+        "box": Box.OUTBOX.value,
+        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         "activity.object.inReplyTo": None,
         "meta.deleted": False,
+        "meta.undo": False,
     }
     c = request.args.get("cursor")
     if c:
         q["_id"] = {"$lt": ObjectId(c)}
 
-    outbox_data = list(
-        DB.outbox.find(
-            {"$or": [q, {"type": "Announce", "meta.undo": False}]}, limit=limit
-        ).sort("_id", -1)
-    )
+    outbox_data = list(DB.activities.find(q, limit=limit).sort("_id", -1))
     cursor = None
     if outbox_data and len(outbox_data) == limit:
         cursor = str(outbox_data[-1]["_id"])
 
-    for data in outbox_data:
-        if data["type"] == "Announce":
-            if data["activity"]["object"].startswith("http"):
-                data["ref"] = {
-                    "activity": {
-                        "object": OBJECT_SERVICE.get(data["activity"]["object"]),
-                        "id": "NA",
-                    },
-                    "meta": {},
-                }
-            print(data)
-
-
-    return render_template(
-        "index.html",
-        me=ME,
-        notes=DB.inbox.find(
-            {"type": "Create", "activity.object.type": "Note", "meta.deleted": False}
-        ).count(),
-        followers=DB.followers.count(),
-        following=DB.following.count(),
-        outbox_data=outbox_data,
-        cursor=cursor,
-    )
+    return render_template("index.html", outbox_data=outbox_data, cursor=cursor)
 
 
 @app.route("/with_replies")
 def with_replies():
+    # FIXME(tsileo): implements pagination, also for the followers/following page
     limit = 50
-    q = {"type": "Create", "activity.object.type": "Note", "meta.deleted": False}
+    q = {
+        "box": Box.OUTBOX.value,
+        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+        "meta.deleted": False,
+        "meta.undo": False,
+    }
     c = request.args.get("cursor")
     if c:
         q["_id"] = {"$lt": ObjectId(c)}
 
-    outbox_data = list(
-        DB.outbox.find(
-            {"$or": [q, {"type": "Announce", "meta.undo": False}]}, limit=limit
-        ).sort("_id", -1)
-    )
+    outbox_data = list(DB.activities.find(q, limit=limit).sort("_id", -1))
     cursor = None
     if outbox_data and len(outbox_data) == limit:
         cursor = str(outbox_data[-1]["_id"])
 
-    for data in outbox_data:
-        if data["type"] == "Announce":
-            print(data)
-            if data["activity"]["object"].startswith("http"):
-                data["ref"] = {
-                    "activity": {
-                        "object": OBJECT_SERVICE.get(data["activity"]["object"])
-                    },
-                    "meta": {},
-                }
-
-    return render_template(
-        "index.html",
-        me=ME,
-        notes=DB.inbox.find(
-            {"type": "Create", "activity.object.type": "Note", "meta.deleted": False}
-        ).count(),
-        followers=DB.followers.count(),
-        following=DB.following.count(),
-        outbox_data=outbox_data,
-        cursor=cursor,
-    )
+    return render_template("index.html", outbox_data=outbox_data, cursor=cursor)
 
 
 def _build_thread(data, include_children=True):
@@ -534,12 +544,7 @@ def _build_thread(data, include_children=True):
         )
 
     # Fetch the root replies, and the children
-    replies = (
-        [data]
-        + list(DB.inbox.find(query))
-        + list(DB.outbox.find(query))
-        + list(DB.threads.find(query))
-    )
+    replies = [data] + list(DB.activities.find(query))
     replies = sorted(replies, key=lambda d: d["activity"]["object"]["published"])
     # Index all the IDs in order to build a tree
     idx = {}
@@ -580,7 +585,9 @@ def _build_thread(data, include_children=True):
 
 @app.route("/note/<note_id>")
 def note_by_id(note_id):
-    data = DB.outbox.find_one({"remote_id": back.activity_url(note_id)})
+    data = DB.activities.find_one(
+        {"box": Box.OUTBOX.value, "remote_id": back.activity_url(note_id)}
+    )
     if not data:
         abort(404)
     if data["meta"].get("deleted", False):
@@ -588,7 +595,7 @@ def note_by_id(note_id):
     thread = _build_thread(data)
 
     likes = list(
-        DB.inbox.find(
+        DB.activities.find(
             {
                 "meta.undo": False,
                 "type": ActivityType.LIKE.value,
@@ -602,7 +609,7 @@ def note_by_id(note_id):
     likes = [ACTOR_SERVICE.get(doc["activity"]["actor"]) for doc in likes]
 
     shares = list(
-        DB.inbox.find(
+        DB.activities.find(
             {
                 "meta.undo": False,
                 "type": ActivityType.ANNOUNCE.value,
@@ -616,7 +623,7 @@ def note_by_id(note_id):
     shares = [ACTOR_SERVICE.get(doc["activity"]["actor"]) for doc in shares]
 
     return render_template(
-        "note.html", likes=likes, shares=shares, me=ME, thread=thread, note=data
+        "note.html", likes=likes, shares=shares, thread=thread, note=data
     )
 
 
@@ -636,7 +643,10 @@ def nodeinfo():
                 "protocols": ["activitypub"],
                 "services": {"inbound": [], "outbound": []},
                 "openRegistrations": False,
-                "usage": {"users": {"total": 1}, "localPosts": DB.outbox.count()},
+                "usage": {
+                    "users": {"total": 1},
+                    "localPosts": DB.activities.count({"box": Box.OUTBOX.value}),
+                },
                 "metadata": {
                     "sourceCode": "https://github.com/tsileo/microblog.pub",
                     "nodeName": f"@{USERNAME}@{DOMAIN}",
@@ -734,12 +744,13 @@ def outbox():
         # TODO(tsileo): filter the outbox if not authenticated
         # FIXME(tsileo): filter deleted, add query support for build_ordered_collection
         q = {
+            "box": Box.OUTBOX.value,
             "meta.deleted": False,
             # 'type': {'$in': [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         }
         return jsonify(
             **activitypub.build_ordered_collection(
-                DB.outbox,
+                DB.activities,
                 q=q,
                 cursor=request.args.get("cursor"),
                 map_func=lambda doc: activity_from_doc(doc, embed=True),
@@ -765,7 +776,9 @@ def outbox():
 
 @app.route("/outbox/<item_id>")
 def outbox_detail(item_id):
-    doc = DB.outbox.find_one({"remote_id": back.activity_url(item_id)})
+    doc = DB.activities.find_one(
+        {"box": Box.OUTBOX.value, "remote_id": back.activity_url(item_id)}
+    )
     if doc["meta"].get("deleted", False):
         obj = ap.parse_activity(doc["activity"])
         resp = jsonify(**obj.get_object().get_tombstone())
@@ -777,8 +790,12 @@ def outbox_detail(item_id):
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
     # TODO(tsileo): handle Tombstone
-    data = DB.outbox.find_one(
-        {"remote_id": back.activity_url(item_id), "meta.deleted": False}
+    data = DB.activities.find_one(
+        {
+            "box": Box.OUTBOX.value,
+            "remote_id": back.activity_url(item_id),
+            "meta.deleted": False,
+        }
     )
     if not data:
         abort(404)
@@ -793,8 +810,12 @@ def outbox_activity_replies(item_id):
     # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
-    data = DB.outbox.find_one(
-        {"remote_id": back.activity_url(item_id), "meta.deleted": False}
+    data = DB.activities.find_one(
+        {
+            "box": Box.OUTBOX.value,
+            "remote_id": back.activity_url(item_id),
+            "meta.deleted": False,
+        }
     )
     if not data:
         abort(404)
@@ -810,7 +831,7 @@ def outbox_activity_replies(item_id):
 
     return jsonify(
         **activitypub.build_ordered_collection(
-            DB.inbox,
+            DB.activities,
             q=q,
             cursor=request.args.get("cursor"),
             map_func=lambda doc: doc["activity"]["object"],
@@ -825,8 +846,12 @@ def outbox_activity_likes(item_id):
     # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
-    data = DB.outbox.find_one(
-        {"remote_id": back.activity_url(item_id), "meta.deleted": False}
+    data = DB.activities.find_one(
+        {
+            "box": Box.OUTBOX.value,
+            "remote_id": back.activity_url(item_id),
+            "meta.deleted": False,
+        }
     )
     if not data:
         abort(404)
@@ -845,7 +870,7 @@ def outbox_activity_likes(item_id):
 
     return jsonify(
         **activitypub.build_ordered_collection(
-            DB.inbox,
+            DB.activities,
             q=q,
             cursor=request.args.get("cursor"),
             map_func=lambda doc: remove_context(doc["activity"]),
@@ -860,8 +885,12 @@ def outbox_activity_shares(item_id):
     # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
-    data = DB.outbox.find_one(
-        {"remote_id": back.activity_url(item_id), "meta.deleted": False}
+    data = DB.activities.find_one(
+        {
+            "box": Box.OUTBOX.value,
+            "remote_id": back.activity_url(item_id),
+            "meta.deleted": False,
+        }
     )
     if not data:
         abort(404)
@@ -880,7 +909,7 @@ def outbox_activity_shares(item_id):
 
     return jsonify(
         **activitypub.build_ordered_collection(
-            DB.inbox,
+            DB.activities,
             q=q,
             cursor=request.args.get("cursor"),
             map_func=lambda doc: remove_context(doc["activity"]),
@@ -893,16 +922,21 @@ def outbox_activity_shares(item_id):
 @app.route("/admin", methods=["GET"])
 @login_required
 def admin():
-    q = {"meta.deleted": False, "meta.undo": False, "type": ActivityType.LIKE.value}
-    col_liked = DB.outbox.count(q)
+    q = {
+        "meta.deleted": False,
+        "meta.undo": False,
+        "type": ActivityType.LIKE.value,
+        "box": Box.OUTBOX.value,
+    }
+    col_liked = DB.activities.count(q)
 
     return render_template(
         "admin.html",
         instances=list(DB.instances.find()),
-        inbox_size=DB.inbox.count(),
-        outbox_size=DB.outbox.count(),
-        object_cache_size=DB.objects_cache.count(),
-        actor_cache_size=DB.actors_cache.count(),
+        inbox_size=DB.activities.count({"box": Box.INBOX.value}),
+        outbox_size=DB.activities.count({"box": Box.OUTBOX.value}),
+        object_cache_size=0,
+        actor_cache_size=0,
         col_liked=col_liked,
         col_followers=DB.followers.count(),
         col_following=DB.following.count(),
@@ -916,11 +950,9 @@ def new():
     content = ""
     thread = []
     if request.args.get("reply"):
-        data = DB.inbox.find_one({"activity.object.id": request.args.get("reply")})
+        data = DB.activities.find_one({"activity.object.id": request.args.get("reply")})
         if not data:
-            data = DB.outbox.find_one({"activity.object.id": request.args.get("reply")})
-            if not data:
-                abort(400)
+            abort(400)
 
         reply = ap.parse_activity(data["activity"])
         reply_id = reply.id
@@ -930,7 +962,7 @@ def new():
         domain = urlparse(actor.id).netloc
         # FIXME(tsileo): if reply of reply, fetch all participants
         content = f"@{actor.preferredUsername}@{domain} "
-        thread = _build_thread(data, include_children=False)
+        thread = _build_thread(data)
 
     return render_template("new.html", reply=reply_id, content=content, thread=thread)
 
@@ -940,42 +972,41 @@ def new():
 def notifications():
     # FIXME(tsileo): implements pagination, also for the followers/following page
     limit = 50
-    q = {
-        "type": "Create",
+    # FIXME(tsileo): show unfollow (performed by the current actor) and liked???
+    mentions_query = {
+        "type": ActivityType.CREATE.value,
         "activity.object.tag.type": "Mention",
         "activity.object.tag.name": f"@{USERNAME}@{DOMAIN}",
         "meta.deleted": False,
     }
-    # TODO(tsileo): also include replies via regex on Create replyTo
-    q = {
-        "$or": [
-            q,
-            {"type": "Follow"},
-            {"type": "Accept"},
-            {"type": "Undo", "activity.object.type": "Follow"},
-            {"type": "Announce", "activity.object": {"$regex": f"^{BASE_URL}"}},
-            {"type": "Create", "activity.object.inReplyTo": {"$regex": f"^{BASE_URL}"}},
-        ]
+    replies_query = {
+        "type": ActivityType.CREATE.value,
+        "activity.object.inReplyTo": {"$regex": f"^{BASE_URL}"},
     }
-    print(q)
+    announced_query = {
+        "type": ActivityType.ANNOUNCE.value,
+        "activity.object": {"$regex": f"^{BASE_URL}"},
+    }
+    new_followers_query = {"type": ActivityType.FOLLOW.value}
+    followed_query = {"type": ActivityType.ACCEPT.value}
+    q = {
+        "box": Box.INBOX.value,
+        "$or": [
+            mentions_query,
+            announced_query,
+            replies_query,
+            new_followers_query,
+            followed_query,
+        ],
+    }
     c = request.args.get("cursor")
     if c:
         q["_id"] = {"$lt": ObjectId(c)}
 
-    outbox_data = list(DB.inbox.find(q, limit=limit).sort("_id", -1))
+    outbox_data = list(DB.activities.find(q, limit=limit).sort("_id", -1))
     cursor = None
     if outbox_data and len(outbox_data) == limit:
         cursor = str(outbox_data[-1]["_id"])
-
-    # TODO(tsileo): fix the annonce handling, copy it from /stream
-    # for data in outbox_data:
-    #    if data['type'] == 'Announce':
-    #        print(data)
-    #        if data['activity']['object'].startswith('http') and data['activity']['object'] in objcache:
-    #            data['ref'] = {'activity': {'object': objcache[data['activity']['object']]}, 'meta': {}}
-    #            out.append(data)
-    #    else:
-    #        out.append(data)
 
     return render_template("stream.html", inbox_data=outbox_data, cursor=cursor)
 
@@ -1061,8 +1092,11 @@ def api_like():
 @api_required
 def api_undo():
     oid = _user_api_arg("id")
-    doc = DB.outbox.find_one(
-        {"$or": [{"remote_id": back.activity_url(oid)}, {"remote_id": oid}]}
+    doc = DB.activities.find_one(
+        {
+            "box": Box.OUTBOX.value,
+            "$or": [{"remote_id": back.activity_url(oid)}, {"remote_id": oid}],
+        }
     )
     if not doc:
         raise ActivityNotFoundError(f"cannot found {oid}")
@@ -1080,50 +1114,24 @@ def api_undo():
 def stream():
     # FIXME(tsileo): implements pagination, also for the followers/following page
     limit = 100
+    c = request.args.get("cursor")
     q = {
-        "type": "Create",
-        "activity.object.type": "Note",
-        "activity.object.inReplyTo": None,
+        "box": Box.INBOX.value,
+        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         "meta.deleted": False,
     }
-    c = request.args.get("cursor")
     if c:
         q["_id"] = {"$lt": ObjectId(c)}
 
-    outbox_data = list(
-        DB.inbox.find({"$or": [q, {"type": "Announce"}]}, limit=limit).sort(
-            "activity.published", -1
-        )
+    inbox_data = list(
+        # FIXME(tsileo): reshape using meta.cached_object
+        DB.activities.find(q, limit=limit).sort("_id", -1)
     )
     cursor = None
-    if outbox_data and len(outbox_data) == limit:
-        cursor = str(outbox_data[-1]["_id"])
+    if inbox_data and len(inbox_data) == limit:
+        cursor = str(inbox_data[-1]["_id"])
 
-    out = []
-    objcache = {}
-    cached = list(
-        DB.objects_cache.find({"meta.part_of_stream": True}, limit=limit * 3).sort(
-            "meta.announce_published", -1
-        )
-    )
-    for c in cached:
-        objcache[c["object_id"]] = c["cached_object"]
-    for data in outbox_data:
-        if data["type"] == "Announce":
-            if (
-                data["activity"]["object"].startswith("http")
-                and data["activity"]["object"] in objcache
-            ):
-                data["ref"] = {
-                    "activity": {"object": objcache[data["activity"]["object"]]},
-                    "meta": {},
-                }
-                out.append(data)
-            else:
-                print("OMG", data)
-        else:
-            out.append(data)
-    return render_template("stream.html", inbox_data=out, cursor=cursor)
+    return render_template("stream.html", inbox_data=inbox_data, cursor=cursor)
 
 
 @app.route("/inbox", methods=["GET", "POST"])
@@ -1138,8 +1146,8 @@ def inbox():
 
         return jsonify(
             **activitypub.build_ordered_collection(
-                DB.inbox,
-                q={"meta.deleted": False},
+                DB.activities,
+                q={"meta.deleted": False, "box": Box.INBOX.value},
                 cursor=request.args.get("cursor"),
                 map_func=lambda doc: remove_context(doc["activity"]),
             )
@@ -1198,9 +1206,9 @@ def api_debug():
         return flask_jsonify(message="DB dropped")
 
     return flask_jsonify(
-        inbox=DB.inbox.count(),
-        outbox=DB.outbox.count(),
-        outbox_data=without_id(DB.outbox.find()),
+        inbox=DB.activities.count({"box": Box.INBOX.value}),
+        outbox=DB.activities.count({"box": Box.OUTBOX.value}),
+        outbox_data=without_id(DB.activities.find({"box": Box.OUTBOX.value})),
     )
 
 
@@ -1305,8 +1313,13 @@ def api_stream():
 def api_block():
     actor = _user_api_arg("actor")
 
-    existing = DB.outbox.find_one(
-        {"type": ActivityType.BLOCK.value, "activity.object": actor, "meta.undo": False}
+    existing = DB.activities.find_one(
+        {
+            "box": Box.OUTBOX.value,
+            "type": ActivityType.BLOCK.value,
+            "activity.object": actor,
+            "meta.undo": False,
+        }
     )
     if existing:
         return _user_api_response(activity=existing["activity"]["id"])
@@ -1346,14 +1359,7 @@ def followers():
     followers = [
         ACTOR_SERVICE.get(doc["remote_actor"]) for doc in DB.followers.find(limit=50)
     ]
-    return render_template(
-        "followers.html",
-        me=ME,
-        notes=DB.inbox.find({"object.object.type": "Note"}).count(),
-        followers=DB.followers.count(),
-        following=DB.following.count(),
-        followers_data=followers,
-    )
+    return render_template("followers.html", followers_data=followers)
 
 
 @app.route("/following")
@@ -1370,30 +1376,27 @@ def following():
     following = [
         ACTOR_SERVICE.get(doc["remote_actor"]) for doc in DB.following.find(limit=50)
     ]
-    return render_template(
-        "following.html",
-        me=ME,
-        notes=DB.inbox.find({"object.object.type": "Note"}).count(),
-        followers=DB.followers.count(),
-        following=DB.following.count(),
-        following_data=following,
-    )
+    return render_template("following.html", following_data=following)
 
 
 @app.route("/tags/<tag>")
 def tags(tag):
-    if not DB.outbox.count(
-        {"activity.object.tag.type": "Hashtag", "activity.object.tag.name": "#" + tag}
+    if not DB.activities.count(
+        {
+            "box": Box.OUTBOX.value,
+            "activity.object.tag.type": "Hashtag",
+            "activity.object.tag.name": "#" + tag,
+        }
     ):
         abort(404)
     if not is_api_request():
         return render_template(
             "tags.html",
             tag=tag,
-            outbox_data=DB.outbox.find(
+            outbox_data=DB.activities.find(
                 {
-                    "type": "Create",
-                    "activity.object.type": "Note",
+                    "box": Box.OUTBOX.value,
+                    "type": ActivityType.CREATE.value,
                     "meta.deleted": False,
                     "activity.object.tag.type": "Hashtag",
                     "activity.object.tag.name": "#" + tag,
@@ -1401,6 +1404,7 @@ def tags(tag):
             ),
         )
     q = {
+        "box": Box.OUTBOX.value,
         "meta.deleted": False,
         "meta.undo": False,
         "type": ActivityType.CREATE.value,
@@ -1409,7 +1413,7 @@ def tags(tag):
     }
     return jsonify(
         **activitypub.build_ordered_collection(
-            DB.outbox,
+            DB.activities,
             q=q,
             cursor=request.args.get("cursor"),
             map_func=lambda doc: doc["activity"]["object"]["id"],
@@ -1423,9 +1427,9 @@ def liked():
     if not is_api_request():
         return render_template(
             "liked.html",
-            me=ME,
-            liked=DB.outbox.find(
+            liked=DB.activities.find(
                 {
+                    "box": Box.OUTBOX.value,
                     "type": ActivityType.LIKE.value,
                     "meta.deleted": False,
                     "meta.undo": False,
@@ -1436,7 +1440,7 @@ def liked():
     q = {"meta.deleted": False, "meta.undo": False, "type": ActivityType.LIKE.value}
     return jsonify(
         **activitypub.build_ordered_collection(
-            DB.outbox,
+            DB.activities,
             q=q,
             cursor=request.args.get("cursor"),
             map_func=lambda doc: doc["activity"]["object"],
