@@ -464,27 +464,27 @@ def tmp_migrate():
 @app.route("/migration1_step2")
 @login_required
 def tmp_migrate2():
+    # Remove buggy OStatus announce
+    DB.activities.remove({"activity.object": {"$regex": f"^tag:"}, "type": ActivityType.ANNOUNCE.value})
+    # Cache the object
     for activity in DB.activities.find():
-        try:
-            if (
-                activity["box"] == Box.OUTBOX.value
-                and activity["type"] == ActivityType.LIKE.value
-            ):
-                like = ap.parse_activity(activity["activity"])
-                obj = like.get_object()
-                DB.activities.update_one(
-                    {"remote_id": like.id},
-                    {"$set": {"meta.object": obj.to_dict(embed=True)}},
-                )
-            elif activity["type"] == ActivityType.ANNOUNCE.value:
-                announce = ap.parse_activity(activity["activity"])
-                obj = announce.get_object()
-                DB.activities.update_one(
-                    {"remote_id": announce.id},
-                    {"$set": {"meta.object": obj.to_dict(embed=True)}},
-                )
-        except Exception:
-            pass
+        if (
+            activity["box"] == Box.OUTBOX.value
+            and activity["type"] == ActivityType.LIKE.value
+        ):
+            like = ap.parse_activity(activity["activity"])
+            obj = like.get_object()
+            DB.activities.update_one(
+                {"remote_id": like.id},
+                {"$set": {"meta.object": obj.to_dict(embed=True)}},
+            )
+        elif activity["type"] == ActivityType.ANNOUNCE.value:
+            announce = ap.parse_activity(activity["activity"])
+            obj = announce.get_object()
+            DB.activities.update_one(
+                {"remote_id": announce.id},
+                {"$set": {"meta.object": obj.to_dict(embed=True)}},
+            )
     return "Done"
 
 
