@@ -19,13 +19,6 @@
 <li><a href="/following"{% if request.path == "/following" %} class="selected" {% endif %}>Following <small class="badge">{{ following_count }}</small></a></li>
 <!-- <li><a href="/about"{% if request.path == "/about" %} class="selected" {% endif %}>/about</a></li>
 -->
-{% if logged_in %}
-<li><a href="/stream"{% if request.path == "/stream" %} class="selected" {% endif %}>/stream</a></li>
-<li><a href="/notifications"{% if request.path == "/notifications" %} class="selected" {% endif %}>/notifs</a></li>
-<li><a href="/new"{% if request.path == "/new" %} class="selected" {% endif %}>/new</a></li>
-<li><a href="/admin"{% if request.path == "/admin" %} class="selected" {% endif %}>/admin</a></li>
-<li><a href="/logout">/logout</a></li>
-{% endif %}
 </ul>
 </div>
 </div>

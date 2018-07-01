@@ -45,7 +45,30 @@ a:hover {
   background: $primary-color;
   color: $background-color;
 }
-
+#admin-menu {
+  list-style-type: none;
+  display: inline;
+  padding: 10px;
+  width: 720px;
+  margin:0 auto;
+  background: $color-menu-background;
+  color: $color-light;
+  border-radius-bottom-left: 2px;
+  border-radius-bottom-right: 2px;
+  .left { float: left; }
+  .right { float: right; }
+  li {
+     a { text-decoration: none; }
+    .admin-title {
+       text-transform: uppercase;
+       font-weight: bold;
+    }
+    padding-right:10px;
+    .selected, a:hover {
+      color: $primary-color;
+    }
+  }
+}
 #header {
   margin-bottom: 70px;
 
@@ -69,7 +92,6 @@ a:hover {
       padding: 0;
       li {
         float:left;
-        padding-right:10px;
         margin-bottom:10px;
       }
     }
