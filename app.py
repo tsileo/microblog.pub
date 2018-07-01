@@ -994,6 +994,10 @@ def notifications():
         "activity.object": {"$regex": f"^{BASE_URL}"},
     }
     new_followers_query = {"type": ActivityType.FOLLOW.value}
+    unfollow_query = {
+        "type": ActivityType.UNDO.value,
+        "activity.object.type": ActivityType.FOLLOW.value,
+    }
     followed_query = {"type": ActivityType.ACCEPT.value}
     q = {
         "box": Box.INBOX.value,
@@ -1003,6 +1007,7 @@ def notifications():
             replies_query,
             new_followers_query,
             followed_query,
+            unfollow_query,
         ],
     }
     c = request.args.get("cursor")

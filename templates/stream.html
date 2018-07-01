@@ -21,13 +21,19 @@
 	{% endif %}
 	
 	{% if item | has_type('Follow') %}
-    <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-hover">new follower</span> <!-- <a href="" class="bar-item">follow back</a></p> -->
+    <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover">new follower</span> <!-- <a href="" class="bar-item">follow back</a></p> -->
     <div style="height: 100px;">
 	{{ utils.display_actor_inline(item.activity.actor | get_actor, size=50) }}
     </div>
 
 	{% elif item | has_type('Accept') %}
-    <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-hover">you started following</span></p>
+    <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover">you started following</span></p>
+    <div style="height: 100px;">
+	{{ utils.display_actor_inline(item.activity.actor | get_actor, size=50) }}
+    </div>
+
+	{% elif item | has_type('Undo') %}
+    <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover">unfollowed you</span></p>
     <div style="height: 100px;">
 	{{ utils.display_actor_inline(item.activity.actor | get_actor, size=50) }}
     </div>
