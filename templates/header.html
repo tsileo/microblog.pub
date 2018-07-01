@@ -4,8 +4,7 @@
 <a href="{{ config.ID }}" class="u-url u-uid no-hover title">
 	<span style="font-size:1.1em;">{{ config.NAME }}</span>
 	<span  style="font-size:0.85em;" class="subtitle-username">@<span class="gold p-name">{{ config.USERNAME }}</span>@<span class="gold">{{ config.DOMAIN }}</span>
-    <small><a style="background:#ddd;padding:5px 8px;margin-top:5px;border-radius:2px;text-decoration:none;" href="/remote_follow">Remote follow</a></small>
-	</span>
+    <small><a class="remote-follow-button" href="/remote_follow">Remote follow</a></small>
 </a>
 <div class="p-note summary">
 {{ config.SUMMARY | safe }}

@@ -24,7 +24,7 @@ DEFAULT_THEME_STYLE = ThemeStyle.LIGHT.value
 
 DEFAULT_THEME_PRIMARY_COLOR = {
     ThemeStyle.LIGHT: "#1d781d",  # Green
-    ThemeStyle.DARK: "#e14eea",  # Purple
+    ThemeStyle.DARK: "#33ff00",  # Purple
 }
 
 

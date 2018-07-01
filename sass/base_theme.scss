@@ -28,6 +28,23 @@ a:hover {
 .gold {
   color: $primary-color;
 }
+.pcolor {
+  color: $primary-color;
+}
+
+.remote-follow-button {
+  background: $color-menu-background;
+  color: $color-light;
+  text-decoration: none;
+  padding: 5px 8px;
+  margin-top: 5px;
+  border-radius: 2px;
+}
+.remote-follow-button:hover {
+  text-decoration: none;
+  background: $primary-color;
+  color: $background-color;
+}
 
 #header {
   margin-bottom: 70px;
@@ -171,12 +188,24 @@ a:hover {
   }
 }
 
+.bar-item-no-hover {
+  background: $color-menu-background;
+  padding: 5px;
+  color: $color-light;
+  margin-right:5px;
+  border-radius:2px;
+}
+
 .bar-item {
   background: $color-menu-background;
   padding: 5px;
   color: $color-light;
   margin-right:5px;
   border-radius:2px;
+}
+.bar-item:hover {
+  background: $primary-color;
+  color: $background-color;
 }
 button.bar-item {
   border: 0

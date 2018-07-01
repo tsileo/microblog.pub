@@ -15,7 +15,7 @@
 
 
 
-{% macro display_note(obj, perma=False, ui=False, likes=[], shares=[], meta={}) -%}
+{% macro display_note(obj, perma=False, ui=False, likes=[], shares=[], meta={}, no_color=False) -%}
 {% set actor = obj.attributedTo | get_actor  %}
 <div class="note h-entry" id="activity-{{ obj.id | permalink_id }}">
 
@@ -26,7 +26,9 @@
 </div>
 
 <div class="note-wrapper">
-	<a href="{{ actor.url }}" style="margin:0;text-decoration:none;" class="no-hover"><strong>{{ actor.name or actor.preferredUsername }}</strong> <span class="l">@{{ actor.preferredUsername }}@{{ actor.url | domain }}</span></a>
+	<a href="{{ actor.url }}" style="margin:0;text-decoration:none;" class="no-hover"><strong>{{ actor.name or actor.preferredUsername }}</strong>
+        <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername }}</span>{% else %}{{ actor.preferredUsername }}{% endif %}@
+            {% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.url | domain }}</span>{% else %}{{ actor.url | domain }}{% endif %}</span></a>
 
 	{% if not perma %}
 	<span style="float:right">
