@@ -4,8 +4,8 @@ from datetime import datetime
 from enum import Enum
 
 import requests
-import yaml
 import sass
+import yaml
 from itsdangerous import JSONWebSignatureSerializer
 from pymongo import MongoClient
 
@@ -80,7 +80,7 @@ SASS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sass")
 theme_css = f"$primary-color: {THEME_COLOR};\n"
 with open(os.path.join(SASS_DIR, f"{THEME_STYLE.value}.scss")) as f:
     theme_css += f.read()
-    theme_css += '\n'
+    theme_css += "\n"
 with open(os.path.join(SASS_DIR, "base_theme.scss")) as f:
     raw_css = theme_css + f.read()
     CSS = sass.compile(string=raw_css)

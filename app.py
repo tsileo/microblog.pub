@@ -465,7 +465,9 @@ def tmp_migrate():
 @login_required
 def tmp_migrate2():
     # Remove buggy OStatus announce
-    DB.activities.remove({"activity.object": {"$regex": f"^tag:"}, "type": ActivityType.ANNOUNCE.value})
+    DB.activities.remove(
+        {"activity.object": {"$regex": f"^tag:"}, "type": ActivityType.ANNOUNCE.value}
+    )
     # Cache the object
     for activity in DB.activities.find():
         if (
