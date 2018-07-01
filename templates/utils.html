@@ -27,8 +27,7 @@
 
 <div class="note-wrapper">
 	<a href="{{ actor.url }}" style="margin:0;text-decoration:none;" class="no-hover"><strong>{{ actor.name or actor.preferredUsername }}</strong>
-        <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername }}</span>{% else %}{{ actor.preferredUsername }}{% endif %}@
-            {% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.url | domain }}</span>{% else %}{{ actor.url | domain }}{% endif %}</span></a>
+        <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername }}</span>{% else %}{{ actor.preferredUsername }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.url | domain }}</span>{% else %}{{ actor.url | domain }}{% endif %}</span></a>
 
 	{% if not perma %}
 	<span style="float:right">
