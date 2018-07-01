@@ -1223,51 +1223,6 @@ def api_debug():
     )
 
 
-@app.route("/api/upload", methods=["POST"])
-@api_required
-def api_upload():
-    file = request.files["file"]
-    rfilename = secure_filename(file.filename)
-    prefix = hashlib.sha256(os.urandom(32)).hexdigest()[:6]
-    mtype = mimetypes.guess_type(rfilename)[0]
-    filename = f"{prefix}_{rfilename}"
-    file.save(os.path.join("static", "media", filename))
-
-    # Remove EXIF metadata
-    if filename.lower().endswith(".jpg") or filename.lower().endswith(".jpeg"):
-        piexif.remove(os.path.join("static", "media", filename))
-
-    print("upload OK")
-    print(filename)
-    attachment = [
-        {
-            "mediaType": mtype,
-            "name": rfilename,
-            "type": "Document",
-            "url": BASE_URL + f"/static/media/{filename}",
-        }
-    ]
-    print(attachment)
-    content = request.args.get("content")
-    to = request.args.get("to")
-    note = ap.Note(
-        attributedTo=MY_PERSON.id,
-        cc=[ID + "/followers"],
-        to=[to if to else ap.AS_PUBLIC],
-        content=content,  # TODO(tsileo): handle markdown
-        attachment=attachment,
-    )
-    print("post_note_init")
-    print(note)
-    create = note.build_create()
-    print(create)
-    print(create.to_dict())
-    OUTBOX.post(create)
-    print("posted")
-
-    return Response(status=201, response="OK")
-
-
 @app.route("/api/new_note", methods=["POST"])
 @api_required
 def api_new_note():
@@ -1293,7 +1248,7 @@ def api_new_note():
         if tag["type"] == "Mention":
             cc.append(tag["href"])
 
-    note = ap.Note(
+    raw_note = dict(
         attributedTo=MY_PERSON.id,
         cc=list(set(cc)),
         to=[to if to else ap.AS_PUBLIC],
@@ -1302,6 +1257,29 @@ def api_new_note():
         source={"mediaType": "text/markdown", "content": source},
         inReplyTo=reply.id if reply else None,
     )
+
+    if 'file' in request.files:
+        file = request.files["file"]
+        rfilename = secure_filename(file.filename)
+        prefix = hashlib.sha256(os.urandom(32)).hexdigest()[:6]
+        mtype = mimetypes.guess_type(rfilename)[0]
+        filename = f"{prefix}_{rfilename}"
+        file.save(os.path.join("static", "media", filename))
+
+        # Remove EXIF metadata
+        if filename.lower().endswith(".jpg") or filename.lower().endswith(".jpeg"):
+            piexif.remove(os.path.join("static", "media", filename))
+
+        raw_note['attachment'] = [
+            {
+                "mediaType": mtype,
+                "name": rfilename,
+                "type": "Document",
+                "url": BASE_URL + f"/static/media/{filename}",
+            }
+        ]
+
+    note = ap.Note(**raw_note)
     create = note.build_create()
     OUTBOX.post(create)
 

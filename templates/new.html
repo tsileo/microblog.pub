@@ -11,11 +11,12 @@
 {% else %}
 <h3 style="padding-bottom:20px;">New note</h3>
 {% endif %}
-<form action="/api/new_note" method="POST">
+<form action="/api/new_note" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="redirect" value="/">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% if reply %}<input type="hidden" name="reply" value="{{reply}}">{% endif %}
 <textarea name="content" rows="10" cols="50" autofocus="autofocus">{{ content }}</textarea>
+<input type="file" name="file">
 <div style="margin-top:20px;">
 <input type="submit" value="post">
 </div>
