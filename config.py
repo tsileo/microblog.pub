@@ -1,9 +1,11 @@
 import os
 import subprocess
 from datetime import datetime
+from enum import Enum
 
 import requests
 import yaml
+import sass
 from itsdangerous import JSONWebSignatureSerializer
 from pymongo import MongoClient
 
@@ -11,6 +13,19 @@ from little_boxes import strtobool
 from utils.key import KEY_DIR
 from utils.key import get_key
 from utils.key import get_secret_key
+
+
+class ThemeStyle(Enum):
+    LIGHT = "light"
+    DARK = "dark"
+
+
+DEFAULT_THEME_STYLE = ThemeStyle.LIGHT.value
+
+DEFAULT_THEME_PRIMARY_COLOR = {
+    ThemeStyle.LIGHT: "#1d781d",  # Green
+    ThemeStyle.DARK: "#e14eea",  # Purple
+}
 
 
 def noop():
@@ -54,8 +69,22 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
     ICON_URL = conf["icon_url"]
     PASS = conf["pass"]
     PUBLIC_INSTANCES = conf.get("public_instances", [])
-    # TODO(tsileo): choose dark/light style
-    THEME_COLOR = conf.get("theme_color")
+
+    # Theme-related config
+    theme_conf = conf.get("theme", {})
+    THEME_STYLE = ThemeStyle(theme_conf.get("style", DEFAULT_THEME_STYLE))
+    THEME_COLOR = theme_conf.get("color", DEFAULT_THEME_PRIMARY_COLOR[THEME_STYLE])
+
+
+SASS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sass")
+theme_css = f"$primary-color: {THEME_COLOR};\n"
+with open(os.path.join(SASS_DIR, f"{THEME_STYLE.value}.scss")) as f:
+    theme_css += f.read()
+    theme_css += '\n'
+with open(os.path.join(SASS_DIR, "base_theme.scss")) as f:
+    raw_css = theme_css + f.read()
+    CSS = sass.compile(string=raw_css)
+
 
 USER_AGENT = (
     f"{requests.utils.default_user_agent()} (microblog.pub/{VERSION}; +{BASE_URL})"
