@@ -210,6 +210,14 @@ def domain(url):
 
 
 @app.template_filter()
+def get_url(u):
+    if isinstance(u, dict):
+        return u["href"]
+    else:
+        return u
+
+
+@app.template_filter()
 def get_actor(url):
     if not url:
         return None
@@ -674,6 +682,11 @@ def wellknown_nodeinfo():
     )
 
 
+# @app.route('/fake_feed')
+# def fake_feed():
+#    return '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0" xmlns:activity="http://activitystrea.ms/spec/1.0/" xmlns:poco="http://portablecontacts.net/spec/1.0" xmlns:ostatus="http://ostatus.org/schema/1.0"><id>https://lol3.tun.a4.io/fake_feed</id><author><id>https://lol3.tun.a4.io/fake</id></author><entry></entry></feed>'
+
+
 @app.route("/.well-known/webfinger")
 def wellknown_webfinger():
     """Enable WebFinger support, required for Mastodon interopability."""
@@ -695,6 +708,13 @@ def wellknown_webfinger():
                 "rel": "http://ostatus.org/schema/1.0/subscribe",
                 "template": BASE_URL + "/authorize_follow?profile={uri}",
             },
+            # {"rel": "magic-public-key", "href": KEY.to_magic_key()},
+            # {"rel": "salmon", "href": BASE_URL + "/salmon"},
+            # {
+            #    "rel": "http://schemas.google.com/g/2010#updates-from",
+            #    "type": "application/atom+xml",
+            #    "href": f"{BASE_URL}/fake_feed",
+            # },
         ],
     }
 
@@ -1258,7 +1278,7 @@ def api_new_note():
         inReplyTo=reply.id if reply else None,
     )
 
-    if 'file' in request.files:
+    if "file" in request.files:
         file = request.files["file"]
         rfilename = secure_filename(file.filename)
         prefix = hashlib.sha256(os.urandom(32)).hexdigest()[:6]
@@ -1270,7 +1290,7 @@ def api_new_note():
         if filename.lower().endswith(".jpg") or filename.lower().endswith(".jpeg"):
             piexif.remove(os.path.join("static", "media", filename))
 
-        raw_note['attachment'] = [
+        raw_note["attachment"] = [
             {
                 "mediaType": mtype,
                 "name": rfilename,
