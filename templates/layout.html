@@ -15,9 +15,7 @@
 <link rel="alternate" href="{{ config.ID }}/feed.rss" type="application/rss+xml" title="RSS">
 <link rel="alternate" href="{{ config.ID }}/feed.atom" type="application/atom+xml" title="Atom 0.3">
 {% if config.THEME_COLOR %}<meta name="theme-color" content="{{ config.THEME_COLOR }}">{% endif %}
-<style>
-{{ config.CSS | safe }}
-</style>
+<style>{{ config.CSS | safe }}</style>
 </head>
 <body>
 {% if logged_in %}

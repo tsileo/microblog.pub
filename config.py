@@ -83,7 +83,7 @@ with open(os.path.join(SASS_DIR, f"{THEME_STYLE.value}.scss")) as f:
     theme_css += "\n"
 with open(os.path.join(SASS_DIR, "base_theme.scss")) as f:
     raw_css = theme_css + f.read()
-    CSS = sass.compile(string=raw_css)
+    CSS = sass.compile(string=raw_css, output_style='compressed')
 
 
 USER_AGENT = (
