@@ -690,6 +690,7 @@ def wellknown_nodeinfo():
 @app.route("/.well-known/webfinger")
 def wellknown_webfinger():
     """Enable WebFinger support, required for Mastodon interopability."""
+    # TODO(tsileo): move this to little-boxes?
     resource = request.args.get("resource")
     if resource not in [f"acct:{USERNAME}@{DOMAIN}", ID]:
         abort(404)
@@ -708,13 +709,12 @@ def wellknown_webfinger():
                 "rel": "http://ostatus.org/schema/1.0/subscribe",
                 "template": BASE_URL + "/authorize_follow?profile={uri}",
             },
-            # {"rel": "magic-public-key", "href": KEY.to_magic_key()},
-            # {"rel": "salmon", "href": BASE_URL + "/salmon"},
-            # {
-            #    "rel": "http://schemas.google.com/g/2010#updates-from",
-            #    "type": "application/atom+xml",
-            #    "href": f"{BASE_URL}/fake_feed",
-            # },
+            {"rel": "magic-public-key", "href": KEY.to_magic_key()},
+            {
+                "href": BASE_URL,
+                "rel": "http://webfinger.net/rel/profile-page",
+                "type": "text/html",
+            },
         ],
     }
 
