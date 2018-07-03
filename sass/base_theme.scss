@@ -91,8 +91,9 @@ a:hover {
       list-style-type: none;
       padding: 0;
       li {
-        float:left;
-        margin-bottom:10px;
+        float: left;
+        margin-bottom: 10px;
+        margin-right: 10px;
       }
     }
     a {
@@ -131,7 +132,7 @@ a:hover {
 #container {
   width: 90%;
   max-width: 720px;
-  margin: 40px auto;
+  margin: 30px auto;
 }
 #container #notes {
   margin-top: 20px;
