@@ -10,6 +10,7 @@ from datetime import timezone
 from functools import wraps
 from typing import Any
 from typing import Dict
+from typing import Tuple
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
@@ -45,6 +46,7 @@ from config import BASE_URL
 from config import DB
 from config import DEBUG_MODE
 from config import DOMAIN
+from config import GRIDFS
 from config import HEADERS
 from config import ICON_URL
 from config import ID
@@ -69,8 +71,11 @@ from little_boxes.httpsig import HTTPSigAuth
 from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
+from utils.img import ImageCache
 from utils.key import get_secret_key
 from utils.object_service import ObjectService
+
+IMAGE_CACHE = ImageCache(GRIDFS)
 
 OBJECT_SERVICE = ACTOR_SERVICE = ObjectService()
 
@@ -178,6 +183,30 @@ ALLOWED_TAGS = [
 
 def clean_html(html):
     return bleach.clean(html, tags=ALLOWED_TAGS)
+
+
+_GRIDFS_CACHE: Dict[Tuple[str, int], str] = {}
+
+
+def _get_actor_icon_url(url, size):
+    k = (url, size)
+    cached = _GRIDFS_CACHE.get(k)
+    if cached:
+        return cached
+
+    doc = IMAGE_CACHE.fs.find_one({"url": url, "size": size})
+    if doc:
+        u = f"/img/{str(doc._id)}"
+        _GRIDFS_CACHE[k] = u
+        return u
+
+    IMAGE_CACHE.cache_actor_icon(url)
+    return _get_actor_icon_url(url, size)
+
+
+@app.template_filter()
+def get_actor_icon_url(url, size):
+    return _get_actor_icon_url(url, size)
 
 
 @app.template_filter()
@@ -356,6 +385,21 @@ def handle_activitypub_error(error):
 
 
 # App routes
+
+
+@app.route("/img/<img_id>")
+def serve_img(img_id):
+    f = IMAGE_CACHE.fs.get(ObjectId(img_id))
+    resp = app.response_class(f, direct_passthrough=True, mimetype=f.content_type)
+    resp.headers.set("Content-Length", f.length)
+    resp.headers.set("ETag", f.md5)
+    resp.headers.set(
+        "Last-Modified", f.uploadDate.strftime("%a, %d %b %Y %H:%M:%S GMT")
+    )
+    resp.headers.set("Cache-Control", "public,max-age=31536000,immutable")
+    resp.headers.set("Content-Encoding", "gzip")
+    return resp
+
 
 #######
 # Login

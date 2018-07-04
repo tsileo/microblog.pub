@@ -19,3 +19,4 @@ passlib
 git+https://github.com/erikriver/opengraph.git
 git+https://github.com/tsileo/little-boxes.git
 pyyaml
+pillow

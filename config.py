@@ -97,6 +97,7 @@ mongo_client = MongoClient(
 
 DB_NAME = "{}_{}".format(USERNAME, DOMAIN.replace(".", "_"))
 DB = mongo_client[DB_NAME]
+GRIDFS = mongo_client[f"{DB_NAME}_gridfs"]
 
 
 def _drop_db():

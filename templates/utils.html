@@ -20,7 +20,7 @@
 <div class="note h-entry" id="activity-{{ obj.id | permalink_id }}">
 
 <div class="h-card p-author">
-<a class="u-url u-uid no-hover" href="{{ actor.url | get_url }}"><img class="u-photo" src="{% if not actor.icon %}/static/nopic.png{% else %}{{ actor.icon.url }}{% endif %}">
+<a class="u-url u-uid no-hover" href="{{ actor.url | get_url }}"><img class="u-photo" src="{% if not actor.icon %}/static/nopic.png{% else %}{{ actor.icon.url | get_actor_icon_url(50) }}{% endif %}">
 </a>
 <data class="p-name" value="{{ actor.name or actor.preferredUsername }}"></data>
 </div>
