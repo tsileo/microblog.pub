@@ -1,3 +1,4 @@
+import mimetypes
 import os
 import subprocess
 from datetime import datetime
@@ -83,7 +84,7 @@ with open(os.path.join(SASS_DIR, f"{THEME_STYLE.value}.scss")) as f:
     theme_css += "\n"
 with open(os.path.join(SASS_DIR, "base_theme.scss")) as f:
     raw_css = theme_css + f.read()
-    CSS = sass.compile(string=raw_css, output_style='compressed')
+    CSS = sass.compile(string=raw_css, output_style="compressed")
 
 
 USER_AGENT = (
@@ -136,6 +137,10 @@ ME = {
     "summary": SUMMARY,
     "endpoints": {},
     "url": ID,
-    "icon": {"mediaType": "image/png", "type": "Image", "url": ICON_URL},
+    "icon": {
+        "mediaType": mimetypes.guess_type(ICON_URL)[0],
+        "type": "Image",
+        "url": ICON_URL,
+    },
     "publicKey": KEY.to_dict(),
 }

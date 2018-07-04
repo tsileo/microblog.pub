@@ -46,6 +46,7 @@ from config import DB
 from config import DEBUG_MODE
 from config import DOMAIN
 from config import HEADERS
+from config import ICON_URL
 from config import ID
 from config import JWT
 from config import KEY
@@ -714,6 +715,11 @@ def wellknown_webfinger():
                 "href": BASE_URL,
                 "rel": "http://webfinger.net/rel/profile-page",
                 "type": "text/html",
+            },
+            {
+                "href": ICON_URL,
+                "rel": "http://webfinger.net/rel/avatar",
+                "type": mimetypes.guess_type(ICON_URL)[0],
             },
         ],
     }
