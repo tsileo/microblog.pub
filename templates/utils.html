@@ -4,7 +4,7 @@
 {% if not follower.icon %}
 <img class="actor-icon" src="/static/nopic.png" style="width:{{ size }}px">
 {% else %}
-<img class="actor-icon" src="{{ follower.icon.url }}" style="width:{{ size }}px;">{% endif %}
+<img class="actor-icon" src="{{ follower.icon.url | get_actor_icon_url(size) }}" style="width:{{ size }}px;">{% endif %}
 </span>
 <div class="actor-inline">
 <div style="font-weight:bold">{{ follower.name or follower.preferredUsername }}</div>
