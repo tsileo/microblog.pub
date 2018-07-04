@@ -756,11 +756,6 @@ def wellknown_webfinger():
             },
             {"rel": "magic-public-key", "href": KEY.to_magic_key()},
             {
-                "href": BASE_URL,
-                "rel": "http://webfinger.net/rel/profile-page",
-                "type": "text/html",
-            },
-            {
                 "href": ICON_URL,
                 "rel": "http://webfinger.net/rel/avatar",
                 "type": mimetypes.guess_type(ICON_URL)[0],
