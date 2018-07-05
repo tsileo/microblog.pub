@@ -37,10 +37,12 @@ from passlib.hash import bcrypt
 from u2flib_server import u2f
 from werkzeug.utils import secure_filename
 
+
 import activitypub
 import config
 from activitypub import Box
 from activitypub import embed_collection
+from config import USER_AGENT
 from config import ADMIN_API_KEY
 from config import BASE_URL
 from config import DB
@@ -72,10 +74,12 @@ from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
 from utils.img import ImageCache
+from utils.img import Kind
 from utils.key import get_secret_key
 from utils.object_service import ObjectService
+from typing import Optional
 
-IMAGE_CACHE = ImageCache(GRIDFS)
+IMAGE_CACHE = ImageCache(GRIDFS, USER_AGENT)
 
 OBJECT_SERVICE = ACTOR_SERVICE = ObjectService()
 
@@ -185,28 +189,33 @@ def clean_html(html):
     return bleach.clean(html, tags=ALLOWED_TAGS)
 
 
-_GRIDFS_CACHE: Dict[Tuple[str, int], str] = {}
+_GRIDFS_CACHE: Dict[Tuple[Kind, str, Optional[int]], str] = {}
 
 
-def _get_actor_icon_url(url, size):
-    k = (url, size)
+def _get_file_url(url, size, kind):
+    k = (kind, url, size)
     cached = _GRIDFS_CACHE.get(k)
     if cached:
         return cached
 
-    doc = IMAGE_CACHE.fs.find_one({"url": url, "size": size})
+    doc = IMAGE_CACHE.get_file(url, size, kind)
     if doc:
         u = f"/img/{str(doc._id)}"
         _GRIDFS_CACHE[k] = u
         return u
 
-    IMAGE_CACHE.cache_actor_icon(url)
-    return _get_actor_icon_url(url, size)
+    IMAGE_CACHE.cache(url, kind)
+    return _get_file_url(url, size, kind)
 
 
 @app.template_filter()
 def get_actor_icon_url(url, size):
-    return _get_actor_icon_url(url, size)
+    return _get_file_url(url, size, Kind.ACTOR_ICON)
+
+
+@app.template_filter()
+def get_attachment_url(url, size):
+    return _get_file_url(url, size, Kind.ATTACHMENT)
 
 
 @app.template_filter()
@@ -540,6 +549,23 @@ def tmp_migrate2():
                 {"remote_id": announce.id},
                 {"$set": {"meta.object": obj.to_dict(embed=True)}},
             )
+    return "Done"
+
+
+@app.route("/migration2")
+@login_required
+def tmp_migrate3():
+    for activity in DB.activities.find():
+        try:
+            activity = ap.parse_activity(activity["activity"])
+            actor = activity.get_actor()
+            if actor.icon:
+                IMAGE_CACHE.cache(actor.icon["url"], Kind.ACTOR_ICON)
+            if activity.type == ActivityType.CREATE.value:
+                for attachment in activity.get_object()._data.get("attachment", []):
+                    IMAGE_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
+        except:
+            app.logger.exception('failed')
     return "Done"
 
 
