@@ -122,10 +122,10 @@ class ImageCache(object):
             self.cache_attachment(url)
 
     def get_actor_icon(self, url: str, size: int) -> Any:
-        return self._get_file(url, size, Kind.ACTOR_ICON)
+        return self.get_file(url, size, Kind.ACTOR_ICON)
 
     def get_attachment(self, url: str, size: int) -> Any:
-        return self._get_file(url, size, Kind.ATTACHMENT)
+        return self.get_file(url, size, Kind.ATTACHMENT)
 
     def get_file(self, url: str, size: int, kind: Kind) -> Any:
         return self.fs.find_one({"url": url, "size": size, "kind": kind.value})
