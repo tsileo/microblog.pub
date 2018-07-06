@@ -588,7 +588,7 @@ def tmp_migrate3():
     return "Done"
 
 
-def paginated_query(db, q, limit=50, sort_key="_id"):
+def paginated_query(db, q, limit=25, sort_key="_id"):
     older_than = newer_than = None
     query_sort = -1
     first_page = not request.args.get("older_than") and not request.args.get(
