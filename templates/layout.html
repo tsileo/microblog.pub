@@ -22,11 +22,11 @@
 {% if logged_in %}
 <ul id="admin-menu">
 <li class="left"><span class="admin-title">Admin</span></li>
-<li class="left"><a href="/new"{% if request.path == "/new" %} class="selected" {% endif %}>New</a></li>
-<li class="left"><a href="/stream"{% if request.path == "/stream" %} class="selected" {% endif %}>Stream</a></li>
-<li class="left"><a href="/notifications"{% if request.path == "/notifications" %} class="selected" {% endif %}>Notifications</a></li>
-<li class="left"><a href="/admin"{% if request.path == "/admin" %} class="selected" {% endif %}>Stats</a></li>
-<li class="right"><a href="/logout">Logout</a></li>
+<li class="left"><a href="/admin/new"{% if request.path == "/admin/new" %} class="selected" {% endif %}>New</a></li>
+<li class="left"><a href="/admin/stream"{% if request.path == "/admin/stream" %} class="selected" {% endif %}>Stream</a></li>
+<li class="left"><a href="/admin/notifications"{% if request.path == "/admin/notifications" %} class="selected" {% endif %}>Notifications</a></li>
+<li class="left"><a href="/admin/stats"{% if request.path == "/admin/stats" %} class="selected" {% endif %}>Stats</a></li>
+<li class="right"><a href="/admin/logout">Logout</a></li>
 </ul>
 {% endif %}
 

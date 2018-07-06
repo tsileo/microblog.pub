@@ -390,6 +390,7 @@ def handle_activitypub_error(error):
 # App routes
 
 ROBOTS_TXT = """User-agent: *
+Disallow: /login
 Disallow: /admin/
 Disallow: /static/
 Disallow: /media/
@@ -433,15 +434,15 @@ def serve_uploads(oid, fname):
 # Login
 
 
-@app.route("/logout")
+@app.route("/admin/logout")
 @login_required
-def logout():
+def admin_logout():
     session["logged_in"] = False
     return redirect("/")
 
 
 @app.route("/login", methods=["POST", "GET"])
-def login():
+def admin_login():
     devices = [doc["device"] for doc in DB.u2f.find()]
     u2f_enabled = True if devices else False
     if request.method == "POST":
@@ -461,7 +462,7 @@ def login():
                     session["challenge"] = None
 
             session["logged_in"] = True
-            return redirect(request.args.get("redirect") or "/admin")
+            return redirect(request.args.get("redirect") or "/notifications")
         else:
             abort(401)
 
@@ -1063,9 +1064,9 @@ def outbox_activity_shares(item_id):
     )
 
 
-@app.route("/admin", methods=["GET"])
+@app.route("/admin/stats", methods=["GET"])
 @login_required
-def admin():
+def admin_stats():
     q = {
         "meta.deleted": False,
         "meta.undo": False,
@@ -1087,9 +1088,9 @@ def admin():
     )
 
 
-@app.route("/new", methods=["GET"])
+@app.route("/admin/new", methods=["GET"])
 @login_required
-def new():
+def admin_new():
     reply_id = None
     content = ""
     thread = []
@@ -1111,9 +1112,9 @@ def new():
     return render_template("new.html", reply=reply_id, content=content, thread=thread)
 
 
-@app.route("/notifications")
+@app.route("/admin/notifications")
 @login_required
-def notifications():
+def admin_notifications():
     # FIXME(tsileo): show unfollow (performed by the current actor) and liked???
     mentions_query = {
         "type": ActivityType.CREATE.value,
@@ -1254,9 +1255,9 @@ def api_undo():
     return _user_api_response(activity=undo.id)
 
 
-@app.route("/stream")
+@app.route("/admin/stream")
 @login_required
-def stream():
+def admin_stream():
     q = {
         "box": Box.INBOX.value,
         "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
