@@ -168,3 +168,19 @@
 {% endif %}
 {% endfor %}
 {% endmacro -%}
+
+{% macro display_pagination(older_than, newer_than) -%}
+<div class="clear">
+    {% if older_than %}
+    <a href="{{ config.BASE_URL }}{{ request.path }}?older_than={{older_than}}" rel="next" class="older-link lcolor"><span class="pcolor">🡨</span> Older</a>
+    {% endif %}
+    {% if newer_than %}
+    <a href="{{ config.BASE_URL }}{{ request.path }}?newer_than={{newer_than}}" rel="prev" class="newer-link lcolor">Newer <span class="pcolor">🡪</span></a>
+    {% endif %}
+</div>
+{% endmacro -%}
+
+{% macro display_pagination_links(older_than, newer_than) -%}
+{% if older_than %}<link rel="next" href="{{ config.BASE_URL }}{{ request.path }}?older_than={{older_than}}">{% endif %}
+{% if newer_than %}<link rel="prev" href="{{ config.BASE_URL }}{{ request.path }}?newer_than={{newer_than}}">{% endif %}
+{% endmacro -%}

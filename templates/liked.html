@@ -12,7 +12,10 @@
 	{{ utils.display_note(item.meta.object) }}
     {% endif %}
 	{% endfor %}
+
+    {{ utils.display_pagination(older_than, newer_than) }}
 </div>
 
 </div>
 {% endblock %}
+{% block links %}{{ utils.display_pagination_links(older_than, newer_than) }}{% endblock %}

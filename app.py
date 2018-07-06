@@ -588,33 +588,27 @@ def tmp_migrate3():
     return "Done"
 
 
-@app.route("/")
-def index():
-    if is_api_request():
-        return jsonify(**ME)
-
+def paginated_query(db, q, limit=50, sort_key="_id"):
     older_than = newer_than = None
     query_sort = -1
-    first_page = not request.args.get('older_than') and not request.args.get('newer_than')
-    limit = 5
-    q = {
-        "box": Box.OUTBOX.value,
-        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
-        "activity.object.inReplyTo": None,
-        "meta.deleted": False,
-        "meta.undo": False,
-    }
+    first_page = not request.args.get("older_than") and not request.args.get(
+        "newer_than"
+    )
+
     query_older_than = request.args.get("older_than")
     query_newer_than = request.args.get("newer_than")
+
     if query_older_than:
         q["_id"] = {"$lt": ObjectId(query_older_than)}
     elif query_newer_than:
         q["_id"] = {"$gt": ObjectId(query_newer_than)}
         query_sort = 1
 
-    outbox_data = list(DB.activities.find(q, limit=limit+1).sort("_id", query_sort))
+    outbox_data = list(db.find(q, limit=limit + 1).sort(sort_key, query_sort))
     outbox_len = len(outbox_data)
-    outbox_data = sorted(outbox_data[:limit], key=lambda x: str(x["_id"]), reverse=True)
+    outbox_data = sorted(
+        outbox_data[:limit], key=lambda x: str(x[sort_key]), reverse=True
+    )
 
     if query_older_than:
         newer_than = str(outbox_data[0]["_id"])
@@ -627,6 +621,23 @@ def index():
     elif first_page and outbox_len == limit + 1:
         older_than = str(outbox_data[-1]["_id"])
 
+    return outbox_data, older_than, newer_than
+
+
+@app.route("/")
+def index():
+    if is_api_request():
+        return jsonify(**ME)
+
+    q = {
+        "box": Box.OUTBOX.value,
+        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+        "activity.object.inReplyTo": None,
+        "meta.deleted": False,
+        "meta.undo": False,
+    }
+    outbox_data, older_than, newer_than = paginated_query(DB.activities, q)
+
     return render_template(
         "index.html",
         outbox_data=outbox_data,
@@ -637,24 +648,20 @@ def index():
 
 @app.route("/with_replies")
 def with_replies():
-    # FIXME(tsileo): implements pagination, also for the followers/following page
-    limit = 50
     q = {
         "box": Box.OUTBOX.value,
         "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         "meta.deleted": False,
         "meta.undo": False,
     }
-    c = request.args.get("cursor")
-    if c:
-        q["_id"] = {"$lt": ObjectId(c)}
+    outbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
-    outbox_data = list(DB.activities.find(q, limit=limit).sort("_id", -1))
-    cursor = None
-    if outbox_data and len(outbox_data) == limit:
-        cursor = str(outbox_data[-1]["_id"])
-
-    return render_template("index.html", outbox_data=outbox_data, cursor=cursor)
+    return render_template(
+        "index.html",
+        outbox_data=outbox_data,
+        older_than=older_than,
+        newer_than=newer_than,
+    )
 
 
 def _build_thread(data, include_children=True):
@@ -1107,8 +1114,6 @@ def new():
 @app.route("/notifications")
 @login_required
 def notifications():
-    # FIXME(tsileo): implements pagination, also for the followers/following page
-    limit = 50
     # FIXME(tsileo): show unfollow (performed by the current actor) and liked???
     mentions_query = {
         "type": ActivityType.CREATE.value,
@@ -1141,16 +1146,14 @@ def notifications():
             unfollow_query,
         ],
     }
-    c = request.args.get("cursor")
-    if c:
-        q["_id"] = {"$lt": ObjectId(c)}
+    inbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
-    outbox_data = list(DB.activities.find(q, limit=limit).sort("_id", -1))
-    cursor = None
-    if outbox_data and len(outbox_data) == limit:
-        cursor = str(outbox_data[-1]["_id"])
-
-    return render_template("stream.html", inbox_data=outbox_data, cursor=cursor)
+    return render_template(
+        "stream.html",
+        inbox_data=inbox_data,
+        older_than=older_than,
+        newer_than=newer_than,
+    )
 
 
 @app.route("/api/key")
@@ -1254,26 +1257,19 @@ def api_undo():
 @app.route("/stream")
 @login_required
 def stream():
-    # FIXME(tsileo): implements pagination, also for the followers/following page
-    limit = 100
-    c = request.args.get("cursor")
     q = {
         "box": Box.INBOX.value,
         "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         "meta.deleted": False,
     }
-    if c:
-        q["_id"] = {"$lt": ObjectId(c)}
+    inbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
-    inbox_data = list(
-        # FIXME(tsileo): reshape using meta.cached_object
-        DB.activities.find(q, limit=limit).sort("_id", -1)
+    return render_template(
+        "stream.html",
+        inbox_data=inbox_data,
+        older_than=older_than,
+        newer_than=newer_than,
     )
-    cursor = None
-    if inbox_data and len(inbox_data) == limit:
-        cursor = str(inbox_data[-1]["_id"])
-
-    return render_template("stream.html", inbox_data=inbox_data, cursor=cursor)
 
 
 @app.route("/inbox", methods=["GET", "POST"])
@@ -1541,16 +1537,17 @@ def tags(tag):
 @app.route("/liked")
 def liked():
     if not is_api_request():
+        q = {
+            "box": Box.OUTBOX.value,
+            "type": ActivityType.LIKE.value,
+            "meta.deleted": False,
+            "meta.undo": False,
+        }
+
+        liked, older_than, newer_than = paginated_query(DB.activities, q)
+
         return render_template(
-            "liked.html",
-            liked=DB.activities.find(
-                {
-                    "box": Box.OUTBOX.value,
-                    "type": ActivityType.LIKE.value,
-                    "meta.deleted": False,
-                    "meta.undo": False,
-                }
-            ),
+            "liked.html", liked=liked, older_than=older_than, newer_than=newer_than
         )
 
     q = {"meta.deleted": False, "meta.undo": False, "type": ActivityType.LIKE.value}
