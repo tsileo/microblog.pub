@@ -1,5 +1,4 @@
 import binascii
-import hashlib
 import json
 import logging
 import mimetypes
@@ -8,15 +7,16 @@ import urllib
 from datetime import datetime
 from datetime import timezone
 from functools import wraps
+from io import BytesIO
 from typing import Any
 from typing import Dict
+from typing import Optional
 from typing import Tuple
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
 import bleach
 import mf2py
-import piexif
 import pymongo
 import timeago
 from bson.objectid import ObjectId
@@ -37,24 +37,22 @@ from passlib.hash import bcrypt
 from u2flib_server import u2f
 from werkzeug.utils import secure_filename
 
-
 import activitypub
 import config
 from activitypub import Box
 from activitypub import embed_collection
-from config import USER_AGENT
 from config import ADMIN_API_KEY
 from config import BASE_URL
 from config import DB
 from config import DEBUG_MODE
 from config import DOMAIN
-from config import GRIDFS
 from config import HEADERS
 from config import ICON_URL
 from config import ID
 from config import JWT
 from config import KEY
 from config import ME
+from config import MEDIA_CACHE
 from config import PASS
 from config import USERNAME
 from config import VERSION
@@ -73,13 +71,9 @@ from little_boxes.httpsig import HTTPSigAuth
 from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
-from utils.img import ImageCache
-from utils.img import Kind
 from utils.key import get_secret_key
+from utils.media import Kind
 from utils.object_service import ObjectService
-from typing import Optional
-
-IMAGE_CACHE = ImageCache(GRIDFS, USER_AGENT)
 
 OBJECT_SERVICE = ACTOR_SERVICE = ObjectService()
 
@@ -198,13 +192,13 @@ def _get_file_url(url, size, kind):
     if cached:
         return cached
 
-    doc = IMAGE_CACHE.get_file(url, size, kind)
+    doc = MEDIA_CACHE.get_file(url, size, kind)
     if doc:
-        u = f"/img/{str(doc._id)}"
+        u = f"/media/{str(doc._id)}"
         _GRIDFS_CACHE[k] = u
         return u
 
-    IMAGE_CACHE.cache(url, kind)
+    MEDIA_CACHE.cache(url, kind)
     return _get_file_url(url, size, kind)
 
 
@@ -395,10 +389,35 @@ def handle_activitypub_error(error):
 
 # App routes
 
+ROBOTS_TXT = """User-agent: *
+Disallow: /admin/
+Disallow: /static/
+Disallow: /media/
+Disallow: /uploads/"""
 
-@app.route("/img/<img_id>")
-def serve_img(img_id):
-    f = IMAGE_CACHE.fs.get(ObjectId(img_id))
+
+@app.route("/robots.txt")
+def robots_txt():
+    return Response(response=ROBOTS_TXT, headers={"Content-Type": "text/plain"})
+
+
+@app.route("/media/<media_id>")
+def serve_media(media_id):
+    f = MEDIA_CACHE.fs.get(ObjectId(media_id))
+    resp = app.response_class(f, direct_passthrough=True, mimetype=f.content_type)
+    resp.headers.set("Content-Length", f.length)
+    resp.headers.set("ETag", f.md5)
+    resp.headers.set(
+        "Last-Modified", f.uploadDate.strftime("%a, %d %b %Y %H:%M:%S GMT")
+    )
+    resp.headers.set("Cache-Control", "public,max-age=31536000,immutable")
+    resp.headers.set("Content-Encoding", "gzip")
+    return resp
+
+
+@app.route("/uploads/<oid>/<fname>")
+def serve_uploads(oid, fname):
+    f = MEDIA_CACHE.fs.get(ObjectId(oid))
     resp = app.response_class(f, direct_passthrough=True, mimetype=f.content_type)
     resp.headers.set("Content-Length", f.length)
     resp.headers.set("ETag", f.md5)
@@ -560,12 +579,12 @@ def tmp_migrate3():
             activity = ap.parse_activity(activity["activity"])
             actor = activity.get_actor()
             if actor.icon:
-                IMAGE_CACHE.cache(actor.icon["url"], Kind.ACTOR_ICON)
+                MEDIA_CACHE.cache(actor.icon["url"], Kind.ACTOR_ICON)
             if activity.type == ActivityType.CREATE.value:
                 for attachment in activity.get_object()._data.get("attachment", []):
-                    IMAGE_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
-        except:
-            app.logger.exception('failed')
+                    MEDIA_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
+        except Exception:
+            app.logger.exception("failed")
     return "Done"
 
 
@@ -574,8 +593,10 @@ def index():
     if is_api_request():
         return jsonify(**ME)
 
-    # FIXME(tsileo): implements pagination, also for the followers/following page
-    limit = 50
+    older_than = newer_than = None
+    query_sort = -1
+    first_page = not request.args.get('older_than') and not request.args.get('newer_than')
+    limit = 5
     q = {
         "box": Box.OUTBOX.value,
         "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
@@ -583,16 +604,35 @@ def index():
         "meta.deleted": False,
         "meta.undo": False,
     }
-    c = request.args.get("cursor")
-    if c:
-        q["_id"] = {"$lt": ObjectId(c)}
+    query_older_than = request.args.get("older_than")
+    query_newer_than = request.args.get("newer_than")
+    if query_older_than:
+        q["_id"] = {"$lt": ObjectId(query_older_than)}
+    elif query_newer_than:
+        q["_id"] = {"$gt": ObjectId(query_newer_than)}
+        query_sort = 1
 
-    outbox_data = list(DB.activities.find(q, limit=limit).sort("_id", -1))
-    cursor = None
-    if outbox_data and len(outbox_data) == limit:
-        cursor = str(outbox_data[-1]["_id"])
+    outbox_data = list(DB.activities.find(q, limit=limit+1).sort("_id", query_sort))
+    outbox_len = len(outbox_data)
+    outbox_data = sorted(outbox_data[:limit], key=lambda x: str(x["_id"]), reverse=True)
 
-    return render_template("index.html", outbox_data=outbox_data, cursor=cursor)
+    if query_older_than:
+        newer_than = str(outbox_data[0]["_id"])
+        if outbox_len == limit + 1:
+            older_than = str(outbox_data[-1]["_id"])
+    elif query_newer_than:
+        older_than = str(outbox_data[-1]["_id"])
+        if outbox_len == limit + 1:
+            newer_than = str(outbox_data[0]["_id"])
+    elif first_page and outbox_len == limit + 1:
+        older_than = str(outbox_data[-1]["_id"])
+
+    return render_template(
+        "index.html",
+        outbox_data=outbox_data,
+        older_than=older_than,
+        newer_than=newer_than,
+    )
 
 
 @app.route("/with_replies")
@@ -1352,21 +1392,17 @@ def api_new_note():
     if "file" in request.files:
         file = request.files["file"]
         rfilename = secure_filename(file.filename)
-        prefix = hashlib.sha256(os.urandom(32)).hexdigest()[:6]
+        with BytesIO() as buf:
+            file.save(buf)
+            oid = MEDIA_CACHE.save_upload(buf, rfilename)
         mtype = mimetypes.guess_type(rfilename)[0]
-        filename = f"{prefix}_{rfilename}"
-        file.save(os.path.join("static", "media", filename))
-
-        # Remove EXIF metadata
-        if filename.lower().endswith(".jpg") or filename.lower().endswith(".jpeg"):
-            piexif.remove(os.path.join("static", "media", filename))
 
         raw_note["attachment"] = [
             {
                 "mediaType": mtype,
                 "name": rfilename,
                 "type": "Document",
-                "url": BASE_URL + f"/static/media/{filename}",
+                "url": f"{BASE_URL}/uploads/{oid}/{rfilename}",
             }
         ]
 

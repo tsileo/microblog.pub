@@ -31,7 +31,15 @@ a:hover {
 .pcolor {
   color: $primary-color;
 }
-
+.lcolor {
+  color: $color-light;
+}
+.older-link, .newer-linker, .older-link:hover, .newer-link:hover {
+  text-decoration: none;
+  padding: 3px;
+}
+.newer-link { float: right }
+.clear { clear: both; }
 .remote-follow-button {
   background: $color-menu-background;
   color: $color-light;

@@ -14,6 +14,7 @@ from little_boxes import strtobool
 from utils.key import KEY_DIR
 from utils.key import get_key
 from utils.key import get_secret_key
+from utils.media import MediaCache
 
 
 class ThemeStyle(Enum):
@@ -98,6 +99,7 @@ mongo_client = MongoClient(
 DB_NAME = "{}_{}".format(USERNAME, DOMAIN.replace(".", "_"))
 DB = mongo_client[DB_NAME]
 GRIDFS = mongo_client[f"{DB_NAME}_gridfs"]
+MEDIA_CACHE = MediaCache(GRIDFS, USER_AGENT)
 
 
 def _drop_db():

@@ -1,20 +1,21 @@
 import base64
+import mimetypes
+from enum import Enum
 from gzip import GzipFile
 from io import BytesIO
 from typing import Any
-import mimetypes
-from enum import Enum
 
 import gridfs
+import piexif
 import requests
 from PIL import Image
 
 
 def load(url, user_agent):
     """Initializes a `PIL.Image` from the URL."""
-    # TODO(tsileo): user agent
     with requests.get(url, stream=True, headers={"User-Agent": user_agent}) as resp:
         resp.raise_for_status()
+        resp.raw.decode_content = True
         return Image.open(BytesIO(resp.raw.read()))
 
 
@@ -29,9 +30,10 @@ def to_data_uri(img):
 class Kind(Enum):
     ATTACHMENT = "attachment"
     ACTOR_ICON = "actor_icon"
+    UPLOAD = "upload"
 
 
-class ImageCache(object):
+class MediaCache(object):
     def __init__(self, gridfs_db: str, user_agent: str) -> None:
         self.fs = gridfs.GridFS(gridfs_db)
         self.user_agent = user_agent
@@ -62,9 +64,8 @@ class ImageCache(object):
             # Save a thumbnail (gzipped)
             i.thumbnail((720, 720))
             with BytesIO() as buf:
-                f1 = GzipFile(mode="wb", fileobj=buf)
-                i.save(f1, format=i.format)
-                f1.close()
+                with GzipFile(mode="wb", fileobj=buf) as f1:
+                    i.save(f1, format=i.format)
                 buf.seek(0)
                 self.fs.put(
                     buf,
@@ -81,11 +82,10 @@ class ImageCache(object):
         ) as resp:
             resp.raise_for_status()
             with BytesIO() as buf:
-                f1 = GzipFile(mode="wb", fileobj=buf)
-                for chunk in resp.iter_content():
-                    if chunk:
-                        f1.write(chunk)
-                f1.close()
+                with GzipFile(mode="wb", fileobj=buf) as f1:
+                    for chunk in resp.iter_content():
+                        if chunk:
+                            f1.write(chunk)
                 buf.seek(0)
                 self.fs.put(
                     buf,
@@ -103,9 +103,8 @@ class ImageCache(object):
             t1 = i.copy()
             t1.thumbnail((size, size))
             with BytesIO() as buf:
-                f1 = GzipFile(mode="wb", fileobj=buf)
-                t1.save(f1, format=i.format)
-                f1.close()
+                with GzipFile(mode="wb", fileobj=buf) as f1:
+                    t1.save(f1, format=i.format)
                 buf.seek(0)
                 self.fs.put(
                     buf,
@@ -114,6 +113,30 @@ class ImageCache(object):
                     content_type=i.get_format_mimetype(),
                     kind=Kind.ACTOR_ICON.value,
                 )
+
+    def save_upload(self, obuf: BytesIO, filename: str) -> str:
+        # Remove EXIF metadata
+        if filename.lower().endswith(".jpg") or filename.lower().endswith(".jpeg"):
+            obuf.seek(0)
+            with BytesIO() as buf2:
+                piexif.remove(obuf.getvalue(), buf2)
+                obuf.truncate(0)
+                obuf.write(buf2.getvalue())
+
+        obuf.seek(0)
+        mtype = mimetypes.guess_type(filename)[0]
+        with BytesIO() as gbuf:
+            with GzipFile(mode="wb", fileobj=gbuf) as gzipfile:
+                gzipfile.write(obuf.getvalue())
+
+            gbuf.seek(0)
+            oid = self.fs.put(
+                gbuf,
+                content_type=mtype,
+                upload_filename=filename,
+                kind=Kind.UPLOAD.value,
+            )
+            return str(oid)
 
     def cache(self, url: str, kind: Kind) -> None:
         if kind == Kind.ACTOR_ICON:

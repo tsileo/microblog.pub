@@ -9,11 +9,12 @@
 <link rel="authorization_endpoint" href="{{ config.ID }}/indieauth">
 <link rel="token_endpoint" href="{{ config.ID }}/token">
 <link rel="micropub" href="{{ config.ID }}/micropub">
-<link rel="canonical" href="https://{{ config.DOMAIN }}{{ request.path }}">
+{% if not request.args.get("older_than") and not request.args.get("previous_than") %}<link rel="canonical" href="https://{{ config.DOMAIN }}{{ request.path }}">{% endif %}
 <link rel="alternate" href="{{ config.ME.url | get_url }}" title="ActivityPub profile"  type="application/activity+json">
 <link rel="alternate" href="{{ config.ID }}/feed.json" type="application/json" title="JSON Feed">
 <link rel="alternate" href="{{ config.ID }}/feed.rss" type="application/rss+xml" title="RSS">
 <link rel="alternate" href="{{ config.ID }}/feed.atom" type="application/atom+xml" title="Atom 0.3">
+{% block links %}{% endblock %}
 {% if config.THEME_COLOR %}<meta name="theme-color" content="{{ config.THEME_COLOR }}">{% endif %}
 <style>{{ config.CSS | safe }}</style>
 </head>
