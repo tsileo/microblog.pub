@@ -886,12 +886,11 @@ def outbox():
     if request.method == "GET":
         if not is_api_request():
             abort(404)
-        # TODO(tsileo): filter the outbox if not authenticated
-        # FIXME(tsileo): filter deleted, add query support for build_ordered_collection
+        # TODO(tsileo): returns the whole outbox if authenticated
         q = {
             "box": Box.OUTBOX.value,
-            "meta.deleted": False,
-            # 'type': {'$in': [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+            "meta.deleted": False,  # TODO(tsileo): retrieve deleted and expose tombstone
+            'type': {'$in': [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         }
         return jsonify(
             **activitypub.build_ordered_collection(
