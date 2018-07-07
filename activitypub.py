@@ -156,26 +156,19 @@ class MicroblogPubBackend(Backend):
 
     @ensure_it_is_me
     def new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        remote_actor = follow.get_actor().id
-
-        if DB.followers.find({"remote_actor": remote_actor}).count() == 0:
-            DB.followers.insert_one({"remote_actor": remote_actor})
+        pass
 
     @ensure_it_is_me
     def undo_new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        # TODO(tsileo): update the follow to set undo
-        DB.followers.delete_one({"remote_actor": follow.get_actor().id})
+        DB.activities.update_one({"remote_id": follow.id}, {"$set": {"meta.undo": True}})
 
     @ensure_it_is_me
     def undo_new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        # TODO(tsileo): update the follow to set undo
-        DB.following.delete_one({"remote_actor": follow.get_object().id})
+        DB.activities.update_one({"remote_id": follow.id}, {"$set": {"meta.undo": True}})
 
     @ensure_it_is_me
     def new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        remote_actor = follow.get_object().id
-        if DB.following.find({"remote_actor": remote_actor}).count() == 0:
-            DB.following.insert_one({"remote_actor": remote_actor})
+        pass
 
     @ensure_it_is_me
     def inbox_like(self, as_actor: ap.Person, like: ap.Like) -> None:
