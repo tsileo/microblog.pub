@@ -19,6 +19,7 @@ from config import ME
 from config import USER_AGENT
 from config import USERNAME
 from config import MEDIA_CACHE
+from config import EXTRA_INBOXES
 from utils.media import Kind
 from little_boxes import activitypub as ap
 from little_boxes import strtobool
@@ -64,6 +65,9 @@ class MicroblogPubBackend(Backend):
     def user_agent(self) -> str:
         """Setup a custom user agent."""
         return USER_AGENT
+
+    def extra_inboxes(self) -> List[str]:
+        return EXTRA_INBOXES
 
     def base_url(self) -> str:
         """Base URL config."""

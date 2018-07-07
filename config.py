@@ -70,7 +70,7 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
     SUMMARY = conf["summary"]
     ICON_URL = conf["icon_url"]
     PASS = conf["pass"]
-    PUBLIC_INSTANCES = conf.get("public_instances", [])
+    EXTRA_INBOXES = conf.get("extra_inboxes", [])
 
     # Theme-related config
     theme_conf = conf.get("theme", {})
