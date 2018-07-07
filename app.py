@@ -132,12 +132,23 @@ def inject_config():
             "type": ActivityType.LIKE.value,
         }
     )
+    followers_q = {
+        "box": Box.INBOX.value,
+        "type": ActivityType.FOLLOW.value,
+        "meta.undo": False,
+    }
+    following_q = {
+        "box": Box.OUTBOX.value,
+        "type": ActivityType.FOLLOW.value,
+        "meta.undo": False,
+    }
+
     return dict(
         microblogpub_version=VERSION,
         config=config,
         logged_in=session.get("logged_in", False),
-        followers_count=DB.followers.count(),
-        following_count=DB.following.count(),
+        followers_count=DB.activities.count(followers_q),
+        following_count=DB.activities.count(following_q),
         notes_count=notes_count,
         liked_count=liked_count,
         with_replies_count=with_replies_count,
@@ -499,7 +510,14 @@ def authorize_follow():
     actor = get_actor_url(request.form.get("profile"))
     if not actor:
         abort(500)
-    if DB.following.find({"remote_actor": actor}).count() > 0:
+
+    q = {
+        "box": Box.OUTBOX.value,
+        "type": ActivityType.FOLLOW.value,
+        "meta.undo": False,
+        "activity.object": actor,
+    }
+    if DB.activities.count(q) > 0:
         return redirect("/following")
 
     follow = ap.Follow(actor=MY_PERSON.id, object=actor)
@@ -584,6 +602,38 @@ def tmp_migrate3():
             if activity.type == ActivityType.CREATE.value:
                 for attachment in activity.get_object()._data.get("attachment", []):
                     MEDIA_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
+        except Exception:
+            app.logger.exception("failed")
+    return "Done"
+
+
+@app.route("/migration3")
+@login_required
+def tmp_migrate4():
+    for activity in DB.activities.find(
+        {"box": Box.OUTBOX.value, "type": ActivityType.UNDO.value}
+    ):
+        try:
+            activity = ap.parse_activity(activity["activity"])
+            if activity.get_object().type == ActivityType.FOLLOW.value:
+                DB.activities.update_one(
+                    {"remote_id": activity.get_object().id},
+                    {"$set": {"meta.undo": True}},
+                )
+                print(activity.get_object().to_dict())
+        except Exception:
+            app.logger.exception("failed")
+    for activity in DB.activities.find(
+        {"box": Box.INBOX.value, "type": ActivityType.UNDO.value}
+    ):
+        try:
+            activity = ap.parse_activity(activity["activity"])
+            if activity.get_object().type == ActivityType.FOLLOW.value:
+                DB.activities.update_one(
+                    {"remote_id": activity.get_object().id},
+                    {"$set": {"meta.undo": True}},
+                )
+                print(activity.get_object().to_dict())
         except Exception:
             app.logger.exception("failed")
     return "Done"
@@ -765,7 +815,7 @@ def nodeinfo():
     q = {
         "box": Box.OUTBOX.value,
         "meta.deleted": False,  # TODO(tsileo): retrieve deleted and expose tombstone
-        'type': {'$in': [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
     }
     return Response(
         headers={
@@ -781,10 +831,7 @@ def nodeinfo():
                 "protocols": ["activitypub"],
                 "services": {"inbound": [], "outbound": []},
                 "openRegistrations": False,
-                "usage": {
-                    "users": {"total": 1},
-                    "localPosts": DB.activities.count(q),
-                },
+                "usage": {"users": {"total": 1}, "localPosts": DB.activities.count(q)},
                 "metadata": {
                     "sourceCode": "https://github.com/tsileo/microblog.pub",
                     "nodeName": f"@{USERNAME}@{DOMAIN}",
@@ -895,7 +942,7 @@ def outbox():
         q = {
             "box": Box.OUTBOX.value,
             "meta.deleted": False,  # TODO(tsileo): retrieve deleted and expose tombstone
-            'type': {'$in': [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+            "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         }
         return jsonify(
             **activitypub.build_ordered_collection(
@@ -1068,9 +1115,9 @@ def outbox_activity_shares(item_id):
     )
 
 
-@app.route("/admin/stats", methods=["GET"])
+@app.route("/admin", methods=["GET"])
 @login_required
-def admin_stats():
+def admin():
     q = {
         "meta.deleted": False,
         "meta.undo": False,
@@ -1084,11 +1131,21 @@ def admin_stats():
         instances=list(DB.instances.find()),
         inbox_size=DB.activities.count({"box": Box.INBOX.value}),
         outbox_size=DB.activities.count({"box": Box.OUTBOX.value}),
-        object_cache_size=0,
-        actor_cache_size=0,
         col_liked=col_liked,
-        col_followers=DB.followers.count(),
-        col_following=DB.following.count(),
+        col_followers=DB.activities.count(
+            {
+                "box": Box.INBOX.value,
+                "type": ActivityType.FOLLOW.value,
+                "meta.undo": False,
+            }
+        ),
+        col_following=DB.activities.count(
+            {
+                "box": Box.OUTBOX.value,
+                "type": ActivityType.FOLLOW.value,
+                "meta.undo": False,
+            }
+        ),
     )
 
 
@@ -1452,7 +1509,14 @@ def api_block():
 def api_follow():
     actor = _user_api_arg("actor")
 
-    existing = DB.following.find_one({"remote_actor": actor})
+    q = {
+        "box": Box.OUTBOX.value,
+        "type": ActivityType.FOLLOW.value,
+        "meta.undo": False,
+        "activity.object": actor,
+    }
+
+    existing = DB.activities.find_one(q)
     if existing:
         return _user_api_response(activity=existing["activity"]["id"])
 
@@ -1464,36 +1528,50 @@ def api_follow():
 
 @app.route("/followers")
 def followers():
+    q = {"box": Box.INBOX.value, "type": ActivityType.FOLLOW.value, "meta.undo": False}
+
     if is_api_request():
         return jsonify(
             **activitypub.build_ordered_collection(
-                DB.followers,
+                DB.activities,
+                q=q,
                 cursor=request.args.get("cursor"),
-                map_func=lambda doc: doc["remote_actor"],
+                map_func=lambda doc: doc["activity"]["object"],
             )
         )
 
-    followers = [
-        ACTOR_SERVICE.get(doc["remote_actor"]) for doc in DB.followers.find(limit=50)
-    ]
-    return render_template("followers.html", followers_data=followers)
+    followers, older_than, newer_than = paginated_query(DB.activities, q)
+    followers = [ACTOR_SERVICE.get(doc["activity"]["object"]) for doc in followers]
+    return render_template(
+        "followers.html",
+        followers_data=followers,
+        older_than=older_than,
+        newer_than=newer_than,
+    )
 
 
 @app.route("/following")
 def following():
+    q = {"box": Box.OUTBOX.value, "type": ActivityType.FOLLOW.value, "meta.undo": False}
+
     if is_api_request():
         return jsonify(
             **activitypub.build_ordered_collection(
-                DB.following,
+                DB.activities,
+                q=q,
                 cursor=request.args.get("cursor"),
-                map_func=lambda doc: doc["remote_actor"],
+                map_func=lambda doc: doc["activity"]["object"],
             )
         )
 
-    following = [
-        ACTOR_SERVICE.get(doc["remote_actor"]) for doc in DB.following.find(limit=50)
-    ]
-    return render_template("following.html", following_data=following)
+    following, older_than, newer_than = paginated_query(DB.activities, q)
+    following = [ACTOR_SERVICE.get(doc["activity"]["object"]) for doc in following]
+    return render_template(
+        "following.html",
+        following_data=following,
+        older_than=older_than,
+        newer_than=newer_than,
+    )
 
 
 @app.route("/tags/<tag>")

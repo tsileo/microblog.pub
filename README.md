@@ -50,8 +50,6 @@
 
 microblog.pub implements an [ActivityPub](http://activitypub.rocks/) server, it implements both the client to server API and the federated server to server API.
 
-Compatible with [Mastodon](https://github.com/tootsuite/mastodon) (which is not following the spec closely), but will drop OStatus messages.
-
 Activities are verified using HTTP Signatures or by fetching the content on the remote server directly.
 
 ## Running your instance

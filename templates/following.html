@@ -13,7 +13,9 @@
 	{{ utils.display_actor_inline(followed, size=80) }}
     </div>
 	{% endfor %}
+    {{ utils.display_pagination(older_than, newer_than) }}
 </div>
 
 </div>
 {% endblock %}
+{% block links %}{{ utils.display_pagination_links(older_than, newer_than) }}{% endblock %}

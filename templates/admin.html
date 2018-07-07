@@ -5,25 +5,17 @@
 <div id="container">
 {% include "header.html" %}
 <div id="admin">
-<h3>Stats</h3>
+<h3>Admin</h3>
 <h4>DB</h4>
 <ul>
 	<li>Inbox size: <strong>{{ inbox_size }}</strong></li>
 	<li>Outbox size: <strong>{{ outbox_size }}</strong></li>
-	<li>Object cache size: <strong>{{ object_cache_size }}</strong></li>
-	<li>Actor cache size: <strong>{{ actor_cache_size }}</strong></li>
 </ul>
 <h4>Collections</h4>
 <ul>
 	<li>followers: <strong>{{ col_followers }}</strong></li>
 	<li>following: <strong>{{ col_following }}</strong></li>
 	<li>liked: <strong>{{col_liked }}</strong></li>
-</ul>
-<h4>Known Instances</h4>
-<ul>
-{% for instance in instances %}
-<li><a href="{{ instance.instance }}">{{ instance.instance }}</a></li>
-{% endfor %}
 </ul>
 </div>
 

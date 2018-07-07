@@ -14,19 +14,19 @@ from html2text import html2text
 import tasks
 from config import BASE_URL
 from config import DB
+from config import EXTRA_INBOXES
 from config import ID
 from config import ME
+from config import MEDIA_CACHE
 from config import USER_AGENT
 from config import USERNAME
-from config import MEDIA_CACHE
-from config import EXTRA_INBOXES
-from utils.media import Kind
 from little_boxes import activitypub as ap
 from little_boxes import strtobool
 from little_boxes.activitypub import _to_list
 from little_boxes.backend import Backend
 from little_boxes.collection import parse_collection as ap_parse_collection
 from little_boxes.errors import Error
+from utils.media import Kind
 
 logger = logging.getLogger(__name__)
 
