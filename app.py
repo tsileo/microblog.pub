@@ -762,6 +762,11 @@ def note_by_id(note_id):
 
 @app.route("/nodeinfo")
 def nodeinfo():
+    q = {
+        "box": Box.OUTBOX.value,
+        "meta.deleted": False,  # TODO(tsileo): retrieve deleted and expose tombstone
+        'type': {'$in': [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+    }
     return Response(
         headers={
             "Content-Type": "application/json; profile=http://nodeinfo.diaspora.software/ns/schema/2.0#"
@@ -778,7 +783,7 @@ def nodeinfo():
                 "openRegistrations": False,
                 "usage": {
                     "users": {"total": 1},
-                    "localPosts": DB.activities.count({"box": Box.OUTBOX.value}),
+                    "localPosts": DB.activities.count(q),
                 },
                 "metadata": {
                     "sourceCode": "https://github.com/tsileo/microblog.pub",
