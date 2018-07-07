@@ -180,6 +180,7 @@ class MicroblogPubBackend(Backend):
             {"box": Box.OUTBOX.value, "activity.object.id": obj.id},
             {"$inc": {"meta.count_like": -1}},
         )
+        DB.activities.update_one({"remote_id": like.id}, {"$set": {"meta.undo": True}})
 
     @ensure_it_is_me
     def outbox_like(self, as_actor: ap.Person, like: ap.Like) -> None:
@@ -199,6 +200,7 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": obj.id},
             {"$inc": {"meta.count_like": -1}, "$set": {"meta.liked": False}},
         )
+        DB.activities.update_one({"remote_id": like.id}, {"$set": {"meta.undo": True}})
 
     @ensure_it_is_me
     def inbox_announce(self, as_actor: ap.Person, announce: ap.Announce) -> None:
@@ -228,6 +230,9 @@ class MicroblogPubBackend(Backend):
         DB.activities.update_one(
             {"activity.object.id": obj.id}, {"$inc": {"meta.count_boost": -1}}
         )
+        DB.activities.update_one(
+            {"remote_id": announce.id}, {"$set": {"meta.undo": True}}
+        )
 
     @ensure_it_is_me
     def outbox_announce(self, as_actor: ap.Person, announce: ap.Announce) -> None:
@@ -245,6 +250,9 @@ class MicroblogPubBackend(Backend):
         obj = announce.get_object()
         DB.activities.update_one(
             {"activity.object.id": obj.id}, {"$set": {"meta.boosted": False}}
+        )
+        DB.activities.update_one(
+            {"remote_id": announce.id}, {"$set": {"meta.undo": True}}
         )
 
     @ensure_it_is_me

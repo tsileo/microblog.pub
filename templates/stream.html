@@ -9,7 +9,7 @@
 <div id="notes">
 	{% for item in inbox_data %}
 	{% if item | has_type('Create') %}
-	{{ utils.display_note(item.activity.object, ui=True) }}
+	{{ utils.display_note(item.activity.object, ui=True, meta=item.meta) }}
 	{% else %}
 
 	{% if item | has_type('Announce') %}

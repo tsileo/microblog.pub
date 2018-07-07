@@ -8,6 +8,17 @@
 
 <div id="notes">
 	{% for item in liked %}
+    {% if session.logged_in %}
+<div style="margin-left:65px;padding-bottom:5px;margin-bottom:15px;">
+<form action="/api/undo" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="/liked"/>
+<input type="hidden" name="id" value="{{ item.remote_id }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item">unlike</button>
+</form>
+        </div>
+  
+    {% endif %}
     {% if item.meta.object %}
 	{{ utils.display_note(item.meta.object) }}
     {% endif %}
