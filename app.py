@@ -1536,12 +1536,12 @@ def followers():
                 DB.activities,
                 q=q,
                 cursor=request.args.get("cursor"),
-                map_func=lambda doc: doc["activity"]["object"],
+                map_func=lambda doc: doc["activity"]["actor"],
             )
         )
 
     followers, older_than, newer_than = paginated_query(DB.activities, q)
-    followers = [ACTOR_SERVICE.get(doc["activity"]["object"]) for doc in followers]
+    followers = [ACTOR_SERVICE.get(doc["activity"]["actor"]) for doc in followers]
     return render_template(
         "followers.html",
         followers_data=followers,
