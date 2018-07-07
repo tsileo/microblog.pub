@@ -20,7 +20,7 @@ class Instance(object):
     def __init__(self, name, host_url, docker_url=None):
         self.host_url = host_url
         self.docker_url = docker_url or host_url
-        self._create_delay = 15
+        self._create_delay = 12
         with open(
             os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
