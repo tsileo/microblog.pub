@@ -472,7 +472,7 @@ def admin_login():
                     session["challenge"] = None
 
             session["logged_in"] = True
-            return redirect(request.args.get("redirect") or "/admin/notifications")
+            return redirect(request.args.get("redirect") or url_for("admin_notifications"))
         else:
             abort(401)
 

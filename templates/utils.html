@@ -72,7 +72,7 @@
 {% if ui and session.logged_in %}
 
 {% set aid = obj.id | quote_plus %}
-<a class="bar-item" href="/new?reply={{ aid }}">reply</a>
+<a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
 
 {% set perma_id = obj.id | permalink_id %}
 {% set redir = request.path + "#activity-" + perma_id %}
