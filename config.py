@@ -15,6 +15,7 @@ from utils.key import KEY_DIR
 from utils.key import get_key
 from utils.key import get_secret_key
 from utils.media import MediaCache
+from utils.object_service import ObjectService
 
 
 class ThemeStyle(Enum):
@@ -147,3 +148,6 @@ ME = {
     },
     "publicKey": KEY.to_dict(),
 }
+
+
+OBJECT_SERVICE = ACTOR_SERVICE = ObjectService()

@@ -41,6 +41,7 @@ import activitypub
 import config
 from activitypub import Box
 from activitypub import embed_collection
+from config import ACTOR_SERVICE
 from config import ADMIN_API_KEY
 from config import BASE_URL
 from config import DB
@@ -53,6 +54,7 @@ from config import JWT
 from config import KEY
 from config import ME
 from config import MEDIA_CACHE
+from config import OBJECT_SERVICE
 from config import PASS
 from config import USERNAME
 from config import VERSION
@@ -73,9 +75,6 @@ from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
 from utils.key import get_secret_key
 from utils.media import Kind
-from utils.object_service import ObjectService
-
-OBJECT_SERVICE = ACTOR_SERVICE = ObjectService()
 
 back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)

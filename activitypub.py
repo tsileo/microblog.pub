@@ -24,7 +24,6 @@ from little_boxes import activitypub as ap
 from little_boxes import strtobool
 from little_boxes.activitypub import _to_list
 from little_boxes.backend import Backend
-from little_boxes.collection import parse_collection as ap_parse_collection
 from little_boxes.errors import Error
 from utils.media import Kind
 
@@ -105,6 +104,28 @@ class MicroblogPubBackend(Backend):
     def outbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
         self.save(Box.OUTBOX, activity)
 
+    def parse_collection(
+        payload: Optional[Dict[str, Any]] = None, url: Optional[str] = None
+    ) -> List[str]:
+        """Resolve/fetch a `Collection`/`OrderedCollection`."""
+        # Resolve internal collections via MongoDB directly
+        if url == ID + "/followers":
+            q = {
+                "box": Box.INBOX.value,
+                "type": ap.ActivityType.FOLLOW.value,
+                "meta.undo": False,
+            }
+            return [doc["activity"]["actor"] for doc in DB.activities.find(q)]
+        elif url == ID + "/following":
+            q = {
+                "box": Box.OUTBOX.value,
+                "type": ap.ActivityType.FOLLOW.value,
+                "meta.undo": False,
+            }
+            return [doc["activity"]["object"] for doc in DB.activities.find(q)]
+
+        return super().parse_collection(payload, url)
+
     @ensure_it_is_me
     def outbox_is_blocked(self, as_actor: ap.Person, actor_id: str) -> bool:
         return bool(
@@ -160,11 +181,15 @@ class MicroblogPubBackend(Backend):
 
     @ensure_it_is_me
     def undo_new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        DB.activities.update_one({"remote_id": follow.id}, {"$set": {"meta.undo": True}})
+        DB.activities.update_one(
+            {"remote_id": follow.id}, {"$set": {"meta.undo": True}}
+        )
 
     @ensure_it_is_me
     def undo_new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        DB.activities.update_one({"remote_id": follow.id}, {"$set": {"meta.undo": True}})
+        DB.activities.update_one(
+            {"remote_id": follow.id}, {"$set": {"meta.undo": True}}
+        )
 
     @ensure_it_is_me
     def new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
@@ -496,20 +521,6 @@ def build_inbox_json_feed(
         resp["next_url"] = ID + path + "?cursor=" + cursor
 
     return resp
-
-
-def parse_collection(
-    payload: Optional[Dict[str, Any]] = None, url: Optional[str] = None
-) -> List[str]:
-    """Resolve/fetch a `Collection`/`OrderedCollection`."""
-    # Resolve internal collections via MongoDB directly
-    if url == ID + "/followers":
-        return [doc["remote_actor"] for doc in DB.followers.find()]
-    elif url == ID + "/following":
-        return [doc["remote_actor"] for doc in DB.following.find()]
-
-    # Go through all the pages
-    return ap_parse_collection(payload, url)
 
 
 def embed_collection(total_items, first_page_id):
