@@ -105,7 +105,7 @@ class MicroblogPubBackend(Backend):
         self.save(Box.OUTBOX, activity)
 
     def parse_collection(
-        payload: Optional[Dict[str, Any]] = None, url: Optional[str] = None
+        self, payload: Optional[Dict[str, Any]] = None, url: Optional[str] = None
     ) -> List[str]:
         """Resolve/fetch a `Collection`/`OrderedCollection`."""
         # Resolve internal collections via MongoDB directly
