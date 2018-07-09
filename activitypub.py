@@ -305,6 +305,12 @@ class MicroblogPubBackend(Backend):
             ).get_object()
 
         logger.info(f"inbox_delete handle_replies obj={obj!r}")
+
+        # Fake a Undo so any related Like/Announce doesn't appear on the web UI
+        DB.activities.update(
+            {"meta.object.id": obj.id},
+            {"$set": {"meta.undo": True, "meta.exta": "object deleted"}},
+        )
         if obj:
             self._handle_replies_delete(as_actor, obj)
 
@@ -324,6 +330,11 @@ class MicroblogPubBackend(Backend):
                     }
                 )["activity"]
             ).get_object()
+
+        DB.activities.update(
+            {"meta.object.id": obj.id},
+            {"$set": {"meta.undo": True, "meta.exta": "object deleted"}},
+        )
 
         self._handle_replies_delete(as_actor, obj)
 
