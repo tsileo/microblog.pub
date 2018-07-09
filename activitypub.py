@@ -24,8 +24,8 @@ from little_boxes import activitypub as ap
 from little_boxes import strtobool
 from little_boxes.activitypub import _to_list
 from little_boxes.backend import Backend
-from little_boxes.errors import Error
 from little_boxes.errors import ActivityGoneError
+from little_boxes.errors import Error
 from utils.media import Kind
 
 logger = logging.getLogger(__name__)

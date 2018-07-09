@@ -472,7 +472,9 @@ def admin_login():
                     session["challenge"] = None
 
             session["logged_in"] = True
-            return redirect(request.args.get("redirect") or url_for("admin_notifications"))
+            return redirect(
+                request.args.get("redirect") or url_for("admin_notifications")
+            )
         else:
             abort(401)
 
@@ -940,7 +942,7 @@ def outbox():
         # TODO(tsileo): returns the whole outbox if authenticated
         q = {
             "box": Box.OUTBOX.value,
-            "meta.deleted": False,  # TODO(tsileo): retrieve deleted and expose tombstone
+            "meta.deleted": False,
             "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         }
         return jsonify(
@@ -974,9 +976,12 @@ def outbox_detail(item_id):
     doc = DB.activities.find_one(
         {"box": Box.OUTBOX.value, "remote_id": back.activity_url(item_id)}
     )
+    if not doc:
+        abort(404)
+
     if doc["meta"].get("deleted", False):
         obj = ap.parse_activity(doc["activity"])
-        resp = jsonify(**obj.get_object().get_tombstone())
+        resp = jsonify(**obj.get_tombstone().to_dict())
         resp.status_code = 410
         return resp
     return jsonify(**activity_from_doc(doc))
@@ -984,17 +989,18 @@ def outbox_detail(item_id):
 
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
-    # TODO(tsileo): handle Tombstone
     data = DB.activities.find_one(
-        {
-            "box": Box.OUTBOX.value,
-            "remote_id": back.activity_url(item_id),
-            "meta.deleted": False,
-        }
+        {"box": Box.OUTBOX.value, "remote_id": back.activity_url(item_id)}
     )
     if not data:
         abort(404)
     obj = activity_from_doc(data)
+    if data["meta"].get("deleted", False):
+        obj = ap.parse_activity(data["activity"])
+        resp = jsonify(**obj.get_object().get_tombstone().to_dict())
+        resp.status_code = 410
+        return resp
+
     if obj["type"] != ActivityType.CREATE.value:
         abort(404)
     return jsonify(**obj["object"])
@@ -1002,7 +1008,6 @@ def outbox_activity(item_id):
 
 @app.route("/outbox/<item_id>/replies")
 def outbox_activity_replies(item_id):
-    # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
     data = DB.activities.find_one(
@@ -1038,7 +1043,6 @@ def outbox_activity_replies(item_id):
 
 @app.route("/outbox/<item_id>/likes")
 def outbox_activity_likes(item_id):
-    # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
     data = DB.activities.find_one(
@@ -1077,7 +1081,6 @@ def outbox_activity_likes(item_id):
 
 @app.route("/outbox/<item_id>/shares")
 def outbox_activity_shares(item_id):
-    # TODO(tsileo): handle Tombstone
     if not is_api_request():
         abort(404)
     data = DB.activities.find_one(
