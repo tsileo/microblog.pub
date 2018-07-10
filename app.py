@@ -66,8 +66,8 @@ from little_boxes.activitypub import _to_list
 from little_boxes.activitypub import clean_activity
 from little_boxes.activitypub import get_backend
 from little_boxes.content_helper import parse_markdown
-from little_boxes.errors import ActivityNotFoundError
 from little_boxes.errors import ActivityGoneError
+from little_boxes.errors import ActivityNotFoundError
 from little_boxes.errors import Error
 from little_boxes.errors import NotFromOutboxError
 from little_boxes.httpsig import HTTPSigAuth
@@ -270,6 +270,7 @@ def get_actor(url):
         return ACTOR_SERVICE.get(url)
     except (ActivityNotFoundError, ActivityGoneError):
         return f"Deleted<{url}>"
+
 
 @app.template_filter()
 def format_time(val):
