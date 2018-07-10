@@ -24,6 +24,7 @@ from little_boxes import activitypub as ap
 from little_boxes import strtobool
 from little_boxes.activitypub import _to_list
 from little_boxes.backend import Backend
+from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import Error
 from utils.media import Kind
 
@@ -150,6 +151,8 @@ class MicroblogPubBackend(Backend):
                 iri = iri.replace("/activity", "")
                 is_a_note = True
             data = DB.activities.find_one({"box": Box.OUTBOX.value, "remote_id": iri})
+            if data and data["meta"]["deleted"]:
+                raise ActivityGoneError(f"{iri} is gone")
             if data and is_a_note:
                 return data["activity"]["object"]
             elif data:
@@ -158,6 +161,8 @@ class MicroblogPubBackend(Backend):
             # Check if the activity is stored in the inbox
             data = DB.activities.find_one({"remote_id": iri})
             if data:
+                if data["meta"]["deleted"]:
+                    raise ActivityGoneError(f"{iri} is gone")
                 return data["activity"]
 
         # Fetch the URL via HTTP
