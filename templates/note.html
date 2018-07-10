@@ -19,3 +19,4 @@
 {{ utils.display_thread(thread, likes=likes, shares=shares) }}
 </div>
 {% endblock %}
+{% block links %}<link rel="alternate" href="{{ note.activity.object.id}}" type="application/activity+json">{% endblock %}

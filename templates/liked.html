@@ -29,4 +29,6 @@
 
 </div>
 {% endblock %}
-{% block links %}{{ utils.display_pagination_links(older_than, newer_than) }}{% endblock %}
+{% block links %}
+<link rel="alternate" href="{{ config.BASE_URL }}/liked" type="application/activity+json">
+{{ utils.display_pagination_links(older_than, newer_than) }}{% endblock %}

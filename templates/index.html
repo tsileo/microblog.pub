@@ -54,4 +54,8 @@
 
 </div>
 {% endblock %}
-{% block links %}{{ utils.display_pagination_links(older_than, newer_than) }}{% endblock %}
+{% block links %}<link rel="alternate" href="{{ config.ME.url | get_url }}" title="ActivityPub profile"  type="application/activity+json">
+<link rel="alternate" href="{{ config.ID }}/feed.json" type="application/json" title="JSON Feed">
+<link rel="alternate" href="{{ config.ID }}/feed.rss" type="application/rss+xml" title="RSS">
+<link rel="alternate" href="{{ config.ID }}/feed.atom" type="application/atom+xml" title="Atom 0.3">
+{{ utils.display_pagination_links(older_than, newer_than) }}{% endblock %}

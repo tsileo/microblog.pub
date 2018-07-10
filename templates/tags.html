@@ -29,3 +29,6 @@
 
 </div>
 {% endblock %}
+{% block links %}
+<link rel="alternate" href="{{ config.BASE_URL }}/tags/{{tag}}" type="application/activity+json">
+{% endblock %}
