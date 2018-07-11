@@ -41,7 +41,6 @@ import activitypub
 import config
 from activitypub import Box
 from activitypub import embed_collection
-from config import ACTOR_SERVICE
 from config import ADMIN_API_KEY
 from config import BASE_URL
 from config import DB
@@ -54,7 +53,6 @@ from config import JWT
 from config import KEY
 from config import ME
 from config import MEDIA_CACHE
-from config import OBJECT_SERVICE
 from config import PASS
 from config import USERNAME
 from config import VERSION
@@ -267,7 +265,7 @@ def get_actor(url):
         return None
     print(f"GET_ACTOR {url}")
     try:
-        return ACTOR_SERVICE.get(url)
+        return get_backend().fetch_iri(url)
     except (ActivityNotFoundError, ActivityGoneError):
         return f"Deleted<{url}>"
 
@@ -794,7 +792,7 @@ def note_by_id(note_id):
             }
         )
     )
-    likes = [ACTOR_SERVICE.get(doc["activity"]["actor"]) for doc in likes]
+    likes = [get_backend().fetch_iri(doc["activity"]["actor"]) for doc in likes]
 
     shares = list(
         DB.activities.find(
@@ -808,7 +806,7 @@ def note_by_id(note_id):
             }
         )
     )
-    shares = [ACTOR_SERVICE.get(doc["activity"]["actor"]) for doc in shares]
+    shares = [get_backend().fetch_iri(doc["activity"]["actor"]) for doc in shares]
 
     return render_template(
         "note.html", likes=likes, shares=shares, thread=thread, note=data
@@ -1248,7 +1246,7 @@ def _user_api_arg(key: str, **kwargs):
 
 def _user_api_get_note(from_outbox: bool = False):
     oid = _user_api_arg("id")
-    note = ap.parse_activity(OBJECT_SERVICE.get(oid), expected=ActivityType.NOTE)
+    note = ap.parse_activity(get_backend().fetch_iri(oid), expected=ActivityType.NOTE)
     if from_outbox and not note.id.startswith(ID):
         raise NotFromOutboxError(
             f"cannot load {note.id}, id must be owned by the server"
@@ -1436,7 +1434,7 @@ def api_new_note():
     cc = [ID + "/followers"]
 
     if _reply:
-        reply = ap.parse_activity(OBJECT_SERVICE.get(_reply))
+        reply = ap.fetch_remote_activity(_reply)
         cc.append(reply.attributedTo)
 
     for tag in tags:
@@ -1547,7 +1545,7 @@ def followers():
         )
 
     followers, older_than, newer_than = paginated_query(DB.activities, q)
-    followers = [ACTOR_SERVICE.get(doc["activity"]["actor"]) for doc in followers]
+    followers = [get_backend().fetch_iri(doc["activity"]["actor"]) for doc in followers]
     return render_template(
         "followers.html",
         followers_data=followers,
@@ -1571,7 +1569,7 @@ def following():
         )
 
     following, older_than, newer_than = paginated_query(DB.activities, q)
-    following = [ACTOR_SERVICE.get(doc["activity"]["object"]) for doc in following]
+    following = [get_backend.fetch_iri(doc["activity"]["object"]) for doc in following]
     return render_template(
         "following.html",
         following_data=following,
