@@ -763,8 +763,10 @@ def _build_thread(data, include_children=True):
         if rep_id == root_id:
             continue
         reply_of = rep["activity"]["object"]["inReplyTo"]
-        idx[reply_of]["_nodes"].append(rep)
-
+        try:
+            idx[reply_of]["_nodes"].append(rep)
+        except:
+            pass
     # Flatten the tree
     thread = []
 
