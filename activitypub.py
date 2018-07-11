@@ -10,6 +10,7 @@ from typing import Optional
 from bson.objectid import ObjectId
 from feedgen.feed import FeedGenerator
 from html2text import html2text
+from cachetools import LRUCache
 
 import tasks
 from config import BASE_URL
@@ -29,6 +30,9 @@ from little_boxes.errors import Error
 from utils.media import Kind
 
 logger = logging.getLogger(__name__)
+
+
+ACTORS_CACHE = LRUCache(maxsize=256)
 
 
 def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
@@ -140,7 +144,7 @@ class MicroblogPubBackend(Backend):
             )
         )
 
-    def fetch_iri(self, iri: str) -> ap.ObjectType:
+    def _fetch_iri(self, iri: str) -> ap.ObjectType:
         if iri == ME["id"]:
             return ME
 
@@ -167,6 +171,30 @@ class MicroblogPubBackend(Backend):
 
         # Fetch the URL via HTTP
         return super().fetch_iri(iri)
+
+    def fetch_iri(self, iri: str) -> ap.ObjectType:
+        if iri == ME["id"]:
+            return ME
+
+        if iri in ACTORS_CACHE:
+            return ACTORS_CACHE[iri]
+
+        data = DB.actors.find_one({"remote_id": iri})
+        if data:
+            ACTORS_CACHE[iri] = data['data']
+            return data['data']
+
+        data = self._fetch_iri(iri)
+        if ap._has_type(data["type"], ap.ACTOR_TYPES):
+            # Cache the actor
+            DB.actors.update_one(
+                {"remote_id": iri},
+                {"$set": {"remote_id": iri, "data": data}},
+                upsert=True,
+            )
+            ACTORS_CACHE[iri] = data
+
+        return data
 
     @ensure_it_is_me
     def inbox_check_duplicate(self, as_actor: ap.Person, iri: str) -> bool:
