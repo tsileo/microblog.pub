@@ -95,8 +95,9 @@ class MicroblogPubBackend(Backend):
             }
         )
 
-        tasks.process_new_activity.delay(activity.id)
         tasks.cache_attachments(activity.id)
+        if box == Box.INBOX:
+            tasks.process_new_activity.delay(activity.id)
 
     @ensure_it_is_me
     def outbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
