@@ -8,7 +8,7 @@
 </span>
 <div class="actor-inline">
 <div style="font-weight:bold">{{ follower.name or follower.preferredUsername }}</div>
-<small>@{{ follower.preferredUsername }}@{{ follower.url | get_url | domain }}</small>
+<small class="lcolor">@{{ follower.preferredUsername }}@{{ follower.url | get_url | domain }}</small>
 </div>
 </a>
 {%- endmacro %}
