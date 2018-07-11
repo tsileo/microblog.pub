@@ -1,7 +1,6 @@
 import opengraph
 import requests
 from bs4 import BeautifulSoup
-
 from little_boxes.urlutils import check_url
 from little_boxes.urlutils import is_url_valid
 

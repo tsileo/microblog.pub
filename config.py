@@ -8,9 +8,9 @@ import requests
 import sass
 import yaml
 from itsdangerous import JSONWebSignatureSerializer
+from little_boxes import strtobool
 from pymongo import MongoClient
 
-from little_boxes import strtobool
 from utils.key import KEY_DIR
 from utils.key import get_key
 from utils.key import get_secret_key

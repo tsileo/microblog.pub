@@ -5,7 +5,6 @@ from typing import Tuple
 
 import requests
 from html2text import html2text
-
 from little_boxes.collection import parse_collection
 
 

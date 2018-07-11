@@ -33,12 +33,27 @@ from flask import url_for
 from flask_wtf.csrf import CSRFProtect
 from html2text import html2text
 from itsdangerous import BadSignature
+from little_boxes import activitypub as ap
+from little_boxes.activitypub import ActivityType
+from little_boxes.activitypub import _to_list
+from little_boxes.activitypub import clean_activity
+from little_boxes.activitypub import get_backend
+from little_boxes.content_helper import parse_markdown
+from little_boxes.errors import ActivityGoneError
+from little_boxes.errors import ActivityNotFoundError
+from little_boxes.errors import Error
+from little_boxes.errors import NotFromOutboxError
+from little_boxes.httpsig import HTTPSigAuth
+from little_boxes.httpsig import verify_request
+from little_boxes.webfinger import get_actor_url
+from little_boxes.webfinger import get_remote_follow_template
 from passlib.hash import bcrypt
 from u2flib_server import u2f
 from werkzeug.utils import secure_filename
 
 import activitypub
 import config
+import tasks
 from activitypub import Box
 from activitypub import embed_collection
 from config import ADMIN_API_KEY
@@ -58,24 +73,23 @@ from config import USERNAME
 from config import VERSION
 from config import _drop_db
 from config import custom_cache_purge_hook
-from little_boxes import activitypub as ap
-from little_boxes.activitypub import ActivityType
-from little_boxes.activitypub import _to_list
-from little_boxes.activitypub import clean_activity
-from little_boxes.activitypub import get_backend
-from little_boxes.content_helper import parse_markdown
-from little_boxes.errors import ActivityGoneError
-from little_boxes.errors import ActivityNotFoundError
-from little_boxes.errors import Error
-from little_boxes.errors import NotFromOutboxError
-from little_boxes.httpsig import HTTPSigAuth
-from little_boxes.httpsig import verify_request
-from little_boxes.webfinger import get_actor_url
-from little_boxes.webfinger import get_remote_follow_template
 from utils.key import get_secret_key
 from utils.media import Kind
 
 back = activitypub.MicroblogPubBackend()
+
+
+def save_cb(box: Box, iri: str) -> None:
+    tasks.cache_attachments.delay(iri)
+    if box == Box.INBOX:
+        tasks.process_new_activity.delay(iri)
+
+
+back.set_save_cb(save_cb)
+
+
+back.set_post_to_remote_inbox(tasks.post_to_inbox.delay)
+
 ap.use_backend(back)
 
 MY_PERSON = ap.Person(**ME)
@@ -1569,7 +1583,9 @@ def following():
         )
 
     following, older_than, newer_than = paginated_query(DB.activities, q)
-    following = [get_backend().fetch_iri(doc["activity"]["object"]) for doc in following]
+    following = [
+        get_backend().fetch_iri(doc["activity"]["object"]) for doc in following
+    ]
     return render_template(
         "following.html",
         following_data=following,

@@ -8,11 +8,16 @@ from typing import List
 from typing import Optional
 
 from bson.objectid import ObjectId
+from cachetools import LRUCache
 from feedgen.feed import FeedGenerator
 from html2text import html2text
+from little_boxes import activitypub as ap
+from little_boxes import strtobool
+from little_boxes.activitypub import _to_list
+from little_boxes.backend import Backend
+from little_boxes.errors import ActivityGoneError
+from little_boxes.errors import Error
 
-import tasks
-from cachetools import LRUCache
 from config import BASE_URL
 from config import DB
 from config import EXTRA_INBOXES
@@ -20,12 +25,6 @@ from config import ID
 from config import ME
 from config import USER_AGENT
 from config import USERNAME
-from little_boxes import activitypub as ap
-from little_boxes import strtobool
-from little_boxes.activitypub import _to_list
-from little_boxes.backend import Backend
-from little_boxes.errors import ActivityGoneError
-from little_boxes.errors import Error
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +94,10 @@ class MicroblogPubBackend(Backend):
             }
         )
 
-        tasks.cache_attachments.delay(activity.id)
-        if box == Box.INBOX:
-            tasks.process_new_activity.delay(activity.id)
+        self.save_cb(box, activity.id)
+
+    def set_save_cb(self, cb):
+        self.save_cb = cb
 
     @ensure_it_is_me
     def outbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
@@ -198,9 +198,12 @@ class MicroblogPubBackend(Backend):
     def inbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
         self.save(Box.INBOX, activity)
 
+    def set_post_to_remote_inbox(self, cb):
+        self.post_to_remote_inbox_cb = cb
+
     @ensure_it_is_me
     def post_to_remote_inbox(self, as_actor: ap.Person, payload: str, to: str) -> None:
-        tasks.post_to_inbox.delay(payload, to)
+        self.post_to_remote_inbox_cb(payload, to)
 
     @ensure_it_is_me
     def new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
