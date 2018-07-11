@@ -10,9 +10,9 @@ from typing import Optional
 from bson.objectid import ObjectId
 from feedgen.feed import FeedGenerator
 from html2text import html2text
-from cachetools import LRUCache
 
 import tasks
+from cachetools import LRUCache
 from config import BASE_URL
 from config import DB
 from config import EXTRA_INBOXES
@@ -181,8 +181,8 @@ class MicroblogPubBackend(Backend):
 
         data = DB.actors.find_one({"remote_id": iri})
         if data:
-            ACTORS_CACHE[iri] = data['data']
-            return data['data']
+            ACTORS_CACHE[iri] = data["data"]
+            return data["data"]
 
         data = self._fetch_iri(iri)
         if ap._has_type(data["type"], ap.ACTOR_TYPES):

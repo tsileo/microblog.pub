@@ -1569,7 +1569,7 @@ def following():
         )
 
     following, older_than, newer_than = paginated_query(DB.activities, q)
-    following = [get_backend.fetch_iri(doc["activity"]["object"]) for doc in following]
+    following = [get_backend().fetch_iri(doc["activity"]["object"]) for doc in following]
     return render_template(
         "following.html",
         following_data=following,
