@@ -66,6 +66,7 @@ def cache_attachments(self, iri: str) -> None:
 
         if actor.icon:
             MEDIA_CACHE.cache(actor.icon["url"], Kind.ACTOR_ICON)
+
         if activity.has_type(ap.ActivityType.CREATE):
             for attachment in activity.get_object()._data.get("attachment", []):
                 MEDIA_CACHE.cache(attachment["url"], Kind.ATTACHMENT)

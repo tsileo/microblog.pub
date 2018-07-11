@@ -95,7 +95,7 @@ class MicroblogPubBackend(Backend):
             }
         )
 
-        tasks.cache_attachments(activity.id)
+        tasks.cache_attachments.delay(activity.id)
         if box == Box.INBOX:
             tasks.process_new_activity.delay(activity.id)
 
