@@ -18,7 +18,6 @@ from config import DB
 from config import EXTRA_INBOXES
 from config import ID
 from config import ME
-from config import MEDIA_CACHE
 from config import USER_AGENT
 from config import USERNAME
 from little_boxes import activitypub as ap
@@ -27,7 +26,6 @@ from little_boxes.activitypub import _to_list
 from little_boxes.backend import Backend
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import Error
-from utils.media import Kind
 
 logger = logging.getLogger(__name__)
 
@@ -97,13 +95,8 @@ class MicroblogPubBackend(Backend):
             }
         )
 
-        # Generates thumbnails for the actor's icon and the attachments if any
-        actor = activity.get_actor()
-        if actor.icon:
-            MEDIA_CACHE.cache(actor.icon["url"], Kind.ACTOR_ICON)
-        if activity.type == ap.ActivityType.CREATE.value:
-            for attachment in activity.get_object()._data.get("attachment", []):
-                MEDIA_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
+        tasks.process_new_activity.delay(activity.id)
+        tasks.cache_attachments(activity.id)
 
     @ensure_it_is_me
     def outbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
