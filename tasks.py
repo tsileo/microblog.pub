@@ -6,6 +6,8 @@ import random
 import requests
 from celery import Celery
 from little_boxes import activitypub as ap
+from little_boxes.errors import ActivityGoneError
+from little_boxes.errors import ActivityNotFoundError
 from little_boxes.httpsig import HTTPSigAuth
 from little_boxes.linked_data_sig import generate_signature
 from requests.exceptions import HTTPError
@@ -49,6 +51,8 @@ def process_new_activity(self, iri: str) -> None:
         )
 
         log.info(f"new activity {iri} processed")
+    except (ActivityGoneError, ActivityNotFoundError):
+        log.exception("failed to process activity {iri}")
     except Exception as err:
         log.exception(f"failed to process new activity {iri}")
         self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
@@ -79,6 +83,8 @@ def cache_attachments(self, iri: str) -> None:
 
         log.info(f"attachments cached for {iri}")
 
+    except (ActivityGoneError, ActivityNotFoundError):
+        log.exception("failed to process activity {iri}")
     except Exception as err:
         log.exception(f"failed to process new activity {iri}")
         self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
