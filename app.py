@@ -737,7 +737,8 @@ def _build_thread(data, include_children=True):
     print(data)
     root_id = data["meta"].get("thread_root_parent", data["activity"]["object"]["id"])
 
-    query = {"$or": [{"meta.thread_root_parent": root_id, "type": "Create"}]}
+    query = {"$or": [{"meta.thread_root_parent": root_id, "type": "Create"},
+                     {"activity.object.id": root_id}]}
     if data["activity"]["object"].get("inReplyTo"):
         query["$or"].append(
             {"activity.object.id": data["activity"]["object"]["inReplyTo"]}
@@ -763,10 +764,8 @@ def _build_thread(data, include_children=True):
         if rep_id == root_id:
             continue
         reply_of = rep["activity"]["object"]["inReplyTo"]
-        try:
-            idx[reply_of]["_nodes"].append(rep)
-        except:
-            pass
+        idx[reply_of]["_nodes"].append(rep)
+
     # Flatten the tree
     thread = []
 
