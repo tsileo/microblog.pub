@@ -52,7 +52,7 @@ def process_new_activity(self, iri: str) -> None:
 
         log.info(f"new activity {iri} processed")
     except (ActivityGoneError, ActivityNotFoundError):
-        log.exception("failed to process activity {iri}")
+        log.exception(f"dropping activity {iri}")
     except Exception as err:
         log.exception(f"failed to process new activity {iri}")
         self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
@@ -84,7 +84,7 @@ def cache_attachments(self, iri: str) -> None:
         log.info(f"attachments cached for {iri}")
 
     except (ActivityGoneError, ActivityNotFoundError):
-        log.exception("failed to process activity {iri}")
+        log.exception(f"dropping activity {iri}")
     except Exception as err:
         log.exception(f"failed to process new activity {iri}")
         self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
