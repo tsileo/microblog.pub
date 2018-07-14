@@ -170,6 +170,7 @@ class MicroblogPubBackend(Backend):
                 return data["activity"]
 
         # Fetch the URL via HTTP
+        logger.info(f"dereference {iri} via HTTP")
         return super().fetch_iri(iri)
 
     def fetch_iri(self, iri: str) -> ap.ObjectType:
@@ -177,14 +178,17 @@ class MicroblogPubBackend(Backend):
             return ME
 
         if iri in ACTORS_CACHE:
+            logger.info(f"{iri} found in cache")
             return ACTORS_CACHE[iri]
 
         data = DB.actors.find_one({"remote_id": iri})
         if data:
+            logger.info(f"{iri} found in DB cache")
             ACTORS_CACHE[iri] = data["data"]
             return data["data"]
 
         data = self._fetch_iri(iri)
+        logger.debug(f"_fetch_iri({iri!r}) == {data!r}")
         if ap._has_type(data["type"], ap.ACTOR_TYPES):
             # Cache the actor
             DB.actors.update_one(
