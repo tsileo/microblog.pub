@@ -1356,8 +1356,7 @@ def api_undo():
 @login_required
 def admin_stream():
     q = {
-        "box": Box.INBOX.value,
-        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+        "meta.stream": True,
         "meta.deleted": False,
     }
     inbox_data, older_than, newer_than = paginated_query(DB.activities, q)
