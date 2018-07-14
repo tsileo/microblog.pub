@@ -65,18 +65,19 @@
 <a class ="bar-item" href="{{ obj.url }}">permalink</a> 
 
 {% if meta.count_reply %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_reply }}</strong> replies</a>{% endif %}
-{% if meta.count_boost %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
-{% if meta.count_like %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
+{% if meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
+{% if meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
+{% endif %}
+
+{% if session.logged_in %}
+{% set perma_id = obj.id | permalink_id %}
+{% set redir = request.path + "#activity-" + perma_id %}
+{% set aid = obj.id | quote_plus %}
 {% endif %}
 
 {% if ui and session.logged_in %}
 
-{% set aid = obj.id | quote_plus %}
 <a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
-
-{% set perma_id = obj.id | permalink_id %}
-{% set redir = request.path + "#activity-" + perma_id %}
-
 {% if meta.boosted %}
 <form action="/api/undo" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">

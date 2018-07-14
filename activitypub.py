@@ -103,25 +103,31 @@ class MicroblogPubBackend(Backend):
     def outbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
         self.save(Box.OUTBOX, activity)
 
+    def followers(self) -> List[str]:
+        q = {
+            "box": Box.INBOX.value,
+            "type": ap.ActivityType.FOLLOW.value,
+            "meta.undo": False,
+        }
+        return [doc["activity"]["actor"] for doc in DB.activities.find(q)]
+
+    def following(self) -> List[str]:
+        q = {
+            "box": Box.OUTBOX.value,
+            "type": ap.ActivityType.FOLLOW.value,
+            "meta.undo": False,
+        }
+        return [doc["activity"]["object"] for doc in DB.activities.find(q)]
+
     def parse_collection(
         self, payload: Optional[Dict[str, Any]] = None, url: Optional[str] = None
     ) -> List[str]:
         """Resolve/fetch a `Collection`/`OrderedCollection`."""
         # Resolve internal collections via MongoDB directly
         if url == ID + "/followers":
-            q = {
-                "box": Box.INBOX.value,
-                "type": ap.ActivityType.FOLLOW.value,
-                "meta.undo": False,
-            }
-            return [doc["activity"]["actor"] for doc in DB.activities.find(q)]
+            return self.followers()
         elif url == ID + "/following":
-            q = {
-                "box": Box.OUTBOX.value,
-                "type": ap.ActivityType.FOLLOW.value,
-                "meta.undo": False,
-            }
-            return [doc["activity"]["object"] for doc in DB.activities.find(q)]
+            return self.following()
 
         return super().parse_collection(payload, url)
 

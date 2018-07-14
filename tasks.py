@@ -37,6 +37,9 @@ def process_new_activity(self, iri: str) -> None:
         activity = ap.fetch_remote_activity(iri)
         log.info(f"activity={activity!r}")
 
+        # Is the activity expected?
+        # following = ap.get_backend().following()
+
         tag_stream = False
         if activity.has_type(ap.ActivityType.ANNOUNCE):
             tag_stream = True
