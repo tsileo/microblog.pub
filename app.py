@@ -737,8 +737,12 @@ def _build_thread(data, include_children=True):
     print(data)
     root_id = data["meta"].get("thread_root_parent", data["activity"]["object"]["id"])
 
-    query = {"$or": [{"meta.thread_root_parent": root_id, "type": "Create"},
-                     {"activity.object.id": root_id}]}
+    query = {
+        "$or": [
+            {"meta.thread_root_parent": root_id, "type": "Create"},
+            {"activity.object.id": root_id},
+        ]
+    }
     if data["activity"]["object"].get("inReplyTo"):
         query["$or"].append(
             {"activity.object.id": data["activity"]["object"]["inReplyTo"]}
@@ -1172,7 +1176,12 @@ def admin():
 @login_required
 def admin_thread():
     data = DB.activities.find_one(
-        {"$or": [{"remote_id": request.args.get("oid")}, {"activity.object.id": request.args.get("oid")}]}
+        {
+            "$or": [
+                {"remote_id": request.args.get("oid")},
+                {"activity.object.id": request.args.get("oid")},
+            ]
+        }
     )
     if not data:
         abort(404)
@@ -1180,9 +1189,7 @@ def admin_thread():
         abort(410)
     thread = _build_thread(data)
 
-    return render_template(
-        "note.html", thread=thread, note=data
-    )
+    return render_template("note.html", thread=thread, note=data)
 
 
 @app.route("/admin/new", methods=["GET"])
@@ -1269,15 +1276,18 @@ def _user_api_arg(key: str, **kwargs):
 
     if not oid:
         if "default" in kwargs:
+            app.logger.info(f'{key}={kwargs.get("default")}')
             return kwargs.get("default")
 
         raise ValueError(f"missing {key}")
 
+    app.logger.info(f"{key}={oid}")
     return oid
 
 
 def _user_api_get_note(from_outbox: bool = False):
     oid = _user_api_arg("id")
+    app.logger.info(f"fetching {oid}")
     note = ap.parse_activity(get_backend().fetch_iri(oid), expected=ActivityType.NOTE)
     if from_outbox and not note.id.startswith(ID):
         raise NotFromOutboxError(
@@ -1355,10 +1365,7 @@ def api_undo():
 @app.route("/admin/stream")
 @login_required
 def admin_stream():
-    q = {
-        "meta.stream": True,
-        "meta.deleted": False,
-    }
+    q = {"meta.stream": True, "meta.deleted": False}
     inbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
     return render_template(
@@ -1601,7 +1608,8 @@ def following():
 
     following, older_than, newer_than = paginated_query(DB.activities, q)
     following = [
-        (doc["remote_id"], get_backend().fetch_iri(doc["activity"]["object"])) for doc in following
+        (doc["remote_id"], get_backend().fetch_iri(doc["activity"]["object"]))
+        for doc in following
     ]
     return render_template(
         "following.html",
