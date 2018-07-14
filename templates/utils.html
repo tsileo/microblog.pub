@@ -64,18 +64,21 @@
 {% else %}	
 <a class ="bar-item" href="{{ obj.url }}">permalink</a> 
 
-{% if meta.count_reply %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_reply }}</strong> replies</a>{% endif %}
-{% if meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
-{% if meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
-{% endif %}
-
 {% if session.logged_in %}
 {% set perma_id = obj.id | permalink_id %}
 {% set redir = request.path + "#activity-" + perma_id %}
 {% set aid = obj.id | quote_plus %}
 {% endif %}
 
-{% if ui and session.logged_in %}
+{% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_reply }}</strong> replies</a>
+{% elif meta.count_reply and session.logged_in %}
+<a class ="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> replies</a>{% endif %}
+
+{% if meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
+{% if meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
+
+{% if session.logged_in %}
+{% if ui%}
 
 <a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
 {% if meta.boosted %}
@@ -112,7 +115,6 @@
 
 {% endif %}
 
-{% if session.logged_in %}
 {% if obj.id | is_from_outbox %}
 <form action="/api/note/delete" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
@@ -130,6 +132,7 @@
 {% endif %}
 {% endif %}
 
+{% endif %}
 
 </div>
 

@@ -1168,6 +1168,23 @@ def admin():
     )
 
 
+@app.route("/admin/thread")
+@login_required
+def admin_thread():
+    data = DB.activities.find_one(
+        {"$or": [{"remote_id": request.args.get("oid")}, {"activity.object.id": request.args.get("oid")}]}
+    )
+    if not data:
+        abort(404)
+    if data["meta"].get("deleted", False):
+        abort(410)
+    thread = _build_thread(data)
+
+    return render_template(
+        "note.html", thread=thread, note=data
+    )
+
+
 @app.route("/admin/new", methods=["GET"])
 @login_required
 def admin_new():
