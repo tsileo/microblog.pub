@@ -12,6 +12,7 @@
 {% block links %}{% endblock %}
 {% if config.THEME_COLOR %}<meta name="theme-color" content="{{ config.THEME_COLOR }}">{% endif %}
 <style>{{ config.CSS | safe }}</style>
+{% block headers %}{% endblock %}
 </head>
 <body>
 {% if logged_in %}
@@ -20,7 +21,7 @@
 <li class="left"><a href="/admin/new"{% if request.path == "/admin/new" %} class="selected" {% endif %}>New</a></li>
 <li class="left"><a href="/admin/stream"{% if request.path == "/admin/stream" %} class="selected" {% endif %}>Stream</a></li>
 <li class="left"><a href="/admin/notifications"{% if request.path == "/admin/notifications" %} class="selected" {% endif %}>Notifications</a></li>
-<li class="right"><a href="/admin/logout">Logout</a></li>
+<li class="left"><a href="/admin/logout">Logout</a></li>
 </ul>
 {% endif %}
 

@@ -471,6 +471,9 @@ def admin_logout():
 
 @app.route("/login", methods=["POST", "GET"])
 def admin_login():
+    if session.get("logged_in") is True:
+        return redirect(url_for("admin_notifications"))
+
     devices = [doc["device"] for doc in DB.u2f.find()]
     u2f_enabled = True if devices else False
     if request.method == "POST":

@@ -1,11 +1,20 @@
 {% extends "layout.html" %}
 {% import 'utils.html' as utils %}
 {% block title %}Login - {{ config.NAME }}{% endblock %}
-{% block header %}
+{% block headers %}
+<style>
+#login-container {
+height: 90%;
+display: grid;
+}
+#login-form {
+margin:auto;
+display:inline;
+}
+</style>
 {% endblock %}
 {% block content %}
-<div id="container">
-	{% if session.logged_in %}logged{% else%}not logged{%endif%}
+<div id="login-container">
 
 <form id="login-form" method="POST">
 	 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
