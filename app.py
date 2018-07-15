@@ -272,7 +272,7 @@ def get_url(u):
     elif isinstance(u, str):
         return u
     else:
-        raise ValueError(f"unexpected URL field type: {type(u)}: {u!r}")
+        return u
 
 
 @app.template_filter()
