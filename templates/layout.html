@@ -16,6 +16,7 @@
 </head>
 <body>
 {% if logged_in %}
+<div id="admin-menu-wrapper">
 <ul id="admin-menu">
 <li class="left"><a href="/admin" class="admin-title{% if request.path == "/admin" %} selected{% endif %}">Admin</a></li>
 <li class="left"><a href="/admin/new"{% if request.path == "/admin/new" %} class="selected" {% endif %}>New</a></li>
@@ -23,6 +24,7 @@
 <li class="left"><a href="/admin/notifications"{% if request.path == "/admin/notifications" %} class="selected" {% endif %}>Notifications</a></li>
 <li class="left"><a href="/admin/logout">Logout</a></li>
 </ul>
+</div>
 {% endif %}
 
 

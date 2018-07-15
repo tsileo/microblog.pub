@@ -53,13 +53,17 @@ a:hover {
   background: $primary-color;
   color: $background-color;
 }
+#admin-menu-wrapper {
+  padding: 10px;
+  margin:0 auto;
+  width: 100%;
+  background: $color-menu-background;
+  max-width: 720px;
+
 #admin-menu {
   list-style-type: none;
   display: inline;
   padding: 10px;
-  width: 720px;
-  margin:0 auto;
-  background: $color-menu-background;
   color: $color-light;
   border-radius-bottom-left: 2px;
   border-radius-bottom-right: 2px;
@@ -76,6 +80,7 @@ a:hover {
       color: $primary-color;
     }
   }
+}
 }
 #header {
   margin-bottom: 70px;
