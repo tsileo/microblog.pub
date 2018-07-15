@@ -14,7 +14,7 @@
 
 	{% if item | has_type('Announce') %}
 	{% set boost_actor = item.activity.actor | get_actor %}
-	<p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> boosted</span></p>
+	<p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> boosted</span></p>
 	{% if item.meta.object %}
 	{{ utils.display_note(item.meta.object, ui=True) }}
 	{% endif %}

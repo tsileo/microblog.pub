@@ -31,7 +31,7 @@
 
 	{% if not perma %}
 	<span style="float:right">
-		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj.url }}">
+		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj.url | get_url }}">
 			<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}">{{ obj.published | format_timeago }}</time></a>
 	</span>
 	{% endif %}
@@ -47,7 +47,7 @@
 	<ul>
 	{% endif %}
 	{% for a in obj.attachment %}
-	{% if a.url | is_img %}
+	{% if a.url | get_url | is_img %}
     <a href="{{ a.url | get_attachment_url(None) }}"><img src="{{a.url | get_attachment_url(720) }}" class="img-attachment"></a>
 	{% else %}
 	<li><a href="{{a.url | get_attachment_url(None) }}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
@@ -61,8 +61,10 @@
 
 <div class="bottom-bar">
 {% if perma %}<span class="perma-item">{{ obj.published | format_time }}</span>
-{% else %}	
-<a class ="bar-item" href="{{ obj.url }}">permalink</a> 
+{% endif %}
+{% if not obj.id | is_from_outbox %}
+<a class ="bar-item" href="{{ obj.url | get_url }}">permalink</a> 
+{% endif %}
 
 {% if session.logged_in %}
 {% set perma_id = obj.id | permalink_id %}
@@ -70,12 +72,12 @@
 {% set aid = obj.id | quote_plus %}
 {% endif %}
 
-{% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_reply }}</strong> replies</a>
+{% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> replies</a>
 {% elif meta.count_reply and session.logged_in %}
 <a class ="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> replies</a>{% endif %}
 
-{% if meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
-{% if meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
+{% if meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
+{% if meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
 
 {% if session.logged_in %}
 {% if ui%}
@@ -132,7 +134,6 @@
 {% endif %}
 {% endif %}
 
-{% endif %}
 
 </div>
 

@@ -269,8 +269,10 @@ def domain(url):
 def get_url(u):
     if isinstance(u, dict):
         return u["href"]
-    else:
+    elif isinstance(u, str):
         return u
+    else:
+        raise ValueError(f"unexpected URL field type: {type(u)}: {u!r}")
 
 
 @app.template_filter()
