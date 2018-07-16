@@ -181,15 +181,17 @@ class MicroblogPubBackend(Backend):
             logger.info(f"{iri} found in cache")
             return ACTORS_CACHE[iri]
 
-        data = DB.actors.find_one({"remote_id": iri})
-        if data:
-            logger.info(f"{iri} found in DB cache")
-            ACTORS_CACHE[iri] = data["data"]
-            return data["data"]
+        # data = DB.actors.find_one({"remote_id": iri})
+        # if data:
+        #    if ap._has_type(data["type"], ap.ACTOR_TYPES):
+        #        logger.info(f"{iri} found in DB cache")
+        #        ACTORS_CACHE[iri] = data["data"]
+        #    return data["data"]
 
         data = self._fetch_iri(iri)
         logger.debug(f"_fetch_iri({iri!r}) == {data!r}")
         if ap._has_type(data["type"], ap.ACTOR_TYPES):
+            logger.debug(f"caching actor {iri}")
             # Cache the actor
             DB.actors.update_one(
                 {"remote_id": iri},
