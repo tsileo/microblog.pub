@@ -566,6 +566,11 @@ def u2f_register():
 
 #######
 # Activity pub routes
+@app.route("/drop_cache")
+@login_required
+def drop_cache():
+    DB.actors.drop()
+    return "Done"
 
 
 @app.route("/migration1_step1")
