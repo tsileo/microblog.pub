@@ -284,6 +284,8 @@ def get_actor(url):
         return get_backend().fetch_iri(url)
     except (ActivityNotFoundError, ActivityGoneError):
         return f"Deleted<{url}>"
+    except Exception:
+        return f"Error<{url}>"
 
 
 @app.template_filter()
