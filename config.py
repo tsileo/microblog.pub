@@ -72,7 +72,7 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
     PASS = conf["pass"]
     EXTRA_INBOXES = conf.get("extra_inboxes", [])
 
-    HIDE_FOLLOWING = conf.get("hide_following", False)
+    HIDE_FOLLOWING = conf.get("hide_following", True)
 
     # Theme-related config
     theme_conf = conf.get("theme", {})
