@@ -80,9 +80,10 @@ back = activitypub.MicroblogPubBackend()
 
 
 def save_cb(box: Box, iri: str) -> None:
-    tasks.cache_attachments.delay(iri)
     if box == Box.INBOX:
         tasks.process_new_activity.delay(iri)
+    else:
+        tasks.cache_attachments.delay(iri)
 
 
 back.set_save_cb(save_cb)

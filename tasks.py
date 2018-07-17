@@ -54,6 +54,7 @@ def process_new_activity(self, iri: str) -> None:
         )
 
         log.info(f"new activity {iri} processed")
+        cache_attachments.delay(iri)
     except (ActivityGoneError, ActivityNotFoundError):
         log.exception(f"dropping activity {iri}")
     except Exception as err:
