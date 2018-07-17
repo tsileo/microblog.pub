@@ -1618,6 +1618,9 @@ def following():
             )
         )
 
+    if config.HIDE_FOLLOWING:
+        abort(404)
+
     following, older_than, newer_than = paginated_query(DB.activities, q)
     following = [
         (doc["remote_id"], get_backend().fetch_iri(doc["activity"]["object"]))
