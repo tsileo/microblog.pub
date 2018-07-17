@@ -13,7 +13,8 @@
 <div class="menu">
 <ul>
 <li><a href="/" {% if request.path == "/" %}class="selected"{% endif %}>Notes <small class="badge">{{ notes_count }}</small></a></li>
-<li><a href="/with_replies" {% if request.path == "/with_replies" %}class="selected"{% endif %}>With replies <small class="badge">{{ with_replies_count }}</small></a></li>
+{% if session.logged_in %}<li><a href="/with_replies" {% if request.path == "/with_replies" %}class="selected"{% endif %}>With replies <small class="badge">{{ with_replies_count }}</small></a></li>
+{% end %}
 <li><a href="/liked" {% if request.path == "/liked" %}class="selected"{% endif %}>Liked <small class="badge">{{ liked_count }}</small></a></li>
 <li><a href="/followers"{% if request.path == "/followers" %} class="selected" {% endif %}>Followers <small class="badge">{{ followers_count }}</small></a></li>
 {% if not config.HIDE_FOLLOWING or session.logged_in %}<li><a href="/following"{% if request.path == "/following" %} class="selected" {% endif %}>Following <small class="badge">{{ following_count }}</small></a></li>{% endif %}

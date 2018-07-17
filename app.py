@@ -728,6 +728,7 @@ def index():
 
 
 @app.route("/with_replies")
+@login_required
 def with_replies():
     q = {
         "box": Box.OUTBOX.value,
