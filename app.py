@@ -404,7 +404,7 @@ def is_api_request():
 
 @app.errorhandler(ValueError)
 def handle_value_error(error):
-    logger.error(f"caught value error: {error!r}, {error.__traceback__}")
+    logger.error(f"caught value error: {error!r}, {error.__traceback__!r}")
     response = flask_jsonify(message=error.args[0])
     response.status_code = 400
     return response
@@ -412,7 +412,7 @@ def handle_value_error(error):
 
 @app.errorhandler(Error)
 def handle_activitypub_error(error):
-    logger.error(f"caught activitypub error {error!r}, {error.__traceback__}")
+    logger.error(f"caught activitypub error {error!r}, {error.__traceback__!r}")
     response = flask_jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
