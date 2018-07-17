@@ -4,6 +4,12 @@
 html, body {
 	  height: 100%;
 }
+
+@media only screen and (max-width: 480px) {
+  #menu-item-following {
+    display: none;
+  }
+}
 body {
   background-color: $background-color;
   color: $color;
