@@ -1601,8 +1601,13 @@ def followers():
             )
         )
 
-    followers, older_than, newer_than = paginated_query(DB.activities, q)
-    followers = [get_backend().fetch_iri(doc["activity"]["actor"]) for doc in followers]
+    raw_followers, older_than, newer_than = paginated_query(DB.activities, q)
+    followers = []
+    for doc in raw_followers:
+        try:
+            followers.append(get_backend().fetch_iri(doc["activity"]["actor"]))
+        except Exception:
+            pass
     return render_template(
         "followers.html",
         followers_data=followers,
@@ -1625,7 +1630,7 @@ def following():
             )
         )
 
-    if config.HIDE_FOLLOWING:
+    if config.HIDE_FOLLOWING and not session.get("logged_in", False):
         abort(404)
 
     following, older_than, newer_than = paginated_query(DB.activities, q)
