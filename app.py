@@ -84,7 +84,7 @@ def save_cb(box: Box, iri: str) -> None:
     if box == Box.INBOX:
         tasks.process_new_activity.delay(iri)
     else:
-        tasks.cache_attachments.delay(iri)
+        tasks.cache_actor.delay(iri)
 
 
 back.set_save_cb(save_cb)
@@ -674,6 +674,14 @@ def tmp_migrate4():
     return "Done"
 
 
+@app.route("/migration4")
+@login_required
+def tmp_migrate5():
+    for activity in DB.activities.find():
+        tasks.cache_actor.delay(activity["remote_id"], also_cache_attachments=False)
+    return "Done"
+
+
 def paginated_query(db, q, limit=25, sort_key="_id"):
     older_than = newer_than = None
     query_sort = -1
@@ -822,6 +830,7 @@ def note_by_id(note_id):
         DB.activities.find(
             {
                 "meta.undo": False,
+                "meta.deleted": False,
                 "type": ActivityType.LIKE.value,
                 "$or": [
                     {"activity.object.id": data["activity"]["object"]["id"]},
@@ -830,12 +839,13 @@ def note_by_id(note_id):
             }
         )
     )
-    likes = [get_backend().fetch_iri(doc["activity"]["actor"]) for doc in likes]
+    likes = [doc["meta"]["actor"] for doc in likes]
 
     shares = list(
         DB.activities.find(
             {
                 "meta.undo": False,
+                "meta.deleted": False,
                 "type": ActivityType.ANNOUNCE.value,
                 "$or": [
                     {"activity.object.id": data["activity"]["object"]["id"]},
@@ -844,7 +854,7 @@ def note_by_id(note_id):
             }
         )
     )
-    shares = [get_backend().fetch_iri(doc["activity"]["actor"]) for doc in shares]
+    shares = [doc["meta"]["actor"] for doc in shares]
 
     return render_template(
         "note.html", likes=likes, shares=shares, thread=thread, note=data
@@ -1605,7 +1615,7 @@ def followers():
     followers = []
     for doc in raw_followers:
         try:
-            followers.append(get_backend().fetch_iri(doc["activity"]["actor"]))
+            followers.append(doc["meta"]["actor"])
         except Exception:
             pass
     return render_template(
