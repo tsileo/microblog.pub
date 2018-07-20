@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block title %}Lookup - {{ config.NAME }}{% endblock %}
+{% block content %}
+<div id="container">
+{% include "header.html" %}
+<div style="margin-top:50px;">
+
+<form id="lookup-form" method="POST">
+	 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+     <input type="text" name="url" value="{{url or '' }}" placeholder="https://url-of-a-user-or-a-note.tld">
+	<input type="submit" value="Lookup">
+</form>
+
+{% if data %}
+{% set data = data.to_dict() %}
+<div id="lookup-result" style="margin-top:30px;">
+    {% if data | has_type('Person') or data | has_type('Service') %}
+<div style="margin-left:95px;padding-bottom:5px;margin-bottom:15px;">
+<form action="/api/follow" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ request.path }}"/>
+<input type="hidden" name="actor" value="{{ data.id }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item">follow</button>
+</form>
+        </div>
+
+
+    {{ utils.display_actor_inline(data, size=80) }}
+    {% elif data | has_type('Create') %}
+	{{ utils.display_note(data.object, ui=True) }}
+    {% elif data | has_type('Note') %}
+	{{ utils.display_note(data, ui=True) }}
+    {% endif %}
+</div>
+{% endif %}
+
+</div>
+</div>
+{% endblock %}
