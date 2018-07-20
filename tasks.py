@@ -15,6 +15,7 @@ from requests.exceptions import HTTPError
 import activitypub
 from config import DB
 from config import HEADERS
+from config import ID
 from config import KEY
 from config import MEDIA_CACHE
 from config import USER_AGENT
@@ -33,6 +34,7 @@ ap.use_backend(back)
 
 @app.task(bind=True, max_retries=12)
 def process_new_activity(self, iri: str) -> None:
+    """Process an activity received in the inbox"""
     try:
         activity = ap.fetch_remote_activity(iri)
         log.info(f"activity={activity!r}")
@@ -45,7 +47,13 @@ def process_new_activity(self, iri: str) -> None:
             tag_stream = True
         elif activity.has_type(ap.ActivityType.CREATE):
             note = activity.get_object()
-            if not note.inReplyTo:
+            if note.inReplyTo:
+                reply = ap.fetch_remote_activity(note.inReplyTo)
+                if reply.id.startswith(ID) and activity.is_public():
+                    # The reply is public "local reply", forward the reply (i.e. the original activity) to the original
+                    # recipients
+                    activity.forward(reply.recipients())
+            else:
                 tag_stream = True
 
         log.info(f"{iri} tag_stream={tag_stream}")
@@ -126,7 +134,11 @@ def post_to_inbox(self, payload: str, to: str) -> None:
         log.info("payload=%s", payload)
         log.info("generating sig")
         signed_payload = json.loads(payload)
-        generate_signature(signed_payload, KEY)
+
+        # Don't overwrite the signature if we're forwarding an activity
+        if "signature" not in signed_payload:
+            generate_signature(signed_payload, KEY)
+
         log.info("to=%s", to)
         resp = requests.post(
             to,
