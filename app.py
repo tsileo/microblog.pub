@@ -76,6 +76,7 @@ from config import _drop_db
 from config import custom_cache_purge_hook
 from utils.key import get_secret_key
 from utils.media import Kind
+from utils.lookup import lookup
 
 back = activitypub.MicroblogPubBackend()
 
@@ -843,7 +844,7 @@ def _build_thread(data, include_children=True):
 @app.route("/note/<note_id>")
 def note_by_id(note_id):
     if is_api_request():
-        return redirect(url_for('outbox_activity', item_id=note_id))
+        return redirect(url_for("outbox_activity", item_id=note_id))
 
     data = DB.activities.find_one(
         {"box": Box.OUTBOX.value, "remote_id": back.activity_url(note_id)}
@@ -1227,6 +1228,17 @@ def admin():
             }
         ),
     )
+
+
+@app.route("/admin/lookup", methods=["GET", "POST"])
+@login_required
+def admin_lookup():
+    data = None
+    if request.method == "POST":
+        if request.form.get("url"):
+            data = lookup(request.form.get("url"))
+
+    return render_template("lookup.html", data=data, url=request.form.get("url"))
 
 
 @app.route("/admin/thread")
