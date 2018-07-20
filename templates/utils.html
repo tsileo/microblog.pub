@@ -172,6 +172,7 @@
 
 {% macro display_thread(thread, likes=[], shares=[]) -%}
 {% for reply in thread %}
+{{ reply }}
 {% if reply._requested %}
 {{ display_note(reply.activity.object, perma=True, ui=False, likes=likes, shares=shares, meta=reply.meta) }}
 {% else %}

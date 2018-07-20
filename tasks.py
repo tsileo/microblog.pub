@@ -72,7 +72,8 @@ def cache_actor(self, iri: str, also_cache_attachments: bool = True) -> None:
 
         # Cache the actor info
         DB.activities.update_one(
-            {"remote_id": iri}, {"$set": {"meta.actor": activitypub._actor_to_meta(actor)}}
+            {"remote_id": iri},
+            {"$set": {"meta.actor": activitypub._actor_to_meta(actor)}},
         )
 
         log.info(f"actor cached for {iri}")

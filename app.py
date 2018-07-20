@@ -75,8 +75,8 @@ from config import VERSION
 from config import _drop_db
 from config import custom_cache_purge_hook
 from utils.key import get_secret_key
-from utils.media import Kind
 from utils.lookup import lookup
+from utils.media import Kind
 
 back = activitypub.MicroblogPubBackend()
 

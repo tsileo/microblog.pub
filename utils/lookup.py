@@ -1,8 +1,8 @@
-import little_boxes.activitypub as ap
 import json
-import requests
 
+import little_boxes.activitypub as ap
 import mf2py
+import requests
 
 
 def lookup(url: str) -> ap.BaseActivity:
