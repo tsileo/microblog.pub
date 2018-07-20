@@ -842,6 +842,9 @@ def _build_thread(data, include_children=True):
 
 @app.route("/note/<note_id>")
 def note_by_id(note_id):
+    if is_api_request():
+        return redirect(url_for('outbox_activity', item_id=note_id))
+
     data = DB.activities.find_one(
         {"box": Box.OUTBOX.value, "remote_id": back.activity_url(note_id)}
     )
