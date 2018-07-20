@@ -679,6 +679,31 @@ def tmp_migrate4():
 def tmp_migrate5():
     for activity in DB.activities.find():
         tasks.cache_actor.delay(activity["remote_id"], also_cache_attachments=False)
+
+    return "Done"
+
+
+@app.route("/migration5")
+@login_required
+def tmp_migrate6():
+    for activity in DB.activities.find():
+        # tasks.cache_actor.delay(activity["remote_id"], also_cache_attachments=False)
+        try:
+            a = ap.parse_activity(activity["activity"])
+            if a.has_type([ActivityType.LIKE, ActivityType.FOLLOW]):
+                DB.activities.update_one(
+                    {"remote_id": a.id},
+                    {
+                        "$set": {
+                            "meta.object_actor": activitypub._actor_to_meta(
+                                a.get_object().get_actor()
+                            )
+                        }
+                    },
+                )
+        except Exception:
+            app.logger.exception(f"processing {activity} failed")
+
     return "Done"
 
 

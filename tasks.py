@@ -2,8 +2,6 @@ import json
 import logging
 import os
 import random
-from typing import Dict
-from typing import Any
 
 import requests
 from celery import Celery
@@ -64,15 +62,6 @@ def process_new_activity(self, iri: str) -> None:
         self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
 
 
-def _actor_to_meta(actor: ap.BaseActivity) -> Dict[str, Any]:
-    return {
-        "url": actor.url,
-        "icon": actor.icon,
-        "name": actor.name,
-        "preferredUsername": actor.preferredUsername,
-    }
-
-
 @app.task(bind=True, max_retries=12)
 def cache_actor(self, iri: str, also_cache_attachments: bool = True) -> None:
     try:
@@ -83,7 +72,7 @@ def cache_actor(self, iri: str, also_cache_attachments: bool = True) -> None:
 
         # Cache the actor info
         DB.activities.update_one(
-            {"remote_id": iri}, {"$set": {"meta.actor": _actor_to_meta(actor)}}
+            {"remote_id": iri}, {"$set": {"meta.actor": activitypub._actor_to_meta(actor)}}
         )
 
         log.info(f"actor cached for {iri}")

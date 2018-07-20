@@ -20,7 +20,7 @@
   
     {% endif %}
     {% if item.meta.object %}
-	{{ utils.display_note(item.meta.object) }}
+    {{ utils.display_note(item.meta.object, meta={'actor': item.meta.object_actor}) }}
     {% endif %}
 	{% endfor %}
 

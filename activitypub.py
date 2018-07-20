@@ -32,6 +32,15 @@ logger = logging.getLogger(__name__)
 ACTORS_CACHE = LRUCache(maxsize=256)
 
 
+def _actor_to_meta(actor: ap.BaseActivity) -> Dict[str, Any]:
+    return {
+        "url": actor.url,
+        "icon": actor.icon,
+        "name": actor.name,
+        "preferredUsername": actor.preferredUsername,
+    }
+
+
 def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
     """Helper for removing MongoDB's `_id` field."""
     doc = doc.copy()
@@ -263,8 +272,15 @@ class MicroblogPubBackend(Backend):
             {"activity.object.id": obj.id},
             {"$inc": {"meta.count_like": 1}, "$set": {"meta.liked": like.id}},
         )
+
         DB.activities.update_one(
-            {"remote_id": like.id}, {"$set": {"meta.object": obj.to_dict(embed=True)}}
+            {"remote_id": like.id},
+            {
+                "$set": {
+                    "meta.object": obj.to_dict(embed=True),
+                    "meta.object_actor": _actor_to_meta(obj.get_actor()),
+                }
+            },
         )
 
     @ensure_it_is_me
@@ -291,7 +307,12 @@ class MicroblogPubBackend(Backend):
         obj = announce.get_object()
         DB.activities.update_one(
             {"remote_id": announce.id},
-            {"$set": {"meta.object": obj.to_dict(embed=True)}},
+            {
+                "$set": {
+                    "meta.object": obj.to_dict(embed=True),
+                    "meta.object_actor": _actor_to_meta(obj.get_actor()),
+                }
+            },
         )
         DB.activities.update_one(
             {"activity.object.id": obj.id}, {"$inc": {"meta.count_boost": 1}}
@@ -313,8 +334,14 @@ class MicroblogPubBackend(Backend):
         obj = announce.get_object()
         DB.activities.update_one(
             {"remote_id": announce.id},
-            {"$set": {"meta.object": obj.to_dict(embed=True)}},
+            {
+                "$set": {
+                    "meta.object": obj.to_dict(embed=True),
+                    "meta.object_actor": _actor_to_meta(obj.get_actor()),
+                }
+            },
         )
+
         DB.activities.update_one(
             {"activity.object.id": obj.id}, {"$set": {"meta.boosted": announce.id}}
         )

@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% import 'utils.html' as utils %}
-{% block title %}Stream - {{ config.NAME }}{% endblock %}
+{% block title %}{% if request.path == url_for('admin_stream') %}Stream{% else %}Notifications{% endif %} - {{ config.NAME }}{% endblock %}
 {% block content %}
 <div class="h-feed" id="container">
 {% include "header.html" %}
@@ -13,7 +13,7 @@
 	{% else %}
 
 	{% if item | has_type('Announce') %}
-	{% set boost_actor = item.activity.actor | get_actor %}
+	{% set boost_actor = item.meta.actor %}
 	<p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> boosted</span></p>
 	{% if item.meta.object %}
 	{{ utils.display_note(item.meta.object, ui=True) }}
@@ -23,19 +23,19 @@
 	{% if item | has_type('Follow') %}
     <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover">new follower</span> <!-- <a href="" class="bar-item">follow back</a></p> -->
     <div style="height: 100px;">
-	{{ utils.display_actor_inline(item.activity.actor | get_actor, size=50) }}
+	{{ utils.display_actor_inline(item.meta.actor, size=50) }}
     </div>
 
 	{% elif item | has_type('Accept') %}
     <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover">you started following</span></p>
     <div style="height: 100px;">
-	{{ utils.display_actor_inline(item.activity.actor | get_actor, size=50) }}
+	{{ utils.display_actor_inline(item.meta.actor, size=50) }}
     </div>
 
 	{% elif item | has_type('Undo') %}
     <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover">unfollowed you</span></p>
     <div style="height: 100px;">
-	{{ utils.display_actor_inline(item.activity.actor | get_actor, size=50) }}
+	{{ utils.display_actor_inline(item.meta.actor, size=50) }}
     </div>
 
 	{% else %}
