@@ -19,6 +19,7 @@ from config import ID
 from config import KEY
 from config import MEDIA_CACHE
 from config import USER_AGENT
+from utils import opengraph
 from utils.media import Kind
 
 log = logging.getLogger(__name__)
@@ -103,11 +104,48 @@ def process_new_activity(self, iri: str) -> None:
         self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
 
 
+@app.task(bind=True, max_retries=12)  # noqa: C901
+def fetch_og_metadata(self, iri: str) -> None:
+    try:
+        activity = ap.fetch_remote_activity(iri)
+        log.info(f"activity={activity!r}")
+        if activity.has_type(ap.ActivityType.CREATE):
+            note = activity.get_object()
+            links = opengraph.links_from_note(note.to_dict())
+            og_metadata = opengraph.fetch_og_metadata(USER_AGENT, links)
+            for og in og_metadata:
+                if not og.get("image"):
+                    continue
+                MEDIA_CACHE.cache_og_image(og["image"])
+
+            log.debug(f"OG metadata {og_metadata!r}")
+            DB.activities.update_one(
+                {"remote_id": iri}, {"$set": {"meta.og_metadata": og_metadata}}
+            )
+
+        log.info(f"OG metadata fetched for {iri}")
+    except (ActivityGoneError, ActivityNotFoundError):
+        log.exception(f"dropping activity {iri}, skip OG metedata")
+    except requests.exceptions.HTTPError as http_err:
+        if 400 <= http_err.response.status_code < 500:
+            log.exception("bad request, no retry")
+        log.exception("failed to fetch OG metadata")
+        self.retry(
+            exc=http_err, countdown=int(random.uniform(2, 4) ** self.request.retries)
+        )
+    except Exception as err:
+        log.exception(f"failed to fetch OG metadata for {iri}")
+        self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
+
+
 @app.task(bind=True, max_retries=12)
 def cache_actor(self, iri: str, also_cache_attachments: bool = True) -> None:
     try:
         activity = ap.fetch_remote_activity(iri)
         log.info(f"activity={activity!r}")
+
+        if activity.has_type(ap.ActivityType.CREATE):
+            fetch_og_metadata.delay(iri)
 
         actor = activity.get_actor()
 

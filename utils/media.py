@@ -31,12 +31,31 @@ class Kind(Enum):
     ATTACHMENT = "attachment"
     ACTOR_ICON = "actor_icon"
     UPLOAD = "upload"
+    OG_IMAGE = "og"
 
 
 class MediaCache(object):
     def __init__(self, gridfs_db: str, user_agent: str) -> None:
         self.fs = gridfs.GridFS(gridfs_db)
         self.user_agent = user_agent
+
+    def cache_og_image(self, url: str) -> None:
+        if self.fs.find_one({"url": url, "kind": Kind.OG_IMAGE.value}):
+            return
+        i = load(url, self.user_agent)
+        # Save the original attachment (gzipped)
+        i.thumbnail((100, 100))
+        with BytesIO() as buf:
+            with GzipFile(mode="wb", fileobj=buf) as f1:
+                i.save(f1, format=i.format)
+            buf.seek(0)
+            self.fs.put(
+                buf,
+                url=url,
+                size=100,
+                content_type=i.get_format_mimetype(),
+                kind=Kind.OG_IMAGE.value,
+            )
 
     def cache_attachment(self, url: str) -> None:
         if self.fs.find_one({"url": url, "kind": Kind.ATTACHMENT.value}):
@@ -141,6 +160,8 @@ class MediaCache(object):
     def cache(self, url: str, kind: Kind) -> None:
         if kind == Kind.ACTOR_ICON:
             self.cache_actor_icon(url)
+        elif kind == Kind.OG_IMAGE:
+            self.cache_og_image(url)
         else:
             self.cache_attachment(url)
 

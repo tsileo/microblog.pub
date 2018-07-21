@@ -21,6 +21,7 @@
 {% else %}
 {% set actor = obj.attributedTo | get_actor  %}
 {% endif %}
+<div class="note-box">
 <div class="note h-entry" id="activity-{{ obj.id | permalink_id }}">
 
 <div class="h-card p-author">
@@ -62,6 +63,26 @@
 	{% endif %}
 </div>
 	{% endif %}
+
+
+
+{% if meta and meta.og_metadata %}
+{% for og in meta.og_metadata %}
+<a href="{{ og.url }}" class="og-link" style="margin:30px 0;clear:both;display: flex;">
+<div>
+<img  style="width:100px;border-radius:3px;" src="{{ og.image | get_og_image_url }}">
+</div>
+<div style="padding:0 20px;">
+<strong>{{ og.title }}</strong>
+<p>{{ og.description | truncate(80) }}</p>
+<small>{{ og.site_name }}</small>
+</div>
+</a>
+{% endfor %}
+{% endif %}
+
+
+
 
 <div class="bottom-bar">
 {% if perma %}<span class="perma-item">{{ obj.published | format_time }}</span>
@@ -163,10 +184,10 @@
 {% endif %}
 
 
-
+</div>
+</div>                       
 </div>
 
-</div>                       
 
 {%- endmacro %}
 

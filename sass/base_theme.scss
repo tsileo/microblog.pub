@@ -189,9 +189,11 @@ a:hover {
     h3 { margin: 0; }
   }
 }
+.note-box {
+  margin-bottom: 70px;
+}
 .note {
   display: flex;
-  margin-bottom: 70px;
   .l {
     color: $color-note-link;
   }
@@ -229,7 +231,11 @@ a:hover {
     padding:10px 0;
   }
 }
-
+.color-menu-background {
+  background: $color-menu-background;
+}
+.og-link { text-decoration: none; }
+.og-link:hover { text-decoration: none; }
 .bar-item-no-hover {
   background: $color-menu-background;
   padding: 5px;

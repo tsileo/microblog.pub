@@ -23,24 +23,11 @@ def links_from_note(note):
     return links
 
 
-def fetch_og_metadata(user_agent, col, remote_id):
-    doc = col.find_one({"remote_id": remote_id})
-    if not doc:
-        raise ValueError
-    note = doc["activity"]["object"]
-    print(note)
-    links = links_from_note(note)
-    if not links:
-        return 0
-    # FIXME(tsileo): set the user agent by giving HTML directly to OpenGraph
+def fetch_og_metadata(user_agent, links):
     htmls = []
     for l in links:
         check_url(l)
-        r = requests.get(l, headers={"User-Agent": user_agent})
+        r = requests.get(l, headers={"User-Agent": user_agent}, timeout=15)
         r.raise_for_status()
         htmls.append(r.text)
-    links_og_metadata = [dict(opengraph.OpenGraph(html=html)) for html in htmls]
-    col.update_one(
-        {"remote_id": remote_id}, {"$set": {"meta.og_metadata": links_og_metadata}}
-    )
-    return len(links)
+    return [dict(opengraph.OpenGraph(html=html)) for html in htmls]

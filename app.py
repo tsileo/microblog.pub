@@ -239,6 +239,11 @@ def get_attachment_url(url, size):
 
 
 @app.template_filter()
+def get_og_image_url(url, size=100):
+    return _get_file_url(url, size, Kind.OG_IMAGE)
+
+
+@app.template_filter()
 def permalink_id(val):
     return str(hash(val))
 
