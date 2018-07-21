@@ -41,12 +41,18 @@ def process_new_activity(self, iri: str) -> None:
 
         # Is the activity expected?
         # following = ap.get_backend().following()
+        should_forward = False
 
         tag_stream = False
         if activity.has_type(ap.ActivityType.ANNOUNCE):
             tag_stream = True
+
         elif activity.has_type(ap.ActivityType.CREATE):
             note = activity.get_object()
+            # Make the note part of the stream if it's not a reply, or if it's a local reply
+            if not note.inReplyTo or note.inReplyTo.startswith(ID):
+                tag_stream = True
+
             if note.inReplyTo:
                 reply = ap.fetch_remote_activity(note.inReplyTo)
                 if (
@@ -54,7 +60,7 @@ def process_new_activity(self, iri: str) -> None:
                 ) and activity.is_public():
                     # The reply is public "local reply", forward the reply (i.e. the original activity) to the original
                     # recipients
-                    activity.forward(back.followers_as_recipients())
+                    should_forward = True
 
             # (partial) Ghost replies handling
             # [X] This is the first time the server has seen this Activity.
@@ -65,18 +71,27 @@ def process_new_activity(self, iri: str) -> None:
                     if local_followers in activity._data[field]:
                         # [X] The values of to, cc, and/or audience contain a Collection owned by the server.
                         should_forward = True
+
+            # [X] The values of inReplyTo, object, target and/or tag are objects owned by the server
             if not (note.inReplyTo and note.inReplyTo.startswith(ID)):
-                # [X] The values of inReplyTo, object, target and/or tag are objects owned by the server
                 should_forward = False
 
-            if should_forward:
-                activity.forward(back.followers_as_recipients())
-            else:
-                tag_stream = True
+        elif activity.has_type(ap.ActivityType.DELETE):
+            note = DB.activities.find_one(
+                {"activity.object.id": activity.get_object().id}
+            )
+            if note["meta"].get("forwarded", False):
+                # If the activity was originally forwarded, forward the delete too
+                should_forward = True
+
+        if should_forward:
+            log.info(f"will forward {activity!r} to followers")
+            activity.forward(back.followers_as_recipients())
 
         log.info(f"{iri} tag_stream={tag_stream}")
         DB.activities.update_one(
-            {"remote_id": activity.id}, {"$set": {"meta.stream": tag_stream}}
+            {"remote_id": activity.id},
+            {"$set": {"meta.stream": tag_stream, "meta.forwarded": should_forward}},
         )
 
         log.info(f"new activity {iri} processed")
