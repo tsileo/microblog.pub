@@ -32,7 +32,7 @@ back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)
 
 
-@app.task(bind=True, max_retries=12)
+@app.task(bind=True, max_retries=12)  # noqa: C901
 def process_new_activity(self, iri: str) -> None:
     """Process an activity received in the inbox"""
     try:
@@ -49,10 +49,28 @@ def process_new_activity(self, iri: str) -> None:
             note = activity.get_object()
             if note.inReplyTo:
                 reply = ap.fetch_remote_activity(note.inReplyTo)
-                if reply.id.startswith(ID) and activity.is_public():
+                if (
+                    reply.id.startswith(ID) or reply.has_mention(ID)
+                ) and activity.is_public():
                     # The reply is public "local reply", forward the reply (i.e. the original activity) to the original
                     # recipients
-                    activity.forward(reply.recipients())
+                    activity.forward(back.followers())
+
+            # (partial) Ghost replies handling
+            # [X] This is the first time the server has seen this Activity.
+            should_forward = False
+            local_followers = ID + "/followers"
+            for field in ["to", "cc"]:
+                if field in activity._data:
+                    if local_followers in activity._data[field]:
+                        # [X] The values of to, cc, and/or audience contain a Collection owned by the server.
+                        should_forward = True
+            if not (note.inReplyTo and note.inReplyTo.startswith(ID)):
+                # [X] The values of inReplyTo, object, target and/or tag are objects owned by the server
+                should_forward = False
+
+            if should_forward:
+                activity.forward(back.followers())
             else:
                 tag_stream = True
 
