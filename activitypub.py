@@ -32,13 +32,24 @@ logger = logging.getLogger(__name__)
 ACTORS_CACHE = LRUCache(maxsize=256)
 
 
-def _actor_to_meta(actor: ap.BaseActivity) -> Dict[str, Any]:
-    return {
+def _actor_to_meta(actor: ap.BaseActivity, with_inbox=False) -> Dict[str, Any]:
+    meta = {
+        "id": actor.id,
         "url": actor.url,
         "icon": actor.icon,
         "name": actor.name,
         "preferredUsername": actor.preferredUsername,
     }
+    if with_inbox:
+        meta.update(
+            {
+                "inbox": actor.inbox,
+                "sharedInbox": actor._data.get("endpoints", {}).get("sharedInbox"),
+            }
+        )
+    logger.debug(f"meta={meta}")
+
+    return meta
 
 
 def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
@@ -119,6 +130,20 @@ class MicroblogPubBackend(Backend):
             "meta.undo": False,
         }
         return [doc["activity"]["actor"] for doc in DB.activities.find(q)]
+
+    def followers_as_recipients(self) -> List[str]:
+        q = {
+            "box": Box.INBOX.value,
+            "type": ap.ActivityType.FOLLOW.value,
+            "meta.undo": False,
+        }
+        recipients = []
+        for doc in DB.activities.find(q):
+            recipients.append(
+                doc["meta"]["actor"]["sharedInbox"] or doc["meta"]["actor"]["inbox"]
+            )
+
+        return list(set(recipients))
 
     def following(self) -> List[str]:
         q = {

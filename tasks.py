@@ -54,7 +54,7 @@ def process_new_activity(self, iri: str) -> None:
                 ) and activity.is_public():
                     # The reply is public "local reply", forward the reply (i.e. the original activity) to the original
                     # recipients
-                    activity.forward(back.followers())
+                    activity.forward(back.followers_as_recipients())
 
             # (partial) Ghost replies handling
             # [X] This is the first time the server has seen this Activity.
@@ -70,7 +70,7 @@ def process_new_activity(self, iri: str) -> None:
                 should_forward = False
 
             if should_forward:
-                activity.forward(back.followers())
+                activity.forward(back.followers_as_recipients())
             else:
                 tag_stream = True
 
@@ -96,10 +96,34 @@ def cache_actor(self, iri: str, also_cache_attachments: bool = True) -> None:
 
         actor = activity.get_actor()
 
+        cache_actor_with_inbox = False
+        if activity.has_type(ap.ActivityType.FOLLOW):
+            if actor.id != ID:
+                # It's a Follow from the Inbox
+                cache_actor_with_inbox = True
+            else:
+                # It's a new following, cache the "object" (which is the actor we follow)
+                DB.activities.update_one(
+                    {"remote_id": iri},
+                    {
+                        "$set": {
+                            "meta.object": activitypub._actor_to_meta(
+                                activity.get_object()
+                            )
+                        }
+                    },
+                )
+
         # Cache the actor info
         DB.activities.update_one(
             {"remote_id": iri},
-            {"$set": {"meta.actor": activitypub._actor_to_meta(actor)}},
+            {
+                "$set": {
+                    "meta.actor": activitypub._actor_to_meta(
+                        actor, cache_actor_with_inbox
+                    )
+                }
+            },
         )
 
         log.info(f"actor cached for {iri}")
