@@ -8,12 +8,12 @@
 {% include "header.html" %}
 
 <div id="following">
-	{% for (follow_id, followed) in following_data %}
+	{% for follow in following_data %}
     {% if session.logged_in %}
 <div style="margin-left:90px;padding-bottom:5px;margin-bottom:15px;">
 <form action="/api/undo" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ request.path }}"/>
-<input type="hidden" name="id" value="{{ follow_id }}"/>
+<input type="hidden" name="id" value="{{ follow.id }}"/>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 <button type="submit" class="bar-item">unfollow</button>
 </form>
@@ -21,7 +21,7 @@
 
     {% endif %}
     <div style="height: 100px;">
-	{{ utils.display_actor_inline(followed, size=80) }}
+	{{ utils.display_actor_inline(follow, size=80) }}
     </div>
 	{% endfor %}
     {{ utils.display_pagination(older_than, newer_than) }}
