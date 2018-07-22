@@ -16,6 +16,7 @@ from little_boxes import strtobool
 from little_boxes.activitypub import _to_list
 from little_boxes.backend import Backend
 from little_boxes.errors import ActivityGoneError
+from little_boxes.errors import NotAnActivityError
 from little_boxes.errors import Error
 
 from config import BASE_URL
@@ -319,17 +320,16 @@ class MicroblogPubBackend(Backend):
 
     @ensure_it_is_me
     def inbox_announce(self, as_actor: ap.Person, announce: ap.Announce) -> None:
-        if isinstance(announce._data["object"], str) and not announce._data[
-            "object"
-        ].startswith("http"):
-            # TODO(tsileo): actually drop it without storing it and better logging, also move the check somewhere else
-            # or remote it?
-            logger.warn(
+        # TODO(tsileo): actually drop it without storing it and better logging, also move the check somewhere else
+        # or remove it?
+        try:
+            obj = announce.get_object()
+        except NotAnActivityError:
+            logger.exception(
                 f'received an Annouce referencing an OStatus notice ({announce._data["object"]}), dropping the message'
             )
             return
 
-        obj = announce.get_object()
         DB.activities.update_one(
             {"remote_id": announce.id},
             {

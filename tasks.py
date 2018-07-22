@@ -6,6 +6,7 @@ import random
 import requests
 from celery import Celery
 from little_boxes import activitypub as ap
+from little_boxes.errors import NotAnActivityError
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import ActivityNotFoundError
 from little_boxes.httpsig import HTTPSigAuth

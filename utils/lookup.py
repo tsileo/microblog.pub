@@ -4,13 +4,16 @@ import little_boxes.activitypub as ap
 import mf2py
 import requests
 from little_boxes.webfinger import get_actor_url
+from little_boxes.errors import NotAnActivityError
 
 
 def lookup(url: str) -> ap.BaseActivity:
     """Try to find an AP object related to the given URL."""
     try:
-        return ap.fetch_remote_activity(get_actor_url(url))
-    except Exception:
+        actor_url = get_actor_url(url)
+        if actor_url:
+            return ap.fetch_remote_activity(actor_url)
+    except NotAnActivityError:
         pass
 
     backend = ap.get_backend()
