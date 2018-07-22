@@ -638,6 +638,16 @@ def embed_collection(total_items, first_page_id):
     }
 
 
+def simple_build_ordered_collection(col_name, data):
+    return {
+        "@context": ap.COLLECTION_CTX,
+        "id": BASE_URL + "/" + col_name,
+        "totalItems": len(data),
+        "type": ap.ActivityType.ORDERED_COLLECTION.value,
+        "orederedItems": data,
+    }
+
+
 def build_ordered_collection(
     col, q=None, cursor=None, map_func=None, limit=50, col_name=None, first_page=False
 ):
@@ -652,6 +662,7 @@ def build_ordered_collection(
 
     if not data:
         return {
+            "@context": ap.COLLECTION_CTX,
             "id": BASE_URL + "/" + col_name,
             "totalItems": 0,
             "type": ap.ActivityType.ORDERED_COLLECTION.value,

@@ -131,6 +131,7 @@ ME = {
     "id": ID,
     "following": ID + "/following",
     "followers": ID + "/followers",
+    "featured": ID + "/featured",
     "liked": ID + "/liked",
     "inbox": ID + "/inbox",
     "outbox": ID + "/outbox",

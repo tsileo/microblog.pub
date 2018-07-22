@@ -23,10 +23,10 @@ import timeago
 from bson.objectid import ObjectId
 from dateutil import parser
 from flask import Flask
+from flask import make_response
 from flask import Response
 from flask import abort
 from flask import jsonify as flask_jsonify
-from flask import make_response
 from flask import redirect
 from flask import render_template
 from flask import request
@@ -1777,6 +1777,13 @@ def tags(tag):
             col_name=f"tags/{tag}",
         )
     )
+
+
+@app.route("/featured")
+def featured():
+    if not is_api_request():
+        abort(404)
+    return jsonify(**activitypub.simple_build_ordered_collection("featured", []))
 
 
 @app.route("/liked")
