@@ -117,7 +117,8 @@ def process_new_activity(self, iri: str) -> None:
         )
 
         log.info(f"new activity {iri} processed")
-        cache_actor.delay(iri)
+        if not should_delete:
+            cache_actor.delay(iri)
     except (ActivityGoneError, ActivityNotFoundError):
         log.exception(f"dropping activity {iri}, skip processing")
     except Exception as err:
