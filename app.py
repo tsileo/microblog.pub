@@ -805,17 +805,23 @@ def index():
         "meta.undo": False,
         "$or": [{"meta.pinned": False}, {"meta.pinned": {"$exists": False}}],
     }
-    q_pinned = {
-        "box": Box.OUTBOX.value,
-        "type": ActivityType.CREATE.value,
-        "meta.deleted": False,
-        "meta.undo": False,
-        "meta.pinned": True,
-    }
-    pinned = list(DB.activities.find(q_pinned))
+
+    pinned = []
+    # Only fetch the pinned notes if we're on the first page
+    if not request.args.get("older_than") and not request.args.get("newer_than"):
+        q_pinned = {
+            "box": Box.OUTBOX.value,
+            "type": ActivityType.CREATE.value,
+            "meta.deleted": False,
+            "meta.undo": False,
+            "meta.pinned": True,
+        }
+        pinned = list(DB.activities.find(q_pinned))
+
     outbox_data, older_than, newer_than = paginated_query(
         DB.activities, q, limit=25 - len(pinned)
     )
+
     return render_template(
         "index.html",
         outbox_data=outbox_data,
