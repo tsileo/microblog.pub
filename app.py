@@ -23,6 +23,7 @@ import timeago
 from bson.objectid import ObjectId
 from dateutil import parser
 from flask import Flask
+from flask import make_response
 from flask import Response
 from flask import abort
 from flask import jsonify as flask_jsonify
@@ -345,11 +346,30 @@ def is_img(filename):
     return _is_img(filename)
 
 
+def add_response_headers(headers={}):
+    """This decorator adds the headers passed in to the response"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            resp = make_response(f(*args, **kwargs))
+            h = resp.headers
+            for header, value in headers.items():
+                h[header] = value
+            return resp
+        return decorated_function
+    return decorator
+
+
+def noindex(f):
+    """This decorator passes X-Robots-Tag: noindex, nofollow"""
+    return add_response_headers({'X-Robots-Tag': 'noindex, nofollow'})(f)
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("logged_in"):
-            return redirect(url_for("login", next=request.url))
+            return redirect(url_for("admin_login", next=request.url))
         return f(*args, **kwargs)
 
     return decorated_function
@@ -445,6 +465,7 @@ def robots_txt():
 
 
 @app.route("/media/<media_id>")
+@noindex
 def serve_media(media_id):
     f = MEDIA_CACHE.fs.get(ObjectId(media_id))
     resp = app.response_class(f, direct_passthrough=True, mimetype=f.content_type)
@@ -484,6 +505,7 @@ def admin_logout():
 
 
 @app.route("/login", methods=["POST", "GET"])
+@noindex
 def admin_login():
     if session.get("logged_in") is True:
         return redirect(url_for("admin_notifications"))
@@ -1840,7 +1862,7 @@ def indieauth_flow():
 def indieauth_endpoint():
     if request.method == "GET":
         if not session.get("logged_in"):
-            return redirect(url_for("login", next=request.url))
+            return redirect(url_for("admin_login", next=request.url))
 
         me = request.args.get("me")
         # FIXME(tsileo): ensure me == ID
