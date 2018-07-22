@@ -275,6 +275,13 @@ def domain(url):
 
 
 @app.template_filter()
+def url_or_id(d):
+    if 'url' in d:
+        return d['url']
+    return d['id']
+
+
+@app.template_filter()
 def get_url(u):
     if isinstance(u, dict):
         return u["href"]
@@ -449,14 +456,14 @@ def handle_activitypub_error(error):
     return response
 
 
-@app.errorhandler(Exception)
-def handle_other_error(error):
-    logger.error(
-        f"caught error {error!r}, {traceback.format_tb(error.__traceback__)}"
-    )
-    response = flask_jsonify({})
-    response.status_code = 500
-    return response
+# @app.errorhandler(Exception)
+# def handle_other_error(error):
+#    logger.error(
+#        f"caught error {error!r}, {traceback.format_tb(error.__traceback__)}"
+#    )
+#    response = flask_jsonify({})
+#    response.status_code = 500
+#    return response
 
 
 # App routes
