@@ -449,6 +449,16 @@ def handle_activitypub_error(error):
     return response
 
 
+@app.errorhandler(Exception)
+def handle_other_error(error):
+    logger.error(
+        f"caught error {error!r}, {traceback.format_tb(error.__traceback__)}"
+    )
+    response = flask_jsonify({})
+    response.status_code = 500
+    return response
+
+
 # App routes
 
 ROBOTS_TXT = """User-agent: *
