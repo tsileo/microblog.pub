@@ -5,6 +5,7 @@ from little_boxes import activitypub as ap
 from little_boxes.errors import NotAnActivityError
 from little_boxes.urlutils import check_url
 from little_boxes.urlutils import is_url_valid
+
 from .lookup import lookup
 
 

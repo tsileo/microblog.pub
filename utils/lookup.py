@@ -3,8 +3,8 @@ import json
 import little_boxes.activitypub as ap
 import mf2py
 import requests
-from little_boxes.webfinger import get_actor_url
 from little_boxes.errors import NotAnActivityError
+from little_boxes.webfinger import get_actor_url
 
 
 def lookup(url: str) -> ap.BaseActivity:

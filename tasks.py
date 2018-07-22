@@ -6,9 +6,9 @@ import random
 import requests
 from celery import Celery
 from little_boxes import activitypub as ap
-from little_boxes.errors import NotAnActivityError
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import ActivityNotFoundError
+from little_boxes.errors import NotAnActivityError
 from little_boxes.httpsig import HTTPSigAuth
 from little_boxes.linked_data_sig import generate_signature
 from requests.exceptions import HTTPError
@@ -44,10 +44,17 @@ def process_new_activity(self, iri: str) -> None:
         # Is the activity expected?
         # following = ap.get_backend().following()
         should_forward = False
+        should_delete = False
 
         tag_stream = False
         if activity.has_type(ap.ActivityType.ANNOUNCE):
             tag_stream = True
+            try:
+                activity.get_object()
+            except NotAnActivityError:
+                # Most likely on OStatus notice
+                tag_stream = False
+                should_delete = True
 
         elif activity.has_type(ap.ActivityType.CREATE):
             note = activity.get_object()
@@ -56,13 +63,17 @@ def process_new_activity(self, iri: str) -> None:
                 tag_stream = True
 
             if note.inReplyTo:
-                reply = ap.fetch_remote_activity(note.inReplyTo)
-                if (
-                    reply.id.startswith(ID) or reply.has_mention(ID)
-                ) and activity.is_public():
-                    # The reply is public "local reply", forward the reply (i.e. the original activity) to the original
-                    # recipients
-                    should_forward = True
+                try:
+                    reply = ap.fetch_remote_activity(note.inReplyTo)
+                    if (
+                        reply.id.startswith(ID) or reply.has_mention(ID)
+                    ) and activity.is_public():
+                        # The reply is public "local reply", forward the reply (i.e. the original activity) to the
+                        # original recipients
+                        should_forward = True
+                except NotAnActivityError:
+                    # Most likely a reply to an OStatus notce
+                    should_delete = True
 
             # (partial) Ghost replies handling
             # [X] This is the first time the server has seen this Activity.
@@ -82,7 +93,7 @@ def process_new_activity(self, iri: str) -> None:
             note = DB.activities.find_one(
                 {"activity.object.id": activity.get_object().id}
             )
-            if note["meta"].get("forwarded", False):
+            if note and note["meta"].get("forwarded", False):
                 # If the activity was originally forwarded, forward the delete too
                 should_forward = True
 
@@ -90,10 +101,19 @@ def process_new_activity(self, iri: str) -> None:
             log.info(f"will forward {activity!r} to followers")
             activity.forward(back.followers_as_recipients())
 
+        if should_delete:
+            log.info(f"will soft delete {activity!r}")
+
         log.info(f"{iri} tag_stream={tag_stream}")
         DB.activities.update_one(
             {"remote_id": activity.id},
-            {"$set": {"meta.stream": tag_stream, "meta.forwarded": should_forward}},
+            {
+                "$set": {
+                    "meta.stream": tag_stream,
+                    "meta.forwarded": should_forward,
+                    "meta.deleted": should_delete,
+                }
+            },
         )
 
         log.info(f"new activity {iri} processed")

@@ -16,8 +16,8 @@ from little_boxes import strtobool
 from little_boxes.activitypub import _to_list
 from little_boxes.backend import Backend
 from little_boxes.errors import ActivityGoneError
-from little_boxes.errors import NotAnActivityError
 from little_boxes.errors import Error
+from little_boxes.errors import NotAnActivityError
 
 from config import BASE_URL
 from config import DB
