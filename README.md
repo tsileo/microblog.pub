@@ -152,6 +152,50 @@ $ http POST https://microblog.pub/api/note/delete Authorization:'Bearer <token>'
 }
 ```
 
+### POST /api/note/pin{?id}
+
+Adds the given note `id` (the note must from the instance outbox) to the featured collection (and pins it on the homepage).
+
+Answers a **201** (Created) status code.
+
+You can pass the `id` via JSON, form data or query argument.
+
+#### Example
+
+```shell
+$ http POST https://microblog.pub/api/note/pin Authorization:'Bearer <token>' id=http://microblob.pub/outbox/<note_id>/activity
+```
+
+#### Response
+
+```json
+{
+    "pinned": true
+}
+```
+
+### POST /api/note/unpin{?id}
+
+Removes the given note `id` (the note must from the instance outbox) from the featured collection (and un-pins it).
+
+Answers a **201** (Created) status code.
+
+You can pass the `id` via JSON, form data or query argument.
+
+#### Example
+
+```shell
+$ http POST https://microblog.pub/api/note/unpin Authorization:'Bearer <token>' id=http://microblob.pub/outbox/<note_id>/activity
+```
+
+#### Response
+
+```json
+{
+    "pinned": false
+}
+```
+
 ### POST /api/like{?id}
 
 Likes the given activity.
