@@ -237,13 +237,27 @@ a:hover {
 .og-link { text-decoration: none; }
 .og-link:hover { text-decoration: none; }
 .bar-item-no-hover {
+  cursor: default;
   background: $color-menu-background;
   padding: 5px;
   color: $color-light;
   margin-right:5px;
   border-radius:2px;
 }
-
+.bar-item-no-hover:hover {
+  cursor: default;
+}
+.bar-item-pinned {
+  cursor: default;
+  background: $color-menu-background;
+  color: $color-light;
+  padding: 5px;
+  margin-right:5px;
+  border-radius:2px;
+}
+.bar-item-pinned:hover {
+  cursor: default;
+}
 .bar-item {
   background: $color-menu-background;
   padding: 5px;

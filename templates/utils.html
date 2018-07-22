@@ -105,8 +105,8 @@
 {% elif meta.count_reply and session.logged_in %}
 <a class ="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> replies</a>{% endif %}
 
-{% if meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
-{% if meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
+{% if not perma and meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
+{% if not perma and meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
 
 {% if session.logged_in %}
 {% if ui%}
@@ -153,6 +153,22 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item">delete</button>
 </form>
+{% if meta.pinned %}
+<form action="/api/note/unpin" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">unpin</button>
+</form>
+{% else %}
+<form action="/api/note/pin" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">pin</button>
+</form>
+{% endif %}
+
 {% else %}
 <form action="/api/block" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">

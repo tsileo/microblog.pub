@@ -21,6 +21,16 @@
 {% include "header.html" %}
 
 <div id="notes">
+	{% for item in pinned %}
+    {% if item.meta.pinned %}
+    <p style="margin-left:65px;padding-bottom:5px;">
+    <span class="bar-item-pinned">pinned</span>
+    </p>
+    {% endif %}
+
+    {{ utils.display_note(item.activity.object, meta=item.meta, no_color=True) }}
+    {% endfor %}
+   
 	{% for item in outbox_data %}
 
 	{% if item | has_type('Announce') %}

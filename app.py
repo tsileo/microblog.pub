@@ -803,14 +803,25 @@ def index():
         "activity.object.inReplyTo": None,
         "meta.deleted": False,
         "meta.undo": False,
+        "$or": [{"meta.pinned": False}, {"meta.pinned": {"$exists": False}}],
     }
-    outbox_data, older_than, newer_than = paginated_query(DB.activities, q)
-
+    q_pinned = {
+        "box": Box.OUTBOX.value,
+        "type": ActivityType.CREATE.value,
+        "meta.deleted": False,
+        "meta.undo": False,
+        "meta.pinned": True,
+    }
+    pinned = list(DB.activities.find(q_pinned))
+    outbox_data, older_than, newer_than = paginated_query(
+        DB.activities, q, limit=25 - len(pinned)
+    )
     return render_template(
         "index.html",
         outbox_data=outbox_data,
         older_than=older_than,
         newer_than=newer_than,
+        pinned=pinned,
     )
 
 
@@ -1453,6 +1464,32 @@ def api_like():
     return _user_api_response(activity=like.id)
 
 
+@app.route("/api/note/pin", methods=["POST"])
+@api_required
+def api_pin():
+    note = _user_api_get_note(from_outbox=True)
+
+    DB.activities.update_one(
+        {"activity.object.id": note.id, "box": Box.OUTBOX.value},
+        {"$set": {"meta.pinned": True}},
+    )
+
+    return _user_api_response(pinned=True)
+
+
+@app.route("/api/note/unpin", methods=["POST"])
+@api_required
+def api_unpin():
+    note = _user_api_get_note(from_outbox=True)
+
+    DB.activities.update_one(
+        {"activity.object.id": note.id, "box": Box.OUTBOX.value},
+        {"$set": {"meta.pinned": False}},
+    )
+
+    return _user_api_response(pinned=False)
+
+
 @app.route("/api/undo", methods=["POST"])
 @api_required
 def api_undo():
@@ -1783,7 +1820,15 @@ def tags(tag):
 def featured():
     if not is_api_request():
         abort(404)
-    return jsonify(**activitypub.simple_build_ordered_collection("featured", []))
+    q = {
+        "box": Box.OUTBOX.value,
+        "type": ActivityType.CREATE.value,
+        "meta.deleted": False,
+        "meta.undo": False,
+        "meta.pinned": True,
+    }
+    data = [clean_activity(doc["activity"]["object"]) for doc in DB.activities.find(q)]
+    return jsonify(**activitypub.simple_build_ordered_collection("featured", data))
 
 
 @app.route("/liked")
