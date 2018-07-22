@@ -276,9 +276,9 @@ def domain(url):
 
 @app.template_filter()
 def url_or_id(d):
-    if 'url' in d:
-        return d['url']
-    return d['id']
+    if "url" in d:
+        return d["url"]
+    return d["id"]
 
 
 @app.template_filter()
@@ -355,6 +355,7 @@ def is_img(filename):
 
 def add_response_headers(headers={}):
     """This decorator adds the headers passed in to the response"""
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -363,13 +364,15 @@ def add_response_headers(headers={}):
             for header, value in headers.items():
                 h[header] = value
             return resp
+
         return decorated_function
+
     return decorator
 
 
 def noindex(f):
     """This decorator passes X-Robots-Tag: noindex, nofollow"""
-    return add_response_headers({'X-Robots-Tag': 'noindex, nofollow'})(f)
+    return add_response_headers({"X-Robots-Tag": "noindex, nofollow"})(f)
 
 
 def login_required(f):
@@ -415,7 +418,7 @@ def api_required(f):
 
 def jsonify(**data):
     if "@context" not in data:
-        data["@context"] = config.CTX_AS
+        data["@context"] = config.DEFAULT_CTX
     return Response(
         response=json.dumps(data),
         headers={
@@ -976,11 +979,6 @@ def wellknown_nodeinfo():
             }
         ]
     )
-
-
-# @app.route('/fake_feed')
-# def fake_feed():
-#    return '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0" xmlns:activity="http://activitystrea.ms/spec/1.0/" xmlns:poco="http://portablecontacts.net/spec/1.0" xmlns:ostatus="http://ostatus.org/schema/1.0"><id>https://lol3.tun.a4.io/fake_feed</id><author><id>https://lol3.tun.a4.io/fake</id></author><entry></entry></feed>'
 
 
 @app.route("/.well-known/webfinger")

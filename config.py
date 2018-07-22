@@ -9,6 +9,7 @@ import sass
 import yaml
 from itsdangerous import JSONWebSignatureSerializer
 from little_boxes import strtobool
+from little_boxes.activitypub import DEFAULT_CTX
 from pymongo import MongoClient
 
 from utils.key import KEY_DIR
@@ -46,10 +47,6 @@ VERSION = (
 
 DEBUG_MODE = strtobool(os.getenv("MICROBLOGPUB_DEBUG", "false"))
 
-
-CTX_AS = "https://www.w3.org/ns/activitystreams"
-CTX_SECURITY = "https://w3id.org/security/v1"
-AS_PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 HEADERS = [
     "application/activity+json",
     "application/ld+json;profile=https://www.w3.org/ns/activitystreams",
@@ -129,7 +126,7 @@ def _admin_jwt_token() -> str:
 ADMIN_API_KEY = get_secret_key("admin_api_key", _admin_jwt_token)
 
 ME = {
-    "@context": [CTX_AS, CTX_SECURITY],
+    "@context": DEFAULT_CTX,
     "type": "Person",
     "id": ID,
     "following": ID + "/following",
