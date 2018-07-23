@@ -429,7 +429,7 @@ class MicroblogPubBackend(Backend):
             {"$set": {"meta.undo": True, "meta.exta": "object deleted"}},
         )
 
-        self._handle_replies_delete(as_actor, obj)
+        self._handle_replies_delete(as_actor, obj.inReplyTo)
 
     @ensure_it_is_me
     def inbox_update(self, as_actor: ap.Person, update: ap.Update) -> None:
