@@ -232,7 +232,7 @@ def _get_file_url(url, size, kind):
 @app.template_filter()
 def remove_mongo_id(dat):
     if "_id" in dat:
-        del dat["_id"]
+        dat["_id"] = str(dat["_id"])
     return dat
 
 
@@ -1531,11 +1531,14 @@ def api_undo():
 @login_required
 def admin_stream():
     q = {"meta.stream": True, "meta.deleted": False}
-    inbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
     tpl = "stream.html"
     if request.args.get("debug"):
         tpl = "stream_debug.html"
+        if request.args.get("debug_inbox"):
+            q = {}
+
+    inbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
     return render_template(
         tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
