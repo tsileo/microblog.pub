@@ -57,7 +57,7 @@
 	{% if a.mediaType.startswith("image/") %}
     <a href="{{ a.url | get_attachment_url(None) }}"><img src="{{a.url | get_attachment_url(720) }}" class="img-attachment"></a>
 	{% else %}
-	<li><a href="{{a.url | get_attachment_url(None) }}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
+	<li><a href="{{a.url }}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
 	{% endif  %}
 	{% endfor %}
 	{% if obj.attachment | not_only_imgs %}
