@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block title %}{% if request.path == url_for('admin_stream') %}Stream{% else %}Notifications{% endif %} - {{ config.NAME }}{% endblock %}
+{% block content %}
+<div class="h-feed" id="container">
+{% include "header.html" %}
+<div id="admin">
+
+<div id="notes">
+	{% for item in inbox_data %}
+    <pre><code>{{ item |remove_mongo_id|tojson(indent=4) }}</code></pre>
+	{% endfor %}
+
+    {{ utils.display_pagination(older_than, newer_than) }}
+</div>
+</div>
+
+</div>
+{% endblock %}
