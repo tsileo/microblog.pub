@@ -230,6 +230,13 @@ def _get_file_url(url, size, kind):
 
 
 @app.template_filter()
+def remove_mongo_id(dat):
+    if "_id" in dat:
+        del dat["_id"]
+    return dat
+
+
+@app.template_filter()
 def get_actor_icon_url(url, size):
     return _get_file_url(url, size, Kind.ACTOR_ICON)
 
@@ -244,7 +251,7 @@ def get_og_image_url(url, size=100):
     try:
         return _get_file_url(url, size, Kind.OG_IMAGE)
     except Exception:
-        return ''
+        return ""
 
 
 @app.template_filter()
@@ -1526,11 +1533,12 @@ def admin_stream():
     q = {"meta.stream": True, "meta.deleted": False}
     inbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
+    tpl = "stream.html"
+    if request.args.get("debug"):
+        tpl = "stream_debug.html"
+
     return render_template(
-        "stream.html",
-        inbox_data=inbox_data,
-        older_than=older_than,
-        newer_than=newer_than,
+        tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
     )
 
 
