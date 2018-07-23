@@ -384,26 +384,17 @@ class MicroblogPubBackend(Backend):
     @ensure_it_is_me
     def inbox_delete(self, as_actor: ap.Person, delete: ap.Delete) -> None:
         obj = delete.get_object()
+        logger.debug("delete object={obj!r}")
         DB.activities.update_one(
             {"activity.object.id": obj.id}, {"$set": {"meta.deleted": True}}
         )
-
-        if obj.ACTIVITY_TYPE != ap.ActivityType.NOTE:
-            obj = ap.parse_activity(
-                DB.activities.find_one(
-                    {
-                        "activity.object.id": delete.get_object().id,
-                        "type": ap.ActivityType.CREATE.value,
-                    }
-                )["activity"]
-            ).get_object()
 
         logger.info(f"inbox_delete handle_replies obj={obj!r}")
 
         # Fake a Undo so any related Like/Announce doesn't appear on the web UI
         DB.activities.update(
             {"meta.object.id": obj.id},
-            {"$set": {"meta.undo": True, "meta.exta": "object deleted"}},
+            {"$set": {"meta.undo": True, "meta.extra": "object deleted"}},
         )
         if obj:
             self._handle_replies_delete(as_actor, obj)
