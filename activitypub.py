@@ -635,7 +635,7 @@ def simple_build_ordered_collection(col_name, data):
         "id": BASE_URL + "/" + col_name,
         "totalItems": len(data),
         "type": ap.ActivityType.ORDERED_COLLECTION.value,
-        "orederedItems": data,
+        "orderedItems": data,
     }
 
 
@@ -657,7 +657,7 @@ def build_ordered_collection(
             "id": BASE_URL + "/" + col_name,
             "totalItems": 0,
             "type": ap.ActivityType.ORDERED_COLLECTION.value,
-            "orederedItems": [],
+            "oredredItems": [],
         }
 
     start_cursor = str(data[0]["_id"])
