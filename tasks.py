@@ -234,7 +234,8 @@ def cache_attachments(self, iri: str) -> None:
 
         if activity.has_type(ap.ActivityType.CREATE):
             for attachment in activity.get_object()._data.get("attachment", []):
-                MEDIA_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
+                if attachment.get("mediaType", "").startswith("image/"):
+                    MEDIA_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
 
         log.info(f"attachments cached for {iri}")
 
