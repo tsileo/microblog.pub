@@ -151,6 +151,7 @@ def fetch_og_metadata(self, iri: str) -> None:
     except requests.exceptions.HTTPError as http_err:
         if 400 <= http_err.response.status_code < 500:
             log.exception("bad request, no retry")
+            return
         log.exception("failed to fetch OG metadata")
         self.retry(
             exc=http_err, countdown=int(random.uniform(2, 4) ** self.request.retries)
