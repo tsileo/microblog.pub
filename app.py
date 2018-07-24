@@ -1538,7 +1538,7 @@ def admin_stream():
         if request.args.get("debug_inbox"):
             q = {}
 
-    inbox_data, older_than, newer_than = paginated_query(DB.activities, q)
+    inbox_data, older_than, newer_than = paginated_query(DB.activities, q, limit=int(request.args.get('limit', 25)))
 
     return render_template(
         tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
