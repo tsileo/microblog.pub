@@ -1,3 +1,4 @@
+{% if not request.path.startswith('/admin') %}
 <div id="header">
 
 <div class="h-card p-author">
@@ -8,15 +9,12 @@
         {% if not session.logged_in %}<small><a class="remote-follow-button" href="/remote_follow">Remote follow</a></small>{% endif %}
 </a>
 
-{% if not request.path.startswith('/admin') %}
 <div class="p-note summary">
 {{ config.SUMMARY | safe }}
 </div>
-{% endif %}
 
 </div>
 
-{% if not request.path.startswith('/admin') %}
 <div class="menu">
 <ul>
 <li><a href="/" {% if request.path == "/" %}class="selected"{% endif %}>Notes <small class="badge">{{ notes_count }}</small></a></li>
@@ -29,6 +27,6 @@
 -->
 </ul>
 </div>
-{% endif %}
 
 </div>
+{% endif %}
