@@ -140,6 +140,8 @@ ME = {
     "summary": SUMMARY,
     "endpoints": {},
     "url": ID,
+    "manuallyApprovesFollowers": False,
+    "attachment": [],
     "icon": {
         "mediaType": mimetypes.guess_type(ICON_URL)[0],
         "type": "Image",
