@@ -225,8 +225,9 @@ def _get_file_url(url, size, kind):
         _GRIDFS_CACHE[k] = u
         return u
 
-    MEDIA_CACHE.cache(url, kind)
-    return _get_file_url(url, size, kind)
+    # MEDIA_CACHE.cache(url, kind)
+    app.logger.error("cache not available for {url}/{size}/{kind}")
+    return url
 
 
 @app.template_filter()

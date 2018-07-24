@@ -239,7 +239,10 @@ def cache_attachments(self, iri: str) -> None:
                     attachment.get("mediaType", "").startswith("image/")
                     or attachment.get("type") == ap.ActivityType.IMAGE.value
                 ):
-                    MEDIA_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
+                    try:
+                        MEDIA_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
+                    except ValueError:
+                        log.exception(f"failed to cache {attachment}")
 
         log.info(f"attachments cached for {iri}")
 
