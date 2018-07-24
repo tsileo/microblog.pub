@@ -48,9 +48,9 @@ def process_new_activity(self, iri: str) -> None:
 
         tag_stream = False
         if activity.has_type(ap.ActivityType.ANNOUNCE):
-            tag_stream = True
             try:
                 activity.get_object()
+                tag_stream = True
             except NotAnActivityError:
                 # Most likely on OStatus notice
                 tag_stream = False
@@ -235,7 +235,10 @@ def cache_attachments(self, iri: str) -> None:
 
         if activity.has_type(ap.ActivityType.CREATE):
             for attachment in activity.get_object()._data.get("attachment", []):
-                if attachment.get("mediaType", "").startswith("image/"):
+                if (
+                    attachment.get("mediaType", "").startswith("image/")
+                    or attachment.get("type") == ap.ActivityType.IMAGE.value
+                ):
                     MEDIA_CACHE.cache(attachment["url"], Kind.ATTACHMENT)
 
         log.info(f"attachments cached for {iri}")
