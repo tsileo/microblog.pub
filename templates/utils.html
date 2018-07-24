@@ -89,10 +89,10 @@
 <div class="bottom-bar">
 {% if perma %}<span class="perma-item">{{ obj.published | format_time }}</span>
 {% if not (obj.id | is_from_outbox) %}
-<a class ="bar-item" href="{{ obj.url | get_url }}">permalink</a> 
+<a class ="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
 {% endif %}
 {% else %}
-<a class ="bar-item" href="{{ obj.url | get_url }}">permalink</a> 
+<a class ="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
 {% endif %}
 
 {% if session.logged_in %}
