@@ -15,6 +15,10 @@ def lookup(url: str) -> ap.BaseActivity:
             return ap.fetch_remote_activity(actor_url)
     except NotAnActivityError:
         pass
+    except requests.HTTPError:
+        # Some websites may returns 404, 503 or others when they don't support webfinger, and we're just taking a guess
+        # when performing the lookup.
+        pass
 
     backend = ap.get_backend()
     resp = requests.get(
