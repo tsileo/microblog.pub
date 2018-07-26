@@ -902,7 +902,10 @@ def _build_thread(data, include_children=True):
         if rep_id == root_id:
             continue
         reply_of = rep["activity"]["object"]["inReplyTo"]
-        idx[reply_of]["_nodes"].append(rep)
+        try:
+            idx[reply_of]["_nodes"].append(rep)
+        except KeyError:
+            app.logger.info(f"{reply_of} is not there! skipping {rep}")
 
     # Flatten the tree
     thread = []
