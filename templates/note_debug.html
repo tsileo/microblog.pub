@@ -17,7 +17,6 @@
 <div id="container">
 {% include "header.html" %}
 <pre><code>{{ thread | remove_mongo_id | tojson(indent=4) }}</code></pre>
-{{ utils.display_thread(thread, likes=likes, shares=shares) }}
 </div>
 {% endblock %}
 {% block links %}<link rel="alternate" href="{{ note.activity.object.id}}" type="application/activity+json">{% endblock %}
