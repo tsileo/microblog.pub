@@ -232,8 +232,13 @@ def _get_file_url(url, size, kind):
 
 @app.template_filter()
 def remove_mongo_id(dat):
+    if isinstance(dat, list):
+        return [remove_mongo_id(item) for item in dat]
     if "_id" in dat:
         dat["_id"] = str(dat["_id"])
+    for k, v in dat.items():
+        if isinstance(v, dict):
+            dat[k] = remove_mongo_id(dat[k])
     return dat
 
 
@@ -1329,7 +1334,10 @@ def admin_thread():
         abort(410)
     thread = _build_thread(data)
 
-    return render_template("note.html", thread=thread, note=data)
+    tpl = "note.html"
+    if request.args.get("debug"):
+        tpl = "note_debug.html"
+    return render_template(tpl, thread=thread, note=data)
 
 
 @app.route("/admin/new", methods=["GET"])
@@ -1539,7 +1547,9 @@ def admin_stream():
         if request.args.get("debug_inbox"):
             q = {}
 
-    inbox_data, older_than, newer_than = paginated_query(DB.activities, q, limit=int(request.args.get('limit', 25)))
+    inbox_data, older_than, newer_than = paginated_query(
+        DB.activities, q, limit=int(request.args.get("limit", 25))
+    )
 
     return render_template(
         tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
