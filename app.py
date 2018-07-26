@@ -1785,7 +1785,7 @@ def following():
         abort(404)
 
     following, older_than, newer_than = paginated_query(DB.activities, q)
-    following = [doc["meta"]["object"] for doc in following]
+    following = [(doc["remote_id"], doc["meta"]["object"]) for doc in following]
     return render_template(
         "following.html",
         following_data=following,
