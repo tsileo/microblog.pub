@@ -336,6 +336,14 @@ def has_type(doc, _type):
     return False
 
 
+@app.template_filter()
+def has_actor_type(doc):
+    for t in ap.ACTOR_TYPES:
+        if has_type(doc, t.value):
+            return True
+    return False
+
+
 def _is_img(filename):
     filename = filename.lower()
     if (

@@ -15,7 +15,7 @@
 {% if data %}
 {% set data = data.to_dict() %}
 <div id="lookup-result" style="margin-top:30px;">
-    {% if data | has_type('Person') or data | has_type('Service') %}
+    {% if data | has_actor_type %}
 <div style="margin-left:95px;padding-bottom:5px;margin-bottom:15px;">
 <form action="/api/follow" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ request.path }}"/>
