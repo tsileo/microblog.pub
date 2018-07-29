@@ -1454,7 +1454,6 @@ def api_delete():
     """API endpoint to delete a Note activity."""
     note = _user_api_get_note(from_outbox=True)
 
-    delete = note.build_delete()
     delete = ap.Delete(actor=ID, object=ap.Tombstone(id=note.id).to_dict(embed=True))
 
     delete_id = tasks.post_to_outbox(delete)
