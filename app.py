@@ -74,7 +74,6 @@ from config import PASS
 from config import USERNAME
 from config import VERSION
 from config import _drop_db
-from config import custom_cache_purge_hook
 from utils.key import get_secret_key
 from utils.lookup import lookup
 from utils.media import Kind
@@ -90,9 +89,6 @@ def save_cb(box: Box, iri: str) -> None:
 
 
 back.set_save_cb(save_cb)
-
-
-back.set_post_to_remote_inbox(tasks.post_to_inbox.delay)
 
 ap.use_backend(back)
 
@@ -116,9 +112,6 @@ else:
     root_logger.setLevel(gunicorn_logger.level)
 
 SIG_AUTH = HTTPSigAuth(KEY)
-
-OUTBOX = ap.Outbox(MY_PERSON)
-INBOX = ap.Inbox(MY_PERSON)
 
 
 def verify_pass(pwd):
@@ -615,7 +608,7 @@ def authorize_follow():
         return redirect("/following")
 
     follow = ap.Follow(actor=MY_PERSON.id, object=actor)
-    OUTBOX.post(follow)
+    tasks.post_to_outbox(follow)
 
     return redirect("/following")
 
@@ -1121,12 +1114,9 @@ def outbox():
     data = request.get_json(force=True)
     print(data)
     activity = ap.parse_activity(data)
-    OUTBOX.post(activity)
+    activity_id = tasks.post_to_outbox(activity)
 
-    # Purge the cache if a custom hook is set, as new content was published
-    custom_cache_purge_hook()
-
-    return Response(status=201, headers={"Location": activity.id})
+    return Response(status=201, headers={"Location": activity_id})
 
 
 @app.route("/outbox/<item_id>")
@@ -1465,9 +1455,9 @@ def api_delete():
     note = _user_api_get_note(from_outbox=True)
 
     delete = note.build_delete()
-    OUTBOX.post(delete)
+    delete_id = tasks.post_to_outbox(delete)
 
-    return _user_api_response(activity=delete.id)
+    return _user_api_response(activity=delete_id)
 
 
 @app.route("/api/boost", methods=["POST"])
@@ -1476,9 +1466,9 @@ def api_boost():
     note = _user_api_get_note()
 
     announce = note.build_announce(MY_PERSON)
-    OUTBOX.post(announce)
+    announce_id = tasks.post_to_outbox(announce)
 
-    return _user_api_response(activity=announce.id)
+    return _user_api_response(activity=announce_id)
 
 
 @app.route("/api/like", methods=["POST"])
@@ -1487,9 +1477,9 @@ def api_like():
     note = _user_api_get_note()
 
     like = note.build_like(MY_PERSON)
-    OUTBOX.post(like)
+    like_id = tasks.post_to_outbox(like)
 
-    return _user_api_response(activity=like.id)
+    return _user_api_response(activity=like_id)
 
 
 @app.route("/api/note/pin", methods=["POST"])
@@ -1534,9 +1524,9 @@ def api_undo():
     obj = ap.parse_activity(doc.get("activity"))
     # FIXME(tsileo): detect already undo-ed and make this API call idempotent
     undo = obj.build_undo()
-    OUTBOX.post(undo)
+    undo_id = tasks.post_to_outbox(undo)
 
-    return _user_api_response(activity=undo.id)
+    return _user_api_response(activity=undo_id)
 
 
 @app.route("/admin/stream")
@@ -1605,7 +1595,7 @@ def inbox():
             )
     activity = ap.parse_activity(data)
     logger.debug(f"inbox activity={activity}/{data}")
-    INBOX.post(activity)
+    tasks.post_to_inbox(activity)
 
     return Response(status=201)
 
@@ -1691,9 +1681,9 @@ def api_new_note():
 
     note = ap.Note(**raw_note)
     create = note.build_create()
-    OUTBOX.post(create)
+    create_id = tasks.post_to_outbox(create)
 
-    return _user_api_response(activity=create.id)
+    return _user_api_response(activity=create_id)
 
 
 @app.route("/api/stream")
@@ -1724,9 +1714,9 @@ def api_block():
         return _user_api_response(activity=existing["activity"]["id"])
 
     block = ap.Block(actor=MY_PERSON.id, object=actor)
-    OUTBOX.post(block)
+    block_id = tasks.post_to_outbox(block)
 
-    return _user_api_response(activity=block.id)
+    return _user_api_response(activity=block_id)
 
 
 @app.route("/api/follow", methods=["POST"])
@@ -1746,9 +1736,9 @@ def api_follow():
         return _user_api_response(activity=existing["activity"]["id"])
 
     follow = ap.Follow(actor=MY_PERSON.id, object=actor)
-    OUTBOX.post(follow)
+    follow_id = tasks.post_to_outbox(follow)
 
-    return _user_api_response(activity=follow.id)
+    return _user_api_response(activity=follow_id)
 
 
 @app.route("/followers")

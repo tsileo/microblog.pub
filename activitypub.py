@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 from datetime import datetime
 from enum import Enum
 from typing import Any
@@ -120,10 +121,6 @@ class MicroblogPubBackend(Backend):
     def set_save_cb(self, cb):
         self.save_cb = cb
 
-    @ensure_it_is_me
-    def outbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
-        self.save(Box.OUTBOX, activity)
-
     def followers(self) -> List[str]:
         q = {
             "box": Box.INBOX.value,
@@ -241,20 +238,8 @@ class MicroblogPubBackend(Backend):
     def inbox_check_duplicate(self, as_actor: ap.Person, iri: str) -> bool:
         return bool(DB.activities.find_one({"box": Box.INBOX.value, "remote_id": iri}))
 
-    @ensure_it_is_me
-    def inbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
-        self.save(Box.INBOX, activity)
-
     def set_post_to_remote_inbox(self, cb):
         self.post_to_remote_inbox_cb = cb
-
-    @ensure_it_is_me
-    def post_to_remote_inbox(self, as_actor: ap.Person, payload: str, to: str) -> None:
-        self.post_to_remote_inbox_cb(payload, to)
-
-    @ensure_it_is_me
-    def new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        pass
 
     @ensure_it_is_me
     def undo_new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
@@ -267,10 +252,6 @@ class MicroblogPubBackend(Backend):
         DB.activities.update_one(
             {"remote_id": follow.id}, {"$set": {"meta.undo": True}}
         )
-
-    @ensure_it_is_me
-    def new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        pass
 
     @ensure_it_is_me
     def inbox_like(self, as_actor: ap.Person, like: ap.Like) -> None:
@@ -526,6 +507,25 @@ class MicroblogPubBackend(Backend):
             {"box": Box.REPLIES.value, "remote_id": {"$in": new_threads}},
             {"$set": {"meta.thread_root_parent": root_reply}},
         )
+
+    def post_to_outbox(self, activity: ap.BaseActivity) -> None:
+        if activity.has_type(ap.CREATE_TYPES):
+            activity = activity.build_create()
+
+        self.save(Box.OUTBOX, activity)
+
+        # Assign create a random ID
+        obj_id = self.random_object_id()
+        activity.set_id(self.activity_url(obj_id), obj_id)
+
+        recipients = activity.recipients()
+        logger.info(f"recipients={recipients}")
+        activity = ap.clean_activity(activity.to_dict())
+
+        payload = json.dumps(activity)
+        for recp in recipients:
+            logger.debug(f"posting to {recp}")
+            self.post_to_remote_inbox(self.get_actor(), payload, recp)
 
 
 def gen_feed():

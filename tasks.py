@@ -14,8 +14,10 @@ from little_boxes.linked_data_sig import generate_signature
 from requests.exceptions import HTTPError
 
 import activitypub
+from activitypub import Box
 from config import DB
 from config import HEADERS
+from config import ME
 from config import ID
 from config import KEY
 from config import MEDIA_CACHE
@@ -32,6 +34,8 @@ SigAuth = HTTPSigAuth(KEY)
 
 back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)
+
+MY_PERSON = ap.Person(**ME)
 
 
 @app.task(bind=True, max_retries=12)  # noqa: C901
@@ -253,8 +257,110 @@ def cache_attachments(self, iri: str) -> None:
         self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
 
 
+def post_to_inbox(activity: ap.BaseActivity) -> None:
+    # Check for Block activity
+    actor = activity.get_actor()
+    if back.outbox_is_blocked(MY_PERSON, actor.id):
+        log.info(
+            f"actor {actor!r} is blocked, dropping the received activity {activity!r}"
+        )
+    return
+
+    if back.inbox_check_duplicate(MY_PERSON, activity.id):
+        # The activity is already in the inbox
+        log.info(f"received duplicate activity {activity!r}, dropping it")
+
+    back.save(Box.INBOX, activity)
+    finish_post_to_inbox.delay(activity.id)
+
+
+@app.task(bind=True, max_retries=12)  # noqa: C901
+def finish_post_to_inbox(self, iri: str) -> None:
+    try:
+        activity = ap.fetch_remote_activity(iri)
+        log.info(f"activity={activity!r}")
+
+        if activity.has_type(ap.ActivityType.DELETE):
+            back.inbox_delete(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.UPDATE):
+            back.inbox_update(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.CREATE):
+            back.inbox_create(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.ANNOUNCE):
+            back.inbox_announce(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.LIKE):
+            back.inbox_like(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.FOLLOW):
+            # Reply to a Follow with an Accept
+            accept = ap.Accept(actor=ID, object=activity.to_dict(embed=True))
+            post_to_outbox(accept)
+        elif activity.has_type(ap.ActivityType.UNDO):
+            obj = activity.get_object()
+            if obj.has_type(ap.ActivityType.LIKE):
+                back.inbox_undo_like(MY_PERSON, obj)
+            elif obj.has_type(ap.ActivityType.ANNOUNCE):
+                back.inbox_undo_announce(MY_PERSON, obj)
+            elif obj.has_type(ap.ActivityType.FOLLOW):
+                back.undo_new_follower(MY_PERSON, obj)
+
+    except Exception as err:
+        log.exception(f"failed to cache attachments for {iri}")
+        self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
+
+
+def post_to_outbox(activity: ap.BaseActivity) -> str:
+    if activity.has_type(ap.CREATE_TYPES):
+        activity = activity.build_create()
+
+    # Assign create a random ID
+    obj_id = back.random_object_id()
+    activity.set_id(back.activity_url(obj_id), obj_id)
+
+    back.save(Box.OUTBOX, activity)
+    finish_post_to_outbox.delay(activity.id)
+    return activity.id
+
+
+@app.task(bind=True, max_retries=12)  # noqa:C901
+def finish_post_to_outbox(self, iri: str) -> None:
+    try:
+        activity = ap.fetch_remote_activity(iri)
+        log.info(f"activity={activity!r}")
+
+        if activity.has_type(ap.activitytype.delete):
+            back.outbox_delete(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.UPDATE):
+            back.outbox_update(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.CREATE):
+            back.outbox_create(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.ANNOUNCE):
+            back.outbox_announce(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.LIKE):
+            back.outbox_like(MY_PERSON, activity)
+        elif activity.has_type(ap.ActivityType.UNDO):
+            obj = activity.get_object()
+            if obj.has_type(ap.ActivityType.LIKE):
+                back.outbox_undo_like(MY_PERSON, obj)
+            elif obj.has_type(ap.ActivityType.ANNOUNCE):
+                back.outbox_undo_announce(MY_PERSON, obj)
+            elif obj.has_type(ap.ActivityType.FOLLOW):
+                back.undo_new_following(MY_PERSON, obj)
+
+        recipients = activity.recipients()
+        log.info(f"recipients={recipients}")
+        activity = ap.clean_activity(activity.to_dict())
+
+        payload = json.dumps(activity)
+        for recp in recipients:
+            log.debug(f"posting to {recp}")
+            post_to_remote_inbox.delay(payload, recp)
+    except Exception as err:
+        log.exception(f"failed to cache attachments for {iri}")
+        self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
+
+
 @app.task(bind=True, max_retries=12)
-def post_to_inbox(self, payload: str, to: str) -> None:
+def post_to_remote_inbox(self, payload: str, to: str) -> None:
     try:
         log.info("payload=%s", payload)
         log.info("generating sig")
