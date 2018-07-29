@@ -1303,11 +1303,20 @@ def admin():
 @login_required
 def admin_lookup():
     data = None
+    meta = None
     if request.method == "POST":
         if request.form.get("url"):
             data = lookup(request.form.get("url"))
+            if data.has_type(ActivityType.ANNOUNCE):
+                meta = dict(
+                    object=data.get_object().to_dict(),
+                    object_actor=data.get_object().get_actor().to_dict(),
+                    actor=data.get_actor().to_dict(),
+                )
 
-    return render_template("lookup.html", data=data, url=request.form.get("url"))
+    return render_template(
+        "lookup.html", data=data, meta=meta, url=request.form.get("url")
+    )
 
 
 @app.route("/admin/thread")
