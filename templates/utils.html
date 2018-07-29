@@ -33,11 +33,11 @@
 </div>
 
 <div class="note-wrapper">
-	<a href="{{ actor | url_or_id | get_url }}" style="margin:0;text-decoration:none;" class="no-hover"><strong>{{ actor.name or actor.preferredUsername }}</strong>
+	<a href="{{ actor | url_or_id | get_url }}" style="margin:0;text-decoration:none;margin: 0;text-decoration: none;display: block;width: 80%;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;float: left;" class="no-hover"><strong>{{ actor.name or actor.preferredUsername }}</strong>
         <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername }}</span>{% else %}{{ actor.preferredUsername }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span></a>
 
 	{% if not perma %}
-	<span style="float:right">
+	<span style="float:right;width: 20%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
 		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj.url | get_url }}">
 			<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}">{{ obj.published | format_timeago }}</time></a>
 	</span>
