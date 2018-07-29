@@ -35,6 +35,17 @@ SigAuth = HTTPSigAuth(KEY)
 back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)
 
+
+def save_cb(box: Box, iri: str) -> None:
+    if box == Box.INBOX:
+        process_new_activity.delay(iri)
+    else:
+        cache_actor.delay(iri)
+
+
+back.set_save_cb(save_cb)
+
+
 MY_PERSON = ap.Person(**ME)
 
 
@@ -327,7 +338,7 @@ def finish_post_to_outbox(self, iri: str) -> None:
         activity = ap.fetch_remote_activity(iri)
         log.info(f"activity={activity!r}")
 
-        if activity.has_type(ap.activitytype.delete):
+        if activity.has_type(ap.ActivityType.DELETE):
             back.outbox_delete(MY_PERSON, activity)
         elif activity.has_type(ap.ActivityType.UPDATE):
             back.outbox_update(MY_PERSON, activity)

@@ -26,6 +26,7 @@ services:
     environment:
      - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
+     - MICROBLOGPUB_DEBUG=1
   mongo:
     image: "mongo:latest"
   rmq:
