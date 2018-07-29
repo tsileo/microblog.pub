@@ -339,6 +339,8 @@ def finish_post_to_outbox(self, iri: str) -> None:
         activity = ap.fetch_remote_activity(iri)
         log.info(f"activity={activity!r}")
 
+        recipients = activity.recipients()
+
         if activity.has_type(ap.ActivityType.DELETE):
             back.outbox_delete(MY_PERSON, activity)
         elif activity.has_type(ap.ActivityType.UPDATE):
@@ -358,7 +360,6 @@ def finish_post_to_outbox(self, iri: str) -> None:
             elif obj.has_type(ap.ActivityType.FOLLOW):
                 back.undo_new_following(MY_PERSON, obj)
 
-        recipients = activity.recipients()
         log.info(f"recipients={recipients}")
         activity = ap.clean_activity(activity.to_dict())
 
