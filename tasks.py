@@ -275,13 +275,14 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         log.info(
             f"actor {actor!r} is blocked, dropping the received activity {activity!r}"
         )
-    return
+        return
 
     if back.inbox_check_duplicate(MY_PERSON, activity.id):
         # The activity is already in the inbox
         log.info(f"received duplicate activity {activity!r}, dropping it")
 
     back.save(Box.INBOX, activity)
+    log.info(f"spawning task for {activity!r}")
     finish_post_to_inbox.delay(activity.id)
 
 
