@@ -114,7 +114,7 @@ def process_new_activity(self, iri: str) -> None:
 
         if should_forward:
             log.info(f"will forward {activity!r} to followers")
-            activity.forward(back.followers_as_recipients())
+            forward_activity.delay(activity.id)
 
         if should_delete:
             log.info(f"will soft delete {activity!r}")
@@ -366,6 +366,22 @@ def finish_post_to_outbox(self, iri: str) -> None:
         payload = json.dumps(activity)
         for recp in recipients:
             log.debug(f"posting to {recp}")
+            post_to_remote_inbox.delay(payload, recp)
+    except Exception as err:
+        log.exception(f"failed to post to remote inbox for {iri}")
+        self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
+
+
+@app.task(bind=True, max_retries=12)  # noqa:C901
+def forward_activity(self, iri: str) -> None:
+    try:
+        activity = ap.fetch_remote_activity(iri)
+        recipients = back.followers_as_recipients()
+        log.debug(f"Forwarding {activity!r} to {recipients}")
+        activity = ap.clean_activity(activity.to_dict())
+        payload = json.dumps(activity)
+        for recp in recipients:
+            log.debug(f"forwarding {activity!r} to {recp}")
             post_to_remote_inbox.delay(payload, recp)
     except Exception as err:
         log.exception(f"failed to cache attachments for {iri}")
