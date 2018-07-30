@@ -10,9 +10,10 @@ from little_boxes.webfinger import get_actor_url
 def lookup(url: str) -> ap.BaseActivity:
     """Try to find an AP object related to the given URL."""
     try:
-        actor_url = get_actor_url(url)
-        if actor_url:
-            return ap.fetch_remote_activity(actor_url)
+        if url.startswith('@'):
+            actor_url = get_actor_url(url)
+            if actor_url:
+                return ap.fetch_remote_activity(actor_url)
     except NotAnActivityError:
         pass
     except requests.HTTPError:

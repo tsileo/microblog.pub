@@ -40,7 +40,7 @@
 
 	{% if not perma %}
 	<span style="float:right;width: 20%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
-		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj.url | get_url }}">
+		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj | url_or_id | get_url }}">
 			<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}">{{ obj.published | format_timeago }}</time></a>
 	</span>
 	{% endif %}

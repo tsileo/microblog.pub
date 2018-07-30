@@ -219,7 +219,7 @@ def _get_file_url(url, size, kind):
         return u
 
     # MEDIA_CACHE.cache(url, kind)
-    app.logger.error("cache not available for {url}/{size}/{kind}")
+    app.logger.error(f"cache not available for {url}/{size}/{kind}")
     return url
 
 
