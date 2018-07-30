@@ -1397,7 +1397,10 @@ def admin_notifications():
         "type": ActivityType.UNDO.value,
         "activity.object.type": ActivityType.FOLLOW.value,
     }
-    likes_query = {"type": ActivityType.LIKE.value}
+    likes_query = {
+        "type": ActivityType.LIKE.value,
+        "activity.object": {"$regex": f"^{BASE_URL}"},
+    }
     followed_query = {"type": ActivityType.ACCEPT.value}
     q = {
         "box": Box.INBOX.value,
