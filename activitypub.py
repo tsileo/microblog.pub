@@ -280,16 +280,6 @@ class MicroblogPubBackend(Backend):
             {"$inc": {"meta.count_like": 1}, "$set": {"meta.liked": like.id}},
         )
 
-        DB.activities.update_one(
-            {"remote_id": like.id},
-            {
-                "$set": {
-                    "meta.object": obj.to_dict(embed=True),
-                    "meta.object_actor": _actor_to_meta(obj.get_actor()),
-                }
-            },
-        )
-
     @ensure_it_is_me
     def outbox_undo_like(self, as_actor: ap.Person, like: ap.Like) -> None:
         obj = like.get_object()

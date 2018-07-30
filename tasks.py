@@ -177,6 +177,30 @@ def fetch_og_metadata(self, iri: str) -> None:
 
 
 @app.task(bind=True, max_retries=12)
+def cache_object(self, iri: str) -> None:
+    try:
+        activity = ap.fetch_remote_activity(iri)
+        log.info(f"activity={activity!r}")
+
+        obj = activity.get_object()
+        DB.activities.update_one(
+            {"remote_id": activity.id},
+            {
+                "$set": {
+                    "meta.object": obj.to_dict(embed=True),
+                    "meta.object_actor": activitypub._actor_to_meta(obj.get_actor()),
+                }
+            },
+        )
+    except (ActivityGoneError, ActivityNotFoundError, NotAnActivityError):
+        DB.activities.update_one({"remote_id": iri}, {"$set": {"meta.deleted": True}})
+        log.exception(f"flagging activity {iri} as deleted, no object caching")
+    except Exception as err:
+        log.exception(f"failed to cache object for {iri}")
+        self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
+
+
+@app.task(bind=True, max_retries=12)
 def cache_actor(self, iri: str, also_cache_attachments: bool = True) -> None:
     try:
         activity = ap.fetch_remote_activity(iri)
@@ -184,6 +208,9 @@ def cache_actor(self, iri: str, also_cache_attachments: bool = True) -> None:
 
         if activity.has_type(ap.ActivityType.CREATE):
             fetch_og_metadata.delay(iri)
+
+        if activity.has_type([ap.ActivityType.LIKE, ap.ActivityType.ANNOUNCE]):
+            cache_object.delay(iri)
 
         actor = activity.get_actor()
 

@@ -1397,6 +1397,7 @@ def admin_notifications():
         "type": ActivityType.UNDO.value,
         "activity.object.type": ActivityType.FOLLOW.value,
     }
+    likes_query = {"type": ActivityType.LIKE.value}
     followed_query = {"type": ActivityType.ACCEPT.value}
     q = {
         "box": Box.INBOX.value,
@@ -1407,6 +1408,7 @@ def admin_notifications():
             new_followers_query,
             followed_query,
             unfollow_query,
+            likes_query,
         ],
     }
     inbox_data, older_than, newer_than = paginated_query(DB.activities, q)

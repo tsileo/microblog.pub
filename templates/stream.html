@@ -19,6 +19,15 @@
 	{{ utils.display_note(item.meta.object, ui=True) }}
 	{% endif %}
 	{% endif %}
+
+    {% if item | has_type('Like') %}
+    {% set boost_actor = item.meta.actor %}
+	<p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> liked</span></p>
+    {{ item }}
+	{% if item.meta.object %}
+    {{ utils.display_note(item.meta.object, ui=False, meta={'actor': item.meta.object_actor}) }}
+	{% endif %}
+    {% endif %}
 	
 	{% if item | has_type('Follow') %}
     <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover">new follower</span> <!-- <a href="" class="bar-item">follow back</a></p> -->
