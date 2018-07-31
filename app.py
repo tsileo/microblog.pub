@@ -1356,12 +1356,20 @@ def admin_new():
     reply_id = None
     content = ""
     thread = []
+    print(request.args)
     if request.args.get("reply"):
         data = DB.activities.find_one({"activity.object.id": request.args.get("reply")})
-        if not data:
-            abort(400)
+        if data:
+            reply = ap.parse_activity(data["activity"])
+        else:
+            data = dict(
+                meta={},
+                activity=dict(
+                    object=get_backend().fetch_iri(request.args.get("reply"))
+                ),
+            )
+            reply = ap.parse_activity(data["activity"]["object"])
 
-        reply = ap.parse_activity(data["activity"])
         reply_id = reply.id
         if reply.ACTIVITY_TYPE == ActivityType.CREATE:
             reply_id = reply.get_object().id
