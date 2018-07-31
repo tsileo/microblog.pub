@@ -1110,6 +1110,7 @@ def outbox():
                 q=q,
                 cursor=request.args.get("cursor"),
                 map_func=lambda doc: activity_from_doc(doc, embed=True),
+                col_name="outbox",
             )
         )
 
@@ -1596,6 +1597,7 @@ def inbox():
                 q={"meta.deleted": False, "box": Box.INBOX.value},
                 cursor=request.args.get("cursor"),
                 map_func=lambda doc: remove_context(doc["activity"]),
+                col_name="inbox",
             )
         )
 
@@ -1783,6 +1785,7 @@ def followers():
                 q=q,
                 cursor=request.args.get("cursor"),
                 map_func=lambda doc: doc["activity"]["actor"],
+                col_name="followers",
             )
         )
 
@@ -1812,6 +1815,7 @@ def following():
                 q=q,
                 cursor=request.args.get("cursor"),
                 map_func=lambda doc: doc["activity"]["object"],
+                col_name="following",
             )
         )
 
