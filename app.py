@@ -939,6 +939,7 @@ def note_by_id(note_id):
     if data["meta"].get("deleted", False):
         abort(410)
     thread = _build_thread(data)
+    app.logger.info(f"thread={thread!r}")
 
     likes = list(
         DB.activities.find(
@@ -947,6 +948,7 @@ def note_by_id(note_id):
                 "meta.deleted": False,
                 "type": ActivityType.LIKE.value,
                 "$or": [
+                    # FIXME(tsileo): remove all the useless $or
                     {"activity.object.id": data["activity"]["object"]["id"]},
                     {"activity.object": data["activity"]["object"]["id"]},
                 ],
@@ -954,6 +956,7 @@ def note_by_id(note_id):
         )
     )
     likes = [doc["meta"]["actor"] for doc in likes]
+    app.logger.info(f"likes={likes!r}")
 
     shares = list(
         DB.activities.find(
@@ -969,6 +972,7 @@ def note_by_id(note_id):
         )
     )
     shares = [doc["meta"]["actor"] for doc in shares]
+    app.logger.info(f"shares={shares!r}")
 
     return render_template(
         "note.html", likes=likes, shares=shares, thread=thread, note=data
