@@ -44,12 +44,15 @@ def fetch_og_metadata(user_agent, links):
 
         r = requests.get(l, headers={"User-Agent": user_agent}, timeout=15)
         r.raise_for_status()
+        if not r.headers.get("content-type").startswith("text/html"):
+            logger.debug(f"skipping {l}")
+            continue
 
         html = r.text
         try:
             data = dict(opengraph.OpenGraph(html=html))
         except Exception:
-            logger.exception("failed to parse {l}")
+            logger.exception(f"failed to parse {l}")
             continue
         if data.get("url"):
             res.append(data)
