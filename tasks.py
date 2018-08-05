@@ -107,7 +107,7 @@ def process_new_activity(self, iri: str) -> None:
                 should_forward = True
 
         elif activity.has_type(ap.ActivityType.LIKE):
-            if not activity.get_object_id.startswith(BASE_URL):
+            if not activity.get_object_id().startswith(BASE_URL):
                 # We only want to keep a like if it's a like for a local activity
                 # (Pleroma relay the likes it received, we don't want to store them)
                 should_delete = True
