@@ -116,11 +116,6 @@ class MicroblogPubBackend(Backend):
             }
         )
 
-        self.save_cb(box, activity.id)
-
-    def set_save_cb(self, cb):
-        self.save_cb = cb
-
     def followers(self) -> List[str]:
         q = {
             "box": Box.INBOX.value,

@@ -79,17 +79,6 @@ from utils.lookup import lookup
 from utils.media import Kind
 
 back = activitypub.MicroblogPubBackend()
-
-
-def save_cb(box: Box, iri: str) -> None:
-    if box == Box.INBOX:
-        tasks.process_new_activity.delay(iri)
-    else:
-        tasks.cache_actor.delay(iri)
-
-
-back.set_save_cb(save_cb)
-
 ap.use_backend(back)
 
 MY_PERSON = ap.Person(**ME)
