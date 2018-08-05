@@ -77,6 +77,7 @@
 
 {% if meta and meta.og_metadata and obj | has_type('Note') %}
 {% for og in meta.og_metadata %}
+{% if og.url %}
 <a href="{{ og.url }}" class="og-link" style="margin:30px 0;clear:both;display: flex;">
 <div>
 <img  style="width:100px;border-radius:3px;" src="{{ og.image | get_og_image_url }}">
@@ -87,6 +88,7 @@
 <small>{{ og.site_name }}</small>
 </div>
 </a>
+{% endif %}
 {% endfor %}
 {% endif %}
 

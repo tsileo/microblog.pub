@@ -42,4 +42,11 @@ def fetch_og_metadata(user_agent, links):
         r = requests.get(l, headers={"User-Agent": user_agent}, timeout=15)
         r.raise_for_status()
         htmls.append(r.text)
-    return [dict(opengraph.OpenGraph(html=html)) for html in htmls]
+
+    res = []
+    for html in htmls:
+        data = dict(opengraph.OpenGraph(html=html))
+        if data.get("url"):
+            res.append(data)
+
+    return res
