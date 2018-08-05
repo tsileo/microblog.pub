@@ -320,7 +320,10 @@ def finish_post_to_inbox(self, iri: str) -> None:
     try:
         activity = ap.fetch_remote_activity(iri)
         log.info(f"activity={activity!r}")
+    except (ActivityGoneError, ActivityNotFoundError):
+        log.exception(f"no retry")
 
+    try:
         if activity.has_type(ap.ActivityType.DELETE):
             back.inbox_delete(MY_PERSON, activity)
         elif activity.has_type(ap.ActivityType.UPDATE):
@@ -343,7 +346,6 @@ def finish_post_to_inbox(self, iri: str) -> None:
                 back.inbox_undo_announce(MY_PERSON, obj)
             elif obj.has_type(ap.ActivityType.FOLLOW):
                 back.undo_new_follower(MY_PERSON, obj)
-
     except Exception as err:
         log.exception(f"failed to cache attachments for {iri}")
         self.retry(exc=err, countdown=int(random.uniform(2, 4) ** self.request.retries))
@@ -368,7 +370,10 @@ def finish_post_to_outbox(self, iri: str) -> None:
     try:
         activity = ap.fetch_remote_activity(iri)
         log.info(f"activity={activity!r}")
+    except (ActivityGoneError, ActivityNotFoundError):
+        log.exception(f"no retry")
 
+    try:
         recipients = activity.recipients()
 
         if activity.has_type(ap.ActivityType.DELETE):
