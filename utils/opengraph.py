@@ -1,3 +1,4 @@
+import logging
 import opengraph
 import requests
 from bs4 import BeautifulSoup
@@ -7,6 +8,8 @@ from little_boxes.urlutils import check_url
 from little_boxes.urlutils import is_url_valid
 
 from .lookup import lookup
+
+logger = logging.getLogger(__name__)
 
 
 def links_from_note(note):
@@ -27,7 +30,7 @@ def links_from_note(note):
 
 
 def fetch_og_metadata(user_agent, links):
-    htmls = []
+    res = []
     for l in links:
         check_url(l)
 
@@ -41,11 +44,13 @@ def fetch_og_metadata(user_agent, links):
 
         r = requests.get(l, headers={"User-Agent": user_agent}, timeout=15)
         r.raise_for_status()
-        htmls.append(r.text)
 
-    res = []
-    for html in htmls:
-        data = dict(opengraph.OpenGraph(html=html))
+        html = r.text
+        try:
+            data = dict(opengraph.OpenGraph(html=html))
+        except Exception:
+            logger.exception("failed to parse {l}")
+            continue
         if data.get("url"):
             res.append(data)
 
