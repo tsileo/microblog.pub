@@ -930,7 +930,7 @@ def note_by_id(note_id):
     thread = _build_thread(data)
     app.logger.info(f"thread={thread!r}")
 
-    likes = list(
+    raw_likes = list(
         DB.activities.find(
             {
                 "meta.undo": False,
@@ -944,10 +944,15 @@ def note_by_id(note_id):
             }
         )
     )
-    likes = [doc["meta"]["actor"] for doc in likes]
+    likes = []
+    for doc in raw_likes:
+        try:
+            likes.append(doc["meta"]["actor"])
+        except Exception:
+            app.logger.exception(f"invalid doc: {doc!r}")
     app.logger.info(f"likes={likes!r}")
 
-    shares = list(
+    raw_shares = list(
         DB.activities.find(
             {
                 "meta.undo": False,
@@ -960,7 +965,12 @@ def note_by_id(note_id):
             }
         )
     )
-    shares = [doc["meta"]["actor"] for doc in shares]
+    shares = []
+    for doc in raw_shares:
+        try:
+            shares.append(doc["meta"]["actor"])
+        except Exception:
+            app.logger.exception(f"invalid doc: {doc!r}")
     app.logger.info(f"shares={shares!r}")
 
     return render_template(
