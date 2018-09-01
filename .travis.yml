@@ -22,6 +22,7 @@ script:
  - docker-compose -p instance1 -f docker-compose-tests.yml ps
  - WEB_PORT=5007 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d
  - docker-compose -p instance2 -f docker-compose-tests.yml ps
+ - sleep 5
  - curl http://localhost:5006
  - curl http://localhost:5007
  # Integration tests first
