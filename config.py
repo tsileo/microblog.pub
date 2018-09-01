@@ -11,6 +11,7 @@ from itsdangerous import JSONWebSignatureSerializer
 from little_boxes import strtobool
 from little_boxes.activitypub import DEFAULT_CTX
 from pymongo import MongoClient
+import pymongo
 
 from utils.key import KEY_DIR
 from utils.key import get_key
@@ -99,6 +100,38 @@ DB_NAME = "{}_{}".format(USERNAME, DOMAIN.replace(".", "_"))
 DB = mongo_client[DB_NAME]
 GRIDFS = mongo_client[f"{DB_NAME}_gridfs"]
 MEDIA_CACHE = MediaCache(GRIDFS, USER_AGENT)
+
+
+def create_indexes():
+    DB.activities.create_index([("remote_id", pymongo.ASCENDING)])
+
+    # Index for the block query
+    DB.activities.create_index(
+        [
+            ("box", pymongo.ASCENDING),
+            ("type", pymongo.ASCENDING),
+            ("meta.undo", pymongo.ASCENDING),
+        ]
+    )
+
+    # Index for count queries
+    DB.activities.create_index(
+        [
+            ("box", pymongo.ASCENDING),
+            ("type", pymongo.ASCENDING),
+            ("meta.undo", pymongo.ASCENDING),
+            ("meta.deleted", pymongo.ASCENDING),
+        ]
+    )
+
+    DB.activities.create_index(
+        [
+            ("type", pymongo.ASCENDING),
+            ("activity.object.type", pymongo.ASCENDING),
+            ("activity.object.inReplyTo", pymongo.ASCENDING),
+            ("meta.deleted", pymongo.ASCENDING),
+        ]
+    )
 
 
 def _drop_db():
