@@ -225,6 +225,14 @@ def remove_mongo_id(dat):
 
 
 @app.template_filter()
+def get_video_link(data):
+    for link in data:
+        if link.get("mimeType", "").startswith("video/"):
+            return link.get("href")
+    return None
+
+
+@app.template_filter()
 def get_actor_icon_url(url, size):
     return _get_file_url(url, size, Kind.ACTOR_ICON)
 
@@ -281,6 +289,11 @@ def url_or_id(d):
 
 @app.template_filter()
 def get_url(u):
+    print(f'GET_URL({u!r})')
+    if isinstance(u, list):
+        for l in u:
+            if l.get('mimeType') == 'text/html':
+                u = l
     if isinstance(u, dict):
         return u["href"]
     elif isinstance(u, str):
@@ -293,13 +306,17 @@ def get_url(u):
 def get_actor(url):
     if not url:
         return None
+    if isinstance(url, list):
+        url = url[0]
+    if isinstance(url, dict):
+        url = url.get("id")
     print(f"GET_ACTOR {url}")
     try:
         return get_backend().fetch_iri(url)
     except (ActivityNotFoundError, ActivityGoneError):
         return f"Deleted<{url}>"
-    except Exception:
-        return f"Error<{url}>"
+    except Exception as exc:
+        return f"Error<{url}/{exc!r}>"
 
 
 @app.template_filter()
@@ -319,9 +336,10 @@ def format_timeago(val):
 
 
 @app.template_filter()
-def has_type(doc, _type):
-    if _type in _to_list(doc["type"]):
-        return True
+def has_type(doc, _types):
+    for _type in _to_list(_types):
+        if _type in _to_list(doc["type"]):
+            return True
     return False
 
 
@@ -1326,6 +1344,7 @@ def admin_lookup():
                     actor=data.get_actor().to_dict(),
                 )
 
+        print(data)
     return render_template(
         "lookup.html", data=data, meta=meta, url=request.form.get("url")
     )

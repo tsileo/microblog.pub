@@ -29,7 +29,7 @@
     {{ utils.display_actor_inline(data, size=80) }}
     {% elif data | has_type('Create') %}
 	{{ utils.display_note(data.object, ui=True) }}
-    {% elif data | has_type('Note') %}
+    {% elif data | has_type(['Note', 'Article', 'Video']) %}
 	{{ utils.display_note(data, ui=True) }}
     {% elif data | has_type('Announce') %}
     {% set boost_actor = meta.actor %}
