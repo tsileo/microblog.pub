@@ -1637,6 +1637,16 @@ def inbox():
         )
         try:
             data = get_backend().fetch_iri(data["id"])
+        except ActivityGoneError:
+            # XXX Mastodon sends Delete activities that are not dereferencable, it's the actor url with #delete
+            # appended, so an `ActivityGoneError` kind of ensure it's "legit"
+            if data["type"] == ActivityType.DELETE.value and data["id"].startswith(data["object"]):
+                logger.info(f"received a Delete for an actor {data!r}")
+                if get_backend().inbox_check_duplicate(MY_PERSON, data["id"]):
+                    # The activity is already in the inbox
+                    logger.info(f"received duplicate activity {data!r}, dropping it")
+
+                get_backend().save(Box.INBOX, data)
         except Exception:
             logger.exception(f'failed to fetch remote id at {data["id"]}')
             return Response(
