@@ -289,10 +289,10 @@ def url_or_id(d):
 
 @app.template_filter()
 def get_url(u):
-    print(f'GET_URL({u!r})')
+    print(f"GET_URL({u!r})")
     if isinstance(u, list):
         for l in u:
-            if l.get('mimeType') == 'text/html':
+            if l.get("mimeType") == "text/html":
                 u = l
     if isinstance(u, dict):
         return u["href"]
@@ -1640,13 +1640,25 @@ def inbox():
         except ActivityGoneError:
             # XXX Mastodon sends Delete activities that are not dereferencable, it's the actor url with #delete
             # appended, so an `ActivityGoneError` kind of ensure it's "legit"
-            if data["type"] == ActivityType.DELETE.value and data["id"].startswith(data["object"]):
+            if data["type"] == ActivityType.DELETE.value and data["id"].startswith(
+                data["object"]
+            ):
                 logger.info(f"received a Delete for an actor {data!r}")
                 if get_backend().inbox_check_duplicate(MY_PERSON, data["id"]):
                     # The activity is already in the inbox
                     logger.info(f"received duplicate activity {data!r}, dropping it")
 
-                get_backend().save(Box.INBOX, data)
+                DB.activities.insert_one(
+                    {
+                        "box": Box.INBOX.value,
+                        "activity": data,
+                        "type": _to_list(data["type"]),
+                        "remote_id": data["id"],
+                        "meta": {"undo": False, "deleted": False},
+                    }
+                )
+                # TODO(tsileo): write the callback the the delete external actor event
+                return Response(status=201)
         except Exception:
             logger.exception(f'failed to fetch remote id at {data["id"]}')
             return Response(
