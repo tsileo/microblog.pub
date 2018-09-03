@@ -1,5 +1,16 @@
 version: '3'
 services:
+  flower:
+    image: microblogpub:latest
+    links:
+     - mongo
+     - rabbitmq
+    command: 'celery flower -l info -A tasks --broker amqp://guest@rabbitmq// --address=0.0.0.0 --port=5556'
+    environment:
+     - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rabbitmq//
+     - MICROBLOGPUB_MONGODB_HOST=mongo:27017
+    ports:
+     - "5556:5556"
   celery:
     image: microblogpub:latest
     links:

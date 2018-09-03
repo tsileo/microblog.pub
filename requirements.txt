@@ -1,5 +1,6 @@
 python-dateutil
 libsass
+flower
 gunicorn
 piexif
 requests

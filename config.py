@@ -109,8 +109,8 @@ def create_indexes():
         ("activity.object.id", pymongo.ASCENDING),
         ("meta.deleted", pymongo.ASCENDING),
     ])
-    DB.cache.create_index([("path", pymongo.ASCENDING), ("type", pymongo.ASCENDING)])
-    DB.cache.create_index("date", expireAfterSeconds=60)
+    DB.cache2.create_index([("path", pymongo.ASCENDING), ("type", pymongo.ASCENDING), ("arg", pymongo.ASCENDING)])
+    DB.cache2.create_index("date", expireAfterSeconds=3600*12)
 
     # Index for the block query
     DB.activities.create_index(

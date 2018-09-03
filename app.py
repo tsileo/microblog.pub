@@ -816,16 +816,41 @@ def paginated_query(db, q, limit=25, sort_key="_id"):
     return outbox_data, older_than, newer_than
 
 
+CACHING = True
+
+
+def _get_cached(type_="html", arg=None):
+    if not CACHING:
+        return None
+    logged_in = session.get("logged_in")
+    if not logged_in:
+        cached = DB.cache2.find_one({"path": request.path, "type": type_, "arg": arg})
+        if cached:
+            app.logger.info("from cache")
+            return cached['response_data']
+    return None
+
+def _cache(resp, type_="html", arg=None):
+    if not CACHING:
+        return None
+    logged_in = session.get("logged_in")
+    if not logged_in:
+        DB.cache2.update_one(
+            {"path": request.path, "type": type_, "arg": arg},
+            {"$set": {"response_data": resp, "date": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+    return None
+
+
 @app.route("/")
 def index():
     if is_api_request():
         return jsonify(**ME)
-    logged_in = session.get("logged_in", False)
-    if not logged_in:
-        cached = DB.cache.find_one({"path": request.path, "type": "html"})
-        if cached:
-            app.logger.info("from cache")
-            return cached['response_data']
+    cache_arg = f"{request.args.get('older_than', '')}:{request.args.get('newer_than', '')}"
+    cached = _get_cached("html", cache_arg)
+    if cached:
+        return cached
 
     q = {
         "box": Box.OUTBOX.value,
@@ -859,12 +884,7 @@ def index():
         newer_than=newer_than,
         pinned=pinned,
     )
-    if not logged_in:
-        DB.cache.update_one(
-            {"path": request.path, "type": "html"},
-            {"$set": {"response_data": resp, "date": datetime.now(timezone.utc)}},
-            upsert=True,
-        )
+    _cache(resp, "html", cache_arg)
     return resp
 
 
@@ -1011,32 +1031,41 @@ def note_by_id(note_id):
 
 @app.route("/nodeinfo")
 def nodeinfo():
-    q = {
-        "box": Box.OUTBOX.value,
-        "meta.deleted": False,  # TODO(tsileo): retrieve deleted and expose tombstone
-        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
-    }
+    response = _get_cached("api")
+    cached = True
+    if not response:
+        cached = False
+        q = {
+            "box": Box.OUTBOX.value,
+            "meta.deleted": False,  # TODO(tsileo): retrieve deleted and expose tombstone
+            "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+        }
+
+        response = json.dumps(
+                {
+                    "version": "2.0",
+                    "software": {
+                        "name": "microblogpub",
+                        "version": f"Microblog.pub {VERSION}",
+                    },
+                    "protocols": ["activitypub"],
+                    "services": {"inbound": [], "outbound": []},
+                    "openRegistrations": False,
+                    "usage": {"users": {"total": 1}, "localPosts": DB.activities.count(q)},
+                    "metadata": {
+                        "sourceCode": "https://github.com/tsileo/microblog.pub",
+                        "nodeName": f"@{USERNAME}@{DOMAIN}",
+                    },
+                }
+            )
+
+    if not cached:
+        _cache(response, "api")
     return Response(
         headers={
             "Content-Type": "application/json; profile=http://nodeinfo.diaspora.software/ns/schema/2.0#"
         },
-        response=json.dumps(
-            {
-                "version": "2.0",
-                "software": {
-                    "name": "microblogpub",
-                    "version": f"Microblog.pub {VERSION}",
-                },
-                "protocols": ["activitypub"],
-                "services": {"inbound": [], "outbound": []},
-                "openRegistrations": False,
-                "usage": {"users": {"total": 1}, "localPosts": DB.activities.count(q)},
-                "metadata": {
-                    "sourceCode": "https://github.com/tsileo/microblog.pub",
-                    "nodeName": f"@{USERNAME}@{DOMAIN}",
-                },
-            }
-        ),
+        response=response,
     )
 
 
