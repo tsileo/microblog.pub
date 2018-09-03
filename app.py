@@ -820,6 +820,12 @@ def paginated_query(db, q, limit=25, sort_key="_id"):
 def index():
     if is_api_request():
         return jsonify(**ME)
+    logged_in = session.get("logged_in", False)
+    if not logged_in:
+        cached = DB.cache.find_one({"path": request.path, "type": "html"})
+        if cached:
+            app.logger.info("from cache")
+            return cached['response_data']
 
     q = {
         "box": Box.OUTBOX.value,
@@ -846,13 +852,20 @@ def index():
         DB.activities, q, limit=25 - len(pinned)
     )
 
-    return render_template(
+    resp = render_template(
         "index.html",
         outbox_data=outbox_data,
         older_than=older_than,
         newer_than=newer_than,
         pinned=pinned,
     )
+    if not logged_in:
+        DB.cache.update_one(
+            {"path": request.path, "type": "html"},
+            {"$set": {"response_data": resp, "date": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+    return resp
 
 
 @app.route("/with_replies")
