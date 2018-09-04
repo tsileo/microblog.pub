@@ -646,6 +646,16 @@ def build_ordered_collection(
     data = list(col.find(q, limit=limit).sort("_id", -1))
 
     if not data:
+        # Returns an empty page if there's a cursor
+        if cursor:
+            return {
+                "@context": ap.COLLECTION_CTX,
+                "type": ap.ActivityType.ORDERED_COLLECTION_PAGE.value,
+                "id": BASE_URL + "/" + col_name + "?cursor=" + cursor,
+                "partOf": BASE_URL + "/" + col_name,
+                "totalItems": 0,
+                "oredredItems": [],
+            }
         return {
             "@context": ap.COLLECTION_CTX,
             "id": BASE_URL + "/" + col_name,
