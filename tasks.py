@@ -324,7 +324,7 @@ def invalidate_cache(activity):
         if activity.get_object().id.startswith(BASE_URL):
             DB.cache2.remove()
     elif activity.has_type(ap.ActivityType.ANNOUNCE):
-        if activity.get_object.id.startswith(BASE_URL):
+        if activity.get_object().id.startswith(BASE_URL):
             DB.cache2.remove()
     elif activity.has_type(ap.ActivityType.UNDO):
         DB.cache2.remove()
