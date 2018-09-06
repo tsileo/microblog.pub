@@ -463,7 +463,7 @@ class MicroblogPubBackend(Backend):
 
         new_threads = []
         root_reply = in_reply_to
-        reply = ap.fetch_remote_activity(root_reply, expected=ap.ActivityType.NOTE)
+        reply = ap.fetch_remote_activity(root_reply)
 
         creply = DB.activities.find_one_and_update(
             {"activity.object.id": in_reply_to},
@@ -479,7 +479,7 @@ class MicroblogPubBackend(Backend):
             if not in_reply_to:
                 break
             root_reply = in_reply_to
-            reply = ap.fetch_remote_activity(root_reply, expected=ap.ActivityType.NOTE)
+            reply = ap.fetch_remote_activity(root_reply)
             q = {"activity.object.id": root_reply}
             if not DB.activities.count(q):
                 self.save(Box.REPLIES, reply)

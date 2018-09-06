@@ -15,7 +15,7 @@ reload-fed:
 	WEB_PORT=5007 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d --force-recreate --build
 
 reload-dev:
-	docker build . -t microblogpub:latest
+	# docker build . -t microblogpub:latest
 	docker-compose -f docker-compose-dev.yml up -d --force-recreate
 
 update:
