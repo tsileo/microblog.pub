@@ -654,14 +654,14 @@ def build_ordered_collection(
                 "id": BASE_URL + "/" + col_name + "?cursor=" + cursor,
                 "partOf": BASE_URL + "/" + col_name,
                 "totalItems": 0,
-                "oredredItems": [],
+                "orderedItems": [],
             }
         return {
             "@context": ap.COLLECTION_CTX,
             "id": BASE_URL + "/" + col_name,
             "totalItems": 0,
             "type": ap.ActivityType.ORDERED_COLLECTION.value,
-            "oredredItems": [],
+            "orderedItems": [],
         }
 
     start_cursor = str(data[0]["_id"])
