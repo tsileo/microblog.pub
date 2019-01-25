@@ -370,7 +370,9 @@ def _is_img(filename):
 @app.template_filter()
 def not_only_imgs(attachment):
     for a in attachment:
-        if not _is_img(a["url"]):
+        if isinstance(a, dict) and not _is_img(a["url"]):
+            return True
+        if isinstance(a, str) and not _is_img(a):
             return True
     return False
 
