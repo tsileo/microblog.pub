@@ -285,9 +285,12 @@ def domain(url):
 
 @app.template_filter()
 def url_or_id(d):
-    if ("url" in d) and isinstance(d["url"], str):
-        return d["url"]
-    return d["id"]
+    if isinstance(d, dict):
+        if ("url" in d) and isinstance(d["url"], str):
+            return d["url"]
+        else:
+            return d["id"]
+    return ""
 
 
 @app.template_filter()
