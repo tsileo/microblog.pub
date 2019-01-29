@@ -964,7 +964,10 @@ def _build_thread(data, include_children=True):
         ):
             _flatten(snode, level=level + 1)
 
-    _flatten(idx[root_id])
+    try:
+        _flatten(idx[root_id])
+    except KeyError:
+        app.logger.info(f"{root_id} is not there! skipping")
 
     return thread
 
