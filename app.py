@@ -2167,3 +2167,29 @@ def token_endpoint():
             "client_id": payload["client_id"],
         }
     )
+
+
+@app.route("/feed.json")
+def json_feed():
+    return Response(
+        response=json.dumps(
+            activitypub.json_feed("/feed.json")
+        ),
+        headers={"Content-Type": "application/json"},
+    )
+
+
+@app.route("/feed.atom")
+def atom_feed():
+    return Response(
+        response=activitypub.gen_feed().atom_str(),
+        headers={"Content-Type": "application/atom+xml"},
+    )
+
+
+@app.route("/feed.rss")
+def rss_feed():
+    return Response(
+        response=activitypub.gen_feed().rss_str(),
+        headers={"Content-Type": "application/rss+xml"},
+    )

@@ -523,8 +523,8 @@ def gen_feed():
     fg.logo(ME.get("icon", {}).get("url"))
     fg.language("en")
     for item in DB.activities.find(
-        {"box": Box.OUTBOX.value, "type": "Create"}, limit=50
-    ):
+        {"box": Box.OUTBOX.value, "type": "Create", "meta.deleted": False}, limit=10
+    ).sort("_id", -1):
         fe = fg.add_entry()
         fe.id(item["activity"]["object"].get("url"))
         fe.link(href=item["activity"]["object"].get("url"))
@@ -537,11 +537,11 @@ def json_feed(path: str) -> Dict[str, Any]:
     """JSON Feed (https://jsonfeed.org/) document."""
     data = []
     for item in DB.activities.find(
-        {"box": Box.OUTBOX.value, "type": "Create"}, limit=50
-    ):
+        {"box": Box.OUTBOX.value, "type": "Create", "meta.deleted": False}, limit=10
+    ).sort("_id", -1):
         data.append(
             {
-                "id": item["id"],
+                "id": item["activity"]["id"],
                 "url": item["activity"]["object"].get("url"),
                 "content_html": item["activity"]["object"]["content"],
                 "content_text": html2text(item["activity"]["object"]["content"]),
