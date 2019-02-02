@@ -189,7 +189,10 @@ ALLOWED_TAGS = [
 
 
 def clean_html(html):
-    return bleach.clean(html, tags=ALLOWED_TAGS)
+    try:
+        return bleach.clean(html, tags=ALLOWED_TAGS)
+    except:
+        return ""
 
 
 _GRIDFS_CACHE: Dict[Tuple[Kind, str, Optional[int]], str] = {}
@@ -282,7 +285,7 @@ def domain(url):
 
 @app.template_filter()
 def url_or_id(d):
-    if "url" in d:
+    if ("url" in d) and isinstance(d["url"], str):
         return d["url"]
     return d["id"]
 
@@ -1524,7 +1527,15 @@ def _user_api_arg(key: str, **kwargs):
 def _user_api_get_note(from_outbox: bool = False):
     oid = _user_api_arg("id")
     app.logger.info(f"fetching {oid}")
-    note = ap.parse_activity(get_backend().fetch_iri(oid), expected=ActivityType.NOTE)
+    try:
+        note = ap.parse_activity(get_backend().fetch_iri(oid), expected=ActivityType.NOTE)
+    except:
+        try:
+            note = ap.parse_activity(get_backend().fetch_iri(oid), expected=ActivityType.VIDEO)
+        except:
+            raise ActivityNotFoundError(
+                "Expected Note or Video ActivityType, but got something else"
+            )
     if from_outbox and not note.id.startswith(ID):
         raise NotFromOutboxError(
             f"cannot load {note.id}, id must be owned by the server"
