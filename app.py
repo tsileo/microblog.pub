@@ -2089,7 +2089,7 @@ def indieauth_flow():
     return redirect(red)
 
 
-# @app.route('/indieauth', methods=['GET', 'POST'])
+@app.route('/indieauth', methods=['GET', 'POST'])
 def indieauth_endpoint():
     if request.method == "GET":
         if not session.get("logged_in"):
