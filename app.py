@@ -1895,12 +1895,8 @@ def followers():
         )
 
     raw_followers, older_than, newer_than = paginated_query(DB.activities, q)
-    followers = []
-    for doc in raw_followers:
-        try:
-            followers.append(doc["meta"]["actor"])
-        except Exception:
-            pass
+    followers = [doc["meta"]["actor"]
+                 for doc in raw_followers if "actor" in doc.get("meta", {})]
     return render_template(
         "followers.html",
         followers_data=followers,
@@ -1928,7 +1924,9 @@ def following():
         abort(404)
 
     following, older_than, newer_than = paginated_query(DB.activities, q)
-    following = [(doc["remote_id"], doc["meta"]["object"]) for doc in following]
+    following = [(doc["remote_id"], doc["meta"]["object"])
+                 for doc in following
+                 if "remote_id" in doc and "object" in doc.get("meta", {})]
     return render_template(
         "following.html",
         following_data=following,
