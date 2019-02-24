@@ -40,10 +40,11 @@ a:hover {
 .lcolor {
   color: $color-light;
 }
-.older-link, .newer-linker, .older-link:hover, .newer-link:hover {
+.older-link, .newer-link, .older-link:hover, .newer-link:hover {
   text-decoration: none;
   padding: 3px;
 }
+.older-link { float: left }
 .newer-link { float: right }
 .clear { clear: both; }
 .remote-follow-button {
@@ -210,6 +211,7 @@ a:hover {
   .note-wrapper {
     flex: 1;
     padding-left: 15px;
+    overflow: hidden;
   }
 
   .bottom-bar { margin-top:10px; }

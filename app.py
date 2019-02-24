@@ -189,7 +189,10 @@ ALLOWED_TAGS = [
 
 
 def clean_html(html):
-    return bleach.clean(html, tags=ALLOWED_TAGS)
+    try:
+        return bleach.clean(html, tags=ALLOWED_TAGS)
+    except:
+        return ""
 
 
 _GRIDFS_CACHE: Dict[Tuple[Kind, str, Optional[int]], str] = {}
@@ -282,9 +285,12 @@ def domain(url):
 
 @app.template_filter()
 def url_or_id(d):
-    if "url" in d:
-        return d["url"]
-    return d["id"]
+    if isinstance(d, dict):
+        if ("url" in d) and isinstance(d["url"], str):
+            return d["url"]
+        else:
+            return d["id"]
+    return ""
 
 
 @app.template_filter()
@@ -367,7 +373,9 @@ def _is_img(filename):
 @app.template_filter()
 def not_only_imgs(attachment):
     for a in attachment:
-        if not _is_img(a["url"]):
+        if isinstance(a, dict) and not _is_img(a["url"]):
+            return True
+        if isinstance(a, str) and not _is_img(a):
             return True
     return False
 
@@ -961,7 +969,10 @@ def _build_thread(data, include_children=True):
         ):
             _flatten(snode, level=level + 1)
 
-    _flatten(idx[root_id])
+    try:
+        _flatten(idx[root_id])
+    except KeyError:
+        app.logger.info(f"{root_id} is not there! skipping")
 
     return thread
 
@@ -1524,7 +1535,15 @@ def _user_api_arg(key: str, **kwargs):
 def _user_api_get_note(from_outbox: bool = False):
     oid = _user_api_arg("id")
     app.logger.info(f"fetching {oid}")
-    note = ap.parse_activity(get_backend().fetch_iri(oid), expected=ActivityType.NOTE)
+    try:
+        note = ap.parse_activity(get_backend().fetch_iri(oid), expected=ActivityType.NOTE)
+    except:
+        try:
+            note = ap.parse_activity(get_backend().fetch_iri(oid), expected=ActivityType.VIDEO)
+        except:
+            raise ActivityNotFoundError(
+                "Expected Note or Video ActivityType, but got something else"
+            )
     if from_outbox and not note.id.startswith(ID):
         raise NotFromOutboxError(
             f"cannot load {note.id}, id must be owned by the server"
@@ -1876,12 +1895,8 @@ def followers():
         )
 
     raw_followers, older_than, newer_than = paginated_query(DB.activities, q)
-    followers = []
-    for doc in raw_followers:
-        try:
-            followers.append(doc["meta"]["actor"])
-        except Exception:
-            pass
+    followers = [doc["meta"]["actor"]
+                 for doc in raw_followers if "actor" in doc.get("meta", {})]
     return render_template(
         "followers.html",
         followers_data=followers,
@@ -1909,7 +1924,9 @@ def following():
         abort(404)
 
     following, older_than, newer_than = paginated_query(DB.activities, q)
-    following = [(doc["remote_id"], doc["meta"]["object"]) for doc in following]
+    following = [(doc["remote_id"], doc["meta"]["object"])
+                 for doc in following
+                 if "remote_id" in doc and "object" in doc.get("meta", {})]
     return render_template(
         "following.html",
         following_data=following,
@@ -2070,7 +2087,7 @@ def indieauth_flow():
     return redirect(red)
 
 
-# @app.route('/indieauth', methods=['GET', 'POST'])
+@app.route('/indieauth', methods=['GET', 'POST'])
 def indieauth_endpoint():
     if request.method == "GET":
         if not session.get("logged_in"):
@@ -2166,4 +2183,30 @@ def token_endpoint():
             "scope": payload["scope"],
             "client_id": payload["client_id"],
         }
+    )
+
+
+@app.route("/feed.json")
+def json_feed():
+    return Response(
+        response=json.dumps(
+            activitypub.json_feed("/feed.json")
+        ),
+        headers={"Content-Type": "application/json"},
+    )
+
+
+@app.route("/feed.atom")
+def atom_feed():
+    return Response(
+        response=activitypub.gen_feed().atom_str(),
+        headers={"Content-Type": "application/atom+xml"},
+    )
+
+
+@app.route("/feed.rss")
+def rss_feed():
+    return Response(
+        response=activitypub.gen_feed().rss_str(),
+        headers={"Content-Type": "application/rss+xml"},
     )

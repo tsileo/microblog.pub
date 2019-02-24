@@ -48,6 +48,7 @@ def fetch_og_metadata(user_agent, links):
             logger.debug(f"skipping {l}")
             continue
 
+        r.encoding = 'UTF-8'
         html = r.text
         try:
             data = dict(opengraph.OpenGraph(html=html))

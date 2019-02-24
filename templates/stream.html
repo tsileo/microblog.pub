@@ -8,6 +8,7 @@
 
 <div id="notes">
 	{% for item in inbox_data %}
+	{% if 'actor' in item.meta %}
 	{% if item | has_type('Create') %}
 	{{ utils.display_note(item.activity.object, ui=True, meta=item.meta) }}
 	{% else %}
@@ -53,6 +54,7 @@
 	{% endif %}
 	
 	
+	{% endif %}
 	{% endif %}
 	{% endfor %}
 

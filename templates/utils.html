@@ -129,7 +129,6 @@
 {% if session.logged_in %}
 {% if ui%}
 
-<a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
 {% if meta.boosted %}
 <form action="/api/undo" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
@@ -195,6 +194,7 @@
 <button type="submit" class="bar-item">block</button>
 </form>
 {% endif %}
+<a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
 {% endif %}
 
 
