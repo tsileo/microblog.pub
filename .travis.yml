@@ -1,7 +1,12 @@
 language: python
 sudo: required
 python:
-  - "3.6"
+  - '3.7'
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
 services:
   - docker
 install:
@@ -23,8 +28,6 @@ script:
  - WEB_PORT=5007 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d
  - docker-compose -p instance2 -f docker-compose-tests.yml ps
  - sleep 5
- - curl http://localhost:5006
- - curl http://localhost:5007
  # Integration tests first
  - python -m pytest -v --ignore data -k integration
  # Federation tests (with two local instances)
