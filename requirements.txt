@@ -1,5 +1,6 @@
 python-dateutil
 libsass
+tornado<6.0.0
 flower
 gunicorn
 piexif
