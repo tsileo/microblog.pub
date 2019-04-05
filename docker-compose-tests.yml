@@ -4,9 +4,6 @@ services:
     image: 'microblogpub:latest'
     ports:
      - "${WEB_PORT}:5005"
-    links:
-     - mongo
-     - rmq
     volumes:
      - "${CONFIG_DIR}:/app/config"
      - "./static:/app/static"
@@ -14,12 +11,10 @@ services:
      - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
      - MICROBLOGPUB_DEBUG=1
+     - POUSSETACHES_AUTH_KEY=123
   celery:
 #    image: "instance1_web"
     image: 'microblogpub:latest'
-    links:
-     - mongo
-     - rmq
     command: 'celery worker -l info -A tasks'
     volumes:
      - "${CONFIG_DIR}:/app/config"
@@ -35,6 +30,10 @@ services:
     environment:
      - RABBITMQ_ERLANG_COOKIE=secretrabbit
      - RABBITMQ_NODENAME=rabbit@my-rabbit
+  poussetaches:
+    image: "poussetaches:latest"
+    environment:
+     - POUSSETACHES_AUTH_KEY=123
 networks:
   default:
     name: microblogpubfede 

@@ -339,6 +339,7 @@ def invalidate_cache(activity):
             DB.cache2.remove()
         # FIXME(tsileo): check if it's a reply of a reply
 
+
 @app.task(bind=True, max_retries=MAX_RETRIES)  # noqa: C901
 def finish_post_to_inbox(self, iri: str) -> None:
     try:
