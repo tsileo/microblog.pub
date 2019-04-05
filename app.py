@@ -2252,7 +2252,7 @@ def task_t2():
 
 
 @app.route("/task/fetch_og_meta", methods=["POST"])
-def task_fetch_og_metadata():
+def task_fetch_og_meta():
     task = p.parse(request)
     app.logger.info(f"task={task!r}")
     iri = task.payload
@@ -2286,6 +2286,8 @@ def task_fetch_og_metadata():
     except Exception:
         app.logger.exception(f"failed to fetch OG metadata for {iri}")
         abort(500)
+
+    return ""
 
 
 @app.route("/task/cache_object", methods=["POST"])
@@ -2405,6 +2407,8 @@ def task_finish_post_to_outbox():
         app.logger.exception(f"failed to post to remote inbox for {iri}")
         abort(500)
 
+    return ""
+
 
 @app.route("/task/finish_post_to_inbox", methods=["POST"])  # noqa: C901
 def task_finish_post_to_inbox():
@@ -2446,6 +2450,8 @@ def task_finish_post_to_inbox():
     except Exception:
         app.logger.exception(f"failed to cache attachments for {iri}")
         abort(500)
+
+    return ""
 
 
 def post_to_outbox(activity: ap.BaseActivity) -> str:
@@ -2544,9 +2550,11 @@ def task_cache_attachments():
         app.logger.exception(f"failed to cache attachments for {iri}")
         abort(500)
 
+    return ""
+
 
 @app.route("/task/cache_actor", methods=["POST"])
-def task_cache_actor():
+def task_cache_actor() -> str:
     task = p.parse(request)
     app.logger.info(f"task={task!r}")
     iri, also_cache_attachments = (
@@ -2558,7 +2566,7 @@ def task_cache_actor():
         app.logger.info(f"activity={activity!r}")
 
         if activity.has_type(ap.ActivityType.CREATE):
-            Tasks.fetch_og_metadata(iri)
+            Tasks.fetch_og_meta(iri)
 
         if activity.has_type([ap.ActivityType.LIKE, ap.ActivityType.ANNOUNCE]):
             Tasks.cache_object(iri)
@@ -2605,6 +2613,8 @@ def task_cache_actor():
     except Exception:
         app.logger.exception(f"failed to cache actor for {iri}")
         abort(500)
+
+    return ""
 
 
 @app.route("/task/process_new_activity", methods=["POST"])  # noqa:c901
@@ -2711,8 +2721,10 @@ def task_process_new_activity():
         app.logger.exception(f"failed to process new activity {iri}")
         abort(500)
 
+    return ""
 
-@app.route("/task/forward_activity")
+
+@app.route("/task/forward_activity", methods=["POST"])
 def task_forward_activity():
     task = p.parse(request)
     app.logger.info(f"task={task!r}")
@@ -2730,8 +2742,10 @@ def task_forward_activity():
         app.logger.exception("task failed")
         abort(500)
 
+    return ""
 
-@app.route("/task/post_to_remote_inbox")
+
+@app.route("/task/post_to_remote_inbox", methods=["POST"])
 def task_post_to_remote_inbox():
     task = p.parse(request)
     app.logger.info(f"task={task!r}")
@@ -2766,3 +2780,5 @@ def task_post_to_remote_inbox():
             return ""
 
         abort(500)
+
+    return ""
