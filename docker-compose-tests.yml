@@ -9,8 +9,9 @@ services:
      - "./static:/app/static"
     environment:
      - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
-     - MICROBLOGPUB_MONGODB_HOST=mongo:27017
+     - MICROBLOGPUB_MONGODB_HOST=${COMPOSE_PROJECT_NAME}_mongo_1:27017
      - MICROBLOGPUB_DEBUG=1
+     - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
      - POUSSETACHES_AUTH_KEY=123
   celery:
 #    image: "instance1_web"

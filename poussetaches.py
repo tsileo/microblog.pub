@@ -45,4 +45,4 @@ class PousseTaches:
         print(f"envelope={envelope!r}")
         payload = json.loads(base64.b64decode(envelope["payload"]))
 
-        return Task(req_id=envelope["req_id"], tries=envelope["tries"], payload=payload)
+        return Task(req_id=envelope["req_id"], tries=envelope["tries"], payload=payload)  # type: ignore
