@@ -14,7 +14,7 @@ services:
     environment:
      - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
-     - POUSSETACHES_AUTH_KEY=123
+     - POUSSETACHES_AUTH_KEY=${POUSSETACHES_AUTH_KEY}
   celery:
     image: 'microblogpub:latest'
     links:
@@ -40,7 +40,7 @@ services:
      - "${DATA_DIR}/rabbitmq:/var/lib/rabbitmq"
   poussetaches:
     image: "poussetaches:latest"
-    ports:
-     - '7991'
+    volumes:
+     - "${DATA_DIR}/poussetaches:/app/poussetaches/poussetaches_data"
     environment:
-     - POUSSETACHES_AUTH_KEY=123
+     - POUSSETACHES_AUTH_KEY=${POUSSETACHES_AUTH_KEY}

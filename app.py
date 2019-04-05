@@ -62,7 +62,7 @@ from werkzeug.utils import secure_filename
 import activitypub
 import config
 
-import tasks
+import tasks  # noqa: here just for the migration  # FIXME(tsileo): remove me
 from activitypub import Box
 from activitypub import embed_collection
 from config import USER_AGENT
@@ -2210,6 +2210,9 @@ def token_endpoint():
     )
 
 
+#################
+# Feeds
+
 @app.route("/feed.json")
 def json_feed():
     return Response(
@@ -2234,22 +2237,48 @@ def rss_feed():
     )
 
 
-@app.route("/task/t1")
-def task_t1():
-    p.push(
-        "https://mastodon.cloud/@iulius/101852467780804071/activity",
-        "/task/cache_object",
-    )
-    return "ok"
+###########
+# Tasks
 
+class Tasks:
+    @staticmethod
+    def cache_object(iri: str) -> None:
+        p.push(iri, "/task/cache_object")
 
-@app.route("/task/t2", methods=["POST"])
-def task_t2():
-    print(request)
-    print(request.headers)
-    task = p.parse(request)
-    print(task)
-    return "yay"
+    @staticmethod
+    def cache_actor(iri: str, also_cache_attachments: bool = True) -> None:
+        p.push(
+            {"iri": iri, "also_cache_attachments": also_cache_attachments},
+            "/task/cache_actor",
+        )
+
+    @staticmethod
+    def post_to_remote_inbox(payload: str, recp: str) -> None:
+        p.push({"payload": payload, "to": recp}, "/task/post_to_remote_inbox")
+
+    @staticmethod
+    def forward_activity(iri: str) -> None:
+        p.push(iri, "/task/forward_activity")
+
+    @staticmethod
+    def fetch_og_meta(iri: str) -> None:
+        p.push(iri, "/task/fetch_og_meta")
+
+    @staticmethod
+    def process_new_activity(iri: str) -> None:
+        p.push(iri, "/task/process_new_activity")
+
+    @staticmethod
+    def cache_attachments(iri: str) -> None:
+        p.push(iri, "/task/cache_attachments")
+
+    @staticmethod
+    def finish_post_to_inbox(iri: str) -> None:
+        p.push(iri, "/task/finish_post_to_inbox")
+
+    @staticmethod
+    def finish_post_to_outbox(iri: str) -> None:
+        p.push(iri, "/task/finish_post_to_outbox")
 
 
 @app.route("/task/fetch_og_meta", methods=["POST"])
@@ -2320,48 +2349,6 @@ def task_cache_object():
         app.logger.exception(f"failed to cache object for {iri}")
         abort(500)
     return ""
-
-
-class Tasks:
-    @staticmethod
-    def cache_object(iri: str) -> None:
-        p.push(iri, "/task/cache_object")
-
-    @staticmethod
-    def cache_actor(iri: str, also_cache_attachments: bool = True) -> None:
-        p.push(
-            {"iri": iri, "also_cache_attachments": also_cache_attachments},
-            "/task/cache_actor",
-        )
-
-    @staticmethod
-    def post_to_remote_inbox(payload: str, recp: str) -> None:
-        p.push({"payload": payload, "to": recp}, "/task/post_to_remote_inbox")
-
-    @staticmethod
-    def forward_activity(iri: str) -> None:
-        p.push(iri, "/task/forward_activity")
-
-    @staticmethod
-    def fetch_og_meta(iri: str) -> None:
-        p.push(iri, "/task/fetch_og_meta")
-
-    @staticmethod
-    def process_new_activity(iri: str) -> None:
-        p.push(iri, "/task/process_new_activity")
-
-    @staticmethod
-    def cache_attachments(iri: str) -> None:
-        p.push(iri, "/task/cache_attachments")
-
-    @staticmethod
-    def finish_post_to_inbox(iri: str) -> None:
-        p.push(iri, "/task/finish_post_to_inbox")
-
-    @staticmethod
-    def finish_post_to_outbox(iri: str) -> None:
-        p.push(iri, "/task/finish_post_to_outbox")
-
 
 @app.route("/task/finish_post_to_outbox", methods=["POST"])  # noqa:C901
 def task_finish_post_to_outbox():
@@ -2748,6 +2735,7 @@ def task_forward_activity():
 
 @app.route("/task/post_to_remote_inbox", methods=["POST"])
 def task_post_to_remote_inbox():
+    """Post an activity to a remote inbox."""
     task = p.parse(request)
     app.logger.info(f"task={task!r}")
     payload, to = task.payload["payload"], task.payload["to"]
