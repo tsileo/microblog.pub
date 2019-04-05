@@ -33,7 +33,7 @@ class PousseTaches:
         )
         resp.raise_for_status()
 
-        return resp.headers.get("Poussetaches-Task-ID")
+        return resp.headers["Poussetaches-Task-ID"]
 
     def parse(self, req: flask.Request) -> Task:
         if req.headers.get("Poussetaches-Auth-Key") != POUSSETACHES_AUTH_KEY:
