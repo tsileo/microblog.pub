@@ -33,7 +33,6 @@ services:
      - RABBITMQ_NODENAME=rabbit@my-rabbit
   poussetaches:
     image: "poussetaches:latest"
-     - '7991'
     environment:
      - POUSSETACHES_AUTH_KEY=123
 networks:
