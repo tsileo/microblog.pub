@@ -62,7 +62,7 @@ from werkzeug.utils import secure_filename
 import activitypub
 import config
 
-# import tasks
+import tasks
 from activitypub import Box
 from activitypub import embed_collection
 from config import USER_AGENT
