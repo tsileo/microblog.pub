@@ -15,6 +15,7 @@ services:
      - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
      - POUSSETACHES_AUTH_KEY=${POUSSETACHES_AUTH_KEY}
+     - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
   celery:
     image: 'microblogpub:latest'
     links:
