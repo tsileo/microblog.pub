@@ -41,6 +41,6 @@ services:
   poussetaches:
     image: "poussetaches:latest"
     volumes:
-     - "${DATA_DIR}/poussetaches:/app/poussetaches/poussetaches_data"
+     - "${DATA_DIR}/poussetaches:/app/poussetaches_data"
     environment:
      - POUSSETACHES_AUTH_KEY=${POUSSETACHES_AUTH_KEY}
