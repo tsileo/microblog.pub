@@ -1402,10 +1402,8 @@ def admin():
 @app.route("/admin/tasks", methods=["GET"])
 @login_required
 def admin_tasks():
-
     return render_template(
         "admin_tasks.html",
-        success=p.get_success(),
         dead=p.get_dead(),
         waiting=p.get_waiting(),
     )
