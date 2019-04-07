@@ -1,0 +1,89 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block title %}Tasks - {{ config.NAME }}{% endblock %}
+{% block content %}
+<div>
+{% include "header.html" %}
+<div style="margin-top:50px;">
+
+<h3>Dead</h3>
+<table class="pure-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>URL</th>
+            <th>Payload</th>
+			<th>Next run</th>
+            <th>Response</th>
+        </tr>
+    </thead>
+
+    <tbody>
+    {% for task in dead %}
+        <tr>
+            <td>{{ task.task_id }}</td>
+            <td>{{ task.url }} ({{ task.expected }}</td>
+            <td>{{ task.payload }}</td>
+            <td>{{ task.next_run }}</td>
+			<td>Tries #{{ task.tries }}: {{ task.last_error_body }} ({{ task.last_error_status_code }})</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+
+<h3>Waiting</h3>
+<table class="pure-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>URL</th>
+            <th>Payload</th>
+			<th>Next run</th>
+            <th>Response</th>
+        </tr>
+    </thead>
+
+    <tbody>
+    {% for task in waiting %}
+        <tr>
+            <td>{{ task.task_id }}</td>
+            <td>{{ task.url }} ({{ task.expected }}</td>
+            <td>{{ task.payload }}</td>
+            <td>{{ task.next_run }}</td>
+			<td>Tries #{{ task.tries }}: {{ task.last_error_body }} ({{ task.last_error_status_code }})</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+
+<h3>Success</h3>
+<table class="pure-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>URL</th>
+            <th>Payload</th>
+			<th>Next run</th>
+            <th>Response</th>
+        </tr>
+    </thead>
+
+    <tbody>
+    {% for task in success %}
+        <tr>
+            <td>{{ task.task_id }}</td>
+            <td>{{ task.url }} ({{ task.expected }}</td>
+            <td>{{ task.payload }}</td>
+            <td>{{ task.next_run }}</td>
+			<td>Tries #{{ task.tries }}: {{ task.last_error_body }} ({{ task.last_error_status_code }})</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+
+</div>
+</div>
+{% endblock %}

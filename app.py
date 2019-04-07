@@ -89,7 +89,7 @@ from utils.media import Kind
 from poussetaches import PousseTaches
 
 phost = "http://" + os.getenv("COMPOSE_PROJECT_NAME", "")
-p = PousseTaches(f"{phost}_poussetaches_1:7991", f"{phost}_web_1:5005")
+p = PousseTaches("http://localhost:7991", "")  # f"{phost}_poussetaches_1:7991", f"{phost}_web_1:5005")
 
 
 back = activitypub.MicroblogPubBackend()
@@ -1396,6 +1396,18 @@ def admin():
                 "meta.undo": False,
             }
         ),
+    )
+
+
+@app.route("/admin/tasks", methods=["GET"])
+@login_required
+def admin_tasks():
+
+    return render_template(
+        "admin_tasks.html",
+        success=p.get_success(),
+        dead=p.get_dead(),
+        waiting=p.get_waiting(),
     )
 
 
