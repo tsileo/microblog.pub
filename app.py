@@ -2353,11 +2353,8 @@ def task_cache_object():
     iri = task.payload
     try:
         activity = ap.fetch_remote_activity(iri)
-        print(activity)
-        print(activity.__dict__)
         app.logger.info(f"activity={activity!r}")
-        obj = activity
-        # obj = activity.get_object()
+        obj = activity.get_object()
         DB.activities.update_one(
             {"remote_id": activity.id},
             {
