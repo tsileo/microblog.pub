@@ -89,7 +89,7 @@ from utils.media import Kind
 from poussetaches import PousseTaches
 
 phost = "http://" + os.getenv("COMPOSE_PROJECT_NAME", "")
-p = PousseTaches("http://localhost:7991", "")  # f"{phost}_poussetaches_1:7991", f"{phost}_web_1:5005")
+p = PousseTaches(f"{phost}_poussetaches_1:7991", f"{phost}_web_1:5005")
 
 
 back = activitypub.MicroblogPubBackend()
