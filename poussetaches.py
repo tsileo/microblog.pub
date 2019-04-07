@@ -60,7 +60,9 @@ class PousseTaches:
         print(f"envelope={envelope!r}")
         payload = json.loads(base64.b64decode(envelope["payload"]))
 
-        return Task(req_id=envelope["req_id"], tries=envelope["tries"], payload=payload)  # type: ignore
+        return Task(
+            req_id=envelope["req_id"], tries=envelope["tries"], payload=payload
+        )  # type: ignore
 
     @staticmethod
     def _expand_task(t: Dict[str, Any]) -> None:
@@ -86,16 +88,18 @@ class PousseTaches:
         dat = resp.json()
         for t in dat["tasks"]:
             self._expand_task(t)
-            out.append(GetTask(
-                task_id=t["id"],
-                payload=t["payload"],
-                expected=t["expected"],
-                tries=t["tries"],
-                url=t["url"],
-                last_error_status_code=t["last_error_status_code"],
-                last_error_body=t["last_error_body"],
-                next_run=t["next_run"],
-            ))
+            out.append(
+                GetTask(
+                    task_id=t["id"],
+                    payload=t["payload"],
+                    expected=t["expected"],
+                    tries=t["tries"],
+                    url=t["url"],
+                    last_error_status_code=t["last_error_status_code"],
+                    last_error_body=t["last_error_body"],
+                    next_run=t["next_run"],
+                )
+            )
 
         return out
 
