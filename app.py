@@ -505,6 +505,22 @@ def handle_activitypub_error(error):
     return response
 
 
+class TaskError(Exception):
+    """Raised to log the error for poussetaches."""
+    def __init__(self):
+        self.message = traceback.format_exc()
+
+
+@app.errorhandler(TaskError)
+def handle_task_error(error):
+    logger.error(
+        f"caught activitypub error {error!r}, {traceback.format_tb(error.__traceback__)}"
+    )
+    response = flask_jsonify({"traceback": error.message})
+    response.status_code = 500
+    return response
+
+
 # @app.errorhandler(Exception)
 # def handle_other_error(error):
 #    logger.error(
@@ -2322,10 +2338,10 @@ def task_fetch_og_meta():
             app.logger.exception("bad request, no retry")
             return ""
         app.logger.exception("failed to fetch OG metadata")
-        abort(500)
-    except Exception:
+        raise TaskError() from http_err
+    except Exception as err:
         app.logger.exception(f"failed to fetch OG metadata for {iri}")
-        abort(500)
+        raise TaskError() from err
 
     return ""
 
@@ -2354,10 +2370,10 @@ def task_cache_object():
     except (ActivityGoneError, ActivityNotFoundError, NotAnActivityError):
         DB.activities.update_one({"remote_id": iri}, {"$set": {"meta.deleted": True}})
         app.logger.exception(f"flagging activity {iri} as deleted, no object caching")
-        return ""
-    except Exception:
+    except Exception as err:
         app.logger.exception(f"failed to cache object for {iri}")
-        abort(500)
+        raise TaskError() from err
+
     return ""
 
 @app.route("/task/finish_post_to_outbox", methods=["POST"])  # noqa:C901
@@ -2401,9 +2417,9 @@ def task_finish_post_to_outbox():
             Tasks.post_to_remote_inbox(payload, recp)
     except (ActivityGoneError, ActivityNotFoundError):
         app.logger.exception(f"no retry")
-    except Exception:
+    except Exception as err:
         app.logger.exception(f"failed to post to remote inbox for {iri}")
-        abort(500)
+        raise TaskError() from err
 
     return ""
 
@@ -2445,9 +2461,9 @@ def task_finish_post_to_inbox():
             app.logger.exception("failed to invalidate cache")
     except (ActivityGoneError, ActivityNotFoundError, NotAnActivityError):
         app.logger.exception(f"no retry")
-    except Exception:
+    except Exception as err:
         app.logger.exception(f"failed to cache attachments for {iri}")
-        abort(500)
+        raise TaskError() from err
 
     return ""
 
@@ -2544,9 +2560,9 @@ def task_cache_attachments():
 
     except (ActivityGoneError, ActivityNotFoundError, NotAnActivityError):
         app.logger.exception(f"dropping activity {iri}, no attachment caching")
-    except Exception:
+    except Exception as err:
         app.logger.exception(f"failed to cache attachments for {iri}")
-        abort(500)
+        raise TaskError() from err
 
     return ""
 
@@ -2608,9 +2624,9 @@ def task_cache_actor() -> str:
     except (ActivityGoneError, ActivityNotFoundError):
         DB.activities.update_one({"remote_id": iri}, {"$set": {"meta.deleted": True}})
         app.logger.exception(f"flagging activity {iri} as deleted, no actor caching")
-    except Exception:
+    except Exception as err:
         app.logger.exception(f"failed to cache actor for {iri}")
-        abort(500)
+        raise TaskError() from err
 
     return ""
 
@@ -2716,9 +2732,9 @@ def task_process_new_activity():
     except (ActivityGoneError, ActivityNotFoundError):
         app.logger.exception(f"dropping activity {iri}, skip processing")
         return ""
-    except Exception:
+    except Exception as err:
         app.logger.exception(f"failed to process new activity {iri}")
-        abort(500)
+        raise TaskError() from err
 
     return ""
 
@@ -2737,9 +2753,9 @@ def task_forward_activity():
         for recp in recipients:
             app.logger.debug(f"forwarding {activity!r} to {recp}")
             Tasks.post_to_remote_inbox(payload, recp)
-    except Exception:
+    except Exception as err:
         app.logger.exception("task failed")
-        abort(500)
+        raise TaskError() from err
 
     return ""
 
@@ -2779,6 +2795,9 @@ def task_post_to_remote_inbox():
             app.logger.info("client error, no retry")
             return ""
 
-        abort(500)
+        raise TaskError() from err
+    except Exception as err:
+        app.logger.exception("task failed")
+        raise TaskError() from err
 
     return ""
