@@ -74,7 +74,7 @@ class PousseTaches:
 
         t["next_run"] = datetime.fromtimestamp(float(t["next_run"] / 1e9))
         if t["last_run"]:
-            t["last_run"] = datetime.fromtimestamp(float(t["last__run"] / 1e9))
+            t["last_run"] = datetime.fromtimestamp(float(t["last_run"] / 1e9))
         else:
             del t["last_run"]
 
