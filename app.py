@@ -1821,7 +1821,7 @@ def api_new_note():
         inReplyTo=reply.id if reply else None,
     )
 
-    if "file" in request.files:
+    if "file" in request.files and request.files["file"].filename:
         file = request.files["file"]
         rfilename = secure_filename(file.filename)
         with BytesIO() as buf:
