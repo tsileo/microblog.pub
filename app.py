@@ -2716,7 +2716,8 @@ def task_process_new_activity():
         if not should_delete and not activity.has_type(ap.ActivityType.DELETE):
             Tasks.cache_actor(iri)
     except (ActivityGoneError, ActivityNotFoundError):
-        app.logger.log.exception(f"dropping activity {iri}, skip processing")
+        app.logger.exception(f"dropping activity {iri}, skip processing")
+        return ""
     except Exception:
         app.logger.exception(f"failed to process new activity {iri}")
         abort(500)
