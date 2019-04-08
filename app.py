@@ -597,8 +597,18 @@ def admin_login():
     u2f_enabled = True if devices else False
     if request.method == "POST":
         csrf.protect()
+        # 1. Check regular password login flow
         pwd = request.form.get("pass")
-        if devices:
+        if pwd:
+            if verify_pass(pwd):
+                session["logged_in"] = True
+                return redirect(
+                    request.args.get("redirect") or url_for("admin_notifications")
+                )
+            else:
+                abort(403)
+        # 2. Check for U2F payload, if any
+        elif devices:
             resp = json.loads(request.form.get("resp"))
             try:
                 u2f.complete_authentication(session["challenge"], resp)
@@ -613,13 +623,6 @@ def admin_login():
             return redirect(
                 request.args.get("redirect") or url_for("admin_notifications")
             )
-        elif pwd and verify_pass(pwd):
-            session["logged_in"] = True
-            return redirect(
-                request.args.get("redirect") or url_for("admin_notifications")
-            )
-        elif pwd:
-            abort(403)
         else:
             abort(401)
 
