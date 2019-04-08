@@ -1267,11 +1267,6 @@ def outbox_activity_shares(item_id):
 @app.route("/admin", methods=["GET"])
 @login_required
 def admin():
-    # Setup the cron tasks
-    p.push({}, "/task/cleanup_part_1", schedule="@every 12h")
-    p.push({}, "/task/cleanup_part_2", schedule="@every 12h")
-    p.push({}, "/task/cleanup_part_3", schedule="@every 12h")
-
     q = {
         "meta.deleted": False,
         "meta.undo": False,
@@ -1393,6 +1388,13 @@ def admin_new():
 @app.route("/admin/notifications")
 @login_required
 def admin_notifications():
+    # Setup the cron for deleting old activities
+    p.push({}, "/task/cleanup", schedule="@every 12h")
+
+    # Trigger a cleanup if asked
+    if request.args.get("cleanup"):
+        p.push({}, "/task/cleanup")
+
     # FIXME(tsileo): show unfollow (performed by the current actor) and liked???
     mentions_query = {
         "type": ActivityType.CREATE.value,
@@ -2707,6 +2709,15 @@ def task_post_to_remote_inbox():
         raise TaskError() from err
 
     return ""
+
+
+@app.route("/task/cleanup", methods=["POST"])
+def task_cleanup():
+    task = p.parse(request)
+    app.logger.info(f"task={task!r}")
+    p.push({}, "/task/cleanup_part_1")
+    p.push({}, "/task/cleanup_part_2")
+    p.push({}, "/task/cleanup_part_3")
 
 
 @app.route("/task/cleanup_part_1", methods=["POST"])
