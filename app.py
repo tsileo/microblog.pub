@@ -91,10 +91,6 @@ from poussetaches import PousseTaches
 
 phost = "http://" + os.getenv("COMPOSE_PROJECT_NAME", "")
 p = PousseTaches(f"{phost}_poussetaches_1:7991", f"{phost}_web_1:5005")
-# Setup the cron tasks
-p.push({}, "/task/cleanup_part_1", schedule="@every 12h")
-p.push({}, "/task/cleanup_part_2", schedule="@every 12h")
-p.push({}, "/task/cleanup_part_3", schedule="@every 12h")
 
 back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)
@@ -1268,6 +1264,11 @@ def outbox_activity_shares(item_id):
 @app.route("/admin", methods=["GET"])
 @login_required
 def admin():
+    # Setup the cron tasks
+    p.push({}, "/task/cleanup_part_1", schedule="@every 12h")
+    p.push({}, "/task/cleanup_part_2", schedule="@every 12h")
+    p.push({}, "/task/cleanup_part_3", schedule="@every 12h")
+
     q = {
         "meta.deleted": False,
         "meta.undo": False,
