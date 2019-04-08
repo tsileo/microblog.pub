@@ -24,6 +24,7 @@ class Task:
 class GetTask:
     payload: Any
     expected: int
+    # schedule: str
     task_id: str
     next_run: datetime
     tries: int
@@ -37,14 +38,21 @@ class PousseTaches:
         self.api_url = api_url
         self.base_url = base_url
 
-    def push(self, payload: Any, path: str, expected=200) -> str:
+    def push(
+        self, payload: Any, path: str, expected: int = 200, schedule: str = ""
+    ) -> str:
         # Encode our payload
         p = base64.b64encode(json.dumps(payload).encode()).decode()
 
         # Queue/push it
         resp = requests.post(
             self.api_url,
-            json={"url": self.base_url + path, "payload": p, "expected": expected},
+            json={
+                "url": self.base_url + path,
+                "payload": p,
+                "expected": expected,
+                "schedule": schedule,
+            },
         )
         resp.raise_for_status()
 
@@ -93,6 +101,7 @@ class PousseTaches:
                     task_id=t["id"],
                     payload=t["payload"],
                     expected=t["expected"],
+                    # shedule=t["schedule"],
                     tries=t["tries"],
                     url=t["url"],
                     last_error_status_code=t["last_error_status_code"],
@@ -102,6 +111,9 @@ class PousseTaches:
             )
 
         return out
+
+    def get_cron(self) -> List[GetTask]:
+        return self._get("cron")
 
     def get_success(self) -> List[GetTask]:
         return self._get("success")

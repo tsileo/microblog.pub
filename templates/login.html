@@ -21,7 +21,7 @@ display:inline;
 	<input type="password" name="pass" placeholder="password">
 	{% if u2f_enabled %}
 	<input type="hidden" name="resp" id="sig-payload" value="">
-	<input type="submit" value="waiting for u2f" disabled>
+	<input type="submit" value="waiting for u2f or login with password" disabled>
 	{% else %}
 	<input type="submit" value="login">
 	{% endif %}
