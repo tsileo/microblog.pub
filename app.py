@@ -66,6 +66,8 @@ import config
 import tasks  # noqa: here just for the migration  # FIXME(tsileo): remove me
 from activitypub import Box
 from activitypub import embed_collection
+from activitypub import save
+from activitypub import followers_as_recipients
 from config import USER_AGENT
 from config import ADMIN_API_KEY
 from config import BASE_URL
@@ -1643,7 +1645,7 @@ def inbox():
                 data["object"]
             ):
                 logger.info(f"received a Delete for an actor {data!r}")
-                if get_backend().inbox_check_duplicate(MY_PERSON, data["id"]):
+                if DB.activities.find_one({"box": Box.INBOX.value, "remote_id": data["id"]}):
                     # The activity is already in the inbox
                     logger.info(f"received duplicate activity {data!r}, dropping it")
 
@@ -2295,7 +2297,9 @@ def task_finish_post_to_outbox():
             elif obj.has_type(ap.ActivityType.ANNOUNCE):
                 back.outbox_undo_announce(MY_PERSON, obj)
             elif obj.has_type(ap.ActivityType.FOLLOW):
-                back.undo_new_following(MY_PERSON, obj)
+                DB.activities.update_one(
+                    {"remote_id": obj.id}, {"$set": {"meta.undo": True}}
+                )
 
         app.logger.info(f"recipients={recipients}")
         activity = ap.clean_activity(activity.to_dict())
@@ -2345,7 +2349,9 @@ def task_finish_post_to_inbox():
             elif obj.has_type(ap.ActivityType.ANNOUNCE):
                 back.inbox_undo_announce(MY_PERSON, obj)
             elif obj.has_type(ap.ActivityType.FOLLOW):
-                back.undo_new_follower(MY_PERSON, obj)
+                DB.activities.update_one(
+                    {"remote_id": obj.id}, {"$set": {"meta.undo": True}}
+                )
         try:
             invalidate_cache(activity)
         except Exception:
@@ -2367,7 +2373,7 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
     obj_id = back.random_object_id()
     activity.set_id(back.activity_url(obj_id), obj_id)
 
-    back.save(Box.OUTBOX, activity)
+    save(Box.OUTBOX, activity)
     Tasks.cache_actor(activity.id)
     Tasks.finish_post_to_outbox(activity.id)
     return activity.id
@@ -2376,7 +2382,14 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
 def post_to_inbox(activity: ap.BaseActivity) -> None:
     # Check for Block activity
     actor = activity.get_actor()
-    if back.outbox_is_blocked(MY_PERSON, actor.id):
+    if DB.activities.find_one(
+                {
+                    "box": Box.OUTBOX.value,
+                    "type": ap.ActivityType.BLOCK.value,
+                    "activity.object": actor.id,
+                    "meta.undo": False,
+                }
+    ):
         app.logger.info(
             f"actor {actor!r} is blocked, dropping the received activity {activity!r}"
         )
@@ -2386,7 +2399,7 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         # The activity is already in the inbox
         app.logger.info(f"received duplicate activity {activity!r}, dropping it")
 
-    back.save(Box.INBOX, activity)
+    save(Box.INBOX, activity)
     Tasks.process_new_activity(activity.id)
 
     app.logger.info(f"spawning task for {activity!r}")
@@ -2654,7 +2667,7 @@ def task_forward_activity():
     iri = task.payload
     try:
         activity = ap.fetch_remote_activity(iri)
-        recipients = back.followers_as_recipients()
+        recipients = followers_as_recipients()
         app.logger.debug(f"Forwarding {activity!r} to {recipients}")
         activity = ap.clean_activity(activity.to_dict())
         payload = json.dumps(activity)
