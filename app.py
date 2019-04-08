@@ -2718,6 +2718,7 @@ def task_cleanup():
     p.push({}, "/task/cleanup_part_1")
     p.push({}, "/task/cleanup_part_2")
     p.push({}, "/task/cleanup_part_3")
+    return ""
 
 
 @app.route("/task/cleanup_part_1", methods=["POST"])
