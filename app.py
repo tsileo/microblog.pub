@@ -1422,7 +1422,10 @@ def admin_cleanup2():
     ):
         # Delete the cached attachment/
         for grid_item in MEDIA_CACHE.fs.find({"remote_id": data["remote_id"]}):
-            MEDIA_CACHE.fs.delete(grid_item._id)
+            try:
+                MEDIA_CACHE.fs.delete(grid_item._id)
+            except Exception:
+                pass
 
     # Delete the Create activities that no longer have cached attachments
     DB.activities.delete_many(
@@ -1451,7 +1454,10 @@ def admin_cleanup3():
     for grid_item in MEDIA_CACHE.fs.find(
         {"kind": {"$in": ["og", "attachment"]}, "remote_id": {"$exists": False}}
     ):
-        MEDIA_CACHE.fs.delete(grid_item._id)
+        try:
+            MEDIA_CACHE.fs.delete(grid_item._id)
+        except Exception:
+            pass
 
     # TODO(tsileo): iterator over "actor_icon" and look for unused one in a separate task
 
