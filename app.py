@@ -1434,6 +1434,14 @@ def admin_cleanup2():
         }
     )
 
+    return "OK"
+
+
+@app.route("/admin/cleanup3", methods=["GET"])
+@login_required
+def admin_cleanup3():
+    d = (datetime.utcnow() - timedelta(days=45)).strftime("%Y-%m-%d")
+
     # Delete old replies we don't care about
     DB.activities.delete_many(
         {"box": Box.REPLIES.value, "meta.keep": False, "activity.published": {"$lt": d}}
