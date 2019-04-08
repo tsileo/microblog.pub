@@ -20,7 +20,7 @@
     </thead>
 
     <tbody>
-    {% for task in dead %}
+    {% for task in cron %}
         <tr>
             <td>{{ task.task_id }}</td>
             <td>{{ task.url }} ({{ task.expected }})</td>
@@ -75,7 +75,7 @@
     {% for task in waiting %}
         <tr>
             <td>{{ task.task_id }}</td>
-            <td>{{ task.url }} ({{ task.expected }}</td>
+            <td>{{ task.url }} ({{ task.expected }})</td>
             <td>{{ task.payload }}</td>
             <td>{{ task.next_run }}</td>
 			<td>Tries #{{ task.tries }}: {{ task.last_error_body }} ({{ task.last_error_status_code }})</td>
