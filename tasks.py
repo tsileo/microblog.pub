@@ -312,7 +312,7 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         # The activity is already in the inbox
         log.info(f"received duplicate activity {activity!r}, dropping it")
 
-    activitypub.save(Box.INBOX, activity)
+    back.save(Box.INBOX, activity)
     process_new_activity.delay(activity.id)
 
     log.info(f"spawning task for {activity!r}")
@@ -387,7 +387,7 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
     obj_id = back.random_object_id()
     activity.set_id(back.activity_url(obj_id), obj_id)
 
-    activitypub.save(Box.OUTBOX, activity)
+    back.save(Box.OUTBOX, activity)
     cache_actor.delay(activity.id)
     finish_post_to_outbox.delay(activity.id)
     return activity.id
@@ -440,7 +440,7 @@ def finish_post_to_outbox(self, iri: str) -> None:
 def forward_activity(self, iri: str) -> None:
     try:
         activity = ap.fetch_remote_activity(iri)
-        recipients = activitypub.followers_as_recipients()
+        recipients = back.followers_as_recipients()
         log.debug(f"Forwarding {activity!r} to {recipients}")
         activity = ap.clean_activity(activity.to_dict())
         payload = json.dumps(activity)

@@ -18,9 +18,6 @@ reload-dev:
 	# docker build . -t microblogpub:latest
 	docker-compose -f docker-compose-dev.yml up -d --force-recreate
 
-update-poussetaches:
-	git clone https://github.com/tsileo/poussetaches.git tmp_poussetaches && cd tmp_poussetaches && docker build . -t poussetaches:latest && cd - && rm -rf tmp_poussetaches
-
 update:
 	git pull
 	docker build . -t microblogpub:latest

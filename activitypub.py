@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 from datetime import datetime
 from enum import Enum
 from typing import Any
@@ -78,52 +79,6 @@ class Box(Enum):
     REPLIES = "replies"
 
 
-def save(box: Box, activity: ap.BaseActivity) -> None:
-    """Custom helper for saving an activity to the DB."""
-    DB.activities.insert_one(
-        {
-            "box": box.value,
-            "activity": activity.to_dict(),
-            "type": _to_list(activity.type),
-            "remote_id": activity.id,
-            "meta": {"undo": False, "deleted": False},
-        }
-    )
-
-
-def followers() -> List[str]:
-    q = {
-        "box": Box.INBOX.value,
-        "type": ap.ActivityType.FOLLOW.value,
-        "meta.undo": False,
-    }
-    return [doc["activity"]["actor"] for doc in DB.activities.find(q)]
-
-
-def following() -> List[str]:
-    q = {
-        "box": Box.OUTBOX.value,
-        "type": ap.ActivityType.FOLLOW.value,
-        "meta.undo": False,
-    }
-    return [doc["activity"]["object"] for doc in DB.activities.find(q)]
-
-
-def followers_as_recipients() -> List[str]:
-    q = {
-        "box": Box.INBOX.value,
-        "type": ap.ActivityType.FOLLOW.value,
-        "meta.undo": False,
-    }
-    recipients = []
-    for doc in DB.activities.find(q):
-        recipients.append(
-            doc["meta"]["actor"]["sharedInbox"] or doc["meta"]["actor"]["inbox"]
-        )
-
-    return list(set(recipients))
-
-
 class MicroblogPubBackend(Backend):
     """Implements a Little Boxes backend, backed by MongoDB."""
 
@@ -149,17 +104,72 @@ class MicroblogPubBackend(Backend):
         """URL for activity link."""
         return f"{BASE_URL}/note/{obj_id}"
 
+    def save(self, box: Box, activity: ap.BaseActivity) -> None:
+        """Custom helper for saving an activity to the DB."""
+        DB.activities.insert_one(
+            {
+                "box": box.value,
+                "activity": activity.to_dict(),
+                "type": _to_list(activity.type),
+                "remote_id": activity.id,
+                "meta": {"undo": False, "deleted": False},
+            }
+        )
+
+    def followers(self) -> List[str]:
+        q = {
+            "box": Box.INBOX.value,
+            "type": ap.ActivityType.FOLLOW.value,
+            "meta.undo": False,
+        }
+        return [doc["activity"]["actor"] for doc in DB.activities.find(q)]
+
+    def followers_as_recipients(self) -> List[str]:
+        q = {
+            "box": Box.INBOX.value,
+            "type": ap.ActivityType.FOLLOW.value,
+            "meta.undo": False,
+        }
+        recipients = []
+        for doc in DB.activities.find(q):
+            recipients.append(
+                doc["meta"]["actor"]["sharedInbox"] or doc["meta"]["actor"]["inbox"]
+            )
+
+        return list(set(recipients))
+
+    def following(self) -> List[str]:
+        q = {
+            "box": Box.OUTBOX.value,
+            "type": ap.ActivityType.FOLLOW.value,
+            "meta.undo": False,
+        }
+        return [doc["activity"]["object"] for doc in DB.activities.find(q)]
+
     def parse_collection(
         self, payload: Optional[Dict[str, Any]] = None, url: Optional[str] = None
     ) -> List[str]:
         """Resolve/fetch a `Collection`/`OrderedCollection`."""
         # Resolve internal collections via MongoDB directly
         if url == ID + "/followers":
-            return followers()
+            return self.followers()
         elif url == ID + "/following":
-            return following()
+            return self.following()
 
         return super().parse_collection(payload, url)
+
+    @ensure_it_is_me
+    def outbox_is_blocked(self, as_actor: ap.Person, actor_id: str) -> bool:
+        return bool(
+            DB.activities.find_one(
+                {
+                    "box": Box.OUTBOX.value,
+                    "type": ap.ActivityType.BLOCK.value,
+                    "activity.object": actor_id,
+                    "meta.undo": False,
+                }
+            )
+        )
 
     def _fetch_iri(self, iri: str) -> ap.ObjectType:
         if iri == ME["id"]:
@@ -218,6 +228,13 @@ class MicroblogPubBackend(Backend):
             ACTORS_CACHE[iri] = data
 
         return data
+
+    @ensure_it_is_me
+    def inbox_check_duplicate(self, as_actor: ap.Person, iri: str) -> bool:
+        return bool(DB.activities.find_one({"box": Box.INBOX.value, "remote_id": iri}))
+
+    def set_post_to_remote_inbox(self, cb):
+        self.post_to_remote_inbox_cb = cb
 
     @ensure_it_is_me
     def undo_new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
@@ -454,7 +471,7 @@ class MicroblogPubBackend(Backend):
         )
         if not creply:
             # It means the activity is not in the inbox, and not in the outbox, we want to save it
-            save(Box.REPLIES, reply)
+            self.save(Box.REPLIES, reply)
             new_threads.append(reply.id)
 
         while reply is not None:
@@ -465,7 +482,7 @@ class MicroblogPubBackend(Backend):
             reply = ap.fetch_remote_activity(root_reply)
             q = {"activity.object.id": root_reply}
             if not DB.activities.count(q):
-                save(Box.REPLIES, reply)
+                self.save(Box.REPLIES, reply)
                 new_threads.append(reply.id)
 
         DB.activities.update_one(
@@ -475,6 +492,25 @@ class MicroblogPubBackend(Backend):
             {"box": Box.REPLIES.value, "remote_id": {"$in": new_threads}},
             {"$set": {"meta.thread_root_parent": root_reply}},
         )
+
+    def post_to_outbox(self, activity: ap.BaseActivity) -> None:
+        if activity.has_type(ap.CREATE_TYPES):
+            activity = activity.build_create()
+
+        self.save(Box.OUTBOX, activity)
+
+        # Assign create a random ID
+        obj_id = self.random_object_id()
+        activity.set_id(self.activity_url(obj_id), obj_id)
+
+        recipients = activity.recipients()
+        logger.info(f"recipients={recipients}")
+        activity = ap.clean_activity(activity.to_dict())
+
+        payload = json.dumps(activity)
+        for recp in recipients:
+            logger.debug(f"posting to {recp}")
+            self.post_to_remote_inbox(self.get_actor(), payload, recp)
 
 
 def gen_feed():
