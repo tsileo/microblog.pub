@@ -1303,6 +1303,7 @@ def admin():
 def admin_tasks():
     return render_template(
         "admin_tasks.html",
+        success=p.get_success(),
         dead=p.get_dead(),
         waiting=p.get_waiting(),
         cron=p.get_cron(),
