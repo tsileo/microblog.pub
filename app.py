@@ -96,12 +96,6 @@ p.push({}, "/task/cleanup_part_1", schedule="@every 12h")
 p.push({}, "/task/cleanup_part_2", schedule="@every 12h")
 p.push({}, "/task/cleanup_part_3", schedule="@every 12h")
 
-# Also trigger a cleanup now
-p.push({}, "/task/cleanup_part_1")
-p.push({}, "/task/cleanup_part_2")
-p.push({}, "/task/cleanup_part_3")
-
-
 back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)
 

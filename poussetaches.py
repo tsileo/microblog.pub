@@ -101,7 +101,7 @@ class PousseTaches:
                     task_id=t["id"],
                     payload=t["payload"],
                     expected=t["expected"],
-                    shedule=t["schedule"],
+                    schedule=t["schedule"],
                     tries=t["tries"],
                     url=t["url"],
                     last_error_status_code=t["last_error_status_code"],
