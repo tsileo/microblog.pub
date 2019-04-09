@@ -103,6 +103,7 @@ MEDIA_CACHE = MediaCache(GRIDFS, USER_AGENT)
 
 
 def create_indexes():
+    DB.command("compact", "activities")
     DB.activities.create_index([("remote_id", pymongo.ASCENDING)])
     DB.activities.create_index([("activity.object.id", pymongo.ASCENDING)])
     DB.activities.create_index(
