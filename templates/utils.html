@@ -56,6 +56,13 @@
 
     {% if obj | has_type('Article') %}
     {{ obj.name }} <a href="{{ obj | url_or_id | get_url }}">{{ obj | url_or_id | get_url }}</a>
+    {% elif obj | has_type('Question') %}
+	{{ obj.content | clean | safe }}
+    <ul>
+    {% for oneOf in obj.oneOf %}
+        <li>{{ oneOf.name }} ({{ oneOf.replies.totalItems }})</li>
+    {% endfor %}
+    </ul>
     {% else %}
 	{{ obj.content | clean | safe }}
     {% endif %}
