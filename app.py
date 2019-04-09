@@ -1390,7 +1390,9 @@ def admin_new():
 @login_required
 def admin_notifications():
     # Setup the cron for deleting old activities
-    p.push({}, "/task/cleanup", schedule="@every 12h")
+
+    # FIXME(tsileo): put back to 12h
+    p.push({}, "/task/cleanup", schedule="@every 1h")
 
     # Trigger a cleanup if asked
     if request.args.get("cleanup"):
@@ -2847,11 +2849,11 @@ def task_cleanup_part_2():
             "meta.keep": False,
             "activity.published": {"$lt": d},
         }
-    ):
+    ).limit(5000):
         # Delete the cached attachment/
         for grid_item in MEDIA_CACHE.fs.find({"remote_id": data["remote_id"]}):
             MEDIA_CACHE.fs.delete(grid_item._id)
-            DB.activities.delete_one({"_id": data["_id"]})
+        DB.activities.delete_one({"_id": data["_id"]})
 
     return "OK"
 
