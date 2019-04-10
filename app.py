@@ -843,10 +843,13 @@ def _build_thread(data, include_children=True):  # noqa: C901
     }
     replies = [data]
     for dat in DB.activities.find(query):
-        if dat["type"][0] != ActivityType.CREATE.value:
+        if dat["type"][0] == ActivityType.CREATE.value:
+            replies.append(dat)
+        else:
             # Make a Note/Question/... looks like a Create
             dat = {"activity": {"object": dat["activity"]}, "meta": dat["meta"], "_id": dat["_id"]}
             replies.append(dat)
+
     replies = sorted(replies, key=lambda d: d["activity"]["object"]["published"])
 
     # Index all the IDs in order to build a tree
