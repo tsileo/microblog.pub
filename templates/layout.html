@@ -11,7 +11,11 @@
 {% if not request.args.get("older_than") and not request.args.get("previous_than") %}<link rel="canonical" href="https://{{ config.DOMAIN }}{{ request.path }}">{% endif %}
 {% block links %}{% endblock %}
 {% if config.THEME_COLOR %}<meta name="theme-color" content="{{ config.THEME_COLOR }}">{% endif %}
-<style>{{ config.CSS | safe }}</style>
+<style>{{ config.CSS | safe }}
+.emoji {
+    width: 20px;
+}
+</style>
 {% block headers %}{% endblock %}
 </head>
 <body>
@@ -39,5 +43,15 @@
 	Powered by <a href="https://microblog.pub">microblog.pub</a> <small class="microblogpub-version"><code>{{ microblogpub_version }}</code></small> (<a href="https://github.com/tsileo/microblog.pub">source code</a>) and the <a href="https://activitypub.rocks/">ActivityPub</a> protocol
 </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/twemoji@12.0.0/2/twemoji.min.js"></script>
+<script>
+window.onload = function() { 
+    twemoji.base = "https://cdn.jsdelivr.net/npm/twemoji@12.0.0/2/";
+    twemoji.parse(document.body, {
+          folder: 'svg',
+          ext: '.svg'
+    });
+}
+</script>
 </body>
 </html>

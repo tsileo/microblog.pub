@@ -106,6 +106,10 @@ def create_indexes():
     DB.command("compact", "activities")
     DB.activities.create_index([("remote_id", pymongo.ASCENDING)])
     DB.activities.create_index([("activity.object.id", pymongo.ASCENDING)])
+    DB.activities.create_index([("meta.thread_root_parent", pymongo.ASCENDING)])
+    DB.activities.create_index(
+        [("meta.thread_root_parent", pymongo.ASCENDING), ("meta.deleted", pymongo.ASCENDING)]
+    )
     DB.activities.create_index(
         [("activity.object.id", pymongo.ASCENDING), ("meta.deleted", pymongo.ASCENDING)]
     )
@@ -195,3 +199,6 @@ ME = {
     },
     "publicKey": KEY.to_dict(),
 }
+
+# TODO(tsileo): read the config from the YAML if set
+EMOJIS = "😺 😸 😹 😻 😼 😽 🙀 😿 😾 😺 😸 😹 😻 😼 😽 🙀 😿 😾"

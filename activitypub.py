@@ -473,6 +473,7 @@ class MicroblogPubBackend(Backend):
             # It means the activity is not in the inbox, and not in the outbox, we want to save it
             self.save(Box.REPLIES, reply)
             new_threads.append(reply.id)
+            # TODO(tsileo): parses the replies collection and import the replies?
 
         while reply is not None:
             in_reply_to = reply.inReplyTo

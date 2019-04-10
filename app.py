@@ -72,6 +72,7 @@ from config import BASE_URL
 from config import DB
 from config import DEBUG_MODE
 from config import DOMAIN
+from config import EMOJIS
 from config import HEADERS
 from config import ICON_URL
 from config import ID
@@ -91,6 +92,7 @@ from poussetaches import PousseTaches
 
 phost = "http://" + os.getenv("COMPOSE_PROJECT_NAME", "")
 p = PousseTaches(f"{phost}_poussetaches_1:7991", f"{phost}_web_1:5005")
+# p = PousseTaches("http://localhost:7991", "http://localhost:5000")
 
 back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)
@@ -831,25 +833,22 @@ def with_replies():
     )
 
 
-def _build_thread(data, include_children=True):
+def _build_thread(data, include_children=True):  # noqa: C901
     data["_requested"] = True
-    print(data)
     root_id = data["meta"].get("thread_root_parent", data["activity"]["object"]["id"])
 
     query = {
-        "$or": [
-            {"meta.thread_root_parent": root_id, "type": "Create"},
-            {"activity.object.id": root_id},
-        ]
+        "meta.thread_root_parent": root_id,
+        "meta.deleted": False,
     }
-    if data["activity"]["object"].get("inReplyTo"):
-        query["$or"].append(
-            {"activity.object.id": data["activity"]["object"]["inReplyTo"]}
-        )
-
-    # Fetch the root replies, and the children
-    replies = [data] + list(DB.activities.find(query))
+    replies = [data]
+    for dat in DB.activities.find(query):
+        if dat["type"][0] != ActivityType.CREATE.value:
+            # Make a Note/Question/... looks like a Create
+            dat = {"activity": {"object": dat["activity"]}, "meta": dat["meta"], "_id": dat["_id"]}
+            replies.append(dat)
     replies = sorted(replies, key=lambda d: d["activity"]["object"]["published"])
+
     # Index all the IDs in order to build a tree
     idx = {}
     replies2 = []
@@ -1326,6 +1325,7 @@ def admin_lookup():
                 )
 
         print(data)
+        app.logger.debug(data.to_dict())
     return render_template(
         "lookup.html", data=data, meta=meta, url=request.form.get("url")
     )
@@ -1383,7 +1383,7 @@ def admin_new():
         content = f"@{actor.preferredUsername}@{domain} "
         thread = _build_thread(data)
 
-    return render_template("new.html", reply=reply_id, content=content, thread=thread)
+    return render_template("new.html", reply=reply_id, content=content, thread=thread, emojis=EMOJIS.split(" "))
 
 
 @app.route("/admin/notifications")

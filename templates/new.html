@@ -1,6 +1,9 @@
 {% extends "layout.html" %}
 {% import 'utils.html' as utils %}
 {% block title %}New - {{ config.NAME }}{% endblock %}
+{% block headers %}
+
+{% endblock %}
 {% block content %}
 <div id="container">
 {% include "header.html" %}
@@ -15,7 +18,14 @@
 <input type="hidden" name="redirect" value="/">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% if reply %}<input type="hidden" name="reply" value="{{reply}}">{% endif %}
-<textarea name="content" rows="10" cols="50" autofocus="autofocus">{{ content }}</textarea>
+
+<p>
+{% for emoji in emojis %}
+<span class="ji">{{ emoji }}</span>
+{% endfor %}
+</p>
+
+<textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on">{{ content }}</textarea>
 <input type="file" name="file">
 <div style="margin-top:20px;">
 <input type="submit" value="post">
@@ -24,4 +34,26 @@
 
 </div>
 </div>
-{% endblock %}
+<script>
+var ta = document.getElementsByTagName("textarea")[0];
+function insertAtCursor (textToInsert) {
+    // get current text of the input
+    const value = ta.value;
+    // save selection start and end position
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    // update the value with our text inserted
+    ta.value = value.slice(0, start) + textToInsert + value.slice(end);
+    // update cursor to be at the end of insertion
+    ta.selectionStart = ta.selectionEnd = start + textToInsert.length;
+}
+var ji = function (ev) {
+    insertAtCursor(ev.target.attributes.alt.value);
+    ta.focus()
+    //console.log(document.execCommand('insertText', false /*no UI*/, ev.target.attributes.alt.value));
+}
+var items = document.getElementsByClassName("ji")
+for (var i = 0; i < items.length; i++) {
+    items[i].addEventListener('click', ji);
+}
+</script>{% endblock %}
