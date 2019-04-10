@@ -201,4 +201,4 @@ ME = {
 }
 
 # TODO(tsileo): read the config from the YAML if set
-EMOJIS = "😺 😸 😹 😻 😼 😽 🙀 😿 😾 😺 😸 😹 😻 😼 😽 🙀 😿 😾"
+EMOJIS = "😺 😸 😹 😻 😼 😽 🙀 😿 😾"
