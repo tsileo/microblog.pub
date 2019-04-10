@@ -838,7 +838,7 @@ def _build_thread(data, include_children=True):  # noqa: C901
     root_id = data["meta"].get("thread_root_parent", data["activity"]["object"]["id"])
 
     query = {
-        "meta.thread_root_parent": root_id,
+        "$or": [{"meta.thread_root_parent": root_id}, {"activity.object.id": root_id}],
         "meta.deleted": False,
     }
     replies = [data]
