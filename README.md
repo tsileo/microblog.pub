@@ -15,6 +15,38 @@
 
 **Still in early development.**
 
+## Perform the "drop-celery" migration
+
+The project is dropping Celery/RabbitMQ in favor of [poussetaches](https://github.com/tsileo/poussetaches), written specifically for microblog.pub.
+
+First you need to know your Docker compose project name, it should be the name of the project directory, without dot.
+If you haven't renamed the directory it should be `microblogpub`.
+If you're not sure you can run `$ docker-compose ps`, and get `{project_name}_{service}_{version}` in the output, like `microblogpub_web_1`
+
+Generate a secret for poussetaches (you can use whatever secret you want):
+
+```
+$ python -c "import os, binascii; print(binascii.hexlify(os.urandom(32)).decode())"
+```
+
+Update the `.env` file and append:
+
+```
+POUSSETACHES_AUTH_KEY=yourgeneratedsecret
+COMPOSE_PROJECT_NAME=microblogpub
+```
+
+Then switch to the `drop-celery` branch:
+
+```
+$ git checkout drop-celery
+# Build the poussetaches container
+$ make poussetaches
+$ make update
+```
+
+And you should be good!
+
 ## Features
 
  - Implements a basic [ActivityPub](https://activitypub.rocks/) server (with federation)

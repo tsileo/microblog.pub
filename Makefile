@@ -14,6 +14,9 @@ reload-fed:
 	WEB_PORT=5006 CONFIG_DIR=./tests/fixtures/instance1/config docker-compose -p instance1 -f docker-compose-tests.yml up -d --force-recreate --build
 	WEB_PORT=5007 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d --force-recreate --build
 
+poussetaches:
+	git clone https://github.com/tsileo/poussetaches.git pt && cd pt && docker build . -t poussetaches:latest && cd - && rm -rf pt
+
 reload-dev:
 	# docker build . -t microblogpub:latest
 	docker-compose -f docker-compose-dev.yml up -d --force-recreate
