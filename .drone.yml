@@ -1,6 +1,9 @@
 pipeline:
   build:
     image: python:3
+    volumes:
+     - name: dockersock
+       path: /var/run/docker.sock
     commands:
       - apt update -y
       - apt install -y apt-transport-https ca-certificates curl software-properties-common gnupg2 curl
@@ -30,11 +33,8 @@ pipeline:
       - python -m pytest -v --ignore data -k integration
       # Federation tests (with two local instances)
       - python -m pytest -v -s --ignore data -k federatio
-  volumes:
-  - name: dockersock
-    path: /var/run/docker.sock
 
 volumes:
-- name: dockersock
-  host:
-    path: /var/run/docker.sock
+ - name: dockersock
+   host:
+     path: /var/run/docker.sock
