@@ -835,6 +835,7 @@ def with_replies():
 
 def _build_thread(data, include_children=True):  # noqa: C901
     data["_requested"] = True
+    app.logger.info(f"_build_thread({data!r})")
     root_id = data["meta"].get("thread_root_parent", data["activity"]["object"]["id"])
 
     query = {
