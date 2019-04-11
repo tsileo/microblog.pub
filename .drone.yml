@@ -24,8 +24,6 @@ steps:
   - flake8 activitypub.py
   - cp -r tests/fixtures/me.yml config/me.yml
   - docker build . -t microblogpub:latest
-  - docker-compose up -d
-  - docker-compose ps
   - WEB_PORT=5006 COMPOSE_PROJECT_NAME=instance1 CONFIG_DIR=./tests/fixtures/instance1/config docker-compose -p instance1 -f docker-compose-tests.yml up -d
   - docker-compose -p instance1 -f docker-compose-tests.yml ps
   - WEB_PORT=5007 COMPOSE_PROJECT_NAME=instance2 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d
