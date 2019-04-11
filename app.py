@@ -1339,13 +1339,9 @@ def admin_lookup():
 @login_required
 def admin_thread():
     data = DB.activities.find_one(
-        {
-            "$or": [
-                {"remote_id": request.args.get("oid")},
-                {"activity.object.id": request.args.get("oid")},
-            ]
-        }
+        {"type": ActivityType.CREATE.value, "activity.object.id": request.args.get("oid")}
     )
+
     if not data:
         abort(404)
     if data["meta"].get("deleted", False):
