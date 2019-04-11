@@ -30,7 +30,7 @@ steps:
   - docker-compose -p instance2 -f docker-compose-tests.yml ps
   - sleep 5
   # Integration tests first
-  - python -m pytest -v --ignore data -k integration
+  # - python -m pytest -v --ignore data -k integration
   # Federation tests (with two local instances)
   - python -m pytest -v -s --ignore data -k federatio
 
