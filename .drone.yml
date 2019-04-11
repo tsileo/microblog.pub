@@ -30,4 +30,11 @@ pipeline:
       - python -m pytest -v --ignore data -k integration
       # Federation tests (with two local instances)
       - python -m pytest -v -s --ignore data -k federatio
+  volumes:
+  - name: dockersock
+    path: /var/run/docker.sock
 
+volumes:
+- name: dockersock
+  host:
+    path: /var/run/docker.sock
