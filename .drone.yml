@@ -2,27 +2,26 @@ pipeline:
   build:
     image: python:3
     commands:
-	  - sudo apt-get install -y curl python-tk
-	  - sudo pip install -U pip
-	  - sudo curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
-	  - sudo chmod +x /usr/local/bin/docker-compose
-	  - docker-compose --version
-	  - pip install -r dev-requirements.txt
-	  - git clone https://github.com/tsileo/poussetaches.git && cd poussetaches && docker build . -t poussetaches:latest && cd -
-	 script:
-	  - mypy --ignore-missing-imports .
-	  - flake8 activitypub.py
-	  - cp -r tests/fixtures/me.yml config/me.yml
-	  - docker build . -t microblogpub:latest
-	  - docker-compose up -d
-	  - docker-compose ps
-	  - WEB_PORT=5006 COMPOSE_PROJECT_NAME=instance1 CONFIG_DIR=./tests/fixtures/instance1/config docker-compose -p instance1 -f docker-compose-tests.yml up -d
-	  - docker-compose -p instance1 -f docker-compose-tests.yml ps
-	  - WEB_PORT=5007 COMPOSE_PROJECT_NAME=instance2 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d
-	  - docker-compose -p instance2 -f docker-compose-tests.yml ps
-	  - sleep 5
-	  # Integration tests first
-	  - python -m pytest -v --ignore data -k integration
-	  # Federation tests (with two local instances)
-	  - python -m pytest -v -s --ignore data -k federatio
+      - sudo apt-get install -y curl python-tk docker-ce docker-ce-cli containerd.io
+      - sudo pip install -U pip
+      - sudo curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+      - sudo chmod +x /usr/local/bin/docker-compose
+      - docker-compose --version
+      - pip install -r dev-requirements.txt
+      - git clone https://github.com/tsileo/poussetaches.git && cd poussetaches && docker build . -t poussetaches:latest && cd -
+      - mypy --ignore-missing-imports .
+      - flake8 activitypub.py
+      - cp -r tests/fixtures/me.yml config/me.yml
+      - docker build . -t microblogpub:latest
+      - docker-compose up -d
+      - docker-compose ps
+      - WEB_PORT=5006 COMPOSE_PROJECT_NAME=instance1 CONFIG_DIR=./tests/fixtures/instance1/config docker-compose -p instance1 -f docker-compose-tests.yml up -d
+      - docker-compose -p instance1 -f docker-compose-tests.yml ps
+      - WEB_PORT=5007 COMPOSE_PROJECT_NAME=instance2 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d
+      - docker-compose -p instance2 -f docker-compose-tests.yml ps
+      - sleep 5
+      # Integration tests first
+      - python -m pytest -v --ignore data -k integration
+      # Federation tests (with two local instances)
+      - python -m pytest -v -s --ignore data -k federatio
 
