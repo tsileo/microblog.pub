@@ -28,7 +28,7 @@ steps:
   - docker-compose -p instance1 -f docker-compose-tests.yml ps
   - WEB_PORT=5007 COMPOSE_PROJECT_NAME=instance2 CONFIG_DIR=./tests/fixtures/instance2/config docker-compose -p instance2 -f docker-compose-tests.yml up -d
   - docker-compose -p instance2 -f docker-compose-tests.yml ps
-  - sleep 5
+  - sleep 30
   # Integration tests first
   # - python -m pytest -v --ignore data -k integration
   # Federation tests (with two local instances)
