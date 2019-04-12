@@ -1,14 +1,12 @@
 python-dateutil
 libsass
 tornado<6.0.0
-flower
 gunicorn
 piexif
 requests
 python-u2flib-server
 Flask
 Flask-WTF
-Celery
 pymongo
 timeago
 bleach
