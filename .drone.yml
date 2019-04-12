@@ -1,85 +1,85 @@
+---
+priviliged: true
 kind: pipeline
 name: default
 steps:
-  - name: setup
-    image: golang
+  - name: test
+    image: python:3
     commands:
-      - |
-        cat <<EOF > index.html
-        hello world
-        EOF
-      - |
-        cat <<EOF > Dockerfile
-        FROM busybox
-        ADD index.html /www/index.html
-        EXPOSE 8000
-        CMD httpd -p 8000 -h /www; tail -f /dev/null
-        EOF
+      - pip install -U pip
+      - pip install mypy flake8 black
+        # - black --check .
+      - flake8 activitypub.py
+      - mypy --ignore-missing-imports .
 
   - name: build
     image: docker:dind
     environment:
       DOCKER_HOST: tcp://docker:2375
     commands:
-      - sleep 5
-      - docker ps
-      - docker build -t hello-world .
-
-  - name: buildpython
-    image: python:3
+      - apk update && apk upgrade && apk add --no-cache bash git openssh curl
+      - git clone https://github.com/tsileo/poussetaches.git pt && cd pt && docker build . -t poussetaches:latest && cd - && rm -rf pt
+      - docker network create fede
+      - docker pull mongo
+      - docker build . -t microblogpub:latest
+  
+  - name: poussetaches
+    image: docker:dind
+    detach: true
     environment:
       DOCKER_HOST: tcp://docker:2375
+      POUSSETACHES_AUTH_KEY: lol
     commands:
-      - apt update -y
-      - apt install -y apt-transport-https ca-certificates curl software-properties-common gnupg2 curl python-tk
-      - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
-      - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
-      - apt update -y
-      - apt install -y docker-ce
-      - pip install -U pip
-      - curl -L https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
-      - chmod +x /usr/local/bin/docker-compose
-      - docker-compose --version
-      - pip install -r dev-requirements.txt
-      - git clone https://github.com/tsileo/poussetaches.git && cd poussetaches && docker build . -t poussetaches:latest && cd -
-      - mypy --ignore-missing-imports .
-      - flake8 activitypub.py
-      - cp -r tests/fixtures/me.yml config/me.yml
-      - docker build . -t microblogpub:latest
-      - WEB_PORT=5006 COMPOSE_PROJECT_NAME=instance1 CONFIG_DIR="${pwd}/tests/fixtures/instance1/config" docker-compose -p instance1 -f docker-compose-tests.yml up -d
-      - COMPOSE_PROJECT_NAME=instance1 docker-compose -p instance1 -f docker-compose-tests.yml ps
-      - sleep 30
-      - WEB_PORT=5007 COMPOSE_PROJECT_NAME=instance2 CONFIG_DIR="${pwd}/tests/fixtures/instance2/config" docker-compose -p instance2 -f docker-compose-tests.yml up -d
-      - COMPOSE_PROJECT_NAME=instance2 docker-compose -p instance2 -f docker-compose-tests.yml ps
-      - sleep 30
-      - curl http://localhost:5006
-      - curl http://localhost:5007
-      # Integration tests first
-      # - python -m pytest -v --ignore data -k integration
-      # Federation tests (with two local instances)
-      - python -m pytest -v -s --ignore data -k federatio
+      - docker run -p 7991:7991 --net fede -e POUSSETACHES_AUTH_KEY --name poussetaches poussetaches
 
-  
-  # start the container using a detached (non-blocking)
-  # step. Bonus we can see our container logs in the
-  # build output.
-  - name: run
+  - name: mongo
     image: docker:dind
     detach: true
     environment:
       DOCKER_HOST: tcp://docker:2375
     commands:
-      - docker run -p 8000:8000 hello-world
+      - docker run -p 27017:27017 --net fede --name mongo mongo
 
-  # curl the container to test it is up and running.
-  # notice that we use `docker:8000` since the container
-  # is running in the docker service container.
-  - name: test
-    image: golang # because I know it has curl installed
+  - name: microblogpub_instance1
+    image: docker:dind
+    detach: true
+    environment:
+      DOCKER_HOST: tcp://docker:2375
+      MICROBLOGPUB_DEBUG: 1
+      MICROBLOGPUB_HOSTNAME: instance1_web
+      MICROBLOGPUB_MONGODB_HOST: mongo:27017
+      POUSSETACHES_AUTH_KEY: lol
     commands:
-      - curl -v http://docker:8000
+      - sleep 5
+      - 'docker run -p 5006:5005 --net fede -v "`pwd`/tests/fixtures/instance1/config:/app/config" -e MICROBLOGPUB_DEBUG -e MICROBLOGPUB_HOSTNAME -e MICROBLOGPUB_MONGODB_HOST -e POUSSETACHES_AUTH_KEY --name instance1_web microblogpub'
+
+  - name: microblogpub_instance2
+    image: docker:dind
+    detach: true
+    environment:
+      DOCKER_HOST: tcp://docker:2375
+      MICROBLOGPUB_DEBUG: 1
+      MICROBLOGPUB_HOSTNAME: instance2_web
+      MICROBLOGPUB_MONGODB_HOST: mongo:27017
+      POUSSETACHES_AUTH_KEY: lol
+    commands:
+      - 'docker run -p 5007:5005 --net fede -v "`pwd`/tests/fixtures/instance2/config:/app/config" -e MICROBLOGPUB_DEBUG -e MICROBLOGPUB_HOSTNAME -e MICROBLOGPUB_MONGODB_HOST -e POUSSETACHES_AUTH_KEY --name instance2_web microblogpub'
+
+ 
+  - name: integration_test
+    image: python:3
+    commands:
+      - pip install -U pip
+      - pip install -r dev-requirements.txt
+      # Federation tests (with two local instances)
+      - python -m pytest -v -s --ignore data -k federatio
 
 services:
 - name: docker
   image: docker:dind
   privileged: true
+---
+kind: signature
+hmac: 0e02bf6fbcb514be8d3ee0f4a315c3f560f762ee474d27a009281b20cc8123ab
+
+...
