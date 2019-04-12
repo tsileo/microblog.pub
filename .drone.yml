@@ -24,6 +24,41 @@ steps:
       - sleep 5
       - docker ps
       - docker build -t hello-world .
+
+  - name: buildpython
+    image: python:3
+    environment:
+      DOCKER_HOST: tcp://docker:2375
+    commands:
+      - apt update -y
+      - apt install -y apt-transport-https ca-certificates curl software-properties-common gnupg2 curl python-tk
+      - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+      - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+      - apt update -y
+      - apt install -y docker-ce
+      - pip install -U pip
+      - curl -L https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+      - chmod +x /usr/local/bin/docker-compose
+      - docker-compose --version
+      - pip install -r dev-requirements.txt
+      - git clone https://github.com/tsileo/poussetaches.git && cd poussetaches && docker build . -t poussetaches:latest && cd -
+      - mypy --ignore-missing-imports .
+      - flake8 activitypub.py
+      - cp -r tests/fixtures/me.yml config/me.yml
+      - docker build . -t microblogpub:latest
+      - WEB_PORT=5006 COMPOSE_PROJECT_NAME=instance1 CONFIG_DIR="${pwd}/tests/fixtures/instance1/config" docker-compose -p instance1 -f docker-compose-tests.yml up -d
+      - COMPOSE_PROJECT_NAME=instance1 docker-compose -p instance1 -f docker-compose-tests.yml ps
+      - sleep 30
+      - WEB_PORT=5007 COMPOSE_PROJECT_NAME=instance2 CONFIG_DIR="${pwd}/tests/fixtures/instance2/config" docker-compose -p instance2 -f docker-compose-tests.yml up -d
+      - COMPOSE_PROJECT_NAME=instance2 docker-compose -p instance2 -f docker-compose-tests.yml ps
+      - sleep 30
+      - curl http://localhost:5006
+      - curl http://localhost:5007
+      # Integration tests first
+      # - python -m pytest -v --ignore data -k integration
+      # Federation tests (with two local instances)
+      - python -m pytest -v -s --ignore data -k federatio
+
   
   # start the container using a detached (non-blocking)
   # step. Bonus we can see our container logs in the
