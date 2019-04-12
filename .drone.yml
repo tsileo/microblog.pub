@@ -1,4 +1,4 @@
-peline:
+pipeline:
   # this code will create a dummy Dockerfile. This is just
   # here so that our yaml file is self-contained.
   setup:
