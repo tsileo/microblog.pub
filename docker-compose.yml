@@ -4,41 +4,19 @@ services:
     image: 'microblogpub:latest'
     ports:
      - "${WEB_PORT}:5005"
-    links:
-     - mongo
-     - rmq
-     - poussetaches
     volumes:
      - "${CONFIG_DIR}:/app/config"
      - "./static:/app/static"
     environment:
-     - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
      - MICROBLOGPUB_MONGODB_HOST=mongo:27017
+     - MICROBLOGPUB_INTERNAL_HOST=http://${COMPOSE_PROJECT_NAME}_web_1:5005
+     - MICROBLOGPUB_POUSSETACHES_HOST=http://${COMPOSE_PROJECT_NAME}_poussetaches_1:7991
      - POUSSETACHES_AUTH_KEY=${POUSSETACHES_AUTH_KEY}
      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-  celery:
-    image: 'microblogpub:latest'
-    links:
-     - mongo
-     - rmq
-    command: 'celery worker -l info -A tasks'
-    volumes:
-     - "${CONFIG_DIR}:/app/config"
-    environment:
-     - MICROBLOGPUB_AMQP_BROKER=pyamqp://guest@rmq//
-     - MICROBLOGPUB_MONGODB_HOST=mongo:27017
   mongo:
     image: "mongo:latest"
     volumes:
      - "${DATA_DIR}/mongodb:/data/db"
-  rmq:
-    image: "rabbitmq:latest"
-    hostname: "my-rabbit"
-    environment:
-     - RABBITMQ_ERLANG_COOKIE=secretrabbit
-     - RABBITMQ_NODENAME=rabbit@my-rabbit
-    volumes:
-     - "${DATA_DIR}/rabbitmq:/var/lib/rabbitmq"
   poussetaches:
     image: "poussetaches:latest"
     volumes:

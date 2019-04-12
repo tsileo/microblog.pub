@@ -208,12 +208,12 @@ class Instance(object):
 def _instances() -> Tuple[Instance, Instance]:
     """Initializes the client for the two test instances."""
     instance1 = Instance(
-        "instance1", "http://localhost:5006", "http://instance1_web_1:5005"
+        "instance1", "http://docker:5006", "http://instance1_web:5005"
     )
     instance1.ping()
 
     instance2 = Instance(
-        "instance2", "http://localhost:5007", "http://instance2_web_1:5005"
+        "instance2", "http://docker:5007", "http://instance2_web:5005"
     )
     instance2.ping()
 

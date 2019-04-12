@@ -46,12 +46,13 @@ steps:
     environment:
       DOCKER_HOST: tcp://docker:2375
       MICROBLOGPUB_DEBUG: 1
-      MICROBLOGPUB_HOSTNAME: instance1_web
+      MICROBLOGPUB_POUSSETACHES_HOST: http://poussetaches:7991
+      MICROBLOGPUB_INTERNAL_HOST: http://instance1_web:5005
       MICROBLOGPUB_MONGODB_HOST: mongo:27017
       POUSSETACHES_AUTH_KEY: lol
     commands:
       - sleep 5
-      - 'docker run -p 5006:5005 --net fede -v "`pwd`/tests/fixtures/instance1/config:/app/config" -e MICROBLOGPUB_DEBUG -e MICROBLOGPUB_HOSTNAME -e MICROBLOGPUB_MONGODB_HOST -e POUSSETACHES_AUTH_KEY --name instance1_web microblogpub'
+      - 'docker run -p 5006:5005 --net fede -v "`pwd`/tests/fixtures/instance1/config:/app/config" -e MICROBLOGPUB_DEBUG -e MICROBLOGPUB_INTERNAL_HOST -e MICROBLOGPUB_MONGODB_HOST -e POUSSETACHES_AUTH_KEY --name instance1_web microblogpub'
 
   - name: microblogpub_instance2
     image: docker:dind
@@ -59,11 +60,12 @@ steps:
     environment:
       DOCKER_HOST: tcp://docker:2375
       MICROBLOGPUB_DEBUG: 1
-      MICROBLOGPUB_HOSTNAME: instance2_web
+      MICROBLOGPUB_POUSSETACHES_HOST: http://poussetaches:7991
+      MICROBLOGPUB_INTERNAL_HOST: http://instance2_web:5005
       MICROBLOGPUB_MONGODB_HOST: mongo:27017
       POUSSETACHES_AUTH_KEY: lol
     commands:
-      - 'docker run -p 5007:5005 --net fede -v "`pwd`/tests/fixtures/instance2/config:/app/config" -e MICROBLOGPUB_DEBUG -e MICROBLOGPUB_HOSTNAME -e MICROBLOGPUB_MONGODB_HOST -e POUSSETACHES_AUTH_KEY --name instance2_web microblogpub'
+      - 'docker run -p 5007:5005 --net fede -v "`pwd`/tests/fixtures/instance2/config:/app/config" -e MICROBLOGPUB_DEBUG -e MICROBLOGPUB_INTERNAL_HOST -e MICROBLOGPUB_MONGODB_HOST -e POUSSETACHES_AUTH_KEY --name instance2_web microblogpub'
 
  
   - name: integration_test
@@ -80,6 +82,6 @@ services:
   privileged: true
 ---
 kind: signature
-hmac: 0e02bf6fbcb514be8d3ee0f4a315c3f560f762ee474d27a009281b20cc8123ab
+hmac: e9e0af1e17c84ff087d83fbdd00ba132327cca9365b9805486d5a295443a5bd3
 
 ...
