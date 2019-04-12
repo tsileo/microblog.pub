@@ -45,6 +45,6 @@ peline:
       - curl -v http://docker:8000
 
 services:
-  docker:
-    image: docker:dind
-    privileged: true
+- name: docker
+  image: docker:dind
+  privileged: true
