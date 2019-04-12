@@ -26,9 +26,12 @@ steps:
   - docker build . -t microblogpub:latest
   - WEB_PORT=5006 COMPOSE_PROJECT_NAME=instance1 CONFIG_DIR="${pwd}/tests/fixtures/instance1/config" docker-compose -p instance1 -f docker-compose-tests.yml up -d
   - COMPOSE_PROJECT_NAME=instance1 docker-compose -p instance1 -f docker-compose-tests.yml ps
+  - sleep 30
   - WEB_PORT=5007 COMPOSE_PROJECT_NAME=instance2 CONFIG_DIR="${pwd}/tests/fixtures/instance2/config" docker-compose -p instance2 -f docker-compose-tests.yml up -d
   - COMPOSE_PROJECT_NAME=instance2 docker-compose -p instance2 -f docker-compose-tests.yml ps
   - sleep 30
+  - curl http://localhost:5006
+  - curl http://localhost:5007
   # Integration tests first
   # - python -m pytest -v --ignore data -k integration
   # Federation tests (with two local instances)
