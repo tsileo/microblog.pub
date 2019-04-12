@@ -47,4 +47,5 @@ peline:
 services:
   docker:
     image: docker:dind
-    privileged: truepath: /var/run/docker.sock
+    privileged: true
+    path: /var/run/docker.sock
