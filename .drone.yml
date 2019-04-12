@@ -1,7 +1,7 @@
-pipeline:
-  # this code will create a dummy Dockerfile. This is just
-  # here so that our yaml file is self-contained.
-  setup:
+kind: pipeline
+name: default
+steps:
+  - name: setup
     image: golang
     commands:
       - |
@@ -16,7 +16,7 @@ pipeline:
         CMD httpd -p 8000 -h /www; tail -f /dev/null
         EOF
 
-  build:
+  - name: build
     image: docker:dind
     environment:
       - DOCKER_HOST=tcp://docker:2375
@@ -28,7 +28,7 @@ pipeline:
   # start the container using a detached (non-blocking)
   # step. Bonus we can see our container logs in the
   # build output.
-  run:
+  - name: run
     image: docker:dind
     detach: true
     environment:
@@ -39,7 +39,7 @@ pipeline:
   # curl the container to test it is up and running.
   # notice that we use `docker:8000` since the container
   # is running in the docker service container.
-  test:
+  - name: test
     image: golang # because I know it has curl installed
     commands:
       - curl -v http://docker:8000
