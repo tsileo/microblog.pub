@@ -1,9 +1,10 @@
 ---
-priviliged: true
+priviliged: true  # Needed for Docker in Docker
 kind: pipeline
 name: default
 steps:
-  - name: test
+  # Run Mypy/Flake8/black linters before any further work is done
+  - name: lint
     image: python:3
     commands:
       - pip install -U pip
@@ -12,7 +13,8 @@ steps:
       - flake8 activitypub.py
       - mypy --ignore-missing-imports .
 
-  - name: build
+  # Build the container images we need for the test suite
+  - name: build_containers
     image: docker:dind
     environment:
       DOCKER_HOST: tcp://docker:2375
@@ -23,7 +25,8 @@ steps:
       - docker pull mongo
       - docker build . -t microblogpub:latest
   
-  - name: poussetaches
+  # Run poussetaches (will be shared by the two microblog.pub instances) "in the background"
+  - name: run_poussetaches
     image: docker:dind
     detach: true
     environment:
@@ -32,7 +35,8 @@ steps:
     commands:
       - docker run -p 7991:7991 --net fede -e POUSSETACHES_AUTH_KEY --name poussetaches poussetaches
 
-  - name: mongo
+  # Run MongoDB (will be shared by the two microblog.pub instances) "in the background"
+  - name: run_mongodb
     image: docker:dind
     detach: true
     environment:
@@ -40,6 +44,7 @@ steps:
     commands:
       - docker run -p 27017:27017 --net fede --name mongo mongo
 
+  # Run a first microblog.pub instance "in the background"
   - name: microblogpub_instance1
     image: docker:dind
     detach: true
@@ -54,6 +59,7 @@ steps:
       - sleep 5
       - 'docker run -p 5006:5005 --net fede -v "`pwd`/tests/fixtures/instance1/config:/app/config" -e MICROBLOGPUB_DEBUG -e MICROBLOGPUB_INTERNAL_HOST -e MICROBLOGPUB_MONGODB_HOST -e MICROBLOGPUB_POUSSETACHES_HOST -e POUSSETACHES_AUTH_KEY --name instance1_web microblogpub'
 
+  # Run the second microblog.pub instance "in the background"
   - name: microblogpub_instance2
     image: docker:dind
     detach: true
@@ -67,8 +73,8 @@ steps:
     commands:
       - 'docker run -p 5007:5005 --net fede -v "`pwd`/tests/fixtures/instance2/config:/app/config" -e MICROBLOGPUB_DEBUG -e MICROBLOGPUB_INTERNAL_HOST -e MICROBLOGPUB_MONGODB_HOST -e MICROBLOGPUB_POUSSETACHES_HOST -e POUSSETACHES_AUTH_KEY --name instance2_web microblogpub'
 
- 
-  - name: integration_test
+  # Run some tests against the two instances to ensure federation is working
+  - name: federation_test
     image: python:3
     commands:
       - pip install -U pip
@@ -76,12 +82,13 @@ steps:
       # Federation tests (with two local instances)
       - python -m pytest -v -s --ignore data -k federatio
 
+# Setup the services needed to do some "Docker in Docker" (or dind)
 services:
 - name: docker
   image: docker:dind
   privileged: true
 ---
 kind: signature
-hmac: e9e0af1e17c84ff087d83fbdd00ba132327cca9365b9805486d5a295443a5bd3
+hmac: a29b3d3699c86cf0fb857e3b412353230ba64544356a9b42b37c5a83e36f5170
 
 ...
