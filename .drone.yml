@@ -1,43 +1,50 @@
-kind: pipeline
-name: default
+peline:
+  # this code will create a dummy Dockerfile. This is just
+  # here so that our yaml file is self-contained.
+  setup:
+    image: golang
+    commands:
+      - |
+        cat <<EOF > index.html
+        hello world
+        EOF
+      - |
+        cat <<EOF > Dockerfile
+        FROM busybox
+        ADD index.html /www/index.html
+        EXPOSE 8000
+        CMD httpd -p 8000 -h /www; tail -f /dev/null
+        EOF
 
-steps:
-- name: build
-  image: python:3
-  volumes:
-  - name: dockersock
-    path: /var/run/docker.sock
-  commands:
-  - apt update -y
-  - apt install -y apt-transport-https ca-certificates curl software-properties-common gnupg2 curl python-tk
-  - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
-  - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
-  - apt update -y
-  - apt install -y docker-ce
-  - pip install -U pip
-  - curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
-  - chmod +x /usr/local/bin/docker-compose
-  - docker-compose --version
-  - pip install -r dev-requirements.txt
-  - git clone https://github.com/tsileo/poussetaches.git && cd poussetaches && docker build . -t poussetaches:latest && cd -
-  - mypy --ignore-missing-imports .
-  - flake8 activitypub.py
-  - cp -r tests/fixtures/me.yml config/me.yml
-  - docker build . -t microblogpub:latest
-  - WEB_PORT=5006 COMPOSE_PROJECT_NAME=instance1 CONFIG_DIR="${pwd}/tests/fixtures/instance1/config" docker-compose -p instance1 -f docker-compose-tests.yml up -d
-  - COMPOSE_PROJECT_NAME=instance1 docker-compose -p instance1 -f docker-compose-tests.yml ps
-  - sleep 30
-  - WEB_PORT=5007 COMPOSE_PROJECT_NAME=instance2 CONFIG_DIR="${pwd}/tests/fixtures/instance2/config" docker-compose -p instance2 -f docker-compose-tests.yml up -d
-  - COMPOSE_PROJECT_NAME=instance2 docker-compose -p instance2 -f docker-compose-tests.yml ps
-  - sleep 30
-  - curl http://localhost:5006
-  - curl http://localhost:5007
-  # Integration tests first
-  # - python -m pytest -v --ignore data -k integration
-  # Federation tests (with two local instances)
-  - python -m pytest -v -s --ignore data -k federatio
+  build:
+    image: docker:dind
+    environment:
+      - DOCKER_HOST=tcp://docker:2375
+    commands:
+      - sleep 5
+      - docker ps
+      - docker build -t hello-world .
+  
+  # start the container using a detached (non-blocking)
+  # step. Bonus we can see our container logs in the
+  # build output.
+  run:
+    image: docker:dind
+    detach: true
+    environment:
+      - DOCKER_HOST=tcp://docker:2375
+    commands:
+      - docker run -p 8000:8000 hello-world
 
-volumes:
- - name: dockersock
-   host:
-     path: /var/run/docker.sock
+  # curl the container to test it is up and running.
+  # notice that we use `docker:8000` since the container
+  # is running in the docker service container.
+  test:
+    image: golang # because I know it has curl installed
+    commands:
+      - curl -v http://docker:8000
+
+services:
+  docker:
+    image: docker:dind
+    privileged: truepath: /var/run/docker.sock
