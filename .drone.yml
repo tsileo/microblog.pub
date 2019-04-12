@@ -48,4 +48,3 @@ services:
   docker:
     image: docker:dind
     privileged: true
-    path: /var/run/docker.sock
