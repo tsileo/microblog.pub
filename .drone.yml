@@ -19,7 +19,7 @@ steps:
   - name: build
     image: docker:dind
     environment:
-      DOCKER_HOST=tcp://docker:2375
+      DOCKER_HOST: tcp://docker:2375
     commands:
       - sleep 5
       - docker ps
@@ -32,7 +32,7 @@ steps:
     image: docker:dind
     detach: true
     environment:
-      DOCKER_HOST=tcp://docker:2375
+      DOCKER_HOST: tcp://docker:2375
     commands:
       - docker run -p 8000:8000 hello-world
 
