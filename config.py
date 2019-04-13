@@ -108,7 +108,10 @@ def create_indexes():
     DB.activities.create_index([("activity.object.id", pymongo.ASCENDING)])
     DB.activities.create_index([("meta.thread_root_parent", pymongo.ASCENDING)])
     DB.activities.create_index(
-        [("meta.thread_root_parent", pymongo.ASCENDING), ("meta.deleted", pymongo.ASCENDING)]
+        [
+            ("meta.thread_root_parent", pymongo.ASCENDING),
+            ("meta.deleted", pymongo.ASCENDING),
+        ]
     )
     DB.activities.create_index(
         [("activity.object.id", pymongo.ASCENDING), ("meta.deleted", pymongo.ASCENDING)]

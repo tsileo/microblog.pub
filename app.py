@@ -850,7 +850,11 @@ def _build_thread(data, include_children=True):  # noqa: C901
             replies.append(dat)
         else:
             # Make a Note/Question/... looks like a Create
-            dat = {"activity": {"object": dat["activity"]}, "meta": dat["meta"], "_id": dat["_id"]}
+            dat = {
+                "activity": {"object": dat["activity"]},
+                "meta": dat["meta"],
+                "_id": dat["_id"],
+            }
             replies.append(dat)
 
     replies = sorted(replies, key=lambda d: d["activity"]["object"]["published"])
@@ -1341,7 +1345,10 @@ def admin_lookup():
 @login_required
 def admin_thread():
     data = DB.activities.find_one(
-        {"type": ActivityType.CREATE.value, "activity.object.id": request.args.get("oid")}
+        {
+            "type": ActivityType.CREATE.value,
+            "activity.object.id": request.args.get("oid"),
+        }
     )
 
     if not data:
@@ -1385,7 +1392,13 @@ def admin_new():
         content = f"@{actor.preferredUsername}@{domain} "
         thread = _build_thread(data)
 
-    return render_template("new.html", reply=reply_id, content=content, thread=thread, emojis=EMOJIS.split(" "))
+    return render_template(
+        "new.html",
+        reply=reply_id,
+        content=content,
+        thread=thread,
+        emojis=EMOJIS.split(" "),
+    )
 
 
 @app.route("/admin/notifications")

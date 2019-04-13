@@ -58,7 +58,7 @@ def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
     """Helper for removing MongoDB's `_id` field."""
     doc = doc.copy()
     if "_id" in doc:
-        del (doc["_id"])
+        del doc["_id"]
     return doc
 
 
@@ -425,7 +425,7 @@ class MicroblogPubBackend(Backend):
                 update["$set"][f"{update_prefix}{k}"] = v
 
         if len(update["$unset"]) == 0:
-            del (update["$unset"])
+            del update["$unset"]
 
         print(f"updating note from outbox {obj!r} {update}")
         logger.info(f"updating note from outbox {obj!r} {update}")

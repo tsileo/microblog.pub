@@ -15,7 +15,7 @@ def load(url, user_agent):
     """Initializes a `PIL.Image` from the URL."""
     with requests.get(url, stream=True, headers={"User-Agent": user_agent}) as resp:
         resp.raise_for_status()
-        if not resp.headers.get('content-type').startswith('image/'):
+        if not resp.headers.get("content-type").startswith("image/"):
             raise ValueError(f"bad content-type {resp.headers.get('content-type')}")
 
         resp.raw.decode_content = True
