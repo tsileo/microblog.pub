@@ -429,8 +429,7 @@ class MicroblogPubBackend(Backend):
             _set["meta.question_replies"] = total_replies
 
             DB.activities.update_one(
-                {"box": Box.INBOX.value, "activity.object.id": obj.id},
-                {"$set": _set},
+                {"box": Box.INBOX.value, "activity.object.id": obj.id}, {"$set": _set}
             )
 
         # FIXME(tsileo): handle update actor amd inbox_update_note/inbox_update_actor
