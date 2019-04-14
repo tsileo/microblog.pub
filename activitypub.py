@@ -416,6 +416,23 @@ class MicroblogPubBackend(Backend):
                 {"activity.object.id": obj.id},
                 {"$set": {"activity.object": obj.to_dict()}},
             )
+        elif obj.has_type(ap.ActivityType.QUESTION):
+            choices = obj._data.get("oneOf", obj.anyOf)
+            total_replies = 0
+            _set = {}
+            for choice in choices:
+                answer_key = _answer_key(choice["name"])
+                cnt = choice["replies"]["totalItems"]
+                total_replies += cnt
+                _set[f"meta.question_answers.{answer_key}"] = cnt
+
+            _set["meta.question_replies"] = total_replies
+
+            DB.activities.update_one(
+                {"box": Box.INBOX.value, "activity.object.id": obj.id},
+                {"$set": _set},
+            )
+
         # FIXME(tsileo): handle update actor amd inbox_update_note/inbox_update_actor
 
     @ensure_it_is_me

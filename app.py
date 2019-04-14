@@ -421,6 +421,12 @@ def is_img(filename):
     return _is_img(filename)
 
 
+@app.template_filter()
+def get_answer_count(choice, meta):
+    print(choice, meta)
+    return meta.get("question_answers", {}).get(_answer_key(choice), 0)
+
+
 def add_response_headers(headers={}):
     """This decorator adds the headers passed in to the response"""
 
@@ -823,9 +829,6 @@ def index():
         DB.activities, q, limit=25 - len(pinned)
     )
 
-    # FIXME(tsileo): add it on permakink too
-    [_add_answers_to_questions(item) for item in outbox_data]
-
     resp = render_template(
         "index.html",
         outbox_data=outbox_data,
@@ -936,9 +939,6 @@ def note_by_id(note_id):
         abort(404)
     if data["meta"].get("deleted", False):
         abort(410)
-
-    # If it's a Question, add the answers from meta
-    _add_answers_to_questions(data)
 
     thread = _build_thread(data)
     app.logger.info(f"thread={thread!r}")
@@ -1113,8 +1113,9 @@ def remove_context(activity: Dict[str, Any]) -> Dict[str, Any]:
 def _add_answers_to_questions(raw_doc: Dict[str, Any]) -> None:
     activity = raw_doc["activity"]
     if (
-        "object" in activity
-        and _to_list(activity["object"]["type"])[0] == ActivityType.QUESTION.value
+        ap._has_type(activity["type"], ActivityType.CREATE)
+        and "object" in activity
+        and ap._has_type(activity["object"]["type"], ActivityType.QUESTION)
     ):
         for choice in activity["object"].get("oneOf", activity["object"].get("anyOf")):
             choice["replies"] = {
@@ -1750,6 +1751,7 @@ def inbox():
                     }
                 ),
             )
+    print(data)
     activity = ap.parse_activity(data)
     logger.debug(f"inbox activity={activity}/{data}")
     post_to_inbox(activity)

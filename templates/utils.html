@@ -71,19 +71,15 @@
     {% elif obj | has_type('Question') %}
 	{{ obj.content | clean | safe }}
 
-    {% if obj.id | is_from_outbox %}
+    {% if obj.id | is_from_outbox or (meta.question_replies and (obj.closed or meta.voted_for)) %}
     <ul style="list-style:none;padding:0;">
-    {% set total_votes = [0] %}
-    {% for oneOf in obj.oneOf %}
-    {% if oneOf.replies %}
-    {% if total_votes.append(total_votes.pop() + oneOf.replies.totalItems) %}{% endif %}
-    {% endif %}
-    {% endfor %}
+    {% set total_votes = meta.question_replies %}
 
     {% for oneOf in obj.oneOf %}
     {% set pct = 0 %}
-    {% if total_votes[0] > 0 and oneOf.replies %}
-    {% set pct = oneOf.replies.totalItems * 100.0 / total_votes[0] %}
+    {% if total_votes > 0 %}
+    {% set cnt = oneOf.name | get_answer_count(meta) %}
+    {% set pct = cnt * 100.0 / total_votes %}
     {% endif %}
     <li class="answer">
         <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
@@ -95,10 +91,10 @@
     {% endfor %}
     </ul>
     <p><small>
-    {% if obj.closed %}
-    Ended {{ obj.endTime | format_timeago }} with <strong>{{ total_votes[0] }}</strong> vote{% if total_votes[0] | gtone %}s{% endif %}.
+    {% if obj.closed or obj.endTime | gtnow %}
+    Ended {{ obj.endTime | format_timeago }} with <strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %}.
     {% else %}
-    Ends {{ obj.endTime | format_timeago }} (<strong>{{ total_votes[0] }}</strong> vote{% if total_votes[0] | gtone %}s{% endif %} as of now).
+    Ends {{ obj.endTime | format_timeago }} (<strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %} as of now).
     {% endif %}
     </small></p>
     {% else %}
