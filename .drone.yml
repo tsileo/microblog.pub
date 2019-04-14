@@ -89,6 +89,6 @@ services:
   privileged: true
 ---
 kind: signature
-hmac: a29b3d3699c86cf0fb857e3b412353230ba64544356a9b42b37c5a83e36f5170
+hmac: c9251926949e9844602715ea2c9a748817cde58d58812986e5d7286ac1b5561e
 
 ...
