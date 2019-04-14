@@ -15,14 +15,26 @@
 {% endif %}
 {%- endmacro %}
 
-
-
 {% macro display_note(obj, perma=False, ui=False, likes=[], shares=[], meta={}, no_color=False) -%}
 {% if meta.actor %}
 {% set actor = meta.actor %}
 {% else %}
 {% set actor = obj.attributedTo | get_actor  %}
 {% endif %}
+
+
+{% if session.logged_in %}
+{% set perma_id = obj.id | permalink_id %}
+
+{% if request.args.get('older_than') %}
+{% set redir = request.path + "?older_than=" + request.args.get('older_than') + "#activity-" + perma_id %}
+{% elif request.args.get('newer_than') %}
+{% set redir = request.path + "?newer_than=" + request.args.get('newer_than') + "#activity-" + perma_id %}
+{% else %}
+{% set redir = request.path + "#activity-" + perma_id %}
+{% endif %}
+
+
 
 <div class="note-box">
 <div class="note h-entry" id="activity-{{ obj.id | permalink_id }}">
@@ -58,11 +70,67 @@
     {{ obj.name }} <a href="{{ obj | url_or_id | get_url }}">{{ obj | url_or_id | get_url }}</a>
     {% elif obj | has_type('Question') %}
 	{{ obj.content | clean | safe }}
-    <ul>
+
+    {% if obj.id | is_from_outbox %}
+    <ul style="list-style:none;padding:0;">
+    {% set total_votes = [0] %}
     {% for oneOf in obj.oneOf %}
-        <li>{{ oneOf.name }} ({{ oneOf.replies.totalItems }})</li>
+    {% if oneOf.replies %}
+    {% if total_votes.append(total_votes.pop() + oneOf.replies.totalItems) %}{% endif %}
+    {% endif %}
+    {% endfor %}
+
+    {% for oneOf in obj.oneOf %}
+    {% set pct = 0 %}
+    {% if total_votes[0] > 0 and oneOf.replies %}
+    {% set pct = oneOf.replies.totalItems * 100.0 / total_votes[0] %}
+    {% endif %}
+    <li class="answer">
+        <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
+        <span class="answer-text">
+            <span>{{ '%0.0f'| format(pct) }}%</span>
+            {{ oneOf.name }} 
+        </span>
+    </li>
     {% endfor %}
     </ul>
+    <p><small>
+    {% if obj.closed %}
+    Ended {{ obj.endTime | format_timeago }} with <strong>{{ total_votes[0] }}</strong> vote{% if total_votes[0] | gtone %}s{% endif %}.
+    {% else %}
+    Ends {{ obj.endTime | format_timeago }} (<strong>{{ total_votes[0] }}</strong> vote{% if total_votes[0] | gtone %}s{% endif %} as of now).
+    {% endif %}
+    </small></p>
+    {% else %}
+
+    <ul style="list-style:none;padding:0;">
+    {% for oneOf in obj.oneOf %}
+    <li class="answer">
+<span class="answer-text">
+
+{% if not meta.voted_for and not obj.endTime | gtnow %}
+<span><form action="/api/vote" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
+<input type="hidden" name="choice" value="{{ oneOf.name }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">vote</button>
+</form></span>
+{% else %}
+    <span>???</span>
+{% endif %}
+{{ oneOf.name }} {% if oneOf.name == meta.voted_for %}(your vote){% endif %}
+</span>
+    </li>
+    {% endfor %}
+    <p><small>{% if obj.endTime | gtnow %}This question ended {{ obj.endTime | format_timeago }}.</small></p>
+    {% else %}This question ends {{ obj.endTime | format_timeago }}{% endif %}
+    </small></p>
+    </ul>
+    
+
+    {% endif %}
+
     {% else %}
 	{{ obj.content | clean | safe }}
     {% endif %}
@@ -118,17 +186,6 @@
 {% endif %}
 {% else %}
 <a class ="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
-{% endif %}
-
-{% if session.logged_in %}
-{% set perma_id = obj.id | permalink_id %}
-
-{% if request.args.get('older_than') %}
-{% set redir = request.path + "?older_than=" + request.args.get('older_than') + "#activity-" + perma_id %}
-{% elif request.args.get('newer_than') %}
-{% set redir = request.path + "?newer_than=" + request.args.get('newer_than') + "#activity-" + perma_id %}
-{% else %}
-{% set redir = request.path + "#activity-" + perma_id %}
 {% endif %}
 
 {% set aid = obj.id | quote_plus %}

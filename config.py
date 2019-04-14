@@ -144,6 +144,19 @@ def create_indexes():
         ]
     )
 
+    DB.activities.create_index([("box", pymongo.ASCENDING)])
+
+    # Outbox query
+    DB.activities.create_index(
+        [
+            ("box", pymongo.ASCENDING),
+            ("type", pymongo.ASCENDING),
+            ("meta.undo", pymongo.ASCENDING),
+            ("meta.deleted", pymongo.ASCENDING),
+            ("meta.public", pymongo.ASCENDING),
+        ]
+    )
+
     DB.activities.create_index(
         [
             ("type", pymongo.ASCENDING),

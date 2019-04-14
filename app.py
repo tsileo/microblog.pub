@@ -42,6 +42,7 @@ from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
 from little_boxes.activitypub import _to_list
 from little_boxes.activitypub import clean_activity
+from little_boxes.activitypub import format_datetime
 from little_boxes.activitypub import get_backend
 from little_boxes.content_helper import parse_markdown
 from little_boxes.linked_data_sig import generate_signature
@@ -65,6 +66,7 @@ import config
 
 from activitypub import Box
 from activitypub import embed_collection
+from activitypub import _answer_key
 from config import USER_AGENT
 from config import ADMIN_API_KEY
 from config import BASE_URL
@@ -129,16 +131,21 @@ def verify_pass(pwd):
 def inject_config():
     q = {
         "type": "Create",
-        "activity.object.type": "Note",
         "activity.object.inReplyTo": None,
         "meta.deleted": False,
+        "meta.public": True,
     }
     notes_count = DB.activities.find(
         {"box": Box.OUTBOX.value, "$or": [q, {"type": "Announce", "meta.undo": False}]}
     ).count()
-    q = {"type": "Create", "activity.object.type": "Note", "meta.deleted": False}
     with_replies_count = DB.activities.find(
-        {"box": Box.OUTBOX.value, "$or": [q, {"type": "Announce", "meta.undo": False}]}
+        {
+            "box": Box.OUTBOX.value,
+            "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+            "meta.undo": False,
+            "meta.deleted": False,
+            "meta.public": True,
+        }
     ).count()
     liked_count = DB.activities.count(
         {
@@ -169,6 +176,7 @@ def inject_config():
         liked_count=liked_count,
         with_replies_count=with_replies_count,
         me=ME,
+        base_url=config.BASE_URL,
     )
 
 
@@ -231,6 +239,16 @@ def _get_file_url(url, size, kind):
     # MEDIA_CACHE.cache(url, kind)
     app.logger.error(f"cache not available for {url}/{size}/{kind}")
     return url
+
+
+@app.template_filter()
+def gtone(n):
+    return n > 1
+
+
+@app.template_filter()
+def gtnow(dtstr):
+    return format_datetime(datetime.now().astimezone()) > dtstr
 
 
 @app.template_filter()
@@ -805,6 +823,9 @@ def index():
         DB.activities, q, limit=25 - len(pinned)
     )
 
+    # FIXME(tsileo): add it on permakink too
+    [_add_answers_to_questions(item) for item in outbox_data]
+
     resp = render_template(
         "index.html",
         outbox_data=outbox_data,
@@ -823,6 +844,7 @@ def with_replies():
         "box": Box.OUTBOX.value,
         "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         "meta.deleted": False,
+        "meta.public": True,
         "meta.undo": False,
     }
     outbox_data, older_than, newer_than = paginated_query(DB.activities, q)
@@ -914,6 +936,10 @@ def note_by_id(note_id):
         abort(404)
     if data["meta"].get("deleted", False):
         abort(410)
+
+    # If it's a Question, add the answers from meta
+    _add_answers_to_questions(data)
+
     thread = _build_thread(data)
     app.logger.info(f"thread={thread!r}")
 
@@ -1084,9 +1110,31 @@ def remove_context(activity: Dict[str, Any]) -> Dict[str, Any]:
     return activity
 
 
+def _add_answers_to_questions(raw_doc: Dict[str, Any]) -> None:
+    activity = raw_doc["activity"]
+    if (
+        "object" in activity
+        and _to_list(activity["object"]["type"])[0] == ActivityType.QUESTION.value
+    ):
+        for choice in activity["object"].get("oneOf", activity["object"].get("anyOf")):
+            choice["replies"] = {
+                "type": ActivityType.COLLECTION.value,
+                "totalItems": raw_doc["meta"]
+                .get("question_answers", {})
+                .get(_answer_key(choice["name"]), 0),
+            }
+        now = datetime.now().astimezone()
+        if format_datetime(now) > activity["object"]["endTime"]:
+            activity["object"]["closed"] = activity["object"]["endTime"]
+
+
 def activity_from_doc(raw_doc: Dict[str, Any], embed: bool = False) -> Dict[str, Any]:
     raw_doc = add_extra_collection(raw_doc)
     activity = clean_activity(raw_doc["activity"])
+
+    # Handle Questions
+    # TODO(tsileo): what about object embedded by ID/URL?
+    _add_answers_to_questions(raw_doc)
     if embed:
         return remove_context(activity)
     return activity
@@ -1101,6 +1149,8 @@ def outbox():
         q = {
             "box": Box.OUTBOX.value,
             "meta.deleted": False,
+            "meta.undo": False,
+            "meta.public": True,
             "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         }
         return jsonify(
@@ -1150,6 +1200,7 @@ def outbox_activity(item_id):
     )
     if not data:
         abort(404)
+
     obj = activity_from_doc(data)
     if data["meta"].get("deleted", False):
         obj = ap.parse_activity(data["activity"])
@@ -1487,19 +1538,7 @@ def _user_api_arg(key: str, **kwargs):
 def _user_api_get_note(from_outbox: bool = False):
     oid = _user_api_arg("id")
     app.logger.info(f"fetching {oid}")
-    try:
-        note = ap.parse_activity(
-            get_backend().fetch_iri(oid), expected=ActivityType.NOTE
-        )
-    except Exception:
-        try:
-            note = ap.parse_activity(
-                get_backend().fetch_iri(oid), expected=ActivityType.VIDEO
-            )
-        except Exception:
-            raise ActivityNotFoundError(
-                "Expected Note or Video ActivityType, but got something else"
-            )
+    note = ap.parse_activity(get_backend().fetch_iri(oid))
     if from_outbox and not note.id.startswith(ID):
         raise NotFromOutboxError(
             f"cannot load {note.id}, id must be owned by the server"
@@ -1540,6 +1579,30 @@ def api_boost():
     announce_id = post_to_outbox(announce)
 
     return _user_api_response(activity=announce_id)
+
+
+@app.route("/api/vote", methods=["POST"])
+@api_required
+def api_vote():
+    oid = _user_api_arg("id")
+    app.logger.info(f"fetching {oid}")
+    note = ap.parse_activity(get_backend().fetch_iri(oid))
+    choice = _user_api_arg("choice")
+
+    raw_note = dict(
+        attributedTo=MY_PERSON.id,
+        cc=[],
+        to=note.get_actor().id,
+        name=choice,
+        tag=[],
+        inReplyTo=note.id,
+    )
+
+    note = ap.Note(**raw_note)
+    create = note.build_create()
+    create_id = post_to_outbox(create)
+
+    return _user_api_response(activity=create_id)
 
 
 @app.route("/api/like", methods=["POST"])
@@ -1775,6 +1838,57 @@ def api_new_note():
 
     note = ap.Note(**raw_note)
     create = note.build_create()
+    create_id = post_to_outbox(create)
+
+    return _user_api_response(activity=create_id)
+
+
+@app.route("/api/new_question", methods=["POST"])
+@api_required
+def api_new_question():
+    source = _user_api_arg("content")
+    if not source:
+        raise ValueError("missing content")
+
+    content, tags = parse_markdown(source)
+    cc = [ID + "/followers"]
+
+    for tag in tags:
+        if tag["type"] == "Mention":
+            cc.append(tag["href"])
+
+    answers = []
+    for i in range(4):
+        a = _user_api_arg(f"answer{i}", default=None)
+        if not a:
+            break
+        answers.append({"type": ActivityType.NOTE.value, "name": a})
+
+    choices = {
+        "endTime": ap.format_datetime(
+            datetime.now().astimezone()
+            + timedelta(minutes=int(_user_api_arg("open_for")))
+        )
+    }
+    of = _user_api_arg("of")
+    if of == "anyOf":
+        choices["anyOf"] = answers
+    else:
+        choices["oneOf"] = answers
+
+    raw_question = dict(
+        attributedTo=MY_PERSON.id,
+        cc=list(set(cc)),
+        to=[ap.AS_PUBLIC],
+        content=content,
+        tag=tags,
+        source={"mediaType": "text/markdown", "content": source},
+        inReplyTo=None,
+        **choices,
+    )
+
+    question = ap.Question(**raw_question)
+    create = question.build_create()
     create_id = post_to_outbox(create)
 
     return _user_api_response(activity=create_id)
@@ -2583,6 +2697,7 @@ def task_process_new_activity():
             if not note.inReplyTo or note.inReplyTo.startswith(ID):
                 tag_stream = True
 
+            # FIXME(tsileo): check for direct addressing in the to, cc, bcc... fields
             if (note.inReplyTo and note.inReplyTo.startswith(ID)) or note.has_mention(
                 ID
             ):
@@ -2734,8 +2849,6 @@ def task_cleanup():
     task = p.parse(request)
     app.logger.info(f"task={task!r}")
     p.push({}, "/task/cleanup_part_1")
-    p.push({}, "/task/cleanup_part_2")
-    p.push({}, "/task/cleanup_part_3")
     return ""
 
 
@@ -2847,6 +2960,17 @@ def task_cleanup_part_1():
         },
         {"$set": {"meta.keep": False}},
     )
+
+    DB.activities.update_many(
+        {
+            "box": Box.OUTBOX.value,
+            "type": ActivityType.CREATE.value,
+            "meta.public": {"$exists": False},
+        },
+        {"$set": {"meta.public": True}},
+    )
+
+    p.push({}, "/task/cleanup_part_2")
     return "OK"
 
 
@@ -2870,6 +2994,7 @@ def task_cleanup_part_2():
             MEDIA_CACHE.fs.delete(grid_item._id)
         DB.activities.delete_one({"_id": data["_id"]})
 
+    p.push({}, "/task/cleanup_part_3")
     return "OK"
 
 

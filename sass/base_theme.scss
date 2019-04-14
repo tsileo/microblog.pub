@@ -329,3 +329,25 @@ input[type=submit] {
 .note-video {
   margin: 30px 0 10px 0;
 }
+li.answer {
+  height:30px;
+  margin-bottom:10px;
+  position:relative;
+}
+.answer .answer-bar {
+  position:absolute;
+  height:30px;
+  border-radius:2px;
+}
+.answer .answer-text {
+  position:relative;
+  top:6px;
+  padding-left:10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.answer .answer-text > span {
+   width:70px;
+   display:inline-block;
+}

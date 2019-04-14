@@ -20,11 +20,14 @@ def links_from_note(note):
             tags_href.add(h)
 
     links = set()
-    soup = BeautifulSoup(note["content"])
-    for link in soup.find_all("a"):
-        h = link.get("href")
-        if h.startswith("http") and h not in tags_href and is_url_valid(h):
-            links.add(h)
+    if "content" in note:
+        soup = BeautifulSoup(note["content"])
+        for link in soup.find_all("a"):
+            h = link.get("href")
+            if h.startswith("http") and h not in tags_href and is_url_valid(h):
+                links.add(h)
+
+    # FIXME(tsileo): support summary and name fields
 
     return links
 

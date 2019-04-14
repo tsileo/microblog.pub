@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import json
@@ -73,6 +74,12 @@ def ensure_it_is_me(f):
     return wrapper
 
 
+def _answer_key(choice: str) -> str:
+    h = hashlib.new("sha1")
+    h.update(choice.encode())
+    return h.hexdigest()
+
+
 class Box(Enum):
     INBOX = "inbox"
     OUTBOX = "outbox"
@@ -106,13 +113,17 @@ class MicroblogPubBackend(Backend):
 
     def save(self, box: Box, activity: ap.BaseActivity) -> None:
         """Custom helper for saving an activity to the DB."""
+        is_public = True
+        if activity.has_type(ap.ActivityType.CREATE) and not activity.is_public():
+            is_public = False
+
         DB.activities.insert_one(
             {
                 "box": box.value,
                 "activity": activity.to_dict(),
                 "type": _to_list(activity.type),
                 "remote_id": activity.id,
-                "meta": {"undo": False, "deleted": False},
+                "meta": {"undo": False, "deleted": False, "public": is_public},
             }
         )
 
@@ -453,6 +464,46 @@ class MicroblogPubBackend(Backend):
             {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
         )
 
+    def _process_question_reply(self, create: ap.Create, question: ap.Question) -> None:
+        choice = create.get_object().name
+
+        # Ensure it's a valid choice
+        if choice not in [
+            c["name"] for c in question._data.get("oneOf", question.anyOf)
+        ]:
+            logger.info("invalid choice")
+            return
+
+        # Check for duplicate votes
+        if DB.activities.find_one(
+            {
+                "activity.object.actor": create.get_actor().id,
+                "meta.answer_to": question.id,
+            }
+        ):
+            logger.info("duplicate response")
+            return
+
+        # Update the DB
+        answer_key = _answer_key(choice)
+
+        DB.activities.update_one(
+            {"activity.object.id": question.id},
+            {
+                "$inc": {
+                    "meta.question_replies": 1,
+                    f"meta.question_answers.{answer_key}": 1,
+                }
+            },
+        )
+
+        DB.activities.update_one(
+            {"remote_id": create.id},
+            {"$set": {"meta.answer_to": question.id, "meta.stream": False}},
+        )
+
+        return None
+
     @ensure_it_is_me
     def _handle_replies(self, as_actor: ap.Person, create: ap.Create) -> None:
         """Go up to the root reply, store unknown replies in the `threads` DB and set the "meta.thread_root_parent"
@@ -464,6 +515,26 @@ class MicroblogPubBackend(Backend):
         new_threads = []
         root_reply = in_reply_to
         reply = ap.fetch_remote_activity(root_reply)
+
+        # Ensure the this is a local reply, of a question, with a direct "to" addressing
+        if (
+            reply.id.startswith(BASE_URL)
+            and reply.has_type(ap.ActivityType.QUESTION.value)
+            and _to_list(create.get_object().to)[0].startswith(BASE_URL)
+            and not create.is_public()
+        ):
+            return self._process_question_reply(create, reply)
+        elif (
+            create.id.startswith(BASE_URL)
+            and reply.has_type(ap.ActivityType.QUESTION.value)
+            and not create.is_public()
+        ):
+            # Keep track of our own votes
+            DB.activities.update_one(
+                {"activity.object.id": reply.id, "box": "inbox"},
+                {"$set": {"meta.voted_for": create.get_object().name}},
+            )
+            return None
 
         creply = DB.activities.find_one_and_update(
             {"activity.object.id": in_reply_to},
