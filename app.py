@@ -812,6 +812,7 @@ def index():
         "meta.undo": False,
         "$or": [{"meta.pinned": False}, {"meta.pinned": {"$exists": False}}],
     }
+    print(list(DB.activities.find(q)))
 
     pinned = []
     # Only fetch the pinned notes if we're on the first page
@@ -2966,7 +2967,7 @@ def task_cleanup_part_1():
     DB.activities.update_many(
         {
             "box": Box.OUTBOX.value,
-            "type": ActivityType.CREATE.value,
+            "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
             "meta.public": {"$exists": False},
         },
         {"$set": {"meta.public": True}},

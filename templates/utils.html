@@ -16,24 +16,27 @@
 {%- endmacro %}
 
 {% macro display_note(obj, perma=False, ui=False, likes=[], shares=[], meta={}, no_color=False) -%}
+
 {% if meta.actor %}
-{% set actor = meta.actor %}
+    {% set actor = meta.actor %}
 {% else %}
-{% set actor = obj.attributedTo | get_actor  %}
+    {% set actor = obj.attributedTo | get_actor  %}
 {% endif %}
 
 
 {% if session.logged_in %}
-{% set perma_id = obj.id | permalink_id %}
+    {% set perma_id = obj.id | permalink_id %}
 
-{% if request.args.get('older_than') %}
-{% set redir = request.path + "?older_than=" + request.args.get('older_than') + "#activity-" + perma_id %}
-{% elif request.args.get('newer_than') %}
-{% set redir = request.path + "?newer_than=" + request.args.get('newer_than') + "#activity-" + perma_id %}
-{% else %}
-{% set redir = request.path + "#activity-" + perma_id %}
+    {% if request.args.get('older_than') %}
+        {% set redir = request.path + "?older_than=" + request.args.get('older_than') + "#activity-" + perma_id %}
+    {% elif request.args.get('newer_than') %}
+        {% set redir = request.path + "?newer_than=" + request.args.get('newer_than') + "#activity-" + perma_id %}
+    {% else %}
+    {% set redir = request.path + "#activity-" + perma_id %}
+    {% endif %}
+
+    {% set aid = obj.id | quote_plus %}
 {% endif %}
-
 
 
 <div class="note-box">
@@ -57,6 +60,7 @@
 	</span>
 	{% endif %}
     </div>
+
 	{% if obj.summary %}<p class="p-summary">{{ obj.summary | clean }}</p>{% endif %}
     {% if obj | has_type('Video') %}
     <div class="note-video">
@@ -64,37 +68,37 @@
     </video>
     </div>
     {% endif %}
-	<div class="note-container{% if perma %} perma{%endif%} p-name e-content">
 
+    <div class="note-container{% if perma %} perma{%endif%} p-name e-content">
     {% if obj | has_type('Article') %}
-    {{ obj.name }} <a href="{{ obj | url_or_id | get_url }}">{{ obj | url_or_id | get_url }}</a>
+        {{ obj.name }} <a href="{{ obj | url_or_id | get_url }}">{{ obj | url_or_id | get_url }}</a>
     {% elif obj | has_type('Question') %}
-	{{ obj.content | clean | safe }}
+        {{ obj.content | clean | safe }}
 
-    {% if obj.id | is_from_outbox or (meta.question_replies and (obj.closed or meta.voted_for)) %}
-    <ul style="list-style:none;padding:0;">
-    {% set total_votes = meta.question_replies %}
+        {% if obj.id | is_from_outbox or (meta.question_replies and (obj.closed or meta.voted_for)) %}
+        <ul style="list-style:none;padding:0;">
+        {% set total_votes = meta.question_replies %}
 
-    {% for oneOf in obj.oneOf %}
-    {% set pct = 0 %}
-    {% if total_votes > 0 %}
-    {% set cnt = oneOf.name | get_answer_count(meta) %}
-    {% set pct = cnt * 100.0 / total_votes %}
-    {% endif %}
-    <li class="answer">
-        <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
-        <span class="answer-text">
-            <span>{{ '%0.0f'| format(pct) }}%</span>
-            {{ oneOf.name }} 
-        </span>
-    </li>
-    {% endfor %}
+        {% for oneOf in obj.oneOf %}
+            {% set pct = 0 %}
+            {% if total_votes > 0 %}
+                {% set cnt = oneOf.name | get_answer_count(meta) %}
+                {% set pct = cnt * 100.0 / total_votes %}
+            {% endif %}
+            <li class="answer">
+                <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
+                <span class="answer-text">
+                    <span>{{ '%0.0f'| format(pct) }}%</span>
+                    {{ oneOf.name }} 
+                </span>
+            </li>
+        {% endfor %}
     </ul>
     <p><small>
     {% if obj.closed or obj.endTime | gtnow %}
-    Ended {{ obj.endTime | format_timeago }} with <strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %}.
+        Ended {{ obj.endTime | format_timeago }} with <strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %}.
     {% else %}
-    Ends {{ obj.endTime | format_timeago }} (<strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %} as of now).
+        Ends {{ obj.endTime | format_timeago }} (<strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %} as of now).
     {% endif %}
     </small></p>
     {% else %}
@@ -182,9 +186,6 @@
 {% endif %}
 {% else %}
 <a class ="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
-{% endif %}
-
-{% set aid = obj.id | quote_plus %}
 {% endif %}
 
 {% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> replies</a>
