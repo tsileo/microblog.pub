@@ -39,7 +39,12 @@ class PousseTaches:
         self.base_url = base_url
 
     def push(
-        self, payload: Any, path: str, expected: int = 200, schedule: str = "", delay: int = 0,
+        self,
+        payload: Any,
+        path: str,
+        expected: int = 200,
+        schedule: str = "",
+        delay: int = 0,
     ) -> str:
         # Encode our payload
         p = base64.b64encode(json.dumps(payload).encode()).decode()
