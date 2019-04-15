@@ -17,37 +17,11 @@
 
 **Still in early development.**
 
-## Perform the "drop-celery" migration
+## /!\ Note to adventurer
 
-The project is dropping Celery/RabbitMQ in favor of [poussetaches](https://github.com/tsileo/poussetaches), written specifically for microblog.pub.
+If you are running an instance with Celery/RabbitMQ, you will need to [perform a migration](https://github.com/tsileo/microblog.pub/tree/drop-celery#perform-the-drop-celery-migration).
 
-First you need to know your Docker compose project name, it should be the name of the project directory, without dot.
-If you haven't renamed the directory it should be `microblogpub`.
-If you're not sure you can run `$ docker-compose ps`, and get `{project_name}_{service}_{version}` in the output, like `microblogpub_web_1`
-
-Generate a secret for poussetaches (you can use whatever secret you want):
-
-```
-$ python -c "import os, binascii; print(binascii.hexlify(os.urandom(32)).decode())"
-```
-
-Update the `.env` file and append:
-
-```
-POUSSETACHES_AUTH_KEY=yourgeneratedsecret
-COMPOSE_PROJECT_NAME=microblogpub
-```
-
-Then switch to the `drop-celery` branch:
-
-```
-$ git checkout drop-celery
-# Build the poussetaches container
-$ make poussetaches
-$ make update
-```
-
-And you should be good!
+Getting closer to a stable release, it should be the "last" migration.
 
 ## Features
 
@@ -74,11 +48,11 @@ And you should be good!
    - You can setup a "purge" hook to let you invalidate cache when the microblog was updated
  - Deployable with Docker (Docker compose for everything: dev, test and deployment)
  - Focused on testing
-   - The core ActivityPub code/tests are in [Little Boxes](https://github.com/tsileo/little-boxes)
    - Tested against the [official ActivityPub test suite](https://test.activitypub.rocks/) ([report submitted](https://github.com/w3c/activitypub/issues/308))
-   - CI runs "federation" tests against two instances
-   - Manually tested against [Mastodon](https://github.com/tootsuite/mastodon)
+   - [CI runs "federation" tests against two instances](https://d.a4.io/tsileo/microblog.pub)
    - Project is running an up-to-date instance
+   - The core ActivityPub code/tests are in [Little Boxes](https://github.com/tsileo/little-boxes)
+   - Manually tested against [Mastodon](https://github.com/tootsuite/mastodon)
 
 ## ActivityPub
 
@@ -120,10 +94,8 @@ pass: $2b$12$iW497g...
 
 ### Deployment
 
-Note: some of the docker yml files use version 3 of [docker-compose](https://docs.docker.com/compose/install/).
-
 ```shell
-$ docker-compose up -d
+$ make update
 ```
 
 ## Development
@@ -134,7 +106,7 @@ The most convenient way to hack on microblog.pub is to run the server locally, a
 ```shell
 # One-time setup
 $ pip install -r requirements.txt
-# Start the Celery worker, RabbitMQ and MongoDB
+# Start MongoDB and poussetaches
 $ docker-compose -f docker-compose-dev.yml up -d
 # Run the server locally
 $ FLASK_DEBUG=1 MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py flask run -p 5005 --with-threads
