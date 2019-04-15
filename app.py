@@ -2847,6 +2847,31 @@ def task_post_to_remote_inbox():
     return ""
 
 
+@app.route("/task/update_question", methods=["POST"])
+def task_update_question():
+    """Post an activity to a remote inbox."""
+    task = p.parse(request)
+    app.logger.info(f"task={task!r}")
+    iri = task.payload
+    try:
+        app.logger.info(f"Updating question {iri}")
+        # TODO(tsileo): sends an Update with the question/iri as an actor, with the updated stats (LD sig will fail?)
+        # but to who? followers and people who voted? but this must not be visible right?
+        # also sends/trigger a notification when a poll I voted for ends like Mastodon?
+    except HTTPError as err:
+        app.logger.exception("request failed")
+        if 400 >= err.response.status_code >= 499:
+            app.logger.info("client error, no retry")
+            return ""
+
+        raise TaskError() from err
+    except Exception as err:
+        app.logger.exception("task failed")
+        raise TaskError() from err
+
+    return ""
+
+
 @app.route("/task/cleanup", methods=["POST"])
 def task_cleanup():
     task = p.parse(request)
