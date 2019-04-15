@@ -39,7 +39,7 @@ class PousseTaches:
         self.base_url = base_url
 
     def push(
-        self, payload: Any, path: str, expected: int = 200, schedule: str = ""
+        self, payload: Any, path: str, expected: int = 200, schedule: str = "", delay: int = 0,
     ) -> str:
         # Encode our payload
         p = base64.b64encode(json.dumps(payload).encode()).decode()
@@ -52,6 +52,7 @@ class PousseTaches:
                 "payload": p,
                 "expected": expected,
                 "schedule": schedule,
+                "delay": delay,
             },
         )
         resp.raise_for_status()
