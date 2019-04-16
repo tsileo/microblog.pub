@@ -2703,9 +2703,7 @@ def task_process_new_activity():
                 tag_stream = True
 
             # FIXME(tsileo): check for direct addressing in the to, cc, bcc... fields
-            if (in_reply_to and in_reply_to.startswith(ID)) or note.has_mention(
-                ID
-            ):
+            if (in_reply_to and in_reply_to.startswith(ID)) or note.has_mention(ID):
                 should_keep = True
 
             if in_reply_to:

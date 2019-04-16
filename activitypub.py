@@ -369,12 +369,14 @@ class MicroblogPubBackend(Backend):
         logger.info(f"inbox_delete handle_replies obj={obj!r}")
         in_reply_to = obj.get_in_reply_to()
         if delete.get_object().ACTIVITY_TYPE != ap.ActivityType.NOTE:
-            in_reply_to = ap._get_id(DB.activities.find_one(
-                {
-                    "activity.object.id": delete.get_object().id,
-                    "type": ap.ActivityType.CREATE.value,
-                }
-            )["activity"]["object"].get("inReplyTo"))
+            in_reply_to = ap._get_id(
+                DB.activities.find_one(
+                    {
+                        "activity.object.id": delete.get_object().id,
+                        "type": ap.ActivityType.CREATE.value,
+                    }
+                )["activity"]["object"].get("inReplyTo")
+            )
 
         # Fake a Undo so any related Like/Announce doesn't appear on the web UI
         DB.activities.update(
