@@ -367,7 +367,7 @@ class MicroblogPubBackend(Backend):
         )
 
         logger.info(f"inbox_delete handle_replies obj={obj!r}")
-        in_reply_to = obj.get_in_reply_to()
+        in_reply_to = obj.get_in_reply_to() if obj.inReplyTo else None
         if delete.get_object().ACTIVITY_TYPE != ap.ActivityType.NOTE:
             in_reply_to = ap._get_id(
                 DB.activities.find_one(
