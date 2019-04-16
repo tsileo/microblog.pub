@@ -901,7 +901,7 @@ def _build_thread(data, include_children=True):  # noqa: C901
         rep_id = rep["activity"]["object"]["id"]
         if rep_id == root_id:
             continue
-        reply_of = rep["activity"]["object"]["inReplyTo"]
+        reply_of = ap._get_id(rep["activity"]["object"]["inReplyTo"])
         try:
             idx[reply_of]["_nodes"].append(rep)
         except KeyError:
@@ -2544,7 +2544,8 @@ def invalidate_cache(activity):
         DB.cache2.remove()
     elif activity.has_type(ap.ActivityType.CREATE):
         note = activity.get_object()
-        if not note.inReplyTo or note.inReplyTo.startswith(ID):
+        in_reply_to = note.get_in_reply_to()
+        if not in_reply_to or in_reply_to.startswith(ID):
             DB.cache2.remove()
         # FIXME(tsileo): check if it's a reply of a reply
 
@@ -2696,19 +2697,20 @@ def task_process_new_activity():
 
         elif activity.has_type(ap.ActivityType.CREATE):
             note = activity.get_object()
+            in_reply_to = note.get_in_reply_to()
             # Make the note part of the stream if it's not a reply, or if it's a local reply
-            if not note.inReplyTo or note.inReplyTo.startswith(ID):
+            if not in_reply_to or in_reply_to.startswith(ID):
                 tag_stream = True
 
             # FIXME(tsileo): check for direct addressing in the to, cc, bcc... fields
-            if (note.inReplyTo and note.inReplyTo.startswith(ID)) or note.has_mention(
+            if (in_reply_to and in_reply_to.startswith(ID)) or note.has_mention(
                 ID
             ):
                 should_keep = True
 
-            if note.inReplyTo:
+            if in_reply_to:
                 try:
-                    reply = ap.fetch_remote_activity(note.inReplyTo)
+                    reply = ap.fetch_remote_activity(note.get_in_reply_to())
                     if (
                         reply.id.startswith(ID) or reply.has_mention(ID)
                     ) and activity.is_public():
@@ -2731,7 +2733,7 @@ def task_process_new_activity():
                         should_forward = True
 
             # [X] The values of inReplyTo, object, target and/or tag are objects owned by the server
-            if not (note.inReplyTo and note.inReplyTo.startswith(ID)):
+            if not (in_reply_to and in_reply_to.startswith(ID)):
                 should_forward = False
 
         elif activity.has_type(ap.ActivityType.DELETE):

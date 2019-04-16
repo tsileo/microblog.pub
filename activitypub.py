@@ -367,14 +367,14 @@ class MicroblogPubBackend(Backend):
         )
 
         logger.info(f"inbox_delete handle_replies obj={obj!r}")
-        in_reply_to = obj.inReplyTo
+        in_reply_to = obj.get_in_reply_to()
         if delete.get_object().ACTIVITY_TYPE != ap.ActivityType.NOTE:
-            in_reply_to = DB.activities.find_one(
+            in_reply_to = ap._get_id(DB.activities.find_one(
                 {
                     "activity.object.id": delete.get_object().id,
                     "type": ap.ActivityType.CREATE.value,
                 }
-            )["activity"]["object"].get("inReplyTo")
+            )["activity"]["object"].get("inReplyTo"))
 
         # Fake a Undo so any related Like/Announce doesn't appear on the web UI
         DB.activities.update(
@@ -406,7 +406,7 @@ class MicroblogPubBackend(Backend):
             {"$set": {"meta.undo": True, "meta.exta": "object deleted"}},
         )
 
-        self._handle_replies_delete(as_actor, obj.inReplyTo)
+        self._handle_replies_delete(as_actor, obj.get_in_reply_to())
 
     @ensure_it_is_me
     def inbox_update(self, as_actor: ap.Person, update: ap.Update) -> None:
@@ -524,7 +524,7 @@ class MicroblogPubBackend(Backend):
     def _handle_replies(self, as_actor: ap.Person, create: ap.Create) -> None:
         """Go up to the root reply, store unknown replies in the `threads` DB and set the "meta.thread_root_parent"
         key to make it easy to query a whole thread."""
-        in_reply_to = create.get_object().inReplyTo
+        in_reply_to = create.get_object().get_in_reply_to()
         if not in_reply_to:
             return
 
@@ -563,7 +563,7 @@ class MicroblogPubBackend(Backend):
             # TODO(tsileo): parses the replies collection and import the replies?
 
         while reply is not None:
-            in_reply_to = reply.inReplyTo
+            in_reply_to = reply.get_in_reply_to()
             if not in_reply_to:
                 break
             root_reply = in_reply_to
