@@ -1706,6 +1706,8 @@ def inbox():
         )
 
     data = request.get_json(force=True)
+    print(f"req_headers={request.headers}")
+    print(f"raw_data={data}")
     logger.debug(f"req_headers={request.headers}")
     logger.debug(f"raw_data={data}")
     try:
