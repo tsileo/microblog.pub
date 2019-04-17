@@ -68,7 +68,6 @@ Activities are verified using HTTP Signatures or by fetching the content on the 
 $ git clone https://github.com/tsileo/microblog.pub
 $ cd microblog.pub
 $ pip install -r requirements.txt
-$ make css
 $ cp -r config/me.sample.yml config/me.yml
 ``` 
 
@@ -107,9 +106,10 @@ The most convenient way to hack on microblog.pub is to run the server locally, a
 # One-time setup
 $ pip install -r requirements.txt
 # Start MongoDB and poussetaches
-$ docker-compose -f docker-compose-dev.yml up -d
+$ make poussetaches
+$ env POUSSETACHES_AUTH_KEY="SetAnyPasswordHere" docker-compose -f docker-compose-dev.yml up -d
 # Run the server locally
-$ FLASK_DEBUG=1 MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py flask run -p 5005 --with-threads
+$ FLASK_DEBUG=1 MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py POUSSETACHES_AUTH_KEY="SetAnyPasswordHere" flask run -p 5005 --with-threads
 ```
 
 ## API
