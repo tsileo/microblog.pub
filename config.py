@@ -174,7 +174,7 @@ def _drop_db():
     mongo_client.drop_database(DB_NAME)
 
 
-KEY = get_key(ID, USERNAME, DOMAIN)
+KEY = get_key(ID, ID+"#main-key", USERNAME, DOMAIN)
 
 
 JWT_SECRET = get_secret_key("jwt")

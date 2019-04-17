@@ -24,9 +24,9 @@ def get_secret_key(name: str, new_key: Callable[[], str] = _new_key) -> str:
         return f.read()
 
 
-def get_key(owner: str, user: str, domain: str) -> Key:
+def get_key(owner: str, _id: str, user: str, domain: str) -> Key:
     """"Loads or generates an RSA key."""
-    k = Key(owner)
+    k = Key(owner, _id)
     user = user.replace(".", "_")
     domain = domain.replace(".", "_")
     key_path = os.path.join(KEY_DIR, f"key_{user}_{domain}.pem")
