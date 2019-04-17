@@ -12,3 +12,5 @@ services:
      - "${DATA_DIR}/poussetaches:/app/poussetaches_data"
     environment:
      - POUSSETACHES_AUTH_KEY=${POUSSETACHES_AUTH_KEY}
+    ports:
+     - "7991:7991"
