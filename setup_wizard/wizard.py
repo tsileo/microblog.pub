@@ -1,11 +1,12 @@
 """Basic wizard for setting up microblog.pub configuration files."""
-import os
 import binascii
+import os
+import sys
 from pathlib import Path
 
 import bcrypt
-from prompt_toolkit import prompt
 from markdown import markdown
+from prompt_toolkit import prompt
 
 
 def main():
@@ -63,4 +64,5 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        pass
+        print("Aborted")
+        sys.exit(1)

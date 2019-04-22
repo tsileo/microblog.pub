@@ -17,19 +17,18 @@ from typing import Tuple
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
-from requests.exceptions import HTTPError
-import requests
 import bleach
 import mf2py
 import pymongo
+import requests
 import timeago
 from bson.objectid import ObjectId
 from dateutil import parser
 from flask import Flask
-from flask import make_response
 from flask import Response
 from flask import abort
 from flask import jsonify as flask_jsonify
+from flask import make_response
 from flask import redirect
 from flask import render_template
 from flask import request
@@ -46,27 +45,25 @@ from little_boxes.activitypub import format_datetime
 from little_boxes.activitypub import get_backend
 from little_boxes.content_helper import parse_markdown
 from little_boxes.errors import ActivityGoneError
-from little_boxes.errors import NotAnActivityError
-from little_boxes.errors import BadActivityError
 from little_boxes.errors import ActivityNotFoundError
+from little_boxes.errors import BadActivityError
 from little_boxes.errors import Error
+from little_boxes.errors import NotAnActivityError
 from little_boxes.errors import NotFromOutboxError
 from little_boxes.httpsig import HTTPSigAuth
 from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
-from utils import opengraph
 from passlib.hash import bcrypt
+from requests.exceptions import HTTPError
 from u2flib_server import u2f
 from werkzeug.utils import secure_filename
 
 import activitypub
 import config
-
 from activitypub import Box
-from activitypub import embed_collection
 from activitypub import _answer_key
-from config import USER_AGENT
+from activitypub import embed_collection
 from config import ADMIN_API_KEY
 from config import BASE_URL
 from config import DB
@@ -81,14 +78,15 @@ from config import KEY
 from config import ME
 from config import MEDIA_CACHE
 from config import PASS
+from config import USER_AGENT
 from config import USERNAME
 from config import VERSION
 from config import _drop_db
+from poussetaches import PousseTaches
+from utils import opengraph
 from utils.key import get_secret_key
 from utils.lookup import lookup
 from utils.media import Kind
-
-from poussetaches import PousseTaches
 
 p = PousseTaches(
     os.getenv("MICROBLOGPUB_POUSSETACHES_HOST", "http://localhost:7991"),

@@ -1,13 +1,15 @@
 import base64
 import json
 import os
-from typing import Dict
+from datetime import datetime
 from typing import Any
+from typing import Dict
 from typing import List
-from dataclasses import dataclass
+
 import flask
 import requests
-from datetime import datetime
+
+from dataclasses import dataclass
 
 POUSSETACHES_AUTH_KEY = os.getenv("POUSSETACHES_AUTH_KEY")
 

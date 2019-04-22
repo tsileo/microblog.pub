@@ -4,6 +4,7 @@ import subprocess
 from datetime import datetime
 from enum import Enum
 
+import pymongo
 import requests
 import sass
 import yaml
@@ -11,7 +12,6 @@ from itsdangerous import JSONWebSignatureSerializer
 from little_boxes import strtobool
 from little_boxes.activitypub import DEFAULT_CTX
 from pymongo import MongoClient
-import pymongo
 
 from utils.key import KEY_DIR
 from utils.key import get_key
