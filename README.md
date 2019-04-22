@@ -55,6 +55,8 @@ Getting closer to a stable release, it should be the "last" migration.
 
 ## User Guide
 
+Remember that _microblog.pub_ is still in early development.
+
 The easiest and recommended way to run _microblog.pub_ in production is to use the provided docker-compose config.
 
 First install [Docker](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/).
@@ -86,7 +88,7 @@ See [docs/api.md](docs/api.md) for the internal HTTP API documentation.
 ### Backup
 
 The easiest way to backup all of your data is to backup the `microblog.pub/` directory directly (that's what I do and I have been able to restore super easily).
-It should be safe to copy the directory while the docker-compose is running.
+It should be safe to copy the directory while the Docker compose project is running.
 
 ## Development
 
@@ -107,4 +109,4 @@ $ FLASK_DEBUG=1 MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py POUSSETACHES_AUTH_KEY="<se
 
 ## Contributions
 
-PRs are welcome, please open an issue to start a discussion before your start any work.
+Contributions/PRs are welcome, please open an issue to start a discussion before your start any work.
