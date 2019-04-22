@@ -45,7 +45,6 @@ from little_boxes.activitypub import clean_activity
 from little_boxes.activitypub import format_datetime
 from little_boxes.activitypub import get_backend
 from little_boxes.content_helper import parse_markdown
-from little_boxes.linked_data_sig import generate_signature
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import NotAnActivityError
 from little_boxes.errors import BadActivityError
@@ -2817,9 +2816,10 @@ def task_post_to_remote_inbox():
         app.logger.info("generating sig")
         signed_payload = json.loads(payload)
 
+        # XXX Disable JSON-LD signature crap for now (as HTTP signatures are enough for most implementations)
         # Don't overwrite the signature if we're forwarding an activity
-        if "signature" not in signed_payload:
-            generate_signature(signed_payload, KEY)
+        # if "signature" not in signed_payload:
+        #    generate_signature(signed_payload, KEY)
 
         app.logger.info("to=%s", to)
         resp = requests.post(
