@@ -55,60 +55,55 @@ Getting closer to a stable release, it should be the "last" migration.
 
 ## ActivityPub
 
-microblog.pub implements an [ActivityPub](http://activitypub.rocks/) server, it implements both the client to server API and the federated server to server API.
+_microblog.pub_ implements an [ActivityPub](http://activitypub.rocks/) server, it implements both the client to server API and the federated server to server API.
 
 Activities are verified using HTTP Signatures or by fetching the content on the remote server directly.
 
-## Running your instance
+## User Guide
+
+The easiest and recommended way to run _microblog.pub_ in production is to use the provided docker-compose config.
+
+First install [Docker](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/).
+It's the only requirements, Python is not needed on the host system.
+
+Note that all the generated data (config included) will be stored on the host (i.e. not in Docker) in `config/` and `data/`.
+
 
 ### Installation
 
 ```shell
 $ git clone https://github.com/tsileo/microblog.pub
 $ cd microblog.pub
-$ pip install -r requirements.txt
-$ cp -r config/me.sample.yml config/me.yml
+$ make config
 ``` 
-
-### Configuration
-
-```shell
-$ make password
-Password: <enter a password; nothing will show on screen>
-$2b$12$iW497g...
-```
-
-Edit `config/me.yml` to add the above-generated password, like so:
-
-```
-username: 'username'
-name: 'Your Name'
-icon_url: 'https://you-avatar-url'
-domain: 'your-domain.tld'
-summary: 'your summary'
-https: true
-pass: $2b$12$iW497g...
-```
 
 ### Deployment
 
+To spawn the docker-compose project (running this command will also update _microblog.pub_ to latest and restart the project it it's already running):
+
 ```shell
-$ make update
+$ make run
 ```
+
+### Backup
+
+The easiest way to backup all of your data is to backup the `microblog.pub/` directory directly (that's what I do and I have been able to restore super easily).
+It should be safe to copy the directory while the docker-compose is running.
 
 ## Development
 
-The most convenient way to hack on microblog.pub is to run the server locally, and run
+The project requires Python3.7+.
 
+The most convenient way to hack on _microblog.pub_ is to run the Python server on the host directly, and evetything else in Docker.
 
 ```shell
-# One-time setup
+# One-time setup (in a new virtual env)
 $ pip install -r requirements.txt
 # Start MongoDB and poussetaches
 $ make poussetaches
-$ env POUSSETACHES_AUTH_KEY="SetAnyPasswordHere" docker-compose -f docker-compose-dev.yml up -d
+$ env POUSSETACHES_AUTH_KEY="<secret-key>" docker-compose -f docker-compose-dev.yml up -d
 # Run the server locally
-$ FLASK_DEBUG=1 MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py POUSSETACHES_AUTH_KEY="SetAnyPasswordHere" flask run -p 5005 --with-threads
+$ FLASK_DEBUG=1 MICROBLOGPUB_DEBUG=1 FLASK_APP=app.py POUSSETACHES_AUTH_KEY="<secret-key>" flask run -p 5005 --with-threads
 ```
 
 ## API

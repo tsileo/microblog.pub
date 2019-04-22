@@ -12,6 +12,16 @@ from prompt_toolkit import prompt
 def main():
     print("Welcome to microblog.pub setup wizard\n")
 
+    config_file = Path("/app/out/config/me.yml")
+    env_file = Path("/app/out/.env")
+
+    if config_file.exists() or env_file.exists():
+        # Spit out the relative path for the "config artifacts"
+        config_file = "config/me.yml"
+        env_file = ".env"
+        print(f"Existing setup detected, please delete {config_file} and/or {env_file} before restarting the wizard")
+        sys.exit(2)
+
     dat = {}
     print("Your identity will be @{username}@{domain}")
     dat["domain"] = prompt("domain: ")
@@ -42,10 +52,11 @@ def main():
     out = ""
     for k, v in dat.items():
         out += f"{k}: {v!r}\n"
-    print(out)
-    print()
 
-    env_file = {
+    with config_file.open("w") as f:
+        f.write(out)
+
+    env = {
         "WEB_PORT": 5005,
         "CONFIG_DIR": "./config",
         "DATA_DIR": "./data",
@@ -54,10 +65,14 @@ def main():
     }
 
     out2 = ""
-    for k, v in env_file.items():
+    for k, v in env.items():
         out2 += f"{k}={v}\n"
 
-    print(out2)
+    with env_file.open("w") as f:
+        f.write(out2)
+
+    print("Done")
+    sys.exit(0)
 
 
 if __name__ == "__main__":
