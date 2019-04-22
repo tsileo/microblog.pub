@@ -19,7 +19,9 @@ def main():
         # Spit out the relative path for the "config artifacts"
         config_file = "config/me.yml"
         env_file = ".env"
-        print(f"Existing setup detected, please delete {config_file} and/or {env_file} before restarting the wizard")
+        print(
+            f"Existing setup detected, please delete {config_file} and/or {env_file} before restarting the wizard"
+        )
         sys.exit(2)
 
     dat = {}
