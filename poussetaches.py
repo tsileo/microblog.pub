@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from typing import Dict
@@ -8,8 +9,6 @@ from typing import List
 
 import flask
 import requests
-
-from dataclasses import dataclass
 
 POUSSETACHES_AUTH_KEY = os.getenv("POUSSETACHES_AUTH_KEY")
 
