@@ -10,8 +10,9 @@ steps:
       - pip install -U pip
       - pip install mypy flake8 black
       - black --check .
-      - flake8 activitypub.py
+      - flake8
       - mypy --ignore-missing-imports .
+      - mypy --ignore-missing-imports setup_wizard
 
   # Build the container images we need for the test suite
   - name: build_containers

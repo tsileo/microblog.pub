@@ -9,7 +9,7 @@ from markdown import markdown
 from prompt_toolkit import prompt
 
 
-def main():
+def main() -> None:
     print("Welcome to microblog.pub setup wizard\n")
 
     config_file = Path("/app/out/config/me.yml")
@@ -17,10 +17,10 @@ def main():
 
     if config_file.exists() or env_file.exists():
         # Spit out the relative path for the "config artifacts"
-        config_file = "config/me.yml"
-        env_file = ".env"
+        rconfig_file = "config/me.yml"
+        renv_file = ".env"
         print(
-            f"Existing setup detected, please delete {config_file} and/or {env_file} before restarting the wizard"
+            f"Existing setup detected, please delete {rconfig_file} and/or {renv_file} before restarting the wizard"
         )
         sys.exit(2)
 
