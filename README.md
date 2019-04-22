@@ -29,9 +29,7 @@ Getting closer to a stable release, it should be the "last" migration.
    - Compatible with [Mastodon](https://github.com/tootsuite/mastodon) and others (Pleroma, Hubzilla...)
    - Also implements a remote follow compatible with Mastodon instances
  - Exposes your outbox as a basic microblog
- - Implements [IndieAuth](https://indieauth.spec.indieweb.org/) endpoints (authorization and token endpoint)
-   - U2F support
-   - You can use your ActivityPub identity to login to other websites/app
+   - Support all content types from the Fediverse (`Note`, `Article`, `Page`, `Video`, `Image`, `Question`...)
  - Comes with an admin UI with notifications and the stream of people you follow
  - Allows you to attach files to your notes
    - Privacy-aware image upload endpoint that strip EXIF meta data before storing the file
@@ -43,16 +41,17 @@ Getting closer to a stable release, it should be the "last" migration.
  - Exports RSS/Atom/[JSON](https://jsonfeed.org/) feeds
     - You stream/timeline is also available in an (authenticated) JSON feed
  - Comes with a tiny HTTP API to help posting new content and and read your inbox/notifications
- - Easy to "cache" (the external/public-facing microblog part)
-   - With a good setup, cached content can be served most of the time
-   - You can setup a "purge" hook to let you invalidate cache when the microblog was updated
  - Deployable with Docker (Docker compose for everything: dev, test and deployment)
+ - Implements [IndieAuth](https://indieauth.spec.indieweb.org/) endpoints (authorization and token endpoint)
+   - U2F support
+   - You can use your ActivityPub identity to login to other websites/app
  - Focused on testing
    - Tested against the [official ActivityPub test suite](https://test.activitypub.rocks/) ([report submitted](https://github.com/w3c/activitypub/issues/308))
    - [CI runs "federation" tests against two instances](https://d.a4.io/tsileo/microblog.pub)
-   - Project is running an up-to-date instance
-   - The core ActivityPub code/tests are in [Little Boxes](https://github.com/tsileo/little-boxes)
-   - Manually tested against [Mastodon](https://github.com/tootsuite/mastodon)
+   - Project is running 2 up-to-date instances ([here](https://microblog.pub) and [there](https://a4.io))
+   - The core ActivityPub code/tests are in [Little Boxes](https://github.com/tsileo/little-boxes) (but needs some cleanup)
+   - Manually tested against [Mastodon](https://github.com/tootsuite/mastodon) and other platforms
+
 
 ## ActivityPub
 
