@@ -26,7 +26,7 @@ Getting closer to a stable release, it should be the "last" migration.
 ## Features
 
  - Implements a basic [ActivityPub](https://activitypub.rocks/) server (with federation)
-   - Compatible with [Mastodon](https://github.com/tootsuite/mastodon) and others (Pleroma, Hubzilla...)
+   - Compatible with [Mastodon](https://joinmastodon.org/) and others ([Pleroma](https://pleroma.social/), Hubzilla...)
    - Also implements a remote follow compatible with Mastodon instances
  - Exposes your outbox as a basic microblog
    - Support all content types from the Fediverse (`Note`, `Article`, `Page`, `Video`, `Image`, `Question`...)
@@ -50,7 +50,7 @@ Getting closer to a stable release, it should be the "last" migration.
    - [CI runs "federation" tests against two instances](https://d.a4.io/tsileo/microblog.pub)
    - Project is running 2 up-to-date instances ([here](https://microblog.pub) and [there](https://a4.io))
    - The core ActivityPub code/tests are in [Little Boxes](https://github.com/tsileo/little-boxes) (but needs some cleanup)
-   - Manually tested against [Mastodon](https://github.com/tootsuite/mastodon) and other platforms
+   - Manually tested against other major platforms
 
 
 ## User Guide
