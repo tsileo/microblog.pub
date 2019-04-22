@@ -73,6 +73,9 @@ $ cd microblog.pub
 $ make config
 ``` 
 
+Once the initial configuration is done, you can still tweak the config by editing `config/me.yml` directly.
+
+
 ### Deployment
 
 To spawn the docker-compose project (running this command will also update _microblog.pub_ to latest and restart the project it it's already running):
@@ -81,14 +84,22 @@ To spawn the docker-compose project (running this command will also update _micr
 $ make run
 ```
 
+By default, the server will listen on `localhost:5005` (http://localhost:5005 should work if you're running locally).
+
+For production, you need to setup a reverse proxy (nginx, caddy) to forward your domain to the local server 
+(and check [certbot](https://certbot.eff.org/) for getting a free TLS certificate).
+
+
 ### HTTP API
 
 See [docs/api.md](docs/api.md) for the internal HTTP API documentation.
+
 
 ### Backup
 
 The easiest way to backup all of your data is to backup the `microblog.pub/` directory directly (that's what I do and I have been able to restore super easily).
 It should be safe to copy the directory while the Docker compose project is running.
+
 
 ## Development
 
