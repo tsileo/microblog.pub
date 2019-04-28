@@ -2212,7 +2212,7 @@ def indieauth_endpoint():
     session["logged_in"] = True
     me = auth["me"]
     state = auth["state"]
-    scope = " ".join(auth["scope"])
+    scope = auth["scope"].split()
     print("STATE", state)
     return build_auth_resp({"me": me, "state": state, "scope": scope})
 
@@ -2235,7 +2235,7 @@ def token_endpoint():
         )
         if not auth:
             abort(403)
-        scope = " ".join(auth["scope"])
+        scope = auth["scope"].split()
         payload = dict(
             me=me, client_id=client_id, scope=scope, ts=datetime.now().timestamp()
         )
