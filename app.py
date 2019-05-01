@@ -2202,7 +2202,13 @@ def indieauth_endpoint():
             "client_id": client_id,
             "verified": False,
         },
-        {"$set": {"verified": True, "action": "login"}},
+        {
+            "$set": {
+                "verified": True,
+                "verified_by": "login",
+                "verified_at": datetime.now().timestamp(),
+            }
+        },
     )
     print(auth)
     print(code, redirect_uri, client_id)
@@ -2232,6 +2238,9 @@ def token_endpoint():
         redirect_uri = request.form.get("redirect_uri")
         client_id = request.form.get("client_id")
 
+        now = datetime.now()
+
+        # This query ensure code, client_id, redirect_uri and me are matching with the code request
         auth = DB.indieauth.find_one_and_update(
             {
                 "code": code,
@@ -2240,17 +2249,28 @@ def token_endpoint():
                 "client_id": client_id,
                 "verified": False,
             },
-            {"$set": {"verified": True, "action": "token"}},
+            {
+                "$set": {
+                    "verified": True,
+                    "verified_by": "token",
+                    "verified_at": now.timestamp(),
+                }
+            },
         )
+
         if not auth:
             abort(403)
 
-        now = datetime.now()
+        scope = auth["scope"].split()
+
+        # Ensure there's at least one scope
+        if not len(scope):
+            abort(400)
+
         # Ensure the code is recent
         if (now - datetime.fromtimestamp(auth["ts"])) > timedelta(minutes=5):
             abort(400)
 
-        scope = auth["scope"].split()
         payload = dict(me=me, client_id=client_id, scope=scope, ts=now.timestamp())
         token = JWT.dumps(payload).decode("utf-8")
         DB.indieauth.update_one(
@@ -2275,7 +2295,9 @@ def token_endpoint():
         abort(403)
 
     # Check the token expritation (valid for 3 hours)
-    if (datetime.now() - datetime.fromtimestamp(payload["ts"])) > timedelta(minutes=180):
+    if (datetime.now() - datetime.fromtimestamp(payload["ts"])) > timedelta(
+        minutes=180
+    ):
         abort(401)
 
     return build_auth_resp(
