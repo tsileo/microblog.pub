@@ -2208,7 +2208,7 @@ def indieauth_endpoint():
     print(code, redirect_uri, client_id)
 
     # Ensure the code is recent
-    if (datetime.now() - datetime.fromtimetamp(auth["ts"])) > timedelta(minutes=5):
+    if (datetime.now() - datetime.fromtimestamp(auth["ts"])) > timedelta(minutes=5):
         abort(400)
 
     if not auth:
@@ -2247,7 +2247,7 @@ def token_endpoint():
 
         now = datetime.now()
         # Ensure the code is recent
-        if (now - datetime.fromtimetamp(auth["ts"])) > timedelta(minutes=5):
+        if (now - datetime.fromtimestamp(auth["ts"])) > timedelta(minutes=5):
             abort(400)
 
         scope = auth["scope"].split()
@@ -2275,7 +2275,7 @@ def token_endpoint():
         abort(403)
 
     # Check the token expritation (valid for 3 hours)
-    if (datetime.now() - datetime.fromtimetamp(payload["ts"])) > timedelta(minutes=180):
+    if (datetime.now() - datetime.fromtimestamp(payload["ts"])) > timedelta(minutes=180):
         abort(401)
 
     return build_auth_resp(
