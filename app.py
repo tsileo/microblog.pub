@@ -19,7 +19,6 @@ from urllib.parse import urlparse
 
 import bleach
 import mf2py
-import pymongo
 import requests
 import timeago
 from bson.objectid import ObjectId
@@ -2147,18 +2146,21 @@ def indieauth_flow():
         state=request.form.get("state"),
         redirect_uri=request.form.get("redirect_uri"),
         response_type=request.form.get("response_type"),
+        ts=datetime.now().timestamp(),
+        code=binascii.hexlify(os.urandom(8)).decode("utf-8"),
+        verified=False,
     )
 
-    code = binascii.hexlify(os.urandom(8)).decode("utf-8")
-    auth.update(code=code, verified=False)
-    print(auth)
+    # XXX(tsileo): a whitelist for me values?
+
+    # TODO(tsileo): redirect_uri checks
     if not auth["redirect_uri"]:
-        abort(500)
+        abort(400)
 
     DB.indieauth.insert_one(auth)
 
     # FIXME(tsileo): fetch client ID and validate redirect_uri
-    red = f'{auth["redirect_uri"]}?code={code}&state={auth["state"]}&me={auth["me"]}'
+    red = f'{auth["redirect_uri"]}?code={auth["code"]}&state={auth["state"]}&me={auth["me"]}'
     return redirect(red)
 
 
@@ -2198,12 +2200,16 @@ def indieauth_endpoint():
             "code": code,
             "redirect_uri": redirect_uri,
             "client_id": client_id,
-        },  # },  #  , 'verified': False},
-        {"$set": {"verified": True}},
-        sort=[("_id", pymongo.DESCENDING)],
+            "verified": False,
+        },
+        {"$set": {"verified": True, "action": "login"}},
     )
     print(auth)
     print(code, redirect_uri, client_id)
+
+    # Ensure the code is recent
+    if (datetime.now() - datetime.fromtimetamp(auth["ts"])) > timedelta(minutes=5):
+        abort(400)
 
     if not auth:
         abort(403)
@@ -2212,36 +2218,54 @@ def indieauth_endpoint():
     session["logged_in"] = True
     me = auth["me"]
     state = auth["state"]
-    scope = auth["scope"].split()
+    scope = auth["scope"]
     print("STATE", state)
     return build_auth_resp({"me": me, "state": state, "scope": scope})
 
 
 @app.route("/token", methods=["GET", "POST"])
 def token_endpoint():
+    # Generate a new token with the returned access code
     if request.method == "POST":
         code = request.form.get("code")
         me = request.form.get("me")
         redirect_uri = request.form.get("redirect_uri")
         client_id = request.form.get("client_id")
 
-        auth = DB.indieauth.find_one(
+        auth = DB.indieauth.find_one_and_update(
             {
                 "code": code,
                 "me": me,
                 "redirect_uri": redirect_uri,
                 "client_id": client_id,
-            }
+                "verified": False,
+            },
+            {"$set": {"verified": True, "action": "token"}},
         )
         if not auth:
             abort(403)
-        scope = auth["scope"].split()
-        payload = dict(
-            me=me, client_id=client_id, scope=scope, ts=datetime.now().timestamp()
-        )
-        token = JWT.dumps(payload).decode("utf-8")
 
-        return build_auth_resp({"me": me, "scope": scope, "access_token": token})
+        now = datetime.now()
+        # Ensure the code is recent
+        if (now - datetime.fromtimetamp(auth["ts"])) > timedelta(minutes=5):
+            abort(400)
+
+        scope = auth["scope"].split()
+        payload = dict(me=me, client_id=client_id, scope=scope, ts=now.timestamp())
+        token = JWT.dumps(payload).decode("utf-8")
+        DB.indieauth.update_one(
+            {"_id": auth["_id"]},
+            {
+                "$set": {
+                    "token": token,
+                    "token_expires": (now + timedelta(minutes=30)).timestamp(),
+                }
+            },
+        )
+
+        return build_auth_resp(
+            {"me": me, "scope": auth["scope"], "access_token": token}
+        )
 
     # Token verification
     token = request.headers.get("Authorization").replace("Bearer ", "")
@@ -2250,12 +2274,14 @@ def token_endpoint():
     except BadSignature:
         abort(403)
 
-    # TODO(tsileo): handle expiration
+    # Check the token expritation (valid for 3 hours)
+    if (datetime.now() - datetime.fromtimetamp(payload["ts"])) > timedelta(minutes=180):
+        abort(401)
 
     return build_auth_resp(
         {
             "me": payload["me"],
-            "scope": payload["scope"],
+            "scope": " ".join(payload["scope"]),
             "client_id": payload["client_id"],
         }
     )
