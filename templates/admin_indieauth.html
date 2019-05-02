@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block title %}IndieAuth logs - {{ config.NAME }}{% endblock %}
+{% block content %}
+<div id="container">
+{% include "header.html" %}
+<div id="admin">
+<h3>IndieAuth logs</h3>
+<ul style="list-style-type:none;padding:0;">
+{% for action in indieauth_actions %}
+<li style="margin-bottom:15px;"><span class="lcolor">{{action.ts|format_ts}}</span>
+<strong>{% if action.verified_by == "login" %}Authorization{% else %}Token{% endif %}</strong>
+requested by <a style="font-weight:bold" href="{{ action.client_id }}">{{ action.client_id }}</a>
+<a style="font-weight:bold;" href="{{action.me}}">{{action.me}}</a>
+({% if action.scope %}scope=<code>{{action.scope}}</code>,{% endif %}redirect_uri={{action.redirect_uri}}).
+{% if action.token_expires %}
+<br>
+The token <code title="{{action.token}}">{{action.token[:20]}}...</code>
+{% if action.token_expires|gt_ts%}has expired on{% else %}expires{% endif %} {{ action.token_expires|format_ts }}
+{% endif %}
+
+</li>
+{% endfor %}
+</ul>
+</div>
+
+</div>
+{% endblock %}

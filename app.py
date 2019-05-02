@@ -366,6 +366,16 @@ def format_time(val):
 
 
 @app.template_filter()
+def format_ts(val):
+    return datetime.fromtimestamp(val).strftime("%B %d, %Y, %H:%M %p")
+
+
+@app.template_filter()
+def gt_ts(val):
+    return datetime.now() > datetime.fromtimestamp(val)
+
+
+@app.template_filter()
 def format_timeago(val):
     if val:
         dt = parser.parse(val)
@@ -1356,6 +1366,15 @@ def admin():
     )
 
 
+@app.route("/admin/indieauth", methods=["GET"])
+@login_required
+def admin_indieauth():
+    return render_template(
+        "admin_indieauth.html",
+        indieauth_actions=DB.indieauth.find().sort("ts", -1).limit(100),
+    )
+
+
 @app.route("/admin/tasks", methods=["GET"])
 @login_required
 def admin_tasks():
@@ -2205,7 +2224,7 @@ def indieauth_endpoint():
         {
             "$set": {
                 "verified": True,
-                "verified_by": "login",
+                "verified_by": "id",
                 "verified_at": datetime.now().timestamp(),
             }
         },
@@ -2252,7 +2271,7 @@ def token_endpoint():
             {
                 "$set": {
                     "verified": True,
-                    "verified_by": "token",
+                    "verified_by": "code",
                     "verified_at": now.timestamp(),
                 }
             },
