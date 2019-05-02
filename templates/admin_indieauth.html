@@ -11,7 +11,7 @@
 <li style="margin-bottom:15px;"><span class="lcolor">{{action.ts|format_ts}}</span>
 <strong>{% if action.verified_by == "login" %}Authorization{% else %}Token{% endif %}</strong>
 requested by <a style="font-weight:bold" href="{{ action.client_id }}">{{ action.client_id }}</a>
-<a style="font-weight:bold;" href="{{action.me}}">{{action.me}}</a>
+as <a style="font-weight:bold;" href="{{action.me}}">{{action.me}}</a>
 ({% if action.scope %}scope=<code>{{action.scope}}</code>,{% endif %}redirect_uri={{action.redirect_uri}}).
 {% if action.token_expires %}
 <br>
