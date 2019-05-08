@@ -2183,6 +2183,18 @@ def indieauth_flow():
     return redirect(red)
 
 
+def _get_ip():
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    geoip = None
+    if request.headers.get("Broxy-Geoip-Country"):
+        geoip = (
+            request.headers.get("Broxy-Geoip-Country")
+            + "/"
+            + request.headers.get("Broxy-Geoip-Region")
+        )
+    return ip, geoip
+
+
 @app.route("/indieauth", methods=["GET", "POST"])
 def indieauth_endpoint():
     if request.method == "GET":
@@ -2214,6 +2226,8 @@ def indieauth_endpoint():
     redirect_uri = request.form.get("redirect_uri")
     client_id = request.form.get("client_id")
 
+    ip, geoip = _get_ip()
+
     auth = DB.indieauth.find_one_and_update(
         {
             "code": code,
@@ -2226,6 +2240,8 @@ def indieauth_endpoint():
                 "verified": True,
                 "verified_by": "id",
                 "verified_at": datetime.now().timestamp(),
+                "ip_address": ip,
+                "geoip": geoip,
             }
         },
     )
@@ -2258,6 +2274,7 @@ def token_endpoint():
         client_id = request.form.get("client_id")
 
         now = datetime.now()
+        ip, geoip = _get_ip()
 
         # This query ensure code, client_id, redirect_uri and me are matching with the code request
         auth = DB.indieauth.find_one_and_update(
@@ -2273,6 +2290,8 @@ def token_endpoint():
                     "verified": True,
                     "verified_by": "code",
                     "verified_at": now.timestamp(),
+                    "ip_address": ip,
+                    "geoip": geoip,
                 }
             },
         )
