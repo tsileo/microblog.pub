@@ -1863,6 +1863,41 @@ def api_new_note():
     return _user_api_response(activity=create_id)
 
 
+@app.route("/api/new_article", methods=["POST"])
+@api_required
+def api_new_article():
+    content = _user_api_arg("content")
+    if not content:
+        raise ValueError("missing content")
+
+    name = _user_api_arg("name")
+    if not name:
+        raise ValueError("missing name")
+
+    url = _user_api_arg("url")
+    if not url:
+        raise ValueError("missing url")
+
+    _id = _user_api_arg("id")
+
+    raw_article = dict(
+        name=name,
+        content=content,
+        url=url,
+        attributedTo=MY_PERSON.id,
+        cc=[ID + "/followers"],
+        to=[ap.AS_PUBLIC],
+        tag=[],
+        inReplyTo=None,
+    )
+
+    article = ap.Article(**raw_article)
+    create = article.build_create()
+    create_id = post_to_outbox(create, obj_id=_id)
+
+    return _user_api_response(activity=create_id)
+
+
 @app.route("/api/new_question", methods=["POST"])
 @api_required
 def api_new_question():
@@ -2579,12 +2614,14 @@ def task_finish_post_to_inbox():
     return ""
 
 
-def post_to_outbox(activity: ap.BaseActivity) -> str:
+def post_to_outbox(activity: ap.BaseActivity, obj_id: Optional[str] = None) -> str:
     if activity.has_type(ap.CREATE_TYPES):
         activity = activity.build_create()
 
     # Assign create a random ID
-    obj_id = back.random_object_id()
+    if obj_id is None:
+        obj_id = back.random_object_id()
+
     activity.set_id(back.activity_url(obj_id), obj_id)
 
     back.save(Box.OUTBOX, activity)
