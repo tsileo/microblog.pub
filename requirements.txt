@@ -21,3 +21,4 @@ git+https://github.com/tsileo/little-boxes.git@litepub
 pyyaml
 pillow
 cachetools
+emoji-unicode

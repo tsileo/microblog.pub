@@ -18,6 +18,7 @@ from urllib.parse import urlencode
 from urllib.parse import urlparse
 
 import bleach
+import emoji_unicode
 import mf2py
 import requests
 import timeago
@@ -86,6 +87,8 @@ from utils import opengraph
 from utils.key import get_secret_key
 from utils.lookup import lookup
 from utils.media import Kind
+
+EMOJI = '<img src="https://cdn.jsdelivr.net/npm/twemoji@12.0.0/2/svg/{filename}.svg" alt="{raw}" class="emoji">'
 
 p = PousseTaches(
     os.getenv("MICROBLOGPUB_POUSSETACHES_HOST", "http://localhost:7991"),
@@ -238,6 +241,14 @@ def _get_file_url(url, size, kind):
 
 
 @app.template_filter()
+def emojify(text):
+    return emoji_unicode.replace(
+        text,
+        lambda e: EMOJI.format(filename=e.code_points, raw=e.unicode),
+    )
+
+
+@app.template_filter()
 def gtone(n):
     return n > 1
 
@@ -302,7 +313,11 @@ def is_from_outbox(t):
 
 @app.template_filter()
 def clean(html):
-    return clean_html(html)
+    out = clean_html(html)
+    return emoji_unicode.replace(
+        out,
+        lambda e: EMOJI.format(filename=e.code_points, raw=e.unicode),
+    )
 
 
 @app.template_filter()
