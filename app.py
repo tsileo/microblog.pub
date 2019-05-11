@@ -243,8 +243,7 @@ def _get_file_url(url, size, kind):
 @app.template_filter()
 def emojify(text):
     return emoji_unicode.replace(
-        text,
-        lambda e: EMOJI.format(filename=e.code_points, raw=e.unicode),
+        text, lambda e: EMOJI.format(filename=e.code_points, raw=e.unicode)
     )
 
 
@@ -315,8 +314,7 @@ def is_from_outbox(t):
 def clean(html):
     out = clean_html(html)
     return emoji_unicode.replace(
-        out,
-        lambda e: EMOJI.format(filename=e.code_points, raw=e.unicode),
+        out, lambda e: EMOJI.format(filename=e.code_points, raw=e.unicode)
     )
 
 
