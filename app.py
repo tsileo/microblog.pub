@@ -2585,6 +2585,7 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
 
     # Assign create a random ID
     obj_id = back.random_object_id()
+
     activity.set_id(back.activity_url(obj_id), obj_id)
 
     back.save(Box.OUTBOX, activity)
