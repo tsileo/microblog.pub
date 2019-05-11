@@ -26,7 +26,7 @@ Getting closer to a stable release, it should be the "last" migration.
 ## Features
 
  - Implements a basic [ActivityPub](https://activitypub.rocks/) server (with federation)
-   - Compatible with [Mastodon](https://joinmastodon.org/) and others ([Pleroma](https://pleroma.social/), Hubzilla...)
+   - Compatible with [Mastodon](https://joinmastodon.org/) and others ([Pleroma](https://pleroma.social/), Plume, PixelFed, Hubzilla...)
    - Also implements a remote follow compatible with Mastodon instances
  - Exposes your outbox as a basic microblog
    - Support all content types from the Fediverse (`Note`, `Article`, `Page`, `Video`, `Image`, `Question`...)
