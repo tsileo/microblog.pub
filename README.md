@@ -34,6 +34,7 @@ Getting closer to a stable release, it should be the "last" migration.
  - Allows you to attach files to your notes
    - Privacy-aware image upload endpoint that strip EXIF meta data before storing the file
  - No JavaScript, **that's it**. Even the admin UI is pure HTML/CSS
+   - (well except for the Emoji picker within the admin, but it's only few line of hand-written JavaScript)
  - Easy to customize (the theme is written Sass)
    - mobile-friendly theme
    - with dark and light version
