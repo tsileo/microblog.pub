@@ -103,6 +103,9 @@ MEDIA_CACHE = MediaCache(GRIDFS, USER_AGENT)
 
 
 def create_indexes():
+    if "trash" not in DB.collection_names():
+        DB.create_collection("trash", capped=True, size=50 << 20)  # 50 MB
+
     DB.command("compact", "activities")
     DB.activities.create_index([("remote_id", pymongo.ASCENDING)])
     DB.activities.create_index([("activity.object.id", pymongo.ASCENDING)])

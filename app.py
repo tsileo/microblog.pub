@@ -522,6 +522,23 @@ def jsonify(**data):
     )
 
 
+def _get_ip():
+    """Guess the IP address from the request. Only used for security purpose (failed logins or bad payload).
+
+    Geoip will be returned if the "broxy" headers are set (it does Geoip
+    using an offline database and append these special headers).
+    """
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    geoip = None
+    if request.headers.get("Broxy-Geoip-Country"):
+        geoip = (
+            request.headers.get("Broxy-Geoip-Country")
+            + "/"
+            + request.headers.get("Broxy-Geoip-Region")
+        )
+    return ip, geoip
+
+
 def is_api_request():
     h = request.headers.get("Accept")
     if h is None:
@@ -1733,7 +1750,19 @@ def inbox():
             )
         )
 
-    data = request.get_json(force=True)
+    try:
+        data = request.get_json(force=True)
+    except Exception:
+        return Response(
+            status=422,
+            headers={"Content-Type": "application/json"},
+            response=json.dumps(
+                {
+                    "error": "failed to decode request as JSON"
+                }
+            ),
+        )
+
     print(f"req_headers={request.headers}")
     print(f"raw_data={data}")
     logger.debug(f"req_headers={request.headers}")
@@ -1755,24 +1784,26 @@ def inbox():
             if data["type"] == ActivityType.DELETE.value and data["id"].startswith(
                 data["object"]
             ):
-                logger.info(f"received a Delete for an actor {data!r}")
-                if get_backend().inbox_check_duplicate(MY_PERSON, data["id"]):
-                    # The activity is already in the inbox
-                    logger.info(f"received duplicate activity {data!r}, dropping it")
+                # If we're here, this means the key is not saved, so we cannot verify the object
+                logger.info(f"received a Delete for an unknown actor {data!r}, drop it")
 
-                DB.activities.insert_one(
-                    {
-                        "box": Box.INBOX.value,
-                        "activity": data,
-                        "type": _to_list(data["type"]),
-                        "remote_id": data["id"],
-                        "meta": {"undo": False, "deleted": False},
-                    }
-                )
-                # TODO(tsileo): write the callback the the delete external actor event
                 return Response(status=201)
         except Exception:
-            logger.exception(f'failed to fetch remote id at {data["id"]}')
+            logger.exception(f'failed to fetch remote for payload {data!r}')
+
+            # Track/store the payload for analysis
+            ip, geoip = _get_ip()
+
+            DB.trash.insert({
+                "activity": data,
+                "meta": {
+                    "ts": datetime.now().timestamp(),
+                    "ip_address": ip,
+                    "geoip": geoip,
+                    "tb": traceback.format_exc(),
+                },
+            })
+
             return Response(
                 status=422,
                 headers={"Content-Type": "application/json"},
@@ -2194,18 +2225,6 @@ def indieauth_flow():
     # FIXME(tsileo): fetch client ID and validate redirect_uri
     red = f'{auth["redirect_uri"]}?code={auth["code"]}&state={auth["state"]}&me={auth["me"]}'
     return redirect(red)
-
-
-def _get_ip():
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    geoip = None
-    if request.headers.get("Broxy-Geoip-Country"):
-        geoip = (
-            request.headers.get("Broxy-Geoip-Country")
-            + "/"
-            + request.headers.get("Broxy-Geoip-Region")
-        )
-    return ip, geoip
 
 
 @app.route("/indieauth", methods=["GET", "POST"])
