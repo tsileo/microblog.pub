@@ -69,6 +69,7 @@ from config import BASE_URL
 from config import DB
 from config import DEBUG_MODE
 from config import DOMAIN
+from config import EMOJI_TPL
 from config import EMOJIS
 from config import HEADERS
 from config import ICON_URL
@@ -87,8 +88,6 @@ from utils import opengraph
 from utils.key import get_secret_key
 from utils.lookup import lookup
 from utils.media import Kind
-
-EMOJI = '<img src="https://cdn.jsdelivr.net/npm/twemoji@12.0.0/2/svg/{filename}.svg" alt="{raw}" class="emoji">'
 
 p = PousseTaches(
     os.getenv("MICROBLOGPUB_POUSSETACHES_HOST", "http://localhost:7991"),
@@ -243,7 +242,7 @@ def _get_file_url(url, size, kind):
 @app.template_filter()
 def emojify(text):
     return emoji_unicode.replace(
-        text, lambda e: EMOJI.format(filename=e.code_points, raw=e.unicode)
+        text, lambda e: EMOJI_TPL.format(filename=e.code_points, raw=e.unicode)
     )
 
 
@@ -314,7 +313,7 @@ def is_from_outbox(t):
 def clean(html):
     out = clean_html(html)
     return emoji_unicode.replace(
-        out, lambda e: EMOJI.format(filename=e.code_points, raw=e.unicode)
+        out, lambda e: EMOJI_TPL.format(filename=e.code_points, raw=e.unicode)
     )
 
 
