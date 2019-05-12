@@ -1756,11 +1756,7 @@ def inbox():
         return Response(
             status=422,
             headers={"Content-Type": "application/json"},
-            response=json.dumps(
-                {
-                    "error": "failed to decode request as JSON"
-                }
-            ),
+            response=json.dumps({"error": "failed to decode request as JSON"}),
         )
 
     print(f"req_headers={request.headers}")
@@ -1789,20 +1785,23 @@ def inbox():
 
                 return Response(status=201)
         except Exception:
-            logger.exception(f'failed to fetch remote for payload {data!r}')
+            logger.exception(f"failed to fetch remote for payload {data!r}")
 
             # Track/store the payload for analysis
             ip, geoip = _get_ip()
 
-            DB.trash.insert({
-                "activity": data,
-                "meta": {
-                    "ts": datetime.now().timestamp(),
-                    "ip_address": ip,
-                    "geoip": geoip,
-                    "tb": traceback.format_exc(),
-                },
-            })
+            DB.trash.insert(
+                {
+                    "activity": data,
+                    "meta": {
+                        "ts": datetime.now().timestamp(),
+                        "ip_address": ip,
+                        "geoip": geoip,
+                        "tb": traceback.format_exc(),
+                        "headers": dict(request.headers),
+                    },
+                }
+            )
 
             return Response(
                 status=422,
