@@ -28,7 +28,7 @@ def main() -> None:
     print("Your identity will be @{username}@{domain}")
     dat["domain"] = prompt("domain: ")
     dat["username"] = prompt("username: ")
-    dat["password"] = bcrypt.hashpw(
+    dat["pass"] = bcrypt.hashpw(
         prompt("password: ", is_password=True).encode(), bcrypt.gensalt()
     ).decode()
     dat["name"] = prompt("name (e.g. John Doe): ")
