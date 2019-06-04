@@ -8,7 +8,7 @@ config:
 	# Build the container for the setup wizard on-the-fly
 	cd setup_wizard && docker build . -t $(SETUP_WIZARD_IMAGE)
 	# Run and remove instantly
-	-docker run -e MICROPUB_WIZARD_PROJECT_NAME --rm -it --volume $(PWD):/app/out $(SETUP_WIZARD_IMAGE)
+	-docker run -e MICROBLOGPUB_WIZARD_PROJECT_NAME --rm -it --volume $(PWD):/app/out $(SETUP_WIZARD_IMAGE)
 	# Finally, remove the tagged image
 	docker rmi $(SETUP_WIZARD_IMAGE)
 

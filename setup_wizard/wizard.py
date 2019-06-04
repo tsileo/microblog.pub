@@ -57,7 +57,7 @@ def main() -> None:
     with config_file.open("w") as f:
         f.write(out)
 
-    proj_name = os.getenv("MICROPUB_WIZARD_PROJECT_NAME", "micropub")
+    proj_name = os.getenv("MICROBLOGPUB_WIZARD_PROJECT_NAME", "microblogpub")
 
     env = {
         "WEB_PORT": 5005,
