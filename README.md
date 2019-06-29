@@ -15,13 +15,7 @@
 
 <p align="center">A self-hosted, single-user, <a href="https://activitypub.rocks">ActivityPub</a> powered microblog.</p>
 
-**Still in early development.**
-
-## /!\ Note to adventurer
-
-If you are running an instance with Celery/RabbitMQ, you will need to [perform a migration](https://github.com/tsileo/microblog.pub/tree/drop-celery#perform-the-drop-celery-migration).
-
-Getting closer to a stable release, it should be the "last" migration.
+**Still in early development/I do not recommend to run an instance yet.**
 
 ## Features
 
