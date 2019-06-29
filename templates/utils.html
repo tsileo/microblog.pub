@@ -38,6 +38,7 @@
     {% set aid = obj.id | quote_plus %}
 {% endif %}
 
+{% set real_end_time = obj.closed or obj.endTime %}
 
 <div class="note-box">
 <div class="note h-entry" id="activity-{{ obj.id | permalink_id }}">
@@ -95,7 +96,7 @@
         {% endfor %}
     </ul>
     <p><small>
-    {% if obj.closed or obj.endTime | gtnow %}
+    {% if real_end_time | gtnow %}
         Ended {{ obj.endTime | format_timeago }} with <strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %}.
     {% else %}
         Ends {{ obj.endTime | format_timeago }} (<strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %} as of now).
@@ -108,7 +109,7 @@
     <li class="answer">
 <span class="answer-text">
 
-{% if not meta.voted_for and not obj.endTime | gtnow %}
+{% if not meta.voted_for and not real_end_time | gtnow %}
 <span><form action="/api/vote" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
 <input type="hidden" name="id" value="{{ obj.id }}">
@@ -123,8 +124,8 @@
 </span>
     </li>
     {% endfor %}
-    <p><small>{% if obj.endTime | gtnow %}This question ended {{ obj.endTime | format_timeago }}.</small></p>
-    {% else %}This question ends {{ obj.endTime | format_timeago }}{% endif %}
+    <p><small>{% if real_end_time | gtnow %}This question ended {{ real_end_time | format_timeago }}.</small></p>
+    {% else %}This question ends {{ real_end_time | format_timeago }}{% endif %}
     </small></p>
     </ul>
     

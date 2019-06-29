@@ -391,7 +391,7 @@ def gt_ts(val):
 def format_timeago(val):
     if val:
         dt = parser.parse(val)
-        return timeago.format(dt, datetime.now(timezone.utc))
+        return timeago.format(dt.astimezone(timezone.utc), datetime.now(timezone.utc))
     return val
 
 
@@ -405,7 +405,9 @@ def has_type(doc, _types):
 
 @app.template_filter()
 def has_actor_type(doc):
-    for t in ap.ACTOR_TYPES:
+    # FIXME(tsileo): skipping the last one "Question", cause Mastodon sends question restuls as an update coming from
+    # the question... Does Pleroma do that too?
+    for t in ap.ACTOR_TYPES[:-1]:
         if has_type(doc, t.value):
             return True
     return False
@@ -2184,6 +2186,7 @@ def _get_prop(props, name, default=None):
 
 
 def get_client_id_data(url):
+    # FIXME(tsileo): ensure not localhost via `little_boxes.urlutils.is_url_valid`
     data = mf2py.parse(url=url)
     for item in data["items"]:
         if "h-x-app" in item["type"] or "h-app" in item["type"]:
