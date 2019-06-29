@@ -15,12 +15,11 @@ def main() -> None:
     config_file = Path("/app/out/config/me.yml")
     env_file = Path("/app/out/.env")
 
-    if config_file.exists() or env_file.exists():
+    if config_file.exists():
         # Spit out the relative path for the "config artifacts"
         rconfig_file = "config/me.yml"
-        renv_file = ".env"
         print(
-            f"Existing setup detected, please delete {rconfig_file} and/or {renv_file} before restarting the wizard"
+            f"Existing setup detected, please delete {rconfig_file} before restarting the wizard"
         )
         sys.exit(2)
 
@@ -58,12 +57,14 @@ def main() -> None:
     with config_file.open("w") as f:
         f.write(out)
 
+    proj_name = os.getenv("MICROBLOGPUB_WIZARD_PROJECT_NAME", "microblogpub")
+
     env = {
         "WEB_PORT": 5005,
         "CONFIG_DIR": "./config",
         "DATA_DIR": "./data",
         "POUSSETACHES_AUTH_KEY": binascii.hexlify(os.urandom(32)).decode(),
-        "COMPOSE_PROJECT_NAME": Path.cwd().name.replace(".", ""),
+        "COMPOSE_PROJECT_NAME": proj_name,
     }
 
     out2 = ""

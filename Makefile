@@ -2,13 +2,13 @@ PYTHON=python
 SETUP_WIZARD_IMAGE=microblogpub-setup-wizard:latest
 PWD=$(shell pwd)
 
-# Build the config (will error if an existing config is found) via a Docker container
+# Build the config (will error if an existing config/me.yml is found) via a Docker container
 .PHONY: config
 config:
 	# Build the container for the setup wizard on-the-fly
 	cd setup_wizard && docker build . -t $(SETUP_WIZARD_IMAGE)
 	# Run and remove instantly
-	-docker run --rm -it --volume $(PWD):/app/out $(SETUP_WIZARD_IMAGE)
+	-docker run -e MICROBLOGPUB_WIZARD_PROJECT_NAME --rm -it --volume $(PWD):/app/out $(SETUP_WIZARD_IMAGE)
 	# Finally, remove the tagged image
 	docker rmi $(SETUP_WIZARD_IMAGE)
 
