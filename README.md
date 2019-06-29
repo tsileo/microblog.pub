@@ -5,15 +5,13 @@
     src="https://sos-ch-dk-2.exo.io/microblogpub/microblobpub.png" 
     width="200" height="200" border="0" alt="microblog.pub">
 </p>
+<p align="center">A self-hosted, single-user, <a href="https://activitypub.rocks">ActivityPub</a> powered microblog.</p>
 <p align="center">
 <a href="https://d.a4.io/tsileo/microblog.pub"><img src="https://d.a4.io/api/badges/tsileo/microblog.pub/status.svg" alt="Build Status"></a>
 <a href="https://matrix.to/#/#microblog.pub:matrix.org"><img src="https://img.shields.io/badge/matrix-%23microblog.pub-blue.svg" alt="#microblog.pub on Matrix"></a>
 <a href="https://github.com/tsileo/microblog.pub/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-AGPL_3.0-blue.svg?style=flat" alt="License"></a>
 <a href="https://github.com/ambv/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
-
-
-<p align="center">A self-hosted, single-user, <a href="https://activitypub.rocks">ActivityPub</a> powered microblog.</p>
 
 **Still in early development/I do not recommend to run an instance yet.**
 
