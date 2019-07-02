@@ -442,9 +442,28 @@ def is_img(filename):
 
 
 @app.template_filter()
-def get_answer_count(choice, meta):
-    print(choice, meta)
-    return meta.get("question_answers", {}).get(_answer_key(choice), 0)
+def get_answer_count(choice, obj, meta):
+    count_from_meta = meta.get("question_answers", {}).get(_answer_key(choice), 0)
+    print(count_from_meta)
+    print(choice, obj, meta)
+    if count_from_meta:
+        return count_from_meta
+    for option in obj.get("oneOf", obj.get("anyOf", [])):
+        if option.get("name") == choice:
+            return option.get("replies", {}).get("totalItems", 0)
+
+
+@app.template_filter()
+def get_total_answers_count(obj, meta):
+    cached = meta.get("question_replies", 0)
+    if cached:
+        return cached
+    cnt = 0
+    print("OKI", obj)
+    for choice in obj.get("anyOf", obj.get("oneOf", [])):
+        print(choice)
+        cnt += choice.get("replies", {}).get("totalItems", 0)
+    return cnt
 
 
 def add_response_headers(headers={}):

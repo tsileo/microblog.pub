@@ -76,14 +76,13 @@
     {% elif obj | has_type('Question') %}
         {{ obj.content | clean | safe }}
 
-        {% if obj.id | is_from_outbox or (meta.question_replies and (obj.closed or meta.voted_for)) %}
+        {% if obj.id | is_from_outbox or obj.closed or meta.voted_for %}
         <ul style="list-style:none;padding:0;">
-        {% set total_votes = meta.question_replies %}
-
+        {% set total_votes = obj | get_total_answers_count(meta) %}
         {% for oneOf in obj.oneOf %}
             {% set pct = 0 %}
             {% if total_votes > 0 %}
-                {% set cnt = oneOf.name | get_answer_count(meta) %}
+                {% set cnt = oneOf.name | get_answer_count(obj, meta) %}
                 {% set pct = cnt * 100.0 / total_votes %}
             {% endif %}
             <li class="answer">
@@ -97,9 +96,9 @@
     </ul>
     <p><small>
     {% if real_end_time | gtnow %}
-        Ended {{ obj.endTime | format_timeago }} with <strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %}.
+        Ended {{ real_end_time | format_timeago }} with <strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %}.
     {% else %}
-        Ends {{ obj.endTime | format_timeago }} (<strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %} as of now).
+        Ends {{ real_end_time | format_timeago }} (<strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %} as of now).
     {% endif %}
     </small></p>
     {% else %}
