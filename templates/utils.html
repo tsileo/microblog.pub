@@ -76,7 +76,7 @@
     {% elif obj | has_type('Question') %}
         {{ obj.content | clean | safe }}
 
-        {% if obj.id | is_from_outbox or obj.closed or meta.voted_for %}
+        
         <ul style="list-style:none;padding:0;">
         {% set total_votes = obj | get_total_answers_count(meta) %}
         {% for oneOf in obj.oneOf %}
@@ -86,10 +86,19 @@
                 {% set pct = cnt * 100.0 / total_votes %}
             {% endif %}
             <li class="answer">
+                {% if not meta.voted_for and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
+<span><form action="/api/vote" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
+<input type="hidden" name="choice" value="{{ oneOf.name }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">vote</button>
+    </form></span>{% endif %}
+
                 <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
                 <span class="answer-text">
                     <span>{{ '%0.0f'| format(pct) }}%</span>
-                    {{ oneOf.name }} 
+                    {{ oneOf.name }} {% if oneOf.name == meta.voted_for %}(your vote){% endif %}
                 </span>
             </li>
         {% endfor %}
@@ -101,35 +110,7 @@
         Ends {{ real_end_time | format_timeago }} (<strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %} as of now).
     {% endif %}
     </small></p>
-    {% else %}
 
-    <ul style="list-style:none;padding:0;">
-    {% for oneOf in obj.oneOf %}
-    <li class="answer">
-<span class="answer-text">
-
-{% if not meta.voted_for and not real_end_time | gtnow %}
-<span><form action="/api/vote" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="choice" value="{{ oneOf.name }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">vote</button>
-</form></span>
-{% else %}
-    <span>???</span>
-{% endif %}
-{{ oneOf.name }} {% if oneOf.name == meta.voted_for %}(your vote){% endif %}
-</span>
-    </li>
-    {% endfor %}
-    <p><small>{% if real_end_time | gtnow %}This question ended {{ real_end_time | format_timeago }}.</small></p>
-    {% else %}This question ends {{ real_end_time | format_timeago }}{% endif %}
-    </small></p>
-    </ul>
-    
-
-    {% endif %}
 
     {% else %}
 	{{ obj.content | clean | safe }}

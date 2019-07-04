@@ -3,12 +3,14 @@ import json
 import logging
 import os
 from datetime import datetime
+from datetime import timezone
 from enum import Enum
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
 
+from dateutil import parser
 from bson.objectid import ObjectId
 from cachetools import LRUCache
 from feedgen.feed import FeedGenerator
@@ -28,6 +30,7 @@ from config import ID
 from config import ME
 from config import USER_AGENT
 from config import USERNAME
+from tasks import Tasks
 
 logger = logging.getLogger(__name__)
 
@@ -211,7 +214,7 @@ class MicroblogPubBackend(Backend):
         logger.info(f"dereference {iri} via HTTP")
         return super().fetch_iri(iri)
 
-    def fetch_iri(self, iri: str) -> ap.ObjectType:
+    def fetch_iri(self, iri: str, no_cache=False) -> ap.ObjectType:
         if iri == ME["id"]:
             return ME
 
@@ -225,8 +228,11 @@ class MicroblogPubBackend(Backend):
         #        logger.info(f"{iri} found in DB cache")
         #        ACTORS_CACHE[iri] = data["data"]
         #    return data["data"]
+        if not no_cache:
+            data = self._fetch_iri(iri)
+        else:
+            return super().fetch_iri(iri)
 
-        data = self._fetch_iri(iri)
         logger.debug(f"_fetch_iri({iri!r}) == {data!r}")
         if ap._has_type(data["type"], ap.ACTOR_TYPES):
             logger.debug(f"caching actor {iri}")
@@ -468,6 +474,15 @@ class MicroblogPubBackend(Backend):
 
     @ensure_it_is_me
     def inbox_create(self, as_actor: ap.Person, create: ap.Create) -> None:
+        # If it's a `Quesiion`, trigger an async task for updating it later (by fetching the remote and updating the
+        # local copy)
+        question = create.get_object()
+        if question.has_type(ap.ActivityType.QUESTION):
+            now = datetime.now(timezone.utc)
+            dt = parser.parse(question.closed or question.endTime)
+            minutes = int((dt - now).total_seconds() / 60)
+            Tasks.fetch_remote_question(create.id, minutes)
+
         self._handle_replies(as_actor, create)
 
     @ensure_it_is_me

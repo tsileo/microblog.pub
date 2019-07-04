@@ -12,7 +12,6 @@
 	{% if item | has_type('Create') %}
 	{{ utils.display_note(item.activity.object, ui=True, meta=item.meta) }}
 	{% else %}
-
 	{% if item | has_type('Announce') %}
 	{% set boost_actor = item.meta.actor %}
     {% if boost_actor %}
@@ -55,6 +54,13 @@
 	
 	
 	{% endif %}
+    {% else %}
+
+    {% if item | has_type('question_ended') %}
+    <p style="margin-left:70px;padding-bottom:5px;"><span class="bar-item-no-hover">poll ended</span></p>
+    {{ utils.display_note(item.activity.object) }}
+    {% endif %}
+
 	{% endif %}
 	{% endfor %}
 
