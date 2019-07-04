@@ -1579,9 +1579,15 @@ def admin_notifications():
     else:
         nend = inbox_data[-1]["_id"].generation_time.isoformat()
     print(nstart, nend)
-    notifs = list(DB.notifications.find({"datetime": {"$lte": nstart, "$gt": nend}}).sort("_id", -1).limit(50))
+    notifs = list(
+        DB.notifications.find({"datetime": {"$lte": nstart, "$gt": nend}})
+        .sort("_id", -1)
+        .limit(50)
+    )
     inbox_data.extend(notifs)
-    inbox_data = sorted(inbox_data, reverse=True, key=lambda doc: doc["_id"].generation_time)
+    inbox_data = sorted(
+        inbox_data, reverse=True, key=lambda doc: doc["_id"].generation_time
+    )
     print(inbox_data)
 
     return render_template(
@@ -1965,8 +1971,7 @@ def api_new_question():
     open_for = int(_user_api_arg("open_for"))
     choices = {
         "endTime": ap.format_datetime(
-            datetime.now().astimezone()
-            + timedelta(minutes=open_for)
+            datetime.now().astimezone() + timedelta(minutes=open_for)
         )
     }
     of = _user_api_arg("of")
@@ -2971,9 +2976,17 @@ def task_fetch_remote_question():
             {"box": Box.INBOX.value, "remote_id": iri}
         )
         remote_question = get_backend().fetch_iri(iri, no_cache=True)
-        if local_question["meta"].get("voted_for") or local_question["meta"]["subscribed"]:
-            DB.notifications.insert_one({"type": "question_ended", "datetime": datetime.now(timezone.utc).isoformat(),
-                                         "activity": remote_question})
+        if (
+            local_question["meta"].get("voted_for")
+            or local_question["meta"]["subscribed"]
+        ):
+            DB.notifications.insert_one(
+                {
+                    "type": "question_ended",
+                    "datetime": datetime.now(timezone.utc).isoformat(),
+                    "activity": remote_question,
+                }
+            )
 
         DB.activities.update_one(
             {"remote_id": iri, "box": Box.INBOX.value},
@@ -3003,9 +3016,7 @@ def task_update_question():
     try:
         app.logger.info(f"Updating question {iri}")
         cc = [ID + "/followers"]
-        doc = DB.activities.find_one(
-            {"box": Box.OUTBOX.value, "remote_id": iri}
-        )
+        doc = DB.activities.find_one({"box": Box.OUTBOX.value, "remote_id": iri})
         _add_answers_to_question(doc)
         question = ap.Question(**doc["activity"]["object"])
 
