@@ -929,8 +929,11 @@ def _build_thread(data, include_children=True):  # noqa: C901
     }
     replies = [data]
     for dat in DB.activities.find(query):
+        print(dat["type"])
         if dat["type"][0] == ActivityType.CREATE.value:
             replies.append(dat)
+        if dat["type"][0] == ActivityType.UPDATE.value:
+            continue
         else:
             # Make a Note/Question/... looks like a Create
             dat = {
@@ -958,7 +961,7 @@ def _build_thread(data, include_children=True):  # noqa: C901
         rep_id = rep["activity"]["object"]["id"]
         if rep_id == root_id:
             continue
-        reply_of = ap._get_id(rep["activity"]["object"]["inReplyTo"])
+        reply_of = ap._get_id(rep["activity"]["object"].get("inReplyTo"))
         try:
             idx[reply_of]["_nodes"].append(rep)
         except KeyError:

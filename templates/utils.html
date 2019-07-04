@@ -86,7 +86,7 @@
                 {% set pct = cnt * 100.0 / total_votes %}
             {% endif %}
             <li class="answer">
-                {% if not meta.voted_for and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
+                {% if session.logged_in and not meta.voted_for and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
 <span><form action="/api/vote" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
 <input type="hidden" name="id" value="{{ obj.id }}">
@@ -161,7 +161,8 @@
 
 
 <div class="bottom-bar">
-{% if perma %}<span class="perma-item">{{ obj.published | format_time }}</span>
+{% if perma %}
+<span class="perma-item" style="float:left;padding:5px;">{{ obj.published | format_time }}</span>
 {% if not (obj.id | is_from_outbox) %}
 <a class ="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
 {% endif %}
