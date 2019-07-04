@@ -22,3 +22,4 @@ pyyaml
 pillow
 cachetools
 emoji-unicode
+html5lib
