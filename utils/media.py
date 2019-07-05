@@ -6,11 +6,10 @@ from io import BytesIO
 from typing import Any
 from typing import Dict
 
-from little_boxes import activitypub as ap
-
 import gridfs
 import piexif
 import requests
+from little_boxes import activitypub as ap
 from PIL import Image
 
 

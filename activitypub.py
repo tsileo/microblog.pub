@@ -10,9 +10,9 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
-from dateutil import parser
 from bson.objectid import ObjectId
 from cachetools import LRUCache
+from dateutil import parser
 from feedgen.feed import FeedGenerator
 from html2text import html2text
 from little_boxes import activitypub as ap

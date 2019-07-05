@@ -84,11 +84,11 @@ from config import USERNAME
 from config import VERSION
 from config import _drop_db
 from poussetaches import PousseTaches
+from tasks import Tasks
 from utils import opengraph
 from utils.key import get_secret_key
 from utils.lookup import lookup
 from utils.media import Kind
-from tasks import Tasks
 
 p = PousseTaches(
     os.getenv("MICROBLOGPUB_POUSSETACHES_HOST", "http://localhost:7991"),
