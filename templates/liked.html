@@ -9,7 +9,7 @@
 <div id="notes">
 	{% for item in liked %}
     {% if session.logged_in %}
-<div style="margin-left:65px;padding-bottom:5px;margin-bottom:15px;">
+<div style="margin-left:65px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
 <form action="/api/undo" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="/liked"/>
 <input type="hidden" name="id" value="{{ item.remote_id }}"/>

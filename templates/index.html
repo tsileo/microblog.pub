@@ -37,17 +37,17 @@
 	{% if "actor" in item.meta %}
         {% set boost_actor = item.meta.actor %}
         {% if session.logged_in %}
-        <div style="margin-left:65px;padding-bottom:5px;margin-bottom:15px;">
-        <span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name }}</a> boosted</span>
+        <div style="margin-left:65px;padding-bottom:5px;margin-bottom:15px;display:inline-block">
 <form action="/api/undo" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="/"/>
 <input type="hidden" name="id" value="{{ item.remote_id }}"/>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 <button type="submit" class="bar-item">unboost</button>
 </form>
+        <span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name }}</a> boosted</span>
         </div>
         {% else %}
-        <p style="margin-left:65px;padding-bottom:5px;">
+        <p style="margin-left:65px;padding-bottom:5px;display:inline-block;">
         <span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name }}</a> boosted</span>
         </p>
         {% endif %}

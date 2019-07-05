@@ -569,6 +569,7 @@ class MicroblogPubBackend(Backend):
             )
             return None
 
+        print(f"processing {create!r} and incrementing {in_reply_to}")
         creply = DB.activities.find_one_and_update(
             {"activity.object.id": in_reply_to},
             {"$inc": {"meta.count_reply": 1, "meta.count_direct_reply": 1}},

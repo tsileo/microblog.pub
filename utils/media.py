@@ -4,6 +4,9 @@ from enum import Enum
 from gzip import GzipFile
 from io import BytesIO
 from typing import Any
+from typing import Dict
+
+from little_boxes import activitypub as ap
 
 import gridfs
 import piexif
@@ -115,45 +118,56 @@ class MediaCache(object):
                 )
             return
 
-    def cache_attachment2(self, url: str, remote_id: str) -> None:
+    def cache_attachment2(self, attachment: Dict[str, Any], remote_id: str) -> None:
+        url = attachment["url"]
+
+        # Ensure it's not already there
         if self.fs.find_one({"url": url, "kind": Kind.ATTACHMENT.value}):
             return
+
+        # If it's an image, make some thumbnails
         if (
             url.endswith(".png")
             or url.endswith(".jpg")
             or url.endswith(".jpeg")
             or url.endswith(".gif")
+            or attachment.get("mediaType", "").startswith("image/")
+            or ap._has_type(attachment.get("type"), ap.ActivityType.IMAGE)
         ):
-            i = load(url, self.user_agent)
-            # Save the original attachment (gzipped)
-            with BytesIO() as buf:
-                f1 = GzipFile(mode="wb", fileobj=buf)
-                i.save(f1, format=i.format)
-                f1.close()
-                buf.seek(0)
-                self.fs.put(
-                    buf,
-                    url=url,
-                    size=None,
-                    content_type=i.get_format_mimetype(),
-                    kind=Kind.ATTACHMENT.value,
-                    remote_id=remote_id,
-                )
-            # Save a thumbnail (gzipped)
-            i.thumbnail((720, 720))
-            with BytesIO() as buf:
-                with GzipFile(mode="wb", fileobj=buf) as f1:
+            try:
+                i = load(url, self.user_agent)
+                # Save the original attachment (gzipped)
+                with BytesIO() as buf:
+                    f1 = GzipFile(mode="wb", fileobj=buf)
                     i.save(f1, format=i.format)
-                buf.seek(0)
-                self.fs.put(
-                    buf,
-                    url=url,
-                    size=720,
-                    content_type=i.get_format_mimetype(),
-                    kind=Kind.ATTACHMENT.value,
-                    remote_id=remote_id,
-                )
-            return
+                    f1.close()
+                    buf.seek(0)
+                    self.fs.put(
+                        buf,
+                        url=url,
+                        size=None,
+                        content_type=i.get_format_mimetype(),
+                        kind=Kind.ATTACHMENT.value,
+                        remote_id=remote_id,
+                    )
+                # Save a thumbnail (gzipped)
+                i.thumbnail((720, 720))
+                with BytesIO() as buf:
+                    with GzipFile(mode="wb", fileobj=buf) as f1:
+                        i.save(f1, format=i.format)
+                    buf.seek(0)
+                    self.fs.put(
+                        buf,
+                        url=url,
+                        size=720,
+                        content_type=i.get_format_mimetype(),
+                        kind=Kind.ATTACHMENT.value,
+                        remote_id=remote_id,
+                    )
+                return
+            except Exception:
+                # FIXME(tsileo): logging
+                pass
 
         # The attachment is not an image, download and save it anyway
         with requests.get(

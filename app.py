@@ -2639,6 +2639,7 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
     if back.inbox_check_duplicate(MY_PERSON, activity.id):
         # The activity is already in the inbox
         app.logger.info(f"received duplicate activity {activity!r}, dropping it")
+        return
 
     back.save(Box.INBOX, activity)
     Tasks.process_new_activity(activity.id)
@@ -2691,16 +2692,23 @@ def task_cache_attachments():
         if actor.icon:
             MEDIA_CACHE.cache(actor.icon["url"], Kind.ACTOR_ICON)
 
+        obj = None
         if activity.has_type(ap.ActivityType.CREATE):
-            for attachment in activity.get_object()._data.get("attachment", []):
-                if (
-                    attachment.get("mediaType", "").startswith("image/")
-                    or attachment.get("type") == ap.ActivityType.IMAGE.value
-                ):
-                    try:
-                        MEDIA_CACHE.cache_attachment2(attachment["url"], iri)
-                    except ValueError:
-                        app.logger.exception(f"failed to cache {attachment}")
+            # This means a `Create` triggered the task
+            obj = activity.get_object()
+        elif activity.has_type(ap.CREATE_TYPES):
+            # This means a `Announce` triggered the task
+            obj = activity
+        else:
+            app.logger.warning(f"Don't know what to do with {activity!r}")
+            return
+
+        # Iter the attachments
+        for attachment in obj._data.get("attachment", []):
+            try:
+                MEDIA_CACHE.cache_attachment2(attachment, iri)
+            except ValueError:
+                app.logger.exception(f"failed to cache {attachment}")
 
         app.logger.info(f"attachments cached for {iri}")
 
@@ -2725,6 +2733,7 @@ def task_cache_actor() -> str:
         activity = ap.fetch_remote_activity(iri)
         app.logger.info(f"activity={activity!r}")
 
+        # FIXME(tsileo): OG meta for Announce?
         if activity.has_type(ap.ActivityType.CREATE):
             Tasks.fetch_og_meta(iri)
 
@@ -2766,6 +2775,10 @@ def task_cache_actor() -> str:
         app.logger.info(f"actor cached for {iri}")
         if also_cache_attachments and activity.has_type(ap.ActivityType.CREATE):
             Tasks.cache_attachments(iri)
+        elif also_cache_attachments and activity.has_type(ap.ActivityType.ANNOUNCE):
+            obj = activity.get_object()
+            Tasks.cache_attachments(obj.id)
+            Tasks.cache_actor(obj.id)
 
     except (ActivityGoneError, ActivityNotFoundError):
         DB.activities.update_one({"remote_id": iri}, {"$set": {"meta.deleted": True}})
@@ -3200,6 +3213,8 @@ def task_cleanup_part_2():
         for grid_item in MEDIA_CACHE.fs.find({"remote_id": data["remote_id"]}):
             MEDIA_CACHE.fs.delete(grid_item._id)
         DB.activities.delete_one({"_id": data["_id"]})
+
+    # FIXME(tsileo): cleanup cache from announces object
 
     p.push({}, "/task/cleanup_part_3")
     return "OK"
