@@ -1,4 +1,5 @@
 import logging
+import urllib
 
 import opengraph
 import requests
@@ -59,6 +60,22 @@ def fetch_og_metadata(user_agent, links):
         except Exception:
             logger.exception(f"failed to parse {l}")
             continue
+
+        # Keep track of the fetched URL as some crappy websites use relative URLs everywhere
+        data["_input_url"] = l
+        u = urllib.parse.urlparse(l)
+
+        # If it's a relative URL, build the absolute version
+        if "image" in data and data["image"].startswith("/"):
+            data["image"] = u._replace(
+                path=data["image"], params="", query="", fragment=""
+            ).geturl()
+
+        if "url" in data and data["url"].startswith("/"):
+            data["url"] = u._replace(
+                path=data["url"], params="", query="", fragment=""
+            ).geturl()
+
         if data.get("url"):
             res.append(data)
 
