@@ -64,6 +64,8 @@ class Tasks:
         dt = parser.parse(question.closed or question.endTime).astimezone(timezone.utc)
         minutes = int((dt - now).total_seconds() / 60)
 
-        p.push(
-            question.id, "/task/fetch_remote_question", delay=minutes
-        )  # XXX: delay expects minutes
+        if minutes > 0:
+            # Only push the task if the poll is not ended yet
+            p.push(
+                question.id, "/task/fetch_remote_question", delay=minutes
+            )  # XXX: delay expects minutes
