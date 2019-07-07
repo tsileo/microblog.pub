@@ -1831,10 +1831,28 @@ def inbox():
         except Exception:
             logger.exception(f"failed to fetch remote for payload {data!r}")
 
-            # Friendica does not returns a 410, but a 302 that redirect to an HTML page
-            if ap._has_type(data["type"], ActivityType.DELETE):
-                logger.info(f"received a Delete for an unknown actor {data!r}, drop it")
-                return Response(status=201)
+            if "type" in data:
+                # Friendica does not returns a 410, but a 302 that redirect to an HTML page
+                if ap._has_type(data["type"], ActivityType.DELETE):
+                    logger.info(
+                        f"received a Delete for an unknown actor {data!r}, drop it"
+                    )
+                    return Response(status=201)
+
+            if "id" in data:
+                if DB.trash.find_one({"activity.id": data["id"]}):
+                    # It's already stored in trash, returns early
+                    return Response(
+                        status=422,
+                        headers={"Content-Type": "application/json"},
+                        response=json.dumps(
+                            {
+                                "error": "failed to verify request (using HTTP signatures or fetching the IRI)"
+                            }
+                        ),
+                    )
+
+            # Now we can store this activity in the trash for later analysis
 
             # Track/store the payload for analysis
             ip, geoip = _get_ip()
