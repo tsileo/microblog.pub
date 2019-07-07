@@ -1,4 +1,8 @@
 import os
+from datetime import datetime
+from datetime import timezone
+
+from dateutil import parser
 
 from poussetaches import PousseTaches
 
@@ -55,7 +59,11 @@ class Tasks:
         )  # XXX: delay expects minutes
 
     @staticmethod
-    def fetch_remote_question(iri: str, delay: int) -> None:
+    def fetch_remote_question(question) -> None:
+        now = datetime.now(timezone.utc)
+        dt = parser.parse(question.closed or question.endTime).astimezone(timezone.utc)
+        minutes = int((dt - now).total_seconds() / 60)
+
         p.push(
-            iri, "/task/fetch_remote_question", delay=delay
+            question.id, "/task/fetch_remote_question", delay=minutes
         )  # XXX: delay expects minutes

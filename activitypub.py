@@ -287,6 +287,9 @@ class MicroblogPubBackend(Backend):
     @ensure_it_is_me
     def outbox_like(self, as_actor: ap.Person, like: ap.Like) -> None:
         obj = like.get_object()
+        if obj.has_type(ap.ActivityType.QUESTION):
+            Tasks.fetch_remote_question(obj)
+
         DB.activities.update_one(
             {"activity.object.id": obj.id},
             {"$inc": {"meta.count_like": 1}, "$set": {"meta.liked": like.id}},
@@ -312,6 +315,9 @@ class MicroblogPubBackend(Backend):
                 f'received an Annouce referencing an OStatus notice ({announce._data["object"]}), dropping the message'
             )
             return
+
+        if obj.has_type(ap.ActivityType.QUESTION):
+            Tasks.fetch_remote_question(obj)
 
         DB.activities.update_one(
             {"remote_id": announce.id},
@@ -340,6 +346,9 @@ class MicroblogPubBackend(Backend):
     @ensure_it_is_me
     def outbox_announce(self, as_actor: ap.Person, announce: ap.Announce) -> None:
         obj = announce.get_object()
+        if obj.has_type(ap.ActivityType.QUESTION):
+            Tasks.fetch_remote_question(obj)
+
         DB.activities.update_one(
             {"remote_id": announce.id},
             {
@@ -478,12 +487,7 @@ class MicroblogPubBackend(Backend):
         # local copy)
         question = create.get_object()
         if question.has_type(ap.ActivityType.QUESTION):
-            now = datetime.now(timezone.utc)
-            dt = parser.parse(question.closed or question.endTime).astimezone(
-                timezone.utc
-            )
-            minutes = int((dt - now).total_seconds() / 60)
-            Tasks.fetch_remote_question(create.id, minutes)
+            Tasks.fetch_remote_question(question)
 
         self._handle_replies(as_actor, create)
 

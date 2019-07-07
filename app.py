@@ -3018,12 +3018,20 @@ def task_fetch_remote_question():
     try:
         app.logger.info(f"Fetching remote question {iri}")
         local_question = DB.activities.find_one(
-            {"box": Box.INBOX.value, "remote_id": iri}
+            {
+                "box": Box.INBOX.value,
+                "type": ActivityType.CREATE.value,
+                "activity.object.id": iri,
+            }
         )
         remote_question = get_backend().fetch_iri(iri, no_cache=True)
         if (
-            local_question["meta"].get("voted_for")
-            or local_question["meta"]["subscribed"]
+            local_question
+            and (
+                local_question["meta"].get("voted_for")
+                or local_question["meta"]["subscribed"]
+            )
+            and not DB.notifications.find_one({"activity.id": remote_question["id"]})
         ):
             DB.notifications.insert_one(
                 {
@@ -3033,9 +3041,17 @@ def task_fetch_remote_question():
                 }
             )
 
-        DB.activities.update_one(
-            {"remote_id": iri, "box": Box.INBOX.value},
-            {"$set": {"activity": remote_question}},
+        # Update the Create if we received it in the inbox
+        if local_question:
+            DB.activities.update_one(
+                {"remote_id": local_question["remote_id"], "box": Box.INBOX.value},
+                {"$set": {"activity.object": remote_question}},
+            )
+
+        # Also update all the cached copies (Like, Announce...)
+        DB.activities.update_many(
+            {"meta.object.id": remote_question["id"]},
+            {"$set": {"activity.object": remote_question}},
         )
 
     except HTTPError as err:

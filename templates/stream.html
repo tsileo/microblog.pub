@@ -58,7 +58,7 @@
 
     {% if item | has_type('question_ended') %}
     <p style="margin-left:70px;padding-bottom:5px;display:inline-block;"><span class="bar-item-no-hover">poll ended</span></p>
-    {{ utils.display_note(item.activity.object) }}
+    {{ utils.display_note(item.activity) }}
     {% endif %}
 
 	{% endif %}
