@@ -1817,7 +1817,7 @@ def inbox():
             "failed to verify request, trying to verify the payload by fetching the remote"
         )
         try:
-            data = get_backend().fetch_iri(data["id"])
+            remote_data = get_backend().fetch_iri(data["id"])
         except ActivityGoneError:
             # XXX Mastodon sends Delete activities that are not dereferencable, it's the actor url with #delete
             # appended, so an `ActivityGoneError` kind of ensure it's "legit"
@@ -1830,6 +1830,11 @@ def inbox():
                 return Response(status=201)
         except Exception:
             logger.exception(f"failed to fetch remote for payload {data!r}")
+
+            # Friendica does not returns a 410, but a 302 that redirect to an HTML page
+            if ap._has_type(data["type"], ActivityType.DELETE):
+                logger.info(f"received a Delete for an unknown actor {data!r}, drop it")
+                return Response(status=201)
 
             # Track/store the payload for analysis
             ip, geoip = _get_ip()
@@ -1856,6 +1861,9 @@ def inbox():
                     }
                 ),
             )
+
+        # We fetched the remote data successfully
+        data = remote_data
     print(data)
     activity = ap.parse_activity(data)
     logger.debug(f"inbox activity={activity}/{data}")
