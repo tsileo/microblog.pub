@@ -1456,6 +1456,9 @@ def admin_lookup():
                     actor=data.get_actor().to_dict(),
                 )
 
+            elif data.has_type(ActivityType.QUESTION):
+                p.push(data.id, "/task/fetch_remote_question")
+
         print(data)
         app.logger.debug(data.to_dict())
     return render_template(
