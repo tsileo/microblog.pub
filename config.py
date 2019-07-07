@@ -45,14 +45,13 @@ except ModuleNotFoundError:
 VERSION = (
     subprocess.check_output(["git", "describe", "--always"]).split()[0].decode("utf-8")
 )
-_version_date = (
-    subprocess.check_output(["git", "show", "6daf8d6"])
+VERSION_DATE = (
+    subprocess.check_output(["git", "show", VERSION])
     .decode()
     .splitlines()[2]
     .split("Date:")[-1]
     .strip()
 )
-VERSION = f"{VERSION} ({_version_date})"
 
 DEBUG_MODE = strtobool(os.getenv("MICROBLOGPUB_DEBUG", "false"))
 

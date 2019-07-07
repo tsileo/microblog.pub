@@ -82,6 +82,7 @@ from config import PASS
 from config import USER_AGENT
 from config import USERNAME
 from config import VERSION
+from config import VERSION_DATE
 from config import _drop_db
 from poussetaches import PousseTaches
 from tasks import Tasks
@@ -1069,7 +1070,7 @@ def nodeinfo():
                 "version": "2.0",
                 "software": {
                     "name": "microblogpub",
-                    "version": f"Microblog.pub {VERSION}",
+                    "version": f"Microblog.pub {VERSION} ({VERSION_DATE})",
                 },
                 "protocols": ["activitypub"],
                 "services": {"inbound": [], "outbound": []},
@@ -1078,6 +1079,8 @@ def nodeinfo():
                 "metadata": {
                     "sourceCode": "https://github.com/tsileo/microblog.pub",
                     "nodeName": f"@{USERNAME}@{DOMAIN}",
+                    "version": VERSION,
+                    "version_date": VERSION_DATE,
                 },
             }
         )
