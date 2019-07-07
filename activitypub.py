@@ -479,7 +479,7 @@ class MicroblogPubBackend(Backend):
         question = create.get_object()
         if question.has_type(ap.ActivityType.QUESTION):
             now = datetime.now(timezone.utc)
-            dt = parser.parse(question.closed or question.endTime)
+            dt = parser.parse(question.closed or question.endTime).astimezone(timezone.utc)
             minutes = int((dt - now).total_seconds() / 60)
             Tasks.fetch_remote_question(create.id, minutes)
 
