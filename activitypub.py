@@ -446,6 +446,10 @@ class MicroblogPubBackend(Backend):
             DB.activities.update_one(
                 {"box": Box.INBOX.value, "activity.object.id": obj.id}, {"$set": _set}
             )
+            # Also update the cached copies of the question (like Announce and Like)
+            DB.activities.update_many(
+                {"meta.object.id": obj.id}, {"$set": {"meta.object": obj.to_dict()}}
+            )
 
         # FIXME(tsileo): handle update actor amd inbox_update_note/inbox_update_actor
 
