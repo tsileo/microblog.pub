@@ -3,7 +3,6 @@ import json
 import logging
 import os
 from datetime import datetime
-from datetime import timezone
 from enum import Enum
 from typing import Any
 from typing import Dict
@@ -12,7 +11,6 @@ from typing import Optional
 
 from bson.objectid import ObjectId
 from cachetools import LRUCache
-from dateutil import parser
 from feedgen.feed import FeedGenerator
 from html2text import html2text
 from little_boxes import activitypub as ap
