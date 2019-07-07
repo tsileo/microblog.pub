@@ -3054,7 +3054,7 @@ def task_fetch_remote_question():
         # Also update all the cached copies (Like, Announce...)
         DB.activities.update_many(
             {"meta.object.id": remote_question["id"]},
-            {"$set": {"activity.object": remote_question}},
+            {"$set": {"meta.object": remote_question}},
         )
 
     except HTTPError as err:
