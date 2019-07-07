@@ -2856,8 +2856,11 @@ def task_process_new_activity():
         elif activity.has_type(ap.ActivityType.CREATE):
             note = activity.get_object()
             in_reply_to = note.get_in_reply_to()
-            # Make the note part of the stream if it's not a reply, or if it's a local reply
-            if not in_reply_to or in_reply_to.startswith(ID):
+            # Make the note part of the stream if it's not a reply, or if it's a local reply **and** it's not a poll
+            # answer
+            if (not in_reply_to or in_reply_to.startswith(ID)) and not note.has_type(
+                ap.ActivityType.QUESTION
+            ):
                 tag_stream = True
 
             # FIXME(tsileo): check for direct addressing in the to, cc, bcc... fields
