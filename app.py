@@ -66,6 +66,7 @@ from activitypub import _answer_key
 from activitypub import embed_collection
 from config import ADMIN_API_KEY
 from config import BASE_URL
+from config import BLACKLIST
 from config import DB
 from config import DEBUG_MODE
 from config import DOMAIN
@@ -121,6 +122,10 @@ else:
     root_logger.setLevel(gunicorn_logger.level)
 
 SIG_AUTH = HTTPSigAuth(KEY)
+
+
+def is_blacklisted(url: str) -> bool:
+    return urlparse(url).netloc in BLACKLIST
 
 
 def verify_pass(pwd):
@@ -1808,6 +1813,19 @@ def inbox():
             headers={"Content-Type": "application/json"},
             response=json.dumps({"error": "failed to decode request as JSON"}),
         )
+
+    # Check the blacklist now to see if we can return super early
+    if (
+        "id" in data
+        and is_blacklisted(data["id"])
+        or (
+            "object" in data
+            and "id" in data["object"]
+            and is_blacklisted(data["object"]["id"])
+        )
+    ):
+        logger.info(f"dropping activity from blacklisted host: {data['id']}")
+        return Response(status=201)
 
     print(f"req_headers={request.headers}")
     print(f"raw_data={data}")
