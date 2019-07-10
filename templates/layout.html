@@ -26,8 +26,8 @@
 <li class="left"><a href="/" class="admin-title {% if not request.path.startswith("/admin") %} selected{% endif %}">Public</a></li>
 <li class="left"><a href="/admin/new"{% if request.path == "/admin/new" %} class="selected" {% endif %}>New</a></li>
 <li class="left"><a href="/admin/stream"{% if request.path == "/admin/stream" %} class="selected" {% endif %}>Stream</a></li>
-<li class="left"><a href="/admin/bookmarks"{% if request.path == "/admin/bookmarks" %} class="selected" {% endif %}>Bookmarks</a></li>
 <li class="left"><a href="/admin/notifications"{% if request.path == "/admin/notifications" %} class="selected" {% endif %}>Notifications</a></li>
+<li class="left"><a href="/admin/bookmarks"{% if request.path == "/admin/bookmarks" %} class="selected" {% endif %}>Bookmarks</a></li>
 <li class="left"><a href="/admin/lookup"{% if request.path == "/admin/lookup" %} class="selected" {% endif %}>Lookup</a></li>
 <li class="left"><a href="/admin/logout">Logout</a></li>
 </ul>
