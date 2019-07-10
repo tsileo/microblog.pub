@@ -212,6 +212,24 @@
 </form>
 {% endif %}
 
+{% if meta.bookmarked or request.path == url_for("admin_bookmarks") %}
+<form action="/api/bookmark" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
+<input type="hidden" name="undo" value="yes">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">unbookmark</button>
+</form>
+{% else %}
+<form action="/api/bookmark" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">bookmark</button>
+</form>
+{% endif %}
+
+
 {% endif %}
 
 {% if obj.id | is_from_outbox %}

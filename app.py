@@ -171,15 +171,17 @@ def inject_config():
         "meta.undo": False,
     }
 
+    logged_in = session.get("logged_in", False)
+
     return dict(
         microblogpub_version=VERSION,
         config=config,
-        logged_in=session.get("logged_in", False),
+        logged_in=logged_in,
         followers_count=DB.activities.count(followers_q),
-        following_count=DB.activities.count(following_q),
+        following_count=DB.activities.count(following_q) if logged_in else 0,
         notes_count=notes_count,
         liked_count=liked_count,
-        with_replies_count=with_replies_count,
+        with_replies_count=with_replies_count if logged_in else 0,
         me=ME,
         base_url=config.BASE_URL,
     )
@@ -1718,6 +1720,23 @@ def api_like():
     return _user_api_response(activity=like_id)
 
 
+@app.route("/api/bookmark", methods=["POST"])
+@api_required
+def api_bookmark():
+    note = _user_api_get_note()
+
+    undo = _user_api_arg("undo", default=None) == "yes"
+
+    DB.activities.update_one(
+        {"meta.object.id": note.id}, {"$set": {"meta.bookmarked": not undo}}
+    )
+    DB.activities.update_one(
+        {"activity.object.id": note.id}, {"$set": {"meta.bookmarked": not undo}}
+    )
+
+    return _user_api_response()
+
+
 @app.route("/api/note/pin", methods=["POST"])
 @api_required
 def api_pin():
@@ -1769,6 +1788,26 @@ def api_undo():
 @login_required
 def admin_stream():
     q = {"meta.stream": True, "meta.deleted": False}
+
+    tpl = "stream.html"
+    if request.args.get("debug"):
+        tpl = "stream_debug.html"
+        if request.args.get("debug_inbox"):
+            q = {}
+
+    inbox_data, older_than, newer_than = paginated_query(
+        DB.activities, q, limit=int(request.args.get("limit", 25))
+    )
+
+    return render_template(
+        tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
+    )
+
+
+@app.route("/admin/bookmarks")
+@login_required
+def admin_bookmarks():
+    q = {"meta.bookmarked": True}
 
     tpl = "stream.html"
     if request.args.get("debug"):
