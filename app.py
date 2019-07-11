@@ -1727,12 +1727,14 @@ def api_bookmark():
 
     undo = _user_api_arg("undo", default=None) == "yes"
 
-    DB.activities.update_one(
-        {"meta.object.id": note.id}, {"$set": {"meta.bookmarked": not undo}}
-    )
-    DB.activities.update_one(
+    # Try to bookmark the `Create` first
+    if not DB.activities.update_one(
         {"activity.object.id": note.id}, {"$set": {"meta.bookmarked": not undo}}
-    )
+    ).modified_count:
+        # Then look for the `Announce`
+        DB.activities.update_one(
+            {"meta.object.id": note.id}, {"$set": {"meta.bookmarked": not undo}}
+        )
 
     return _user_api_response()
 
