@@ -3097,7 +3097,7 @@ def task_fetch_remote_question():
             local_question
             and (
                 local_question["meta"].get("voted_for")
-                or local_question["meta"]["subscribed"]
+                or local_question["meta"].get("subscribed")
             )
             and not DB.notifications.find_one({"activity.id": remote_question["id"]})
         ):
