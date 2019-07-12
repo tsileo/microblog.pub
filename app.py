@@ -86,8 +86,8 @@ from config import VERSION_DATE
 from config import _drop_db
 from poussetaches import PousseTaches
 from tasks import Tasks
-from utils import parse_datetime
 from utils import opengraph
+from utils import parse_datetime
 from utils.key import get_secret_key
 from utils.lookup import lookup
 from utils.media import Kind
@@ -143,13 +143,13 @@ def inject_config():
     notes_count = DB.activities.find(
         {"box": Box.OUTBOX.value, "$or": [q, {"type": "Announce", "meta.undo": False}]}
     ).count()
+    # FIXME(tsileo): rename to all_count, and remove poll answers from it
     with_replies_count = DB.activities.find(
         {
             "box": Box.OUTBOX.value,
             "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
             "meta.undo": False,
             "meta.deleted": False,
-            "meta.public": True,
         }
     ).count()
     liked_count = DB.activities.count(
@@ -875,6 +875,7 @@ def index():
         "activity.object.inReplyTo": None,
         "meta.deleted": False,
         "meta.undo": False,
+        "meta.public": True,
         "$or": [{"meta.pinned": False}, {"meta.pinned": {"$exists": False}}],
     }
     print(list(DB.activities.find(q)))
@@ -887,6 +888,7 @@ def index():
             "type": ActivityType.CREATE.value,
             "meta.deleted": False,
             "meta.undo": False,
+            "meta.public": True,
             "meta.pinned": True,
         }
         pinned = list(DB.activities.find(q_pinned))
@@ -906,14 +908,13 @@ def index():
     return resp
 
 
-@app.route("/with_replies")
+@app.route("/all")
 @login_required
-def with_replies():
+def all():
     q = {
         "box": Box.OUTBOX.value,
         "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         "meta.deleted": False,
-        "meta.public": True,
         "meta.undo": False,
     }
     outbox_data, older_than, newer_than = paginated_query(DB.activities, q)
