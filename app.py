@@ -23,7 +23,6 @@ import mf2py
 import requests
 import timeago
 from bson.objectid import ObjectId
-from dateutil import parser
 from flask import Flask
 from flask import Response
 from flask import abort
@@ -87,6 +86,7 @@ from config import VERSION_DATE
 from config import _drop_db
 from poussetaches import PousseTaches
 from tasks import Tasks
+from utils import parse_datetime
 from utils import opengraph
 from utils.key import get_secret_key
 from utils.lookup import lookup
@@ -262,7 +262,7 @@ def gtone(n):
 
 @app.template_filter()
 def gtnow(dtstr):
-    return format_datetime(datetime.now().astimezone()) > dtstr
+    return format_datetime(datetime.now(timezone.utc)) > dtstr
 
 
 @app.template_filter()
@@ -381,7 +381,7 @@ def get_actor(url):
 @app.template_filter()
 def format_time(val):
     if val:
-        dt = parser.parse(val)
+        dt = parse_datetime(val)
         return datetime.strftime(dt, "%B %d, %Y, %H:%M %p")
     return val
 
@@ -399,7 +399,7 @@ def gt_ts(val):
 @app.template_filter()
 def format_timeago(val):
     if val:
-        dt = parser.parse(val)
+        dt = parse_datetime(val)
         return timeago.format(dt.astimezone(timezone.utc), datetime.now(timezone.utc))
     return val
 
@@ -1195,7 +1195,7 @@ def _add_answers_to_question(raw_doc: Dict[str, Any]) -> None:
                 .get("question_answers", {})
                 .get(_answer_key(choice["name"]), 0),
             }
-        now = datetime.now().astimezone()
+        now = datetime.now(timezone.utc)
         if format_datetime(now) >= activity["object"]["endTime"]:
             activity["object"]["closed"] = activity["object"]["endTime"]
 
@@ -2065,7 +2065,7 @@ def api_new_question():
     open_for = int(_user_api_arg("open_for"))
     choices = {
         "endTime": ap.format_datetime(
-            datetime.now().astimezone() + timedelta(minutes=open_for)
+            datetime.now(timezone.utc) + timedelta(minutes=open_for)
         )
     }
     of = _user_api_arg("of")
@@ -2923,8 +2923,11 @@ def task_process_new_activity():
             in_reply_to = note.get_in_reply_to()
             # Make the note part of the stream if it's not a reply, or if it's a local reply **and** it's not a poll
             # answer
-            if (not in_reply_to or in_reply_to.startswith(ID)) and not note.has_type(
-                ap.ActivityType.QUESTION
+            # FIXME(tsileo): this will block "regular replies" to a Poll, maybe the adressing will help make the
+            # difference?
+            if not in_reply_to or (
+                in_reply_to.startswith(ID)
+                and not note.has_type(ap.ActivityType.QUESTION)
             ):
                 tag_stream = True
 

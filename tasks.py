@@ -2,8 +2,7 @@ import os
 from datetime import datetime
 from datetime import timezone
 
-from dateutil import parser
-
+from utils import parse_datetime
 from poussetaches import PousseTaches
 
 p = PousseTaches(
@@ -61,7 +60,7 @@ class Tasks:
     @staticmethod
     def fetch_remote_question(question) -> None:
         now = datetime.now(timezone.utc)
-        dt = parser.parse(question.closed or question.endTime).astimezone(timezone.utc)
+        dt = parse_datetime(question.closed or question.endTime)
         minutes = int((dt - now).total_seconds() / 60)
 
         if minutes > 0:
