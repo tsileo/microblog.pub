@@ -1532,6 +1532,7 @@ def admin_new():
         reply=reply_id,
         content=content,
         thread=thread,
+        visibility=ap.Visibility,
         emojis=EMOJIS.split(" "),
     )
 
@@ -1995,22 +1996,41 @@ def api_new_note():
     except ValueError:
         pass
 
+    visibility = ap.Visibility[
+        _user_api_arg("visibility", default=ap.Visibility.PUBLIC.name)
+    ]
+
     content, tags = parse_markdown(source)
-    to = request.args.get("to")
-    cc = [ID + "/followers"]
+
+    to, cc = [], []
+    if visibility == ap.Visibility.PUBLIC:
+        to = [ap.AS_PUBLIC]
+        cc = [ID + "/followers"]
+    elif visibility == ap.Visibility.UNLISTED:
+        to = [ID + "/followers"]
+        cc = [ap.AS_PUBLIC]
+    elif visibility == ap.Visibility.FOLLOWERS_ONLY:
+        to = [ID + "/followers"]
+        cc = []
 
     if _reply:
         reply = ap.fetch_remote_activity(_reply)
-        cc.append(reply.attributedTo)
+        if visibility == ap.Visibility.DIRECT:
+            to.append(reply.attributedTo)
+        else:
+            cc.append(reply.attributedTo)
 
     for tag in tags:
         if tag["type"] == "Mention":
-            cc.append(tag["href"])
+            if visibility == ap.Visibility.DIRECT:
+                to.append(tag["href"])
+            else:
+                cc.append(tag["href"])
 
     raw_note = dict(
         attributedTo=MY_PERSON.id,
         cc=list(set(cc)),
-        to=[to if to else ap.AS_PUBLIC],
+        to=list(set(to)),
         content=content,
         tag=tags,
         source={"mediaType": "text/markdown", "content": source},
