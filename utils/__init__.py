@@ -16,7 +16,7 @@ def strtobool(s: str) -> bool:
     raise ValueError(f"cannot convert {s} to bool")
 
 
-def parse_datetime(s :str) -> datetime:
+def parse_datetime(s: str) -> datetime:
     # Parses the datetime with dateutil
     dt = parser.parse(s)
 
