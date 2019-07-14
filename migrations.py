@@ -60,11 +60,15 @@ class _1_MetaMigrationt(Migration):
             # Set `meta.object_visibility` (str)
             if not data["meta"].get("object_visibility"):
                 set_meta["meta.object_visibility"] = None
-                object_id = data["meta"].get("object_id") or set_meta.get("meta.object_id")
+                object_id = data["meta"].get("object_id") or set_meta.get(
+                    "meta.object_id"
+                )
                 if object_id:
                     obj = data["meta"].get("object") or data["activity"].get("object")
                     if isinstance(obj, dict):
-                        set_meta["meta.object_visibility"] = self.__guess_visibility(obj).name
+                        set_meta["meta.object_visibility"] = self.__guess_visibility(
+                            obj
+                        ).name
 
             # Set `meta.actor_id` (str)
             if not data["meta"].get("actor_id"):
@@ -92,7 +96,9 @@ class _1_MetaMigrationt(Migration):
 
             # Set `meta.visibility` (str)
             if not data["meta"].get("visibility"):
-                set_meta["meta.visibility"] = self.__guess_visibility(data["activity"]).name
+                set_meta["meta.visibility"] = self.__guess_visibility(
+                    data["activity"]
+                ).name
 
             if not data["meta"].get("server"):
                 set_meta["meta.server"] = urlparse(data["remote_id"]).netloc
