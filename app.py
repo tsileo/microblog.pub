@@ -144,14 +144,13 @@ def inject_config():
         {"box": Box.OUTBOX.value, "$or": [q, {"type": "Announce", "meta.undo": False}]}
     ).count()
     # FIXME(tsileo): rename to all_count, and remove poll answers from it
-    with_replies_count = DB.activities.find(
-        {
-            "box": Box.OUTBOX.value,
-            "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
-            "meta.undo": False,
-            "meta.deleted": False,
-        }
-    ).count()
+    all_q = {
+        "box": Box.OUTBOX.value,
+        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+        "meta.undo": False,
+        "meta.deleted": False,
+        "meta.poll_answer": False,
+    }
     liked_count = DB.activities.count(
         {
             "box": Box.OUTBOX.value,
@@ -181,7 +180,7 @@ def inject_config():
         following_count=DB.activities.count(following_q) if logged_in else 0,
         notes_count=notes_count,
         liked_count=liked_count,
-        with_replies_count=with_replies_count if logged_in else 0,
+        with_replies_count=DB.activities.count(all_q) if logged_in else 0,
         me=ME,
         base_url=config.BASE_URL,
     )
@@ -916,6 +915,7 @@ def all():
         "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         "meta.deleted": False,
         "meta.undo": False,
+        "meta.poll_answer": False,
     }
     outbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
@@ -1218,7 +1218,7 @@ def outbox():
     if request.method == "GET":
         if not is_api_request():
             abort(404)
-        # TODO(tsileo): returns the whole outbox if authenticated
+        # TODO(tsileo): returns the whole outbox if authenticated and look at OCAP support
         q = {
             "box": Box.OUTBOX.value,
             "meta.deleted": False,
@@ -1253,7 +1253,11 @@ def outbox():
 @app.route("/outbox/<item_id>")
 def outbox_detail(item_id):
     doc = DB.activities.find_one(
-        {"box": Box.OUTBOX.value, "remote_id": back.activity_url(item_id)}
+        {
+            "box": Box.OUTBOX.value,
+            "remote_id": back.activity_url(item_id),
+            "meta.public": True,
+        }
     )
     if not doc:
         abort(404)
@@ -1269,7 +1273,11 @@ def outbox_detail(item_id):
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
     data = DB.activities.find_one(
-        {"box": Box.OUTBOX.value, "remote_id": back.activity_url(item_id)}
+        {
+            "box": Box.OUTBOX.value,
+            "remote_id": back.activity_url(item_id),
+            "meta.public": True,
+        }
     )
     if not data:
         abort(404)
@@ -1295,6 +1303,7 @@ def outbox_activity_replies(item_id):
             "box": Box.OUTBOX.value,
             "remote_id": back.activity_url(item_id),
             "meta.deleted": False,
+            "meta.public": True,
         }
     )
     if not data:
@@ -1305,6 +1314,7 @@ def outbox_activity_replies(item_id):
 
     q = {
         "meta.deleted": False,
+        "meta.public": True,
         "type": ActivityType.CREATE.value,
         "activity.object.inReplyTo": obj.get_object().id,
     }
@@ -1330,6 +1340,7 @@ def outbox_activity_likes(item_id):
             "box": Box.OUTBOX.value,
             "remote_id": back.activity_url(item_id),
             "meta.deleted": False,
+            "meta.public": True,
         }
     )
     if not data:

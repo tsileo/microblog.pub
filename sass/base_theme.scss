@@ -270,6 +270,15 @@ a:hover {
   float: left;
   border-radius:2px;
 }
+.bar-icon {
+  background: $background-color;
+  padding: 5px;
+  color: $color-light;
+  margin-right: 10px;
+  float: left;
+  border: none;
+}
+
 .bar-item:hover {
   background: $primary-color;
   color: $background-color;

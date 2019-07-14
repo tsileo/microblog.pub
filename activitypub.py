@@ -8,6 +8,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from urllib.parse import urlparse
 
 from bson.objectid import ObjectId
 from cachetools import LRUCache
@@ -114,9 +115,17 @@ class MicroblogPubBackend(Backend):
 
     def save(self, box: Box, activity: ap.BaseActivity) -> None:
         """Custom helper for saving an activity to the DB."""
-        is_public = True
-        if activity.has_type(ap.ActivityType.CREATE) and not activity.is_public():
-            is_public = False
+        visibility = ap.get_visibility(activity)
+        is_public = False
+        if visibility in [ap.Visibility.PUBLIC, ap.Visibility.UNLISTED]:
+            is_public = True
+        object_id = None
+        try:
+            object_id = activity.get_object_id()
+        except ValueError:
+            pass
+
+        actor_id = activity.get_actor().id
 
         DB.activities.insert_one(
             {
@@ -124,7 +133,16 @@ class MicroblogPubBackend(Backend):
                 "activity": activity.to_dict(),
                 "type": _to_list(activity.type),
                 "remote_id": activity.id,
-                "meta": {"undo": False, "deleted": False, "public": is_public},
+                "meta": {
+                    "undo": False,
+                    "deleted": False,
+                    "public": is_public,
+                    "server": urlparse(activity.id).netloc,
+                    "visibility": visibility.name,
+                    "actor_id": actor_id,
+                    "object_id": object_id,
+                    "poll_answer": False,
+                },
             }
         )
 
@@ -481,6 +499,15 @@ class MicroblogPubBackend(Backend):
 
     @ensure_it_is_me
     def outbox_create(self, as_actor: ap.Person, create: ap.Create) -> None:
+        obj = create.get_object()
+
+        # Flag the activity as a poll answer if needed
+        print(f"POLL ANSWER ChECK {obj.get_in_reply_to()} {obj.name} {obj.content}")
+        if obj.get_in_reply_to() and obj.name and not obj.content:
+            DB.activities.update_one(
+                {"remote_id": create.id}, {"$set": {"meta.poll_answer": True}}
+            )
+
         self._handle_replies(as_actor, create)
 
     @ensure_it_is_me
@@ -540,7 +567,13 @@ class MicroblogPubBackend(Backend):
 
         DB.activities.update_one(
             {"remote_id": create.id},
-            {"$set": {"meta.answer_to": question.id, "meta.stream": False}},
+            {
+                "$set": {
+                    "meta.answer_to": question.id,
+                    "meta.stream": False,
+                    "meta.poll_answer": True,
+                }
+            },
         )
 
         return None

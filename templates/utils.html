@@ -56,6 +56,7 @@
 
 	{% if not perma %}
 	<span style="float:right;width: 20%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
+        <i class="fe fe-unlock" title="Public" style="font-size:1em;padding-right:5px;"></i>
 		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj | url_or_id | get_url }}">
 			<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}">{{ obj.published | format_timeago }}</time></a>
 	</span>
@@ -164,10 +165,14 @@
 {% if perma %}
 <span class="perma-item" style="float:left;padding:5px;">{{ obj.published | format_time }}</span>
 {% if not (obj.id | is_from_outbox) %}
-<a class ="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
+<a class="bar-icon" href="{{ obj | url_or_id | get_url }}">
+    <i class="fe fe-link-external"></i>
+</a> 
 {% endif %}
 {% else %}
-<a class ="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
+<a class="bar-icon" style="font-size:1.5em;" href="{{ obj | url_or_id | get_url }}">
+    <i class="fe fe-link-external"></i>
+</a> 
 {% endif %}
 
 {% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> replies</a>
@@ -192,7 +197,9 @@
 <input type="hidden" name="redirect" value="{{ redir }}">
 <input type="hidden" name="id" value="{{ obj.id }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">boost</button>
+<button type="submit" class="bar-icon" style="font-size:1.5em;">
+        <i class="fe fe-share" title="Public"></i>
+</button>
 </form>
 {% endif %}
 
