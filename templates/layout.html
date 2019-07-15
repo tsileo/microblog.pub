@@ -6,13 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>{% block title %}{{ config.NAME }}{% endblock %}'s microblog</title>
 <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
-<link rel="stylesheet" href="/static/css/feathericon.min.css">
 <link rel="authorization_endpoint" href="{{ config.ID }}/indieauth">
 <link rel="token_endpoint" href="{{ config.ID }}/token">
 {% if not request.args.get("older_than") and not request.args.get("previous_than") %}<link rel="canonical" href="https://{{ config.DOMAIN }}{{ request.path }}">{% endif %}
 {% block links %}{% endblock %}
 {% if config.THEME_COLOR %}<meta name="theme-color" content="{{ config.THEME_COLOR }}">{% endif %}
 <style>{{ config.CSS | safe }}
+.icon { color: #555; }
 .emoji {
     width: 20px;
 }

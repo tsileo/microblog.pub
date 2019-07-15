@@ -17,7 +17,9 @@
 
 {% macro display_note(obj, perma=False, ui=False, likes=[], shares=[], meta={}, no_color=False) -%}
 
-{% if meta.actor %}
+{% if meta.object_actor %}
+    {% set actor = meta.object_actor %}
+{% elif meta.actor %}
     {% set actor = meta.actor %}
 {% else %}
     {% set actor = obj.attributedTo | get_actor  %}
@@ -51,12 +53,11 @@
 
 <div class="note-wrapper">
     <div style="clear:both;height:20px;">
-	<a href="{{ actor | url_or_id | get_url }}" style="margin:0;text-decoration:none;margin: 0;text-decoration: none;display: block;width: 80%;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;float: left;" class="no-hover"><strong>{{ actor.name or actor.preferredUsername }}</strong>
+	<a href="{{ actor | url_or_id | get_url }}" style="margin:0;text-decoration:none;margin: 0;text-decoration: none;display: block;width: 75%;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;float: left;" class="no-hover"><strong>{{ actor.name or actor.preferredUsername }}</strong>
         <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername }}</span>{% else %}{{ actor.preferredUsername }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span></a>
 
 	{% if not perma %}
-	<span style="float:right;width: 20%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
-        <i class="fe fe-unlock" title="Public" style="font-size:1em;padding-right:5px;"></i>
+	<span style="float:right;width: 25%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
 		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj | url_or_id | get_url }}">
 			<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}">{{ obj.published | format_timeago }}</time></a>
 	</span>
@@ -164,27 +165,21 @@
 <div class="bottom-bar">
 {% if perma %}
 <span class="perma-item" style="float:left;padding:5px;">{{ obj.published | format_time }}</span>
-{% if not (obj.id | is_from_outbox) %}
-<a class="bar-icon" href="{{ obj | url_or_id | get_url }}">
-    <i class="fe fe-link-external"></i>
-</a> 
-{% endif %}
-{% else %}
-<a class="bar-icon" style="font-size:1.5em;" href="{{ obj | url_or_id | get_url }}">
-    <i class="fe fe-link-external"></i>
-</a> 
 {% endif %}
 
 {% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> replies</a>
 {% elif meta.count_reply and session.logged_in %}
-<a class ="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> replies</a>{% endif %}
+<a class="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> replies</a>{% endif %}
+
 
 {% if not perma and meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
 {% if not perma and meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
 
 {% if session.logged_in %}
 {% if ui%}
+<a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
 
+{% if meta.object_visibility | visibility_is_public %}
 {% if meta.boosted %}
 <form action="/api/undo" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
@@ -197,10 +192,9 @@
 <input type="hidden" name="redirect" value="{{ redir }}">
 <input type="hidden" name="id" value="{{ obj.id }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-icon" style="font-size:1.5em;">
-        <i class="fe fe-share" title="Public"></i>
-</button>
+<button type="submit" class="bar-item">boost</button>
 </form>
+{% endif %}
 {% endif %}
 
 {% if meta.liked %}
@@ -244,7 +238,7 @@
 <input type="hidden" name="redirect" value="{{ redir }}">
 <input type="hidden" name="id" value="{{ obj.id }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">delete</button>
+<button type="submit" class="bar-item" onclick="return confirm('Confirm the delete action?');">delete</button>
 </form>
 {% if meta.pinned %}
 <form action="/api/note/unpin" class="action-form"  method="POST">
@@ -267,12 +261,16 @@
 <input type="hidden" name="redirect" value="{{ redir }}">
 <input type="hidden" name="actor" value="{{ actor.id }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">block</button>
+<button type="submit" class="bar-item" onclick="return confirm('Confirm the block action?');">block</button>
 </form>
 {% endif %}
-<a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
+
 {% endif %}
 
+<a class="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
+{% if session.logged_in %}
+<a class="bar-item bar-item-no-border">{{ meta.object_visibility | visibility }}</a>
+{% endif %}
 
 </div>
 

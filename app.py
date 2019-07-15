@@ -248,6 +248,16 @@ def _get_file_url(url, size, kind):
 
 
 @app.template_filter()
+def visibility(v: str) -> str:
+    return ap.Visibility[v].value.lower()
+
+
+@app.template_filter()
+def visibility_is_public(v: str) -> bool:
+    return v in [ap.Visibility.PUBLIC.name, ap.Visibility.UNLISTED.name]
+
+
+@app.template_filter()
 def emojify(text):
     return emoji_unicode.replace(
         text, lambda e: EMOJI_TPL.format(filename=e.code_points, raw=e.unicode)
@@ -1691,6 +1701,10 @@ def api_delete():
 def api_boost():
     note = _user_api_get_note()
 
+    # Ensures the note visibility allow us to build an Announce (in respect to the post visibility)
+    if ap.get_visibility(note) not in [ap.Visibility.PUBLIC, ap.VISIBILITY.UNLISTED]:
+        abort(400)
+
     announce = note.build_announce(MY_PERSON)
     announce_id = post_to_outbox(announce)
 
@@ -1841,6 +1855,7 @@ def admin_bookmarks():
 
 @app.route("/inbox", methods=["GET", "POST"])  # noqa: C901
 def inbox():
+    # GET /inbox
     if request.method == "GET":
         if not is_api_request():
             abort(404)
@@ -1859,6 +1874,7 @@ def inbox():
             )
         )
 
+    # POST/ inbox
     try:
         data = request.get_json(force=True)
     except Exception:
@@ -3125,6 +3141,7 @@ def task_fetch_remote_question():
             }
         )
         remote_question = get_backend().fetch_iri(iri, no_cache=True)
+        # FIXME(tsileo): compute and set `meta.object_visiblity` (also update utils.py to do it)
         if (
             local_question
             and (

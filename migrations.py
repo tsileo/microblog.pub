@@ -104,4 +104,5 @@ class _1_MetaMigrationt(Migration):
                 set_meta["meta.server"] = urlparse(data["remote_id"]).netloc
 
             logger.info(f"meta={set_meta}\n")
-            DB.activities.update_one({"_id": data["_id"]}, {"$set": set_meta})
+            if set_meta:
+                DB.activities.update_one({"_id": data["_id"]}, {"$set": set_meta})

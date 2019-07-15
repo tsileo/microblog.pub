@@ -124,6 +124,9 @@ class MicroblogPubBackend(Backend):
             object_id = activity.get_object_id()
         except ValueError:
             pass
+        object_visibility = None
+        if object_id:
+            object_visibility = ap.get_visibility(activity.get_object())
 
         actor_id = activity.get_actor().id
 
@@ -141,6 +144,7 @@ class MicroblogPubBackend(Backend):
                     "visibility": visibility.name,
                     "actor_id": actor_id,
                     "object_id": object_id,
+                    "object_visibility": object_visibility.name,
                     "poll_answer": False,
                 },
             }
@@ -670,7 +674,7 @@ def gen_feed():
     fg.logo(ME.get("icon", {}).get("url"))
     fg.language("en")
     for item in DB.activities.find(
-        {"box": Box.OUTBOX.value, "type": "Create", "meta.deleted": False}, limit=10
+        {"box": Box.OUTBOX.value, "type": "Create", "meta.deleted": False, "meta.public": True}, limit=10
     ).sort("_id", -1):
         fe = fg.add_entry()
         fe.id(item["activity"]["object"].get("url"))
@@ -684,7 +688,7 @@ def json_feed(path: str) -> Dict[str, Any]:
     """JSON Feed (https://jsonfeed.org/) document."""
     data = []
     for item in DB.activities.find(
-        {"box": Box.OUTBOX.value, "type": "Create", "meta.deleted": False}, limit=10
+        {"box": Box.OUTBOX.value, "type": "Create", "meta.deleted": False, "meta.public": True}, limit=10
     ).sort("_id", -1):
         data.append(
             {
