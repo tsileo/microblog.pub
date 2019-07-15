@@ -126,7 +126,7 @@ class MicroblogPubBackend(Backend):
             pass
         object_visibility = None
         if object_id:
-            object_visibility = ap.get_visibility(activity.get_object())
+            object_visibility = ap.get_visibility(activity.get_object()).name
 
         actor_id = activity.get_actor().id
 
@@ -144,7 +144,7 @@ class MicroblogPubBackend(Backend):
                     "visibility": visibility.name,
                     "actor_id": actor_id,
                     "object_id": object_id,
-                    "object_visibility": object_visibility.name,
+                    "object_visibility": object_visibility,
                     "poll_answer": False,
                 },
             }
