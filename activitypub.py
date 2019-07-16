@@ -437,7 +437,7 @@ class MicroblogPubBackend(Backend):
         obj_id = delete.get_object_id()
         logger.debug("delete object={obj_id}")
         try:
-            obj = delete.get_object()
+            obj = ap.fetch_remote_activity(obj_id)
             logger.info(f"inbox_delete handle_replies obj={obj!r}")
             in_reply_to = obj.get_in_reply_to() if obj.inReplyTo else None
             if obj.has_type(ap.CREATE_TYPES):

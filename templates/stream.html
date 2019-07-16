@@ -8,7 +8,6 @@
 
 <div id="notes">
 	{% for item in inbox_data %}
-    {{ item }}
 	{% if 'actor' in item.meta %}
 	{% if item | has_type('Create') %}
 	{{ utils.display_note(item.activity.object, ui=True, meta=item.meta) }}
