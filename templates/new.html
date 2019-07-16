@@ -21,6 +21,11 @@
 <form action="/api/new_{% if request.args.get("question") == "1" %}question{%else%}note{%endif%}" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="redirect" value="/">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<select name="visibility">
+{% for v in visibility %}
+<option value="{{v.name}}">{{ v.value }}</option>
+{% endfor %}
+</select>
 {% if reply %}<input type="hidden" name="reply" value="{{reply}}">{% endif %}
 
 <p>

@@ -18,7 +18,7 @@
 	<p style="margin-left:70px;padding-bottom:5px;display:inline-block;"><span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> boosted</span></p>
     {% endif %}
 	{% if item.meta.object %}
-	{{ utils.display_note(item.meta.object, ui=True) }}
+	{{ utils.display_note(item.meta.object, ui=True, meta=item.meta) }}
 	{% endif %}
 	{% endif %}
 
@@ -26,7 +26,7 @@
     {% set boost_actor = item.meta.actor %}
 	<p style="margin-left:70px;padding-bottom:5px;display:inline-block;"><span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> liked</span></p>
 	{% if item.meta.object %}
-    {{ utils.display_note(item.meta.object, ui=False, meta={'actor': item.meta.object_actor}) }}
+    {{ utils.display_note(item.meta.object, ui=False, meta=item.meta) }}
 	{% endif %}
     {% endif %}
 	
@@ -58,7 +58,7 @@
 
     {% if item | has_type('question_ended') %}
     <p style="margin-left:70px;padding-bottom:5px;display:inline-block;"><span class="bar-item-no-hover">poll ended</span></p>
-    {{ utils.display_note(item.activity) }}
+    {{ utils.display_note(item.activity, meta={"object_visibility": "PUBLIC"}) }}
     {% endif %}
 
 	{% endif %}

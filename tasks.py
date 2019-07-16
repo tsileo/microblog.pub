@@ -2,8 +2,8 @@ import os
 from datetime import datetime
 from datetime import timezone
 
-from utils import parse_datetime
 from poussetaches import PousseTaches
+from utils import parse_datetime
 
 p = PousseTaches(
     os.getenv("MICROBLOGPUB_POUSSETACHES_HOST", "http://localhost:7991"),

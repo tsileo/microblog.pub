@@ -8,6 +8,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from urllib.parse import urlparse
 
 from bson.objectid import ObjectId
 from cachetools import LRUCache
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 ACTORS_CACHE = LRUCache(maxsize=256)
+MY_PERSON = ap.Person(**ME)
 
 
 def _actor_to_meta(actor: ap.BaseActivity, with_inbox=False) -> Dict[str, Any]:
@@ -114,9 +116,20 @@ class MicroblogPubBackend(Backend):
 
     def save(self, box: Box, activity: ap.BaseActivity) -> None:
         """Custom helper for saving an activity to the DB."""
-        is_public = True
-        if activity.has_type(ap.ActivityType.CREATE) and not activity.is_public():
-            is_public = False
+        visibility = ap.get_visibility(activity)
+        is_public = False
+        if visibility in [ap.Visibility.PUBLIC, ap.Visibility.UNLISTED]:
+            is_public = True
+        object_id = None
+        try:
+            object_id = activity.get_object_id()
+        except ValueError:
+            pass
+        object_visibility = None
+        if activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
+            object_visibility = ap.get_visibility(activity.get_object()).name
+
+        actor_id = activity.get_actor().id
 
         DB.activities.insert_one(
             {
@@ -124,7 +137,17 @@ class MicroblogPubBackend(Backend):
                 "activity": activity.to_dict(),
                 "type": _to_list(activity.type),
                 "remote_id": activity.id,
-                "meta": {"undo": False, "deleted": False, "public": is_public},
+                "meta": {
+                    "undo": False,
+                    "deleted": False,
+                    "public": is_public,
+                    "server": urlparse(activity.id).netloc,
+                    "visibility": visibility.name,
+                    "actor_id": actor_id,
+                    "object_id": object_id,
+                    "object_visibility": object_visibility,
+                    "poll_answer": False,
+                },
             }
         )
 
@@ -183,9 +206,39 @@ class MicroblogPubBackend(Backend):
             )
         )
 
-    def _fetch_iri(self, iri: str) -> ap.ObjectType:
+    def _fetch_iri(self, iri: str) -> ap.ObjectType:  # noqa: C901
+        # Shortcut if the instance actor is fetched
         if iri == ME["id"]:
             return ME
+
+        # Internal collecitons handling
+        # Followers
+        if iri == MY_PERSON.followers:
+            followers = []
+            for data in DB.activities.find(
+                {
+                    "box": Box.INBOX.value,
+                    "type": ap.ActivityType.FOLLOW.value,
+                    "meta.undo": False,
+                }
+            ):
+                followers.append(data["meta"]["actor_id"])
+            return {"type": "Collection", "items": followers}
+
+        # Following
+        if iri == MY_PERSON.following:
+            following = []
+            for data in DB.activities.find(
+                {
+                    "box": Box.OUTBOX.value,
+                    "type": ap.ActivityType.FOLLOW.value,
+                    "meta.undo": False,
+                }
+            ):
+                following.append(data["meta"]["object_id"])
+            return {"type": "Collection", "items": following}
+
+        # TODO(tsileo): handle the liked collection too
 
         # Check if the activity is owned by this server
         if iri.startswith(BASE_URL):
@@ -207,40 +260,48 @@ class MicroblogPubBackend(Backend):
                 if data["meta"]["deleted"]:
                     raise ActivityGoneError(f"{iri} is gone")
                 return data["activity"]
+            obj = DB.activities.find_one({"meta.object_id": iri, "type": "Create"})
+            if obj:
+                if obj["meta"]["deleted"]:
+                    raise ActivityGoneError(f"{iri} is gone")
+                return obj["meta"].get("object") or obj["activity"]["object"]
+
+            # Check if it's cached because it's a follower
+            # Remove extra info (like the key hash if any)
+            cleaned_iri = iri.split("#")[0]
+            actor = DB.activities.find_one(
+                {
+                    "meta.actor_id": cleaned_iri,
+                    "type": ap.ActivityType.FOLLOW.value,
+                    "meta.undo": False,
+                }
+            )
+            if actor and actor["meta"].get("actor"):
+                return actor["meta"]["actor"]
+
+            # Check if it's cached because it's a following
+            actor2 = DB.activities.find_one(
+                {
+                    "meta.object_id": cleaned_iri,
+                    "type": ap.ActivityType.FOLLOW.value,
+                    "meta.undo": False,
+                }
+            )
+            if actor2 and actor2["meta"].get("object"):
+                return actor2["meta"]["object"]
 
         # Fetch the URL via HTTP
         logger.info(f"dereference {iri} via HTTP")
         return super().fetch_iri(iri)
 
     def fetch_iri(self, iri: str, no_cache=False) -> ap.ObjectType:
-        if iri == ME["id"]:
-            return ME
-
-        if iri in ACTORS_CACHE:
-            logger.info(f"{iri} found in cache")
-            return ACTORS_CACHE[iri]
-
-        # data = DB.actors.find_one({"remote_id": iri})
-        # if data:
-        #    if ap._has_type(data["type"], ap.ACTOR_TYPES):
-        #        logger.info(f"{iri} found in DB cache")
-        #        ACTORS_CACHE[iri] = data["data"]
-        #    return data["data"]
         if not no_cache:
+            # Fetch the activity by checking the local DB first
             data = self._fetch_iri(iri)
         else:
-            return super().fetch_iri(iri)
+            data = super().fetch_iri(iri)
 
         logger.debug(f"_fetch_iri({iri!r}) == {data!r}")
-        if ap._has_type(data["type"], ap.ACTOR_TYPES):
-            logger.debug(f"caching actor {iri}")
-            # Cache the actor
-            DB.actors.update_one(
-                {"remote_id": iri},
-                {"$set": {"remote_id": iri, "data": data}},
-                upsert=True,
-            )
-            ACTORS_CACHE[iri] = data
 
         return data
 
@@ -373,37 +434,36 @@ class MicroblogPubBackend(Backend):
 
     @ensure_it_is_me
     def inbox_delete(self, as_actor: ap.Person, delete: ap.Delete) -> None:
-        obj = delete.get_object()
-        logger.debug("delete object={obj!r}")
+        obj_id = delete.get_object_id()
+        logger.debug("delete object={obj_id}")
+        try:
+            obj = ap.fetch_remote_activity(obj_id)
+            logger.info(f"inbox_delete handle_replies obj={obj!r}")
+            in_reply_to = obj.get_in_reply_to() if obj.inReplyTo else None
+            if obj.has_type(ap.CREATE_TYPES):
+                in_reply_to = ap._get_id(
+                    DB.activities.find_one(
+                        {"meta.object_id": obj_id, "type": ap.ActivityType.CREATE.value}
+                    )["activity"]["object"].get("inReplyTo")
+                )
+                if in_reply_to:
+                    self._handle_replies_delete(as_actor, in_reply_to)
+        except Exception:
+            logger.exception(f"failed to handle delete replies for {obj_id}")
+
         DB.activities.update_one(
-            {"activity.object.id": obj.id}, {"$set": {"meta.deleted": True}}
+            {"meta.object_id": obj_id, "type": "Create"},
+            {"$set": {"meta.deleted": True}},
         )
 
-        logger.info(f"inbox_delete handle_replies obj={obj!r}")
-        in_reply_to = obj.get_in_reply_to() if obj.inReplyTo else None
-        if delete.get_object().ACTIVITY_TYPE != ap.ActivityType.NOTE:
-            in_reply_to = ap._get_id(
-                DB.activities.find_one(
-                    {
-                        "activity.object.id": delete.get_object().id,
-                        "type": ap.ActivityType.CREATE.value,
-                    }
-                )["activity"]["object"].get("inReplyTo")
-            )
-
-        # Fake a Undo so any related Like/Announce doesn't appear on the web UI
-        DB.activities.update(
-            {"meta.object.id": obj.id},
-            {"$set": {"meta.undo": True, "meta.extra": "object deleted"}},
-        )
-        if in_reply_to:
-            self._handle_replies_delete(as_actor, in_reply_to)
+        # Foce undo other related activities
+        DB.activities.update({"meta.object_id": obj_id}, {"$set": {"meta.undo": True}})
 
     @ensure_it_is_me
     def outbox_delete(self, as_actor: ap.Person, delete: ap.Delete) -> None:
-        DB.activities.update_one(
-            {"activity.object.id": delete.get_object().id},
-            {"$set": {"meta.deleted": True}},
+        DB.activities.update(
+            {"meta.object_id": delete.get_object_id()},
+            {"$set": {"meta.deleted": True, "meta.undo": True}},
         )
         obj = delete.get_object()
         if delete.get_object().ACTIVITY_TYPE != ap.ActivityType.NOTE:
@@ -415,11 +475,6 @@ class MicroblogPubBackend(Backend):
                     }
                 )["activity"]
             ).get_object()
-
-        DB.activities.update(
-            {"meta.object.id": obj.id},
-            {"$set": {"meta.undo": True, "meta.exta": "object deleted"}},
-        )
 
         self._handle_replies_delete(as_actor, obj.get_in_reply_to())
 
@@ -481,6 +536,15 @@ class MicroblogPubBackend(Backend):
 
     @ensure_it_is_me
     def outbox_create(self, as_actor: ap.Person, create: ap.Create) -> None:
+        obj = create.get_object()
+
+        # Flag the activity as a poll answer if needed
+        print(f"POLL ANSWER ChECK {obj.get_in_reply_to()} {obj.name} {obj.content}")
+        if obj.get_in_reply_to() and obj.name and not obj.content:
+            DB.activities.update_one(
+                {"remote_id": create.id}, {"$set": {"meta.poll_answer": True}}
+            )
+
         self._handle_replies(as_actor, create)
 
     @ensure_it_is_me
@@ -540,7 +604,13 @@ class MicroblogPubBackend(Backend):
 
         DB.activities.update_one(
             {"remote_id": create.id},
-            {"$set": {"meta.answer_to": question.id, "meta.stream": False}},
+            {
+                "$set": {
+                    "meta.answer_to": question.id,
+                    "meta.stream": False,
+                    "meta.poll_answer": True,
+                }
+            },
         )
 
         return None
@@ -637,7 +707,13 @@ def gen_feed():
     fg.logo(ME.get("icon", {}).get("url"))
     fg.language("en")
     for item in DB.activities.find(
-        {"box": Box.OUTBOX.value, "type": "Create", "meta.deleted": False}, limit=10
+        {
+            "box": Box.OUTBOX.value,
+            "type": "Create",
+            "meta.deleted": False,
+            "meta.public": True,
+        },
+        limit=10,
     ).sort("_id", -1):
         fe = fg.add_entry()
         fe.id(item["activity"]["object"].get("url"))
@@ -651,7 +727,13 @@ def json_feed(path: str) -> Dict[str, Any]:
     """JSON Feed (https://jsonfeed.org/) document."""
     data = []
     for item in DB.activities.find(
-        {"box": Box.OUTBOX.value, "type": "Create", "meta.deleted": False}, limit=10
+        {
+            "box": Box.OUTBOX.value,
+            "type": "Create",
+            "meta.deleted": False,
+            "meta.public": True,
+        },
+        limit=10,
     ).sort("_id", -1):
         data.append(
             {

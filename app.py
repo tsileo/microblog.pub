@@ -86,8 +86,8 @@ from config import VERSION_DATE
 from config import _drop_db
 from poussetaches import PousseTaches
 from tasks import Tasks
-from utils import parse_datetime
 from utils import opengraph
+from utils import parse_datetime
 from utils.key import get_secret_key
 from utils.lookup import lookup
 from utils.media import Kind
@@ -143,15 +143,14 @@ def inject_config():
     notes_count = DB.activities.find(
         {"box": Box.OUTBOX.value, "$or": [q, {"type": "Announce", "meta.undo": False}]}
     ).count()
-    with_replies_count = DB.activities.find(
-        {
-            "box": Box.OUTBOX.value,
-            "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
-            "meta.undo": False,
-            "meta.deleted": False,
-            "meta.public": True,
-        }
-    ).count()
+    # FIXME(tsileo): rename to all_count, and remove poll answers from it
+    all_q = {
+        "box": Box.OUTBOX.value,
+        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+        "meta.undo": False,
+        "meta.deleted": False,
+        "meta.poll_answer": False,
+    }
     liked_count = DB.activities.count(
         {
             "box": Box.OUTBOX.value,
@@ -181,7 +180,7 @@ def inject_config():
         following_count=DB.activities.count(following_q) if logged_in else 0,
         notes_count=notes_count,
         liked_count=liked_count,
-        with_replies_count=with_replies_count if logged_in else 0,
+        with_replies_count=DB.activities.count(all_q) if logged_in else 0,
         me=ME,
         base_url=config.BASE_URL,
     )
@@ -246,6 +245,19 @@ def _get_file_url(url, size, kind):
     # MEDIA_CACHE.cache(url, kind)
     app.logger.error(f"cache not available for {url}/{size}/{kind}")
     return url
+
+
+@app.template_filter()
+def visibility(v: str) -> str:
+    try:
+        return ap.Visibility[v].value.lower()
+    except Exception:
+        return v
+
+
+@app.template_filter()
+def visibility_is_public(v: str) -> bool:
+    return v in [ap.Visibility.PUBLIC.name, ap.Visibility.UNLISTED.name]
 
 
 @app.template_filter()
@@ -762,7 +774,13 @@ def authorize_follow():
     if DB.activities.count(q) > 0:
         return redirect("/following")
 
-    follow = ap.Follow(actor=MY_PERSON.id, object=actor)
+    follow = ap.Follow(
+        actor=MY_PERSON.id,
+        object=actor,
+        to=[actor],
+        cc=[ap.AS_PUBLIC],
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
     post_to_outbox(follow)
 
     return redirect("/following")
@@ -875,6 +893,7 @@ def index():
         "activity.object.inReplyTo": None,
         "meta.deleted": False,
         "meta.undo": False,
+        "meta.public": True,
         "$or": [{"meta.pinned": False}, {"meta.pinned": {"$exists": False}}],
     }
     print(list(DB.activities.find(q)))
@@ -887,6 +906,7 @@ def index():
             "type": ActivityType.CREATE.value,
             "meta.deleted": False,
             "meta.undo": False,
+            "meta.public": True,
             "meta.pinned": True,
         }
         pinned = list(DB.activities.find(q_pinned))
@@ -906,15 +926,15 @@ def index():
     return resp
 
 
-@app.route("/with_replies")
+@app.route("/all")
 @login_required
-def with_replies():
+def all():
     q = {
         "box": Box.OUTBOX.value,
         "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         "meta.deleted": False,
-        "meta.public": True,
         "meta.undo": False,
+        "meta.poll_answer": False,
     }
     outbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
@@ -1217,7 +1237,7 @@ def outbox():
     if request.method == "GET":
         if not is_api_request():
             abort(404)
-        # TODO(tsileo): returns the whole outbox if authenticated
+        # TODO(tsileo): returns the whole outbox if authenticated and look at OCAP support
         q = {
             "box": Box.OUTBOX.value,
             "meta.deleted": False,
@@ -1252,7 +1272,11 @@ def outbox():
 @app.route("/outbox/<item_id>")
 def outbox_detail(item_id):
     doc = DB.activities.find_one(
-        {"box": Box.OUTBOX.value, "remote_id": back.activity_url(item_id)}
+        {
+            "box": Box.OUTBOX.value,
+            "remote_id": back.activity_url(item_id),
+            "meta.public": True,
+        }
     )
     if not doc:
         abort(404)
@@ -1268,7 +1292,11 @@ def outbox_detail(item_id):
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
     data = DB.activities.find_one(
-        {"box": Box.OUTBOX.value, "remote_id": back.activity_url(item_id)}
+        {
+            "box": Box.OUTBOX.value,
+            "remote_id": back.activity_url(item_id),
+            "meta.public": True,
+        }
     )
     if not data:
         abort(404)
@@ -1294,6 +1322,7 @@ def outbox_activity_replies(item_id):
             "box": Box.OUTBOX.value,
             "remote_id": back.activity_url(item_id),
             "meta.deleted": False,
+            "meta.public": True,
         }
     )
     if not data:
@@ -1304,6 +1333,7 @@ def outbox_activity_replies(item_id):
 
     q = {
         "meta.deleted": False,
+        "meta.public": True,
         "type": ActivityType.CREATE.value,
         "activity.object.inReplyTo": obj.get_object().id,
     }
@@ -1329,6 +1359,7 @@ def outbox_activity_likes(item_id):
             "box": Box.OUTBOX.value,
             "remote_id": back.activity_url(item_id),
             "meta.deleted": False,
+            "meta.public": True,
         }
     )
     if not data:
@@ -1532,6 +1563,7 @@ def admin_new():
         reply=reply_id,
         content=content,
         thread=thread,
+        visibility=ap.Visibility,
         emojis=EMOJIS.split(" "),
     )
 
@@ -1666,7 +1698,14 @@ def api_delete():
     """API endpoint to delete a Note activity."""
     note = _user_api_get_note(from_outbox=True)
 
-    delete = ap.Delete(actor=ID, object=ap.Tombstone(id=note.id).to_dict(embed=True))
+    # Create the delete, same audience as the Create object
+    delete = ap.Delete(
+        actor=ID,
+        object=ap.Tombstone(id=note.id).to_dict(embed=True),
+        to=note.to,
+        cc=note.cc,
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
 
     delete_id = post_to_outbox(delete)
 
@@ -1678,7 +1717,17 @@ def api_delete():
 def api_boost():
     note = _user_api_get_note()
 
-    announce = note.build_announce(MY_PERSON)
+    # Ensures the note visibility allow us to build an Announce (in respect to the post visibility)
+    if ap.get_visibility(note) not in [ap.Visibility.PUBLIC, ap.Visibility.UNLISTED]:
+        abort(400)
+
+    announce = ap.Announce(
+        actor=MY_PERSON.id,
+        object=note.id,
+        to=[MY_PERSON.followers, note.attributedTo],
+        cc=[ap.AS_PUBLIC],
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
     announce_id = post_to_outbox(announce)
 
     return _user_api_response(activity=announce_id)
@@ -1714,7 +1763,28 @@ def api_vote():
 def api_like():
     note = _user_api_get_note()
 
-    like = note.build_like(MY_PERSON)
+    to = []
+    cc = []
+
+    note_visibility = ap.get_visibility(note)
+
+    if note_visibility == ap.Visibility.PUBLIC:
+        to = [ap.AS_PUBLIC]
+        cc = [ID + "/followers", note.get_actor().id]
+    elif note_visibility == ap.Visibility.UNLISTED:
+        to = [ID + "/followers", note.get_actor().id]
+        cc = [ap.AS_PUBLIC]
+    else:
+        to = [note.get_actor().id]
+
+    like = ap.Like(
+        object=note.id,
+        actor=MY_PERSON.id,
+        to=to,
+        cc=cc,
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
+
     like_id = post_to_outbox(like)
 
     return _user_api_response(activity=like_id)
@@ -1779,8 +1849,16 @@ def api_undo():
         raise ActivityNotFoundError(f"cannot found {oid}")
 
     obj = ap.parse_activity(doc.get("activity"))
+
+    undo = ap.Undo(
+        actor=MY_PERSON.id,
+        object=obj.to_dict(embed=True, embed_object_id_only=True),
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+        to=obj.to,
+        cc=obj.cc,
+    )
+
     # FIXME(tsileo): detect already undo-ed and make this API call idempotent
-    undo = obj.build_undo()
     undo_id = post_to_outbox(undo)
 
     return _user_api_response(activity=undo_id)
@@ -1828,6 +1906,7 @@ def admin_bookmarks():
 
 @app.route("/inbox", methods=["GET", "POST"])  # noqa: C901
 def inbox():
+    # GET /inbox
     if request.method == "GET":
         if not is_api_request():
             abort(404)
@@ -1846,6 +1925,7 @@ def inbox():
             )
         )
 
+    # POST/ inbox
     try:
         data = request.get_json(force=True)
     except Exception:
@@ -1995,22 +2075,41 @@ def api_new_note():
     except ValueError:
         pass
 
+    visibility = ap.Visibility[
+        _user_api_arg("visibility", default=ap.Visibility.PUBLIC.name)
+    ]
+
     content, tags = parse_markdown(source)
-    to = request.args.get("to")
-    cc = [ID + "/followers"]
+
+    to, cc = [], []
+    if visibility == ap.Visibility.PUBLIC:
+        to = [ap.AS_PUBLIC]
+        cc = [ID + "/followers"]
+    elif visibility == ap.Visibility.UNLISTED:
+        to = [ID + "/followers"]
+        cc = [ap.AS_PUBLIC]
+    elif visibility == ap.Visibility.FOLLOWERS_ONLY:
+        to = [ID + "/followers"]
+        cc = []
 
     if _reply:
         reply = ap.fetch_remote_activity(_reply)
-        cc.append(reply.attributedTo)
+        if visibility == ap.Visibility.DIRECT:
+            to.append(reply.attributedTo)
+        else:
+            cc.append(reply.attributedTo)
 
     for tag in tags:
         if tag["type"] == "Mention":
-            cc.append(tag["href"])
+            if visibility == ap.Visibility.DIRECT:
+                to.append(tag["href"])
+            else:
+                cc.append(tag["href"])
 
     raw_note = dict(
         attributedTo=MY_PERSON.id,
         cc=list(set(cc)),
-        to=[to if to else ap.AS_PUBLIC],
+        to=list(set(to)),
         content=content,
         tag=tags,
         source={"mediaType": "text/markdown", "content": source},
@@ -2143,7 +2242,13 @@ def api_follow():
     if existing:
         return _user_api_response(activity=existing["activity"]["id"])
 
-    follow = ap.Follow(actor=MY_PERSON.id, object=actor)
+    follow = ap.Follow(
+        actor=MY_PERSON.id,
+        object=actor,
+        to=[actor],
+        cc=[ap.AS_PUBLIC],
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
     follow_id = post_to_outbox(follow)
 
     return _user_api_response(activity=follow_id)
@@ -2680,7 +2785,13 @@ def task_finish_post_to_inbox():
             back.inbox_like(MY_PERSON, activity)
         elif activity.has_type(ap.ActivityType.FOLLOW):
             # Reply to a Follow with an Accept
-            accept = ap.Accept(actor=ID, object=activity.to_dict(embed=True))
+            accept = ap.Accept(
+                actor=ID,
+                object=activity.to_dict(),
+                to=[activity.get_actor().id],
+                cc=[ap.AS_PUBLIC],
+                published=ap.format_datetime(datetime.now(timezone.utc)),
+            )
             post_to_outbox(accept)
         elif activity.has_type(ap.ActivityType.UNDO):
             obj = activity.get_object()
@@ -2833,34 +2944,21 @@ def task_cache_actor() -> str:
 
         actor = activity.get_actor()
 
-        cache_actor_with_inbox = False
         if activity.has_type(ap.ActivityType.FOLLOW):
-            if actor.id != ID:
-                # It's a Follow from the Inbox
-                cache_actor_with_inbox = True
-            else:
+            if actor.id == ID:
                 # It's a new following, cache the "object" (which is the actor we follow)
                 DB.activities.update_one(
                     {"remote_id": iri},
                     {
                         "$set": {
-                            "meta.object": activitypub._actor_to_meta(
-                                activity.get_object()
-                            )
+                            "meta.object": activity.get_object().to_dict(embed=True)
                         }
                     },
                 )
 
         # Cache the actor info
         DB.activities.update_one(
-            {"remote_id": iri},
-            {
-                "$set": {
-                    "meta.actor": activitypub._actor_to_meta(
-                        actor, cache_actor_with_inbox
-                    )
-                }
-            },
+            {"remote_id": iri}, {"$set": {"meta.actor": actor.to_dict(embed=True)}}
         )
 
         app.logger.info(f"actor cached for {iri}")
@@ -2965,7 +3063,7 @@ def task_process_new_activity():
 
         elif activity.has_type(ap.ActivityType.DELETE):
             note = DB.activities.find_one(
-                {"activity.object.id": activity.get_object().id}
+                {"activity.object.id": activity.get_object_id()}
             )
             if note and note["meta"].get("forwarded", False):
                 # If the activity was originally forwarded, forward the delete too
@@ -3093,6 +3191,7 @@ def task_fetch_remote_question():
             }
         )
         remote_question = get_backend().fetch_iri(iri, no_cache=True)
+        # FIXME(tsileo): compute and set `meta.object_visiblity` (also update utils.py to do it)
         if (
             local_question
             and (

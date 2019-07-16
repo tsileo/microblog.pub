@@ -53,7 +53,7 @@
         {% endif %}
 	{% endif %}
         {% if item.meta.object %}
-        {{ utils.display_note(item.meta.object, ui=False, meta={'actor': item.meta.object_actor}) }}
+        {{ utils.display_note(item.meta.object, ui=False, meta=item.meta) }}
         {% endif %}
 	{% elif item | has_type('Create') %}
         {{ utils.display_note(item.activity.object, meta=item.meta, no_color=True) }}
