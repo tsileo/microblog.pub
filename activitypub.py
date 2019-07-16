@@ -123,7 +123,7 @@ class MicroblogPubBackend(Backend):
         object_id = None
         try:
             object_id = activity.get_object_id()
-        except ValueError:
+        except Exception:  # TODO(tsileo): should be ValueError, but replies trigger a KeyError on object
             pass
         object_visibility = None
         if activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
