@@ -38,7 +38,7 @@ microblogpub:
 	# Update microblog.pub
 	git pull
 	# Rebuild the Docker image
-	docker build . -t microblogpub:latest
+	docker build . --no-cache -t microblogpub:latest
 
 # Run the docker-compose project locally (will perform a update if the project is already running)
 .PHONY: run
