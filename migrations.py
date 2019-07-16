@@ -5,12 +5,12 @@ from urllib.parse import urlparse
 
 from little_boxes import activitypub as ap
 
+import activitypub
+from config import ID
 from utils.migrations import DB
 from utils.migrations import Migration
 from utils.migrations import logger
 from utils.migrations import perform  # noqa:  just here for export
-from config import ID
-import activitypub
 
 back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)
@@ -119,34 +119,37 @@ class _2_FollowMigration(Migration):
     def migrate(self) -> None:
         actor_cache: Dict[str, Dict[str, Any]] = {}
         for data in DB.activities.find({"type": ap.ActivityType.FOLLOW.value}):
-            if data["meta"]["actor_id"] == ID:
-                # It's a "following"
-                actor = actor_cache.get(data["meta"]["object_id"])
-                if not actor:
-                    actor = ap.parse_activity(
-                        ap.get_backend().fetch_iri(
-                            data["meta"]["object_id"], no_cache=True
-                        )
-                    ).to_dict(embed=True)
+            try:
+                if data["meta"]["actor_id"] == ID:
+                    # It's a "following"
+                    actor = actor_cache.get(data["meta"]["object_id"])
                     if not actor:
-                        raise ValueError(f"missing actor {data!r}")
-                    actor_cache[actor["id"]] = actor
-                DB.activities.update_one(
-                    {"_id": data["_id"]}, {"$set": {"meta.object": actor}}
-                )
+                        actor = ap.parse_activity(
+                            ap.get_backend().fetch_iri(
+                                data["meta"]["object_id"], no_cache=True
+                            )
+                        ).to_dict(embed=True)
+                        if not actor:
+                            raise ValueError(f"missing actor {data!r}")
+                        actor_cache[actor["id"]] = actor
+                    DB.activities.update_one(
+                        {"_id": data["_id"]}, {"$set": {"meta.object": actor}}
+                    )
 
-            else:
-                # It's a "followers"
-                actor = actor_cache.get(data["meta"]["actor_id"])
-                if not actor:
-                    actor = ap.parse_activity(
-                        ap.get_backend().fetch_iri(
-                            data["meta"]["actor_id"], no_cache=True
-                        )
-                    ).to_dict(embed=True)
+                else:
+                    # It's a "followers"
+                    actor = actor_cache.get(data["meta"]["actor_id"])
                     if not actor:
-                        raise ValueError(f"missing actor {data!r}")
-                    actor_cache[actor["id"]] = actor
-                DB.activities.update_one(
-                    {"_id": data["_id"]}, {"$set": {"meta.actor": actor}}
-                )
+                        actor = ap.parse_activity(
+                            ap.get_backend().fetch_iri(
+                                data["meta"]["actor_id"], no_cache=True
+                            )
+                        ).to_dict(embed=True)
+                        if not actor:
+                            raise ValueError(f"missing actor {data!r}")
+                        actor_cache[actor["id"]] = actor
+                    DB.activities.update_one(
+                        {"_id": data["_id"]}, {"$set": {"meta.actor": actor}}
+                    )
+            except Exception:
+                logger.exception("failed to process actor {data!r}")
