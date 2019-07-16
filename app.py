@@ -249,7 +249,10 @@ def _get_file_url(url, size, kind):
 
 @app.template_filter()
 def visibility(v: str) -> str:
-    return ap.Visibility[v].value.lower()
+    try:
+        return ap.Visibility[v].value.lower()
+    except Exception:
+        return v
 
 
 @app.template_filter()
@@ -771,7 +774,13 @@ def authorize_follow():
     if DB.activities.count(q) > 0:
         return redirect("/following")
 
-    follow = ap.Follow(actor=MY_PERSON.id, object=actor)
+    follow = ap.Follow(
+        actor=MY_PERSON.id,
+        object=actor,
+        to=[actor],
+        cc=[ap.AS_PUBLIC],
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
     post_to_outbox(follow)
 
     return redirect("/following")
@@ -1689,7 +1698,14 @@ def api_delete():
     """API endpoint to delete a Note activity."""
     note = _user_api_get_note(from_outbox=True)
 
-    delete = ap.Delete(actor=ID, object=ap.Tombstone(id=note.id).to_dict(embed=True))
+    # Create the delete, same audience as the Create object
+    delete = ap.Delete(
+        actor=ID,
+        object=ap.Tombstone(id=note.id).to_dict(embed=True),
+        to=note.to,
+        cc=note.cc,
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
 
     delete_id = post_to_outbox(delete)
 
@@ -1702,10 +1718,16 @@ def api_boost():
     note = _user_api_get_note()
 
     # Ensures the note visibility allow us to build an Announce (in respect to the post visibility)
-    if ap.get_visibility(note) not in [ap.Visibility.PUBLIC, ap.VISIBILITY.UNLISTED]:
+    if ap.get_visibility(note) not in [ap.Visibility.PUBLIC, ap.Visibility.UNLISTED]:
         abort(400)
 
-    announce = note.build_announce(MY_PERSON)
+    announce = ap.Announce(
+        actor=MY_PERSON.id,
+        object=note.id,
+        to=[MY_PERSON.followers, note.attributedTo],
+        cc=[ap.AS_PUBLIC],
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
     announce_id = post_to_outbox(announce)
 
     return _user_api_response(activity=announce_id)
@@ -1741,7 +1763,28 @@ def api_vote():
 def api_like():
     note = _user_api_get_note()
 
-    like = note.build_like(MY_PERSON)
+    to = []
+    cc = []
+
+    note_visibility = ap.get_visibility(note)
+
+    if note_visibility == ap.Visibility.PUBLIC:
+        to = [ap.AS_PUBLIC]
+        cc = [ID + "/followers", note.get_actor().id]
+    elif note_visibility == ap.Visibility.UNLISTED:
+        to = [ID + "/followers", note.get_actor().id]
+        cc = [ap.AS_PUBLIC]
+    else:
+        to = [note.get_actor().id]
+
+    like = ap.Like(
+        object=note.id,
+        actor=MY_PERSON.id,
+        to=to,
+        cc=cc,
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
+
     like_id = post_to_outbox(like)
 
     return _user_api_response(activity=like_id)
@@ -1806,8 +1849,16 @@ def api_undo():
         raise ActivityNotFoundError(f"cannot found {oid}")
 
     obj = ap.parse_activity(doc.get("activity"))
+
+    undo = ap.Undo(
+        actor=MY_PERSON.id,
+        object=obj.to_dict(embed=True, embed_object_id_only=True),
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+        to=obj.to,
+        cc=obj.cc,
+    )
+
     # FIXME(tsileo): detect already undo-ed and make this API call idempotent
-    undo = obj.build_undo()
     undo_id = post_to_outbox(undo)
 
     return _user_api_response(activity=undo_id)
@@ -2191,7 +2242,13 @@ def api_follow():
     if existing:
         return _user_api_response(activity=existing["activity"]["id"])
 
-    follow = ap.Follow(actor=MY_PERSON.id, object=actor)
+    follow = ap.Follow(
+        actor=MY_PERSON.id,
+        object=actor,
+        to=[actor],
+        cc=[ap.AS_PUBLIC],
+        published=ap.format_datetime(datetime.now(timezone.utc)),
+    )
     follow_id = post_to_outbox(follow)
 
     return _user_api_response(activity=follow_id)
@@ -2728,7 +2785,13 @@ def task_finish_post_to_inbox():
             back.inbox_like(MY_PERSON, activity)
         elif activity.has_type(ap.ActivityType.FOLLOW):
             # Reply to a Follow with an Accept
-            accept = ap.Accept(actor=ID, object=activity.to_dict(embed=True))
+            accept = ap.Accept(
+                actor=ID,
+                object=activity.to_dict(),
+                to=[activity.get_actor().id],
+                cc=[ap.AS_PUBLIC],
+                published=ap.format_datetime(datetime.now(timezone.utc)),
+            )
             post_to_outbox(accept)
         elif activity.has_type(ap.ActivityType.UNDO):
             obj = activity.get_object()
@@ -2881,34 +2944,21 @@ def task_cache_actor() -> str:
 
         actor = activity.get_actor()
 
-        cache_actor_with_inbox = False
         if activity.has_type(ap.ActivityType.FOLLOW):
-            if actor.id != ID:
-                # It's a Follow from the Inbox
-                cache_actor_with_inbox = True
-            else:
+            if actor.id == ID:
                 # It's a new following, cache the "object" (which is the actor we follow)
                 DB.activities.update_one(
                     {"remote_id": iri},
                     {
                         "$set": {
-                            "meta.object": activitypub._actor_to_meta(
-                                activity.get_object()
-                            )
+                            "meta.object": activity.get_object().to_dict(embed=True)
                         }
                     },
                 )
 
         # Cache the actor info
         DB.activities.update_one(
-            {"remote_id": iri},
-            {
-                "$set": {
-                    "meta.actor": activitypub._actor_to_meta(
-                        actor, cache_actor_with_inbox
-                    )
-                }
-            },
+            {"remote_id": iri}, {"$set": {"meta.actor": actor.to_dict(embed=True)}}
         )
 
         app.logger.info(f"actor cached for {iri}")
@@ -3013,7 +3063,7 @@ def task_process_new_activity():
 
         elif activity.has_type(ap.ActivityType.DELETE):
             note = DB.activities.find_one(
-                {"activity.object.id": activity.get_object().id}
+                {"activity.object.id": activity.get_object_id()}
             )
             if note and note["meta"].get("forwarded", False):
                 # If the activity was originally forwarded, forward the delete too
