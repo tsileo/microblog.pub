@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% import 'utils.html' as utils %}
-{% block title %}{{ config.NAME }}: "{{ note.activity.object.content | html2plaintext | truncate(50) }}"{% endblock %}
+{% block title %}{{ config.NAME }}: {{ note.activity.object.content | html2plaintext | truncate(50) }}{% endblock %}
 {% block header %}
 <meta content="article" property="og:type" />
 <meta content="{{ note.activity.object.url }}" property="og:url" />

@@ -34,7 +34,7 @@ from flask import request
 from flask import session
 from flask import url_for
 from flask_wtf.csrf import CSRFProtect
-from html2text import html2text
+import html2text
 from itsdangerous import BadSignature
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
@@ -122,6 +122,10 @@ else:
     root_logger.setLevel(gunicorn_logger.level)
 
 SIG_AUTH = HTTPSigAuth(KEY)
+
+H2T = html2text.HTML2Text()
+H2T.ignore_links = True
+H2T.ignore_images = True
 
 
 def is_blacklisted(url: str) -> bool:
@@ -340,7 +344,7 @@ def clean(html):
 
 @app.template_filter()
 def html2plaintext(body):
-    return html2text(body)
+    return H2T.handle(body)
 
 
 @app.template_filter()
