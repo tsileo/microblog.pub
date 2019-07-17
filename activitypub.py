@@ -276,7 +276,13 @@ class MicroblogPubBackend(Backend):
                     "meta.undo": False,
                 }
             )
-            if actor and actor["meta"].get("actor"):
+
+            # "type" check is here to skip old metadata for "old/buggy" followers
+            if (
+                actor
+                and actor["meta"].get("actor")
+                and "type" in actor["meta"]["actor"]
+            ):
                 return actor["meta"]["actor"]
 
             # Check if it's cached because it's a following
@@ -287,7 +293,11 @@ class MicroblogPubBackend(Backend):
                     "meta.undo": False,
                 }
             )
-            if actor2 and actor2["meta"].get("object"):
+            if (
+                actor2
+                and actor2["meta"].get("object")
+                and "type" in actor2["meta"]["object"]
+            ):
                 return actor2["meta"]["object"]
 
         # Fetch the URL via HTTP
