@@ -83,6 +83,18 @@ def _answer_key(choice: str) -> str:
     return h.hexdigest()
 
 
+def _is_local_reply(create: ap.Create) -> bool:
+    for dest in _to_list(create.to or []):
+        if dest.startswith(BASE_URL):
+            return True
+
+    for dest in _to_list(create.cc or []):
+        if dest.startswith(BASE_URL):
+            return True
+
+    return False
+
+
 class Box(Enum):
     INBOX = "inbox"
     OUTBOX = "outbox"
@@ -641,7 +653,7 @@ class MicroblogPubBackend(Backend):
         if (
             reply.id.startswith(BASE_URL)
             and reply.has_type(ap.ActivityType.QUESTION.value)
-            and _to_list(create.get_object().to)[0].startswith(BASE_URL)
+            and _is_local_reply(create)
             and not create.is_public()
         ):
             return self._process_question_reply(create, reply)

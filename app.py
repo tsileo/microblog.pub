@@ -1594,6 +1594,7 @@ def admin_notifications():
     replies_query = {
         "type": ActivityType.CREATE.value,
         "activity.object.inReplyTo": {"$regex": f"^{BASE_URL}"},
+        "meta.poll_answer": False,
     }
     announced_query = {
         "type": ActivityType.ANNOUNCE.value,
@@ -2163,7 +2164,13 @@ def api_new_question():
         a = _user_api_arg(f"answer{i}", default=None)
         if not a:
             break
-        answers.append({"type": ActivityType.NOTE.value, "name": a})
+        answers.append(
+            {
+                "type": ActivityType.NOTE.value,
+                "name": a,
+                "replies": {"type": ActivityType.COLLECTION.value, "totalItems": 0},
+            }
+        )
 
     open_for = int(_user_api_arg("open_for"))
     choices = {
