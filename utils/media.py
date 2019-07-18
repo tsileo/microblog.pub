@@ -42,25 +42,7 @@ class MediaCache(object):
         self.fs = gridfs.GridFS(gridfs_db)
         self.user_agent = user_agent
 
-    def cache_og_image(self, url: str) -> None:
-        if self.fs.find_one({"url": url, "kind": Kind.OG_IMAGE.value}):
-            return
-        i = load(url, self.user_agent)
-        # Save the original attachment (gzipped)
-        i.thumbnail((100, 100))
-        with BytesIO() as buf:
-            with GzipFile(mode="wb", fileobj=buf) as f1:
-                i.save(f1, format=i.format)
-            buf.seek(0)
-            self.fs.put(
-                buf,
-                url=url,
-                size=100,
-                content_type=i.get_format_mimetype(),
-                kind=Kind.OG_IMAGE.value,
-            )
-
-    def cache_og_image2(self, url: str, remote_id: str) -> None:
+    def cache_og_image(self, url: str, remote_id: str) -> None:
         if self.fs.find_one({"url": url, "kind": Kind.OG_IMAGE.value}):
             return
         i = load(url, self.user_agent)
@@ -79,49 +61,11 @@ class MediaCache(object):
                 remote_id=remote_id,
             )
 
-    def cache_attachment(self, url: str) -> None:
-        if self.fs.find_one({"url": url, "kind": Kind.ATTACHMENT.value}):
-            return
-        if (
-            url.endswith(".png")
-            or url.endswith(".jpg")
-            or url.endswith(".jpeg")
-            or url.endswith(".gif")
-        ):
-            i = load(url, self.user_agent)
-            # Save the original attachment (gzipped)
-            with BytesIO() as buf:
-                f1 = GzipFile(mode="wb", fileobj=buf)
-                i.save(f1, format=i.format)
-                f1.close()
-                buf.seek(0)
-                self.fs.put(
-                    buf,
-                    url=url,
-                    size=None,
-                    content_type=i.get_format_mimetype(),
-                    kind=Kind.ATTACHMENT.value,
-                )
-            # Save a thumbnail (gzipped)
-            i.thumbnail((720, 720))
-            with BytesIO() as buf:
-                with GzipFile(mode="wb", fileobj=buf) as f1:
-                    i.save(f1, format=i.format)
-                buf.seek(0)
-                self.fs.put(
-                    buf,
-                    url=url,
-                    size=720,
-                    content_type=i.get_format_mimetype(),
-                    kind=Kind.ATTACHMENT.value,
-                )
-            return
-
-    def cache_attachment2(self, attachment: Dict[str, Any], remote_id: str) -> None:
+    def cache_attachment(self, attachment: Dict[str, Any], remote_id: str) -> None:
         url = attachment["url"]
 
         # Ensure it's not already there
-        if self.fs.find_one({"url": url, "kind": Kind.ATTACHMENT.value}):
+        if self.fs.find_one({"url": url, "kind": Kind.ATTACHMENT.value, "remote_id": remote_id}):
             return
 
         # If it's an image, make some thumbnails
@@ -230,14 +174,6 @@ class MediaCache(object):
                 kind=Kind.UPLOAD.value,
             )
             return str(oid)
-
-    def cache(self, url: str, kind: Kind) -> None:
-        if kind == Kind.ACTOR_ICON:
-            self.cache_actor_icon(url)
-        elif kind == Kind.OG_IMAGE:
-            self.cache_og_image(url)
-        else:
-            self.cache_attachment(url)
 
     def get_actor_icon(self, url: str, size: int) -> Any:
         return self.get_file(url, size, Kind.ACTOR_ICON)
