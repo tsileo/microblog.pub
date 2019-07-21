@@ -65,7 +65,9 @@ class MediaCache(object):
         url = attachment["url"]
 
         # Ensure it's not already there
-        if self.fs.find_one({"url": url, "kind": Kind.ATTACHMENT.value, "remote_id": remote_id}):
+        if self.fs.find_one(
+            {"url": url, "kind": Kind.ATTACHMENT.value, "remote_id": remote_id}
+        ):
             return
 
         # If it's an image, make some thumbnails

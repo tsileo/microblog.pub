@@ -92,7 +92,9 @@ def perform() -> None:
 
             # TODO(tsileo): remove after tests
             if meta.get("keep"):
-                logger.warning(f"{activity!r} would not have been deleted, skipping for now")
+                logger.warning(
+                    f"{activity!r} would not have been deleted, skipping for now"
+                )
                 continue
 
             # Delete the cached attachment
