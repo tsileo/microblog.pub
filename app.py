@@ -129,7 +129,11 @@ H2T.ignore_images = True
 
 
 def is_blacklisted(url: str) -> bool:
-    return urlparse(url).netloc in BLACKLIST
+    try:
+        return urlparse(url).netloc in BLACKLIST
+    except Exception:
+        logger.exception(f"failed to blacklist for {url}")
+        return False
 
 
 def verify_pass(pwd):
