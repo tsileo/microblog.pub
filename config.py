@@ -226,6 +226,7 @@ ME = {
     "publicKey": KEY.to_dict(),
 }
 
+# Default emojis, space-separated, update `me.yml` to customize emojis
 EMOJIS = "😺 😸 😹 😻 😼 😽 🙀 😿 😾"
 if conf.get("emojis"):
     EMOJIS = conf["emojis"]
@@ -235,5 +236,8 @@ EMOJI_TPL = '<img src="https://cdn.jsdelivr.net/npm/twemoji@12.0.0/2/svg/{filena
 if conf.get("emoji_tpl"):
     EMOJI_TPL = conf["emoji_tpl"]
 
-# Host blacklist
+# Hosts blacklist
 BLACKLIST = conf.get("blacklist", [])
+
+# By default, we keep 14 of inbox data ; outbox is kept forever (along with bookmarked stuff, outbox replies, liked...)
+DAYS_TO_KEEP = 14
