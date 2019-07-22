@@ -5,7 +5,6 @@ from datetime import datetime
 from enum import Enum
 
 import pymongo
-import requests
 import yaml
 from itsdangerous import JSONWebSignatureSerializer
 from little_boxes import strtobool
