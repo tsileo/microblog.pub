@@ -126,7 +126,7 @@ def perform() -> None:  # noqa: C901
             logger.exception(f"failed to process {data!r}")
 
     after_gc_create = perf_counter()
-    time_to_gc_create = start - after_gc_create
+    time_to_gc_create = after_gc_create - start
     logger.info(
         f"{time_to_gc_create:.2f} seconds to analyze {create_count} Create, {create_deleted} deleted"
     )
@@ -176,7 +176,7 @@ def perform() -> None:  # noqa: C901
             logger.exception(f"failed to process {data!r}")
 
     after_gc_announce = perf_counter()
-    time_to_gc_announce = after_gc_create - after_gc_announce
+    time_to_gc_announce = after_gc_announce - after_gc_create
     logger.info(
         f"{time_to_gc_announce:.2f} seconds to analyze {announce_count} Announce, {announce_deleted} deleted"
     )
