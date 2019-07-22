@@ -11,12 +11,40 @@
 	{% for (follow_id, follow) in following_data %}
     {% if session.logged_in %}
 <div style="margin-left:90px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
-<form action="/api/undo" class="action-form"  method="POST">
+<form action="/api/undo" class="action-form"  method="post">
 <input type="hidden" name="redirect" value="{{ request.path }}"/>
 <input type="hidden" name="id" value="{{ follow_id }}"/>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 <button type="submit" class="bar-item">unfollow</button>
 </form>
+<form action="/api/add_to_list" class="action-form"  method="post">
+<input type="hidden" name="redirect" value="{{ request.path }}"/>
+<input type="hidden" name="actor_id" value="{{ follow.id }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<select name="list_name" style="float:left;">
+<option></option>
+{% for l in lists %}
+{% if follow.id not in l.members %}
+<option value="{{l.name}}">{{l.name}}</option>
+{% endif %}
+{% endfor %}
+</select>
+<button type="submit" class="bar-item">add to list</button>
+</form>
+
+{% for l in lists %}
+{% if follow.id in l.members %}
+<form action="/api/remove_from_list" class="action-form"  method="post">
+<input type="hidden" name="redirect" value="{{ request.path }}"/>
+<input type="hidden" name="actor_id" value="{{ follow.id }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item">remove from {{ l.name }}</button>
+</form>
+
+
+{% endif %}
+{% endfor %}
+ 
         </div>
 
     {% endif %}

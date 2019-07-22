@@ -1578,6 +1578,14 @@ def admin_new():
     )
 
 
+@app.route("/admin/lists", methods=["GET"])
+@login_required
+def admin_lists():
+    lists = list(DB.lists.find())
+
+    return render_template("lists.html", lists=lists)
+
+
 @app.route("/admin/notifications")
 @login_required
 def admin_notifications():
@@ -1895,6 +1903,34 @@ def admin_stream():
     )
 
 
+@app.route("/admin/list/<name>")
+@login_required
+def admin_list(name):
+    list_ = DB.lists.find_one({"name": name})
+    if not list_:
+        abort(404)
+
+    q = {
+        "meta.stream": True,
+        "meta.deleted": False,
+        "meta.actor_id": {"$in": list_["members"]},
+    }
+
+    tpl = "stream.html"
+    if request.args.get("debug"):
+        tpl = "stream_debug.html"
+        if request.args.get("debug_inbox"):
+            q = {}
+
+    inbox_data, older_than, newer_than = paginated_query(
+        DB.activities, q, limit=int(request.args.get("limit", 25))
+    )
+
+    return render_template(
+        tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
+    )
+
+
 @app.route("/admin/bookmarks")
 @login_required
 def admin_bookmarks():
@@ -2071,6 +2107,72 @@ def api_debug():
         outbox=DB.activities.count({"box": Box.OUTBOX.value}),
         outbox_data=without_id(DB.activities.find({"box": Box.OUTBOX.value})),
     )
+
+
+@app.route("/api/new_list", methods=["POST"])
+@api_required
+def api_new_list():
+    name = _user_api_arg("name")
+    if not name:
+        raise ValueError("missing name")
+
+    if not DB.lists.find_one({"name": name}):
+        DB.lists.insert_one({"name": name, "members": []})
+
+    return _user_api_response(name=name)
+
+
+@app.route("/api/delete_list", methods=["POST"])
+@api_required
+def api_delete_list():
+    name = _user_api_arg("name")
+    if not name:
+        raise ValueError("missing name")
+
+    if not DB.lists.find_one({"name": name}):
+        abort(404)
+
+    DB.lists.delete_one({"name": name})
+
+    return _user_api_response()
+
+
+@app.route("/api/add_to_list", methods=["POST"])
+@api_required
+def api_add_to_list():
+    list_name = _user_api_arg("list_name")
+    if not list_name:
+        raise ValueError("missing list_name")
+
+    if not DB.lists.find_one({"name": list_name}):
+        raise ValueError(f"list {list_name} does not exist")
+
+    actor_id = _user_api_arg("actor_id")
+    if not actor_id:
+        raise ValueError("missing actor_id")
+
+    DB.lists.update_one({"name": list_name}, {"$addToSet": {"members": actor_id}})
+
+    return _user_api_response()
+
+
+@app.route("/api/remove_from_list", methods=["POST"])
+@api_required
+def api_remove_from_list():
+    list_name = _user_api_arg("list_name")
+    if not list_name:
+        raise ValueError("missing list_name")
+
+    if not DB.lists.find_one({"name": list_name}):
+        raise ValueError(f"list {list_name} does not exist")
+
+    actor_id = _user_api_arg("actor_id")
+    if not actor_id:
+        raise ValueError("missing actor_id")
+
+    DB.lists.update_one({"name": list_name}, {"$pull": {"members": actor_id}})
+
+    return _user_api_response()
 
 
 @app.route("/api/new_note", methods=["POST"])
@@ -2322,11 +2424,13 @@ def following():
         for doc in following
         if "remote_id" in doc and "object" in doc.get("meta", {})
     ]
+    lists = list(DB.lists.find())
     return render_template(
         "following.html",
         following_data=following,
         older_than=older_than,
         newer_than=newer_than,
+        lists=lists,
     )
 
 

@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block title %}Lists - {{ config.NAME }}{% endblock %}
+{% block headers %}
+
+{% endblock %}
+{% block content %}
+<div id="container">
+{% include "header.html" %}
+
+<div id="following">
+<h2>New List</h2>
+<form action="/api/new_list" method="POST">
+<input type="hidden" name="redirect" value="{{ url_for('admin_lists') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="text" name="name" placeholder="My list">
+<input type="submit" value="Create">
+</form>
+
+<h2>Lists</h2>
+<p>Manage list members in the <a href="{{ url_for('following') }}">Following section</a></p>
+
+<ul>
+    {% for l in lists %}
+    <li><a href="{{url_for('admin_list', name=l.name)}}">{{ l.name }}</a></li>
+    {% endfor %}
+</ul>
+
+<h2>Manage lists</h2>
+{% for l in lists %}
+<h3><a href="{{url_for("admin_list", name=l.name)}}">{{ l.name }}</a> <small style="font-weight:normal">{{ l.members | length }} members</small></h3>
+<form action="/api/delete_list" method="post">
+<input type="hidden" name="redirect" value="{{ request.path }}"/>
+<input type="hidden" name="name" value="{{ l.name }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item">delete list</button>
+</form>
+
+<div style="clear:both;padding-top:30px;">
+
+{% for member in l.members %}
+<div style="margin-left:90px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
+<form action="/api/remove_from_list" class="action-form"  method="post">
+<input type="hidden" name="redirect" value="{{ request.path }}"/>
+<input type="hidden" name="actor_id" value="{{ member }}"/>
+<input type="hidden" name="list_name" value="{{ l.name }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item">remove from {{ l.name }}</button>
+</form>
+</div>
+
+    <div style="height: 100px;">
+	{{ utils.display_actor_inline(member | get_actor, size=80) }}
+    </div>
+{% endfor %}
+
+{% endfor %}
+</div>
+</div>
+</div>
+{% endblock %}
