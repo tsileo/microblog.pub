@@ -324,12 +324,15 @@ form.action-form {
 #admin {
   margin-top: 50px;
 }
-textarea, input {
+textarea, input, select {
   background: $color-menu-background;
   padding: 10px;
   color: $color-light;
   border: 0px;
   border-radius: 2px;
+}
+select {
+    padding: 4px 10px;
 }
 input {
   padding: 10px;

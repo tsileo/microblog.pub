@@ -9,6 +9,7 @@
 {% include "header.html" %}
 
 <div id="following">
+<p>Lists and its members are private.</p>
 <h2>New List</h2>
 <form action="/api/new_list" method="POST">
 <input type="hidden" name="redirect" value="{{ url_for('admin_lists') }}">
