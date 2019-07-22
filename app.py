@@ -58,6 +58,7 @@ from requests.exceptions import HTTPError
 from u2flib_server import u2f
 from werkzeug.utils import secure_filename
 
+import activity_gc
 import activitypub
 import config
 from activitypub import Box
@@ -116,6 +117,7 @@ root_logger = logging.getLogger()
 if os.getenv("FLASK_DEBUG"):
     logger.setLevel(logging.DEBUG)
     root_logger.setLevel(logging.DEBUG)
+    root_logger.handlers = app.logger.handlers
 else:
     gunicorn_logger = logging.getLogger("gunicorn.error")
     root_logger.handlers = gunicorn_logger.handlers
@@ -3276,7 +3278,7 @@ def task_update_question():
 def task_cleanup():
     task = p.parse(request)
     app.logger.info(f"task={task!r}")
-    # p.push({}, "/task/cleanup_part_1")
+    activity_gc.perform()
     return ""
 
 
