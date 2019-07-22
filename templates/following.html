@@ -17,6 +17,8 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 <button type="submit" class="bar-item">unfollow</button>
 </form>
+
+{% if lists %}
 <form action="/api/add_to_list" class="action-form"  method="post">
 <input type="hidden" name="redirect" value="{{ request.path }}"/>
 <input type="hidden" name="actor_id" value="{{ follow.id }}"/>
@@ -31,6 +33,7 @@
 </select>
 <button type="submit" class="bar-item">add to list</button>
 </form>
+{% endif %}
 
 {% for l in lists %}
 {% if follow.id in l.members %}
