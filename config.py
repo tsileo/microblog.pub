@@ -95,9 +95,7 @@ with open(os.path.join(SASS_DIR, "base_theme.scss")) as f:
     CSS = sass.compile(string=raw_css, output_style="compressed")
 
 
-USER_AGENT = (
-    f"{requests.utils.default_user_agent()} (microblog.pub/{VERSION}; +{BASE_URL})"
-)
+USER_AGENT = f"microblog.pub/{VERSION}; +{BASE_URL}"
 
 mongo_client = MongoClient(
     host=[os.getenv("MICROBLOGPUB_MONGODB_HOST", "localhost:27017")]
