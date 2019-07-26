@@ -758,9 +758,7 @@ def remote_follow():
     profile = request.form.get("profile")
     if not profile.startswith("@"):
         profile = f"@{profile}"
-    return redirect(
-        get_remote_follow_template(profile).format(uri=ID)
-    )
+    return redirect(get_remote_follow_template(profile).format(uri=ID))
 
 
 @app.route("/authorize_follow", methods=["GET", "POST"])
