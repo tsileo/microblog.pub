@@ -759,7 +759,7 @@ def remote_follow():
     if not profile.startswith("@"):
         profile = f"@{profile}"
     return redirect(
-        get_remote_follow_template(profile).format(uri=f"{USERNAME}@{DOMAIN}")
+        get_remote_follow_template(profile).format(uri=ID)
     )
 
 
@@ -1098,7 +1098,7 @@ def nodeinfo():
         cached = False
         q = {
             "box": Box.OUTBOX.value,
-            "meta.deleted": False,  # TODO(tsileo): retrieve deleted and expose tombstone
+            "meta.deleted": False,
             "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         }
 
