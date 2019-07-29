@@ -1,3 +1,4 @@
+from enum import unique
 from enum import Enum
 from typing import Any
 from typing import Dict
@@ -7,12 +8,14 @@ from little_boxes import activitypub as ap
 _SubQuery = Dict[str, Any]
 
 
+@unique
 class Box(Enum):
     INBOX = "inbox"
     OUTBOX = "outbox"
     REPLIES = "replies"
 
 
+@unique
 class MetaKey(Enum):
     NOTIFICATION = "notification"
     NOTIFICATION_UNREAD = "notification_unread"

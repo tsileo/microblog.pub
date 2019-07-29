@@ -26,7 +26,7 @@ def _is_from_outbox(activity: ap.BaseActivity) -> bool:
 
 def _flag_as_notification(activity: ap.BaseActivity, new_meta: _NewMeta) -> None:
     new_meta.update(
-        **{_meta(MetaKey.NOTIFICATION): True, _meta(MetaKey.NOTIFICATION_UNREAD): True}
+        {_meta(MetaKey.NOTIFICATION): True, _meta(MetaKey.NOTIFICATION_UNREAD): True}
     )
     return None
 
@@ -58,7 +58,7 @@ def _accept_set_inbox_flags(activity: ap.Accept, new_meta: _NewMeta) -> None:
 
     # This Accept will be a "You started following $actor" notification
     _flag_as_notification(activity, new_meta)
-    new_meta.update(**{_meta(MetaKey.NOTIFICATION_FOLLOWS_BACK): follows_back})
+    new_meta.update({_meta(MetaKey.NOTIFICATION_FOLLOWS_BACK): follows_back})
     return None
 
 
@@ -83,7 +83,7 @@ def _follow_set_inbox_flags(activity: ap.Follow, new_meta: _NewMeta) -> None:
 
     # This Follow will be a "$actor started following you" notification
     _flag_as_notification(activity, new_meta)
-    new_meta.update(**{_meta(MetaKey.NOTIFICATION_FOLLOWS_BACK): follows_back})
+    new_meta.update({_meta(MetaKey.NOTIFICATION_FOLLOWS_BACK): follows_back})
     return None
 
 
@@ -98,7 +98,7 @@ def _like_set_inbox_flags(activity: ap.Like, new_meta: _NewMeta) -> None:
         Tasks.cache_object(activity.id)
 
         # Also set the "keep mark" for the GC (as we want to keep it forever)
-        new_meta.update(**{_meta(MetaKey.GC_KEEP): True})
+        new_meta.update({_meta(MetaKey.GC_KEEP): True})
 
     return None
 
@@ -111,9 +111,23 @@ def _announce_set_inbox_flags(activity: ap.Announce, new_meta: _NewMeta) -> None
         _flag_as_notification(activity, new_meta)
 
         # Also set the "keep mark" for the GC (as we want to keep it forever)
-        new_meta.update(**{_meta(MetaKey.GC_KEEP): True})
+        new_meta.update({_meta(MetaKey.GC_KEEP): True})
 
-    # Cache the object in all case (for display on the notifcation page)
+    # Cache the object in all case (for display on the notifcation page **and** the stream page)
     Tasks.cache_object(activity.id)
+
+    return None
+
+
+@set_inbox_flags.register
+def _undo_set_inbox_flags(activity: ap.Undo, new_meta: _NewMeta) -> None:
+    obj = activity.get_object()
+
+    if obj.has_type(ap.ActivityType.FOLLOW):
+        # Flag it as a noticiation (for the "$actor unfollowed you"
+        _flag_as_notification(activity, new_meta)
+
+        # Also set the "keep mark" for the GC (as we want to keep it forever)
+        new_meta.update({_meta(MetaKey.GC_KEEP): True})
 
     return None
