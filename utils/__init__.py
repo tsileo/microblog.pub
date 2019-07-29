@@ -29,4 +29,4 @@ def parse_datetime(s: str) -> datetime:
 
 
 def now() -> str:
-    ap.format_datetime(datetime.now(timezone.utc))
+    return ap.format_datetime(datetime.now(timezone.utc))

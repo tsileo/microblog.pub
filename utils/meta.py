@@ -20,6 +20,9 @@ class MetaKey(Enum):
     ACTOR_ID = "actor_id"
     UNDO = "undo"
     PUBLISHED = "published"
+    GC_KEEP = "gc_keep"
+    OBJECT = "object"
+    OBJECT_ACTOR = "object_actor"
 
 
 def _meta(mk: MetaKey) -> str:

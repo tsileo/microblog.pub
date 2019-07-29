@@ -2005,6 +2005,8 @@ def inbox():
     # POST/ inbox
     try:
         data = request.get_json(force=True)
+        if not isinstance(data, dict):
+            raise ValueError("not a dict")
     except Exception:
         return Response(
             status=422,
@@ -2018,8 +2020,14 @@ def inbox():
         and is_blacklisted(data["id"])
         or (
             "object" in data
+            and isinstance(data["object"], dict)
             and "id" in data["object"]
             and is_blacklisted(data["object"]["id"])
+        )
+        or (
+            "object" in data
+            and isinstance(data["object"], str)
+            and is_blacklisted(data["object"])
         )
     ):
         logger.info(f"dropping activity from blacklisted host: {data['id']}")
@@ -3067,13 +3075,6 @@ def task_cache_actor() -> str:
         if activity.has_type(ap.ActivityType.CREATE):
             Tasks.fetch_og_meta(iri)
 
-        # Cache the object if it's a `Like` or an `Announce` unrelated to the server outbox (because it will never get
-        # displayed)
-        if activity.has_type(
-            [ap.ActivityType.LIKE, ap.ActivityType.ANNOUNCE]
-        ) and not activity.get_object_id().startswith(BASE_URL):
-            Tasks.cache_object(iri)
-
         actor = activity.get_actor()
         if actor.icon:
             if isinstance(actor.icon, dict) and "url" in actor.icon:
@@ -3211,14 +3212,6 @@ def task_process_new_activity():
             if note and note["meta"].get("forwarded", False):
                 # If the activity was originally forwarded, forward the delete too
                 should_forward = True
-
-        elif activity.has_type(ap.ActivityType.LIKE):
-            if activity.get_object_id().startswith(BASE_URL):
-                should_keep = True
-            else:
-                # We only want to keep a like if it's a like for a local activity
-                # (Pleroma relay the likes it received, we don't want to store them)
-                should_delete = True
 
         if should_forward:
             app.logger.info(f"will forward {activity!r} to followers")

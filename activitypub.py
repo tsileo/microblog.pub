@@ -3,7 +3,6 @@ import json
 import logging
 import os
 from datetime import datetime
-from enum import Enum
 from typing import Any
 from typing import Dict
 from typing import List
@@ -133,7 +132,9 @@ class MicroblogPubBackend(Backend):
         except Exception:  # TODO(tsileo): should be ValueError, but replies trigger a KeyError on object
             pass
         object_visibility = None
-        if activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
+        if activity.has_type(
+            [ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE, ap.ActivityType.LIKE]
+        ):
             object_visibility = ap.get_visibility(activity.get_object()).name
 
         actor_id = activity.get_actor().id
