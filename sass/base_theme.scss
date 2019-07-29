@@ -244,11 +244,22 @@ a:hover {
   background: $color-menu-background;
   padding: 5px;
   color: $color-light;
-  margin-right:5px;
+  margin-right:10px;
   border-radius:2px;
   float: left;
 }
 .bar-item-no-hover:hover {
+  cursor: default;
+}
+.bar-item-no-bg {
+  cursor: default;
+  padding: 5px;
+  color: $color-light;
+  margin-right:10px;
+  border-radius:2px;
+  float: left;
+}
+.bar-item-no-bg:hover {
   cursor: default;
 }
 .bar-item-pinned {

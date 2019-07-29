@@ -16,6 +16,8 @@ from utils.key import KEY_DIR
 from utils.key import get_key
 from utils.key import get_secret_key
 from utils.media import MediaCache
+from utils.meta import MetaKey
+from utils.meta import _meta
 
 
 class ThemeStyle(Enum):
@@ -111,6 +113,10 @@ def create_indexes():
         DB.create_collection("trash", capped=True, size=50 << 20)  # 50 MB
 
     DB.command("compact", "activities")
+    DB.activities.create_index([(_meta(MetaKey.NOTIFICATION), pymongo.ASCENDING)])
+    DB.activities.create_index(
+        [(_meta(MetaKey.NOTIFICATION_UNREAD), pymongo.ASCENDING)]
+    )
     DB.activities.create_index([("remote_id", pymongo.ASCENDING)])
     DB.activities.create_index([("activity.object.id", pymongo.ASCENDING)])
     DB.activities.create_index([("meta.thread_root_parent", pymongo.ASCENDING)])

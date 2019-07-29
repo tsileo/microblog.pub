@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import timezone
 
 from dateutil import parser
+from little_boxes import activitypub as ap
 
 logger = logging.getLogger(__name__)
 
@@ -25,3 +26,7 @@ def parse_datetime(s: str) -> datetime:
         dt = dt.replace(tzinfo=timezone.utc)
 
     return dt
+
+
+def now() -> str:
+    ap.format_datetime(datetime.now(timezone.utc))

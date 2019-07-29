@@ -6,7 +6,18 @@
 {% include "header.html" %}
 <div id="admin">
 
-<div id="notes">
+{% if request.path == url_for('admin_notifications') and unread_notifications_count %}
+<div style="clear:both;padding-bottom:30px;">
+<form action="/api/mark_notifications_as_read" method="POST">
+<input type="hidden" name="redirect" value="{{ request.path }}"/>
+<input type="hidden" name="nid" value="{{ nid }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item" style="text-transform:uppercase">Mark as read</button>
+</form>
+</div>
+{% endif %}
+
+<div id="notes" style="clear:both;">
 	{% for item in inbox_data %}
 	{% if 'actor' in item.meta %}
 	{% if item | has_type('Create') %}
@@ -31,13 +42,30 @@
     {% endif %}
 	
 	{% if item | has_type('Follow') %}
-    <p style="margin-left:70px;padding-bottom:5px;display:inline-block;"><span class="bar-item-no-hover">new follower</span> <!-- <a href="" class="bar-item">follow back</a></p> -->
+    <div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
+    {% if item.meta.notification_unread %}<span class="bar-item-no-bg"><span class="pcolor">new</span></span>{% endif %}
+    <span class="bar-item-no-bg">new follower</span>
+    {% if item.meta.notification_follows_back %}<span class="bar-item-no-hover">already following</span>
+    {% else %}
+    <form action="/api/follow" class="action-form"  method="POST">
+    <input type="hidden" name="redirect" value="{{ request.path }}"/>
+    <input type="hidden" name="actor" value="{{ item.meta.actor_id }}"/>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <button type="submit" class="bar-item">follow back</button>
+    </form>
+    {% endif %}
+    </div>
     <div style="height: 100px;">
 	{{ utils.display_actor_inline(item.meta.actor, size=50) }}
     </div>
 
 	{% elif item | has_type('Accept') %}
-    <p style="margin-left:70px;padding-bottom:5px;display:inline-block;"><span class="bar-item-no-hover">you started following</span></p>
+    <div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
+    {% if item.meta.notification_unread %}<span class="bar-item-no-bg"><span class="pcolor">new</span></span>{% endif %}
+    <span class="bar-item-no-bg">you started following</span>
+    {% if item.meta.notification_follows_back %}<span class="bar-item-no-hover">follows you back</span>{% endif %}
+    </div>
+    
     <div style="height: 100px;">
 	{{ utils.display_actor_inline(item.meta.actor, size=50) }}
     </div>

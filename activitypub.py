@@ -30,6 +30,7 @@ from config import ME
 from config import USER_AGENT
 from config import USERNAME
 from tasks import Tasks
+from utils.meta import Box
 
 logger = logging.getLogger(__name__)
 
@@ -93,12 +94,6 @@ def _is_local_reply(create: ap.Create) -> bool:
             return True
 
     return False
-
-
-class Box(Enum):
-    INBOX = "inbox"
-    OUTBOX = "outbox"
-    REPLIES = "replies"
 
 
 class MicroblogPubBackend(Backend):

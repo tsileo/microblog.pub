@@ -84,14 +84,18 @@ from config import USER_AGENT
 from config import USERNAME
 from config import VERSION
 from config import VERSION_DATE
+from config import MetaKey
 from config import _drop_db
+from config import _meta
 from poussetaches import PousseTaches
 from tasks import Tasks
+from utils import now
 from utils import opengraph
 from utils import parse_datetime
 from utils.key import get_secret_key
 from utils.lookup import lookup
 from utils.media import Kind
+from utils.notifications import set_inbox_flags
 
 p = PousseTaches(
     os.getenv("MICROBLOGPUB_POUSSETACHES_HOST", "http://localhost:7991"),
@@ -179,6 +183,7 @@ def inject_config():
         "type": ActivityType.FOLLOW.value,
         "meta.undo": False,
     }
+    unread_notifications_q = {_meta(MetaKey.NOTIFICATION_UNREAD): True}
 
     logged_in = session.get("logged_in", False)
 
@@ -191,6 +196,9 @@ def inject_config():
         notes_count=notes_count,
         liked_count=liked_count,
         with_replies_count=DB.activities.count(all_q) if logged_in else 0,
+        unread_notifications_count=DB.activities.count(unread_notifications_q)
+        if logged_in
+        else 0,
         me=ME,
         base_url=config.BASE_URL,
     )
@@ -695,6 +703,21 @@ def serve_uploads(oid, fname):
 # Login
 
 
+@app.route("/admin/update_actor")
+@login_required
+def admin_update_actor():
+    update = ap.Update(
+        actor=MY_PERSON.id,
+        object=MY_PERSON.to_dict(),
+        to=[MY_PERSON.followers],
+        cc=[ap.AS_PUBLIC],
+        published=now(),
+    )
+
+    post_to_outbox(update)
+    return "OK"
+
+
 @app.route("/admin/logout")
 @login_required
 def admin_logout():
@@ -783,11 +806,7 @@ def authorize_follow():
         return redirect("/following")
 
     follow = ap.Follow(
-        actor=MY_PERSON.id,
-        object=actor,
-        to=[actor],
-        cc=[ap.AS_PUBLIC],
-        published=ap.format_datetime(datetime.now(timezone.utc)),
+        actor=MY_PERSON.id, object=actor, to=[actor], cc=[ap.AS_PUBLIC], published=now()
     )
     post_to_outbox(follow)
 
@@ -1649,17 +1668,23 @@ def admin_notifications():
         .sort("_id", -1)
         .limit(50)
     )
+    print(inbox_data)
+
+    nid = None
+    if inbox_data:
+        nid = inbox_data[0]["_id"]
+
     inbox_data.extend(notifs)
     inbox_data = sorted(
         inbox_data, reverse=True, key=lambda doc: doc["_id"].generation_time
     )
-    print(inbox_data)
 
     return render_template(
         "stream.html",
         inbox_data=inbox_data,
         older_than=older_than,
         newer_than=newer_than,
+        nid=nid,
     )
 
 
@@ -1721,7 +1746,7 @@ def api_delete():
         object=ap.Tombstone(id=note.id).to_dict(embed=True),
         to=note.to,
         cc=note.cc,
-        published=ap.format_datetime(datetime.now(timezone.utc)),
+        published=now(),
     )
 
     delete_id = post_to_outbox(delete)
@@ -1743,11 +1768,24 @@ def api_boost():
         object=note.id,
         to=[MY_PERSON.followers, note.attributedTo],
         cc=[ap.AS_PUBLIC],
-        published=ap.format_datetime(datetime.now(timezone.utc)),
+        published=now(),
     )
     announce_id = post_to_outbox(announce)
 
     return _user_api_response(activity=announce_id)
+
+
+@app.route("/api/mark_notifications_as_read", methods=["POST"])
+@api_required
+def api_mark_notification_as_read():
+    nid = ObjectId(_user_api_arg("nid"))
+
+    DB.activities.update_many(
+        {_meta(MetaKey.NOTIFICATION_UNREAD): True, "_id": {"$lte": nid}},
+        {"$set": {_meta(MetaKey.NOTIFICATION_UNREAD): False}},
+    )
+
+    return _user_api_response()
 
 
 @app.route("/api/vote", methods=["POST"])
@@ -1794,13 +1832,7 @@ def api_like():
     else:
         to = [note.get_actor().id]
 
-    like = ap.Like(
-        object=note.id,
-        actor=MY_PERSON.id,
-        to=to,
-        cc=cc,
-        published=ap.format_datetime(datetime.now(timezone.utc)),
-    )
+    like = ap.Like(object=note.id, actor=MY_PERSON.id, to=to, cc=cc, published=now())
 
     like_id = post_to_outbox(like)
 
@@ -1870,7 +1902,7 @@ def api_undo():
     undo = ap.Undo(
         actor=MY_PERSON.id,
         object=obj.to_dict(embed=True, embed_object_id_only=True),
-        published=ap.format_datetime(datetime.now(timezone.utc)),
+        published=now(),
         to=obj.to,
         cc=obj.cc,
     )
@@ -2360,11 +2392,7 @@ def api_follow():
         return _user_api_response(activity=existing["activity"]["id"])
 
     follow = ap.Follow(
-        actor=MY_PERSON.id,
-        object=actor,
-        to=[actor],
-        cc=[ap.AS_PUBLIC],
-        published=ap.format_datetime(datetime.now(timezone.utc)),
+        actor=MY_PERSON.id, object=actor, to=[actor], cc=[ap.AS_PUBLIC], published=now()
     )
     follow_id = post_to_outbox(follow)
 
@@ -2904,12 +2932,17 @@ def task_finish_post_to_inbox():
             back.inbox_like(MY_PERSON, activity)
         elif activity.has_type(ap.ActivityType.FOLLOW):
             # Reply to a Follow with an Accept
+            actor_id = activity.get_actor().id
             accept = ap.Accept(
                 actor=ID,
-                object=activity.to_dict(),
-                to=[activity.get_actor().id],
-                cc=[ap.AS_PUBLIC],
-                published=ap.format_datetime(datetime.now(timezone.utc)),
+                object={
+                    "type": "Follow",
+                    "id": activity.id,
+                    "object": activity.get_object_id(),
+                    "actor": actor_id,
+                },
+                to=[actor_id],
+                published=now(),
             )
             post_to_outbox(accept)
         elif activity.has_type(ap.ActivityType.UNDO):
@@ -3094,6 +3127,16 @@ def task_process_new_activity():
         should_forward = False
         should_delete = False
         should_keep = False
+
+        flags = {}
+
+        if not activity.published:
+            flags[_meta(MetaKey.PUBLISHED)] = now()
+
+        set_inbox_flags(activity, flags)
+        app.logger.info(f"a={activity}, flags={flags!r}")
+        if flags:
+            DB.activities.update_one({"remote_id": activity.id}, {"$set": flags})
 
         tag_stream = False
         if activity.has_type(ap.ActivityType.ANNOUNCE):
