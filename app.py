@@ -1121,10 +1121,11 @@ def nodeinfo():
 
         response = json.dumps(
             {
-                "version": "2.0",
+                "version": "2.1",
                 "software": {
                     "name": "microblogpub",
-                    "version": f"Microblog.pub {VERSION} ({VERSION_DATE})",
+                    "version": f"{VERSION}",
+                    "repository": "https://github.com/tsileo/microblog.pub",
                 },
                 "protocols": ["activitypub"],
                 "services": {"inbound": [], "outbound": []},
@@ -1143,7 +1144,7 @@ def nodeinfo():
         _cache(response, "api")
     return Response(
         headers={
-            "Content-Type": "application/json; profile=http://nodeinfo.diaspora.software/ns/schema/2.0#"
+            "Content-Type": "application/json; profile=http://nodeinfo.diaspora.software/ns/schema/2.1#"
         },
         response=response,
     )
