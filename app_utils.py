@@ -3,7 +3,7 @@ from little_boxes import activitypub as ap
 
 import activitypub
 from activitypub import Box
-from config import me
+from config import ME
 from tasks import Tasks
 
 csrf = CSRFProtect()

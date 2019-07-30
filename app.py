@@ -14,11 +14,8 @@ from typing import Dict
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
-import emoji_unicode
-import html2text
 import mf2py
 import requests
-import timeago
 from bson.objectid import ObjectId
 from flask import Flask
 from flask import Response
