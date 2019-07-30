@@ -20,6 +20,8 @@ class MetaKey(Enum):
     NOTIFICATION = "notification"
     NOTIFICATION_UNREAD = "notification_unread"
     NOTIFICATION_FOLLOWS_BACK = "notification_follows_back"
+    POLL_ANSWER = "poll_answer"
+    STREAM = "stream"
     ACTOR_ID = "actor_id"
     UNDO = "undo"
     PUBLISHED = "published"

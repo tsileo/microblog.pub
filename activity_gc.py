@@ -48,7 +48,7 @@ def threads_of_interest() -> List[str]:
     return list(out)
 
 
-def _keep(data: Dict[str, Any]):
+def _keep(data: Dict[str, Any]) -> None:
     DB.activities.update_one({"_id": data["_id"]}, {"$set": {"meta.gc_keep": True}})
 
 

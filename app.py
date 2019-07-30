@@ -4,7 +4,6 @@ import logging
 import mimetypes
 import os
 import traceback
-import urllib
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -12,12 +11,9 @@ from functools import wraps
 from io import BytesIO
 from typing import Any
 from typing import Dict
-from typing import Optional
-from typing import Tuple
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
-import bleach
 import emoji_unicode
 import html2text
 import mf2py
@@ -34,18 +30,15 @@ from flask import render_template
 from flask import request
 from flask import session
 from flask import url_for
-from flask_wtf.csrf import CSRFProtect
 from itsdangerous import BadSignature
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
-from little_boxes.activitypub import _to_list
 from little_boxes.activitypub import clean_activity
 from little_boxes.activitypub import format_datetime
 from little_boxes.activitypub import get_backend
 from little_boxes.content_helper import parse_markdown
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import ActivityNotFoundError
-from little_boxes.errors import BadActivityError
 from little_boxes.errors import Error
 from little_boxes.errors import NotAnActivityError
 from little_boxes.errors import NotFromOutboxError
@@ -64,13 +57,16 @@ import config
 from activitypub import Box
 from activitypub import _answer_key
 from activitypub import embed_collection
+from api import api
+from app_utils import MY_PERSON
+from app_utils import back
+from app_utils import csrf
 from config import ADMIN_API_KEY
 from config import BASE_URL
 from config import BLACKLIST
 from config import DB
 from config import DEBUG_MODE
 from config import DOMAIN
-from config import EMOJI_TPL
 from config import EMOJIS
 from config import HEADERS
 from config import ICON_URL
@@ -91,11 +87,10 @@ from poussetaches import PousseTaches
 from tasks import Tasks
 from utils import now
 from utils import opengraph
-from utils import parse_datetime
 from utils.key import get_secret_key
 from utils.lookup import lookup
-from utils.media import Kind
 from utils.notifications import set_inbox_flags
+from utils.template_filters import filters
 
 p = PousseTaches(
     os.getenv("MICROBLOGPUB_POUSSETACHES_HOST", "http://localhost:7991"),
@@ -104,15 +99,12 @@ p = PousseTaches(
 
 # p = PousseTaches("http://localhost:7991", "http://localhost:5000")
 
-back = activitypub.MicroblogPubBackend()
-ap.use_backend(back)
-
-MY_PERSON = ap.Person(**ME)
-
 app = Flask(__name__)
 app.secret_key = get_secret_key("flask")
+app.register_blueprint(filters)
+app.register_blueprint(api, url_prefix="/api")
 app.config.update(WTF_CSRF_CHECK_DEFAULT=False)
-csrf = CSRFProtect(app)
+csrf.init_app(app)
 
 logger = logging.getLogger(__name__)
 
@@ -128,10 +120,6 @@ else:
     root_logger.setLevel(gunicorn_logger.level)
 
 SIG_AUTH = HTTPSigAuth(KEY)
-
-H2T = html2text.HTML2Text()
-H2T.ignore_links = True
-H2T.ignore_images = True
 
 
 def is_blacklisted(url: str) -> bool:
@@ -208,301 +196,6 @@ def inject_config():
 def set_x_powered_by(response):
     response.headers["X-Powered-By"] = "microblog.pub"
     return response
-
-
-# HTML/templates helper
-ALLOWED_TAGS = [
-    "a",
-    "abbr",
-    "acronym",
-    "b",
-    "br",
-    "blockquote",
-    "code",
-    "pre",
-    "em",
-    "i",
-    "li",
-    "ol",
-    "strong",
-    "ul",
-    "span",
-    "div",
-    "p",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-]
-
-
-def clean_html(html):
-    try:
-        return bleach.clean(html, tags=ALLOWED_TAGS)
-    except Exception:
-        return ""
-
-
-_GRIDFS_CACHE: Dict[Tuple[Kind, str, Optional[int]], str] = {}
-
-
-def _get_file_url(url, size, kind):
-    k = (kind, url, size)
-    cached = _GRIDFS_CACHE.get(k)
-    if cached:
-        return cached
-
-    doc = MEDIA_CACHE.get_file(url, size, kind)
-    if doc:
-        u = f"/media/{str(doc._id)}"
-        _GRIDFS_CACHE[k] = u
-        return u
-
-    # MEDIA_CACHE.cache(url, kind)
-    app.logger.error(f"cache not available for {url}/{size}/{kind}")
-    return url
-
-
-@app.template_filter()
-def visibility(v: str) -> str:
-    try:
-        return ap.Visibility[v].value.lower()
-    except Exception:
-        return v
-
-
-@app.template_filter()
-def visibility_is_public(v: str) -> bool:
-    return v in [ap.Visibility.PUBLIC.name, ap.Visibility.UNLISTED.name]
-
-
-@app.template_filter()
-def emojify(text):
-    return emoji_unicode.replace(
-        text, lambda e: EMOJI_TPL.format(filename=e.code_points, raw=e.unicode)
-    )
-
-
-@app.template_filter()
-def gtone(n):
-    return n > 1
-
-
-@app.template_filter()
-def gtnow(dtstr):
-    return format_datetime(datetime.now(timezone.utc)) > dtstr
-
-
-@app.template_filter()
-def remove_mongo_id(dat):
-    if isinstance(dat, list):
-        return [remove_mongo_id(item) for item in dat]
-    if "_id" in dat:
-        dat["_id"] = str(dat["_id"])
-    for k, v in dat.items():
-        if isinstance(v, dict):
-            dat[k] = remove_mongo_id(dat[k])
-    return dat
-
-
-@app.template_filter()
-def get_video_link(data):
-    for link in data:
-        if link.get("mimeType", "").startswith("video/"):
-            return link.get("href")
-    return None
-
-
-@app.template_filter()
-def get_actor_icon_url(url, size):
-    return _get_file_url(url, size, Kind.ACTOR_ICON)
-
-
-@app.template_filter()
-def get_attachment_url(url, size):
-    return _get_file_url(url, size, Kind.ATTACHMENT)
-
-
-@app.template_filter()
-def get_og_image_url(url, size=100):
-    try:
-        return _get_file_url(url, size, Kind.OG_IMAGE)
-    except Exception:
-        return ""
-
-
-@app.template_filter()
-def permalink_id(val):
-    return str(hash(val))
-
-
-@app.template_filter()
-def quote_plus(t):
-    return urllib.parse.quote_plus(t)
-
-
-@app.template_filter()
-def is_from_outbox(t):
-    return t.startswith(ID)
-
-
-@app.template_filter()
-def clean(html):
-    out = clean_html(html)
-    return emoji_unicode.replace(
-        out, lambda e: EMOJI_TPL.format(filename=e.code_points, raw=e.unicode)
-    )
-
-
-@app.template_filter()
-def html2plaintext(body):
-    return H2T.handle(body)
-
-
-@app.template_filter()
-def domain(url):
-    return urlparse(url).netloc
-
-
-@app.template_filter()
-def url_or_id(d):
-    if isinstance(d, dict):
-        if "url" in d:
-            return d["url"]
-        else:
-            return d["id"]
-    return ""
-
-
-@app.template_filter()
-def get_url(u):
-    print(f"GET_URL({u!r})")
-    if isinstance(u, list):
-        for l in u:
-            if l.get("mimeType") == "text/html":
-                u = l
-    if isinstance(u, dict):
-        return u["href"]
-    elif isinstance(u, str):
-        return u
-    else:
-        return u
-
-
-@app.template_filter()
-def get_actor(url):
-    if not url:
-        return None
-    if isinstance(url, list):
-        url = url[0]
-    if isinstance(url, dict):
-        url = url.get("id")
-    print(f"GET_ACTOR {url}")
-    try:
-        return get_backend().fetch_iri(url)
-    except (ActivityNotFoundError, ActivityGoneError):
-        return f"Deleted<{url}>"
-    except Exception as exc:
-        return f"Error<{url}/{exc!r}>"
-
-
-@app.template_filter()
-def format_time(val):
-    if val:
-        dt = parse_datetime(val)
-        return datetime.strftime(dt, "%B %d, %Y, %H:%M %p")
-    return val
-
-
-@app.template_filter()
-def format_ts(val):
-    return datetime.fromtimestamp(val).strftime("%B %d, %Y, %H:%M %p")
-
-
-@app.template_filter()
-def gt_ts(val):
-    return datetime.now() > datetime.fromtimestamp(val)
-
-
-@app.template_filter()
-def format_timeago(val):
-    if val:
-        dt = parse_datetime(val)
-        return timeago.format(dt.astimezone(timezone.utc), datetime.now(timezone.utc))
-    return val
-
-
-@app.template_filter()
-def has_type(doc, _types):
-    for _type in _to_list(_types):
-        if _type in _to_list(doc["type"]):
-            return True
-    return False
-
-
-@app.template_filter()
-def has_actor_type(doc):
-    # FIXME(tsileo): skipping the last one "Question", cause Mastodon sends question restuls as an update coming from
-    # the question... Does Pleroma do that too?
-    for t in ap.ACTOR_TYPES[:-1]:
-        if has_type(doc, t.value):
-            return True
-    return False
-
-
-def _is_img(filename):
-    filename = filename.lower()
-    if (
-        filename.endswith(".png")
-        or filename.endswith(".jpg")
-        or filename.endswith(".jpeg")
-        or filename.endswith(".gif")
-        or filename.endswith(".svg")
-    ):
-        return True
-    return False
-
-
-@app.template_filter()
-def not_only_imgs(attachment):
-    for a in attachment:
-        if isinstance(a, dict) and not _is_img(a["url"]):
-            return True
-        if isinstance(a, str) and not _is_img(a):
-            return True
-    return False
-
-
-@app.template_filter()
-def is_img(filename):
-    return _is_img(filename)
-
-
-@app.template_filter()
-def get_answer_count(choice, obj, meta):
-    count_from_meta = meta.get("question_answers", {}).get(_answer_key(choice), 0)
-    print(count_from_meta)
-    print(choice, obj, meta)
-    if count_from_meta:
-        return count_from_meta
-    for option in obj.get("oneOf", obj.get("anyOf", [])):
-        if option.get("name") == choice:
-            return option.get("replies", {}).get("totalItems", 0)
-
-
-@app.template_filter()
-def get_total_answers_count(obj, meta):
-    cached = meta.get("question_replies", 0)
-    if cached:
-        return cached
-    cnt = 0
-    print("OKI", obj)
-    for choice in obj.get("anyOf", obj.get("oneOf", [])):
-        print(choice)
-        cnt += choice.get("replies", {}).get("totalItems", 0)
-    return cnt
 
 
 def add_response_headers(headers={}):
@@ -875,44 +568,10 @@ def paginated_query(db, q, limit=25, sort_key="_id"):
     return outbox_data, older_than, newer_than
 
 
-CACHING = True
-
-
-def _get_cached(type_="html", arg=None):
-    if not CACHING:
-        return None
-    logged_in = session.get("logged_in")
-    if not logged_in:
-        cached = DB.cache2.find_one({"path": request.path, "type": type_, "arg": arg})
-        if cached:
-            app.logger.info("from cache")
-            return cached["response_data"]
-    return None
-
-
-def _cache(resp, type_="html", arg=None):
-    if not CACHING:
-        return None
-    logged_in = session.get("logged_in")
-    if not logged_in:
-        DB.cache2.update_one(
-            {"path": request.path, "type": type_, "arg": arg},
-            {"$set": {"response_data": resp, "date": datetime.now(timezone.utc)}},
-            upsert=True,
-        )
-    return None
-
-
 @app.route("/")
 def index():
     if is_api_request():
         return jsonify(**ME)
-    cache_arg = (
-        f"{request.args.get('older_than', '')}:{request.args.get('newer_than', '')}"
-    )
-    cached = _get_cached("html", cache_arg)
-    if cached:
-        return cached
 
     q = {
         "box": Box.OUTBOX.value,
@@ -949,7 +608,6 @@ def index():
         newer_than=newer_than,
         pinned=pinned,
     )
-    _cache(resp, "html", cache_arg)
     return resp
 
 
@@ -1109,39 +767,33 @@ def note_by_id(note_id):
 
 @app.route("/nodeinfo")
 def nodeinfo():
-    response = _get_cached("api")
-    cached = True
-    if not response:
-        cached = False
-        q = {
-            "box": Box.OUTBOX.value,
-            "meta.deleted": False,
-            "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+    q = {
+        "box": Box.OUTBOX.value,
+        "meta.deleted": False,
+        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+    }
+
+    response = json.dumps(
+        {
+            "version": "2.1",
+            "software": {
+                "name": "microblogpub",
+                "version": f"{VERSION}",
+                "repository": "https://github.com/tsileo/microblog.pub",
+            },
+            "protocols": ["activitypub"],
+            "services": {"inbound": [], "outbound": []},
+            "openRegistrations": False,
+            "usage": {"users": {"total": 1}, "localPosts": DB.activities.count(q)},
+            "metadata": {
+                "sourceCode": "https://github.com/tsileo/microblog.pub",
+                "nodeName": f"@{USERNAME}@{DOMAIN}",
+                "version": VERSION,
+                "version_date": VERSION_DATE,
+            },
         }
+    )
 
-        response = json.dumps(
-            {
-                "version": "2.1",
-                "software": {
-                    "name": "microblogpub",
-                    "version": f"{VERSION}",
-                    "repository": "https://github.com/tsileo/microblog.pub",
-                },
-                "protocols": ["activitypub"],
-                "services": {"inbound": [], "outbound": []},
-                "openRegistrations": False,
-                "usage": {"users": {"total": 1}, "localPosts": DB.activities.count(q)},
-                "metadata": {
-                    "sourceCode": "https://github.com/tsileo/microblog.pub",
-                    "nodeName": f"@{USERNAME}@{DOMAIN}",
-                    "version": VERSION,
-                    "version_date": VERSION_DATE,
-                },
-            }
-        )
-
-    if not cached:
-        _cache(response, "api")
     return Response(
         headers={
             "Content-Type": "application/json; profile=http://nodeinfo.diaspora.software/ns/schema/2.1#"
@@ -1733,47 +1385,6 @@ def _user_api_response(**kwargs):
     resp = flask_jsonify(**kwargs)
     resp.status_code = 201
     return resp
-
-
-@app.route("/api/note/delete", methods=["POST"])
-@api_required
-def api_delete():
-    """API endpoint to delete a Note activity."""
-    note = _user_api_get_note(from_outbox=True)
-
-    # Create the delete, same audience as the Create object
-    delete = ap.Delete(
-        actor=ID,
-        object=ap.Tombstone(id=note.id).to_dict(embed=True),
-        to=note.to,
-        cc=note.cc,
-        published=now(),
-    )
-
-    delete_id = post_to_outbox(delete)
-
-    return _user_api_response(activity=delete_id)
-
-
-@app.route("/api/boost", methods=["POST"])
-@api_required
-def api_boost():
-    note = _user_api_get_note()
-
-    # Ensures the note visibility allow us to build an Announce (in respect to the post visibility)
-    if ap.get_visibility(note) not in [ap.Visibility.PUBLIC, ap.Visibility.UNLISTED]:
-        abort(400)
-
-    announce = ap.Announce(
-        actor=MY_PERSON.id,
-        object=note.id,
-        to=[MY_PERSON.followers, note.attributedTo],
-        cc=[ap.AS_PUBLIC],
-        published=now(),
-    )
-    announce_id = post_to_outbox(announce)
-
-    return _user_api_response(activity=announce_id)
 
 
 @app.route("/api/mark_notifications_as_read", methods=["POST"])
@@ -3124,118 +2735,20 @@ def task_process_new_activity():
         activity = ap.fetch_remote_activity(iri)
         app.logger.info(f"activity={activity!r}")
 
-        # Is the activity expected?
-        # following = ap.get_backend().following()
-        should_forward = False
-        should_delete = False
-        should_keep = False
-
         flags = {}
 
         if not activity.published:
             flags[_meta(MetaKey.PUBLISHED)] = now()
+        else:
+            flags[_meta(MetaKey.PUBLISHED)] = activity.published
 
         set_inbox_flags(activity, flags)
         app.logger.info(f"a={activity}, flags={flags!r}")
         if flags:
             DB.activities.update_one({"remote_id": activity.id}, {"$set": flags})
 
-        tag_stream = False
-        if activity.has_type(ap.ActivityType.ANNOUNCE):
-            # FIXME(tsileo): Ensure it's follower and store into a "dead activities" DB
-            try:
-                activity.get_object()
-                tag_stream = True
-                if activity.get_object_id().startswith(BASE_URL):
-                    should_keep = True
-            except (NotAnActivityError, BadActivityError):
-                app.logger.exception(f"failed to get announce object for {activity!r}")
-                # Most likely on OStatus notice
-                tag_stream = False
-                should_delete = True
-            except (ActivityGoneError, ActivityNotFoundError):
-                # The announced activity is deleted/gone, drop it
-                should_delete = True
-
-        elif activity.has_type(ap.ActivityType.FOLLOW):
-            # FIXME(tsileo): ensure it's a follow where the server is the object
-            should_keep = True
-
-        elif activity.has_type(ap.ActivityType.CREATE):
-            note = activity.get_object()
-            in_reply_to = note.get_in_reply_to()
-            # Make the note part of the stream if it's not a reply, or if it's a local reply **and** it's not a poll
-            # answer
-            # FIXME(tsileo): this will block "regular replies" to a Poll, maybe the adressing will help make the
-            # difference?
-            if not in_reply_to or (
-                in_reply_to.startswith(ID)
-                and not note.has_type(ap.ActivityType.QUESTION)
-            ):
-                tag_stream = True
-
-            # FIXME(tsileo): check for direct addressing in the to, cc, bcc... fields
-            if (in_reply_to and in_reply_to.startswith(ID)) or note.has_mention(ID):
-                should_keep = True
-
-            if in_reply_to:
-                try:
-                    reply = ap.fetch_remote_activity(note.get_in_reply_to())
-                    if (
-                        reply.id.startswith(ID) or reply.has_mention(ID)
-                    ) and activity.is_public():
-                        # The reply is public "local reply", forward the reply (i.e. the original activity) to the
-                        # original recipients
-                        should_forward = True
-                        should_keep = True
-                except NotAnActivityError:
-                    # Most likely a reply to an OStatus notce
-                    should_delete = True
-
-            # (partial) Ghost replies handling
-            # [X] This is the first time the server has seen this Activity.
-            should_forward = False
-            local_followers = ID + "/followers"
-            for field in ["to", "cc"]:
-                if field in activity._data:
-                    if local_followers in activity._data[field]:
-                        # [X] The values of to, cc, and/or audience contain a Collection owned by the server.
-                        should_forward = True
-
-            # [X] The values of inReplyTo, object, target and/or tag are objects owned by the server
-            if not (in_reply_to and in_reply_to.startswith(ID)):
-                should_forward = False
-
-        elif activity.has_type(ap.ActivityType.DELETE):
-            note = DB.activities.find_one(
-                {"activity.object.id": activity.get_object_id()}
-            )
-            if note and note["meta"].get("forwarded", False):
-                # If the activity was originally forwarded, forward the delete too
-                should_forward = True
-
-        if should_forward:
-            app.logger.info(f"will forward {activity!r} to followers")
-            Tasks.forward_activity(activity.id)
-
-        if should_delete:
-            app.logger.info(f"will soft delete {activity!r}")
-
-        app.logger.info(f"{iri} tag_stream={tag_stream}")
-        DB.activities.update_one(
-            {"remote_id": activity.id},
-            {
-                "$set": {
-                    "meta.keep": should_keep,
-                    "meta.stream": tag_stream,
-                    "meta.forwarded": should_forward,
-                    "meta.deleted": should_delete,
-                }
-            },
-        )
-
         app.logger.info(f"new activity {iri} processed")
-        if not should_delete and not activity.has_type(ap.ActivityType.DELETE):
+        if not activity.has_type(ap.ActivityType.DELETE):
             Tasks.cache_actor(iri)
     except (ActivityGoneError, ActivityNotFoundError):
         app.logger.exception(f"dropping activity {iri}, skip processing")
