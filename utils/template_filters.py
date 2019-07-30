@@ -31,7 +31,7 @@ H2T.ignore_links = True
 H2T.ignore_images = True
 
 
-filters = flask.Blueprint('filters', __name__)
+filters = flask.Blueprint("filters", __name__)
 
 
 @filters.app_template_filter()
