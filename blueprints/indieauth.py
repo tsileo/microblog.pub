@@ -7,10 +7,8 @@ from urllib.parse import urlencode
 
 import flask
 import mf2py
-from bson.objectid import ObjectId
 from flask import Response
 from flask import abort
-from flask import current_app as app
 from flask import redirect
 from flask import render_template
 from flask import request
