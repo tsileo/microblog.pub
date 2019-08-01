@@ -27,11 +27,6 @@ reload-dev:
 	docker build . -t microblogpub:latest
 	docker-compose -f docker-compose-dev.yml up -d --force-recreate
 
-# Build the poussetaches Docker image
-.PHONY: poussetaches
-poussetaches:
-	git clone https://github.com/tsileo/poussetaches.git pt && cd pt && docker build . -t poussetaches:latest && cd - && rm -rf pt
-
 # Build the microblogpub Docker image
 .PHONY: microblogpub
 microblogpub:
@@ -42,10 +37,11 @@ microblogpub:
 
 # Run the docker-compose project locally (will perform a update if the project is already running)
 .PHONY: run
-run: poussetaches microblogpub
+run: microblogpub
 	# (poussetaches and microblogpub Docker image will updated)
 	# Update MongoDB
 	docker pull mongo
+	docker pull poussetaches/poussetaches
 	# Restart the project
 	docker-compose stop
 	docker-compose up -d --force-recreate --build

@@ -71,7 +71,7 @@ Once the initial configuration is done, you can still tweak the config by editin
 
 ### Deployment
 
-To spawn the docker-compose project (running this command will also update _microblog.pub_ to latest and restart the project it it's already running):
+To spawn the docker-compose project (running this command will also update _microblog.pub_ to latest and restart everything if it's already running):
 
 ```shell
 $ make run

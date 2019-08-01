@@ -4,7 +4,6 @@ import subprocess
 from datetime import datetime
 from enum import Enum
 
-import pymongo
 import yaml
 from itsdangerous import JSONWebSignatureSerializer
 from little_boxes import strtobool
@@ -16,8 +15,6 @@ from utils.key import KEY_DIR
 from utils.key import get_key
 from utils.key import get_secret_key
 from utils.media import MediaCache
-from utils.meta import MetaKey
-from utils.meta import _meta
 
 
 class ThemeStyle(Enum):
@@ -32,16 +29,6 @@ DEFAULT_THEME_PRIMARY_COLOR = {
     ThemeStyle.DARK: "#33ff00",  # Purple
 }
 
-
-def noop():
-    pass
-
-
-CUSTOM_CACHE_HOOKS = False
-try:
-    from cache_hooks import purge as custom_cache_purge_hook
-except ModuleNotFoundError:
-    custom_cache_purge_hook = noop
 
 VERSION = (
     subprocess.check_output(["git", "describe", "--always"]).split()[0].decode("utf-8")
@@ -106,78 +93,6 @@ DB_NAME = "{}_{}".format(USERNAME, DOMAIN.replace(".", "_"))
 DB = mongo_client[DB_NAME]
 GRIDFS = mongo_client[f"{DB_NAME}_gridfs"]
 MEDIA_CACHE = MediaCache(GRIDFS, USER_AGENT)
-
-
-def create_indexes():
-    if "trash" not in DB.collection_names():
-        DB.create_collection("trash", capped=True, size=50 << 20)  # 50 MB
-
-    DB.command("compact", "activities")
-    DB.activities.create_index([(_meta(MetaKey.NOTIFICATION), pymongo.ASCENDING)])
-    DB.activities.create_index(
-        [(_meta(MetaKey.NOTIFICATION_UNREAD), pymongo.ASCENDING)]
-    )
-    DB.activities.create_index([("remote_id", pymongo.ASCENDING)])
-    DB.activities.create_index([("activity.object.id", pymongo.ASCENDING)])
-    DB.activities.create_index([("meta.thread_root_parent", pymongo.ASCENDING)])
-    DB.activities.create_index(
-        [
-            ("meta.thread_root_parent", pymongo.ASCENDING),
-            ("meta.deleted", pymongo.ASCENDING),
-        ]
-    )
-    DB.activities.create_index(
-        [("activity.object.id", pymongo.ASCENDING), ("meta.deleted", pymongo.ASCENDING)]
-    )
-    DB.cache2.create_index(
-        [
-            ("path", pymongo.ASCENDING),
-            ("type", pymongo.ASCENDING),
-            ("arg", pymongo.ASCENDING),
-        ]
-    )
-    DB.cache2.create_index("date", expireAfterSeconds=3600 * 12)
-
-    # Index for the block query
-    DB.activities.create_index(
-        [
-            ("box", pymongo.ASCENDING),
-            ("type", pymongo.ASCENDING),
-            ("meta.undo", pymongo.ASCENDING),
-        ]
-    )
-
-    # Index for count queries
-    DB.activities.create_index(
-        [
-            ("box", pymongo.ASCENDING),
-            ("type", pymongo.ASCENDING),
-            ("meta.undo", pymongo.ASCENDING),
-            ("meta.deleted", pymongo.ASCENDING),
-        ]
-    )
-
-    DB.activities.create_index([("box", pymongo.ASCENDING)])
-
-    # Outbox query
-    DB.activities.create_index(
-        [
-            ("box", pymongo.ASCENDING),
-            ("type", pymongo.ASCENDING),
-            ("meta.undo", pymongo.ASCENDING),
-            ("meta.deleted", pymongo.ASCENDING),
-            ("meta.public", pymongo.ASCENDING),
-        ]
-    )
-
-    DB.activities.create_index(
-        [
-            ("type", pymongo.ASCENDING),
-            ("activity.object.type", pymongo.ASCENDING),
-            ("activity.object.inReplyTo", pymongo.ASCENDING),
-            ("meta.deleted", pymongo.ASCENDING),
-        ]
-    )
 
 
 def _drop_db():

@@ -7,7 +7,7 @@ services:
     ports:
      - "27017:27017"
   poussetaches:
-    image: "poussetaches:latest"
+    image: "poussetaches/poussetaches:latest"
     volumes:
      - "${DATA_DIR}/poussetaches:/app/poussetaches_data"
     environment:

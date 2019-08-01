@@ -12,7 +12,7 @@
 <p>Lists and its members are private.</p>
 <h2>New List</h2>
 <form action="/api/new_list" method="POST">
-<input type="hidden" name="redirect" value="{{ url_for('admin_lists') }}">
+<input type="hidden" name="redirect" value="{{ url_for('admin.admin_lists') }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="text" name="name" placeholder="My list">
 <input type="submit" value="Create">
@@ -23,13 +23,13 @@
 
 <ul>
     {% for l in lists %}
-    <li><a href="{{url_for('admin_list', name=l.name)}}">{{ l.name }}</a></li>
+    <li><a href="{{url_for('admin.admin_list', name=l.name)}}">{{ l.name }}</a></li>
     {% endfor %}
 </ul>
 
 <h2>Manage lists</h2>
 {% for l in lists %}
-<h3><a href="{{url_for("admin_list", name=l.name)}}">{{ l.name }}</a> <small style="font-weight:normal">{{ l.members | length }} members</small></h3>
+<h3><a href="{{url_for('admin.admin_list', name=l.name)}}">{{ l.name }}</a> <small style="font-weight:normal">{{ l.members | length }} members</small></h3>
 <form action="/api/delete_list" method="post">
 <input type="hidden" name="redirect" value="{{ request.path }}"/>
 <input type="hidden" name="name" value="{{ l.name }}"/>

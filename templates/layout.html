@@ -31,7 +31,7 @@
  {% if unread_notifications_count %}
  ({{unread_notifications_count}})
  {% endif %}</a></li>
-<li class="left"><a href="/admin/lists"{% if request.path == url_for('admin_lists') %} class="selected" {% endif %}>Lists</a></li>
+<li class="left"><a href="/admin/lists"{% if request.path == url_for('admin.admin_lists') %} class="selected" {% endif %}>Lists</a></li>
 <li class="left"><a href="/admin/bookmarks"{% if request.path == "/admin/bookmarks" %} class="selected" {% endif %}>Bookmarks</a></li>
 <li class="left"><a href="/admin/lookup"{% if request.path == "/admin/lookup" %} class="selected" {% endif %}>Lookup</a></li>
 <li class="left"><a href="/admin/logout">Logout</a></li>

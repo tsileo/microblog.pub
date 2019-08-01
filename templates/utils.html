@@ -213,7 +213,7 @@
 </form>
 {% endif %}
 
-{% if meta.bookmarked or request.path == url_for("admin_bookmarks") %}
+{% if meta.bookmarked or request.path == url_for("admin.admin_bookmarks") %}
 <form action="/api/bookmark" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
 <input type="hidden" name="id" value="{{ obj.id }}">

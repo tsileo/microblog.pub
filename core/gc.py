@@ -8,12 +8,12 @@ from typing import List
 
 from little_boxes import activitypub as ap
 
-import activitypub
-from activitypub import Box
 from config import DAYS_TO_KEEP
 from config import ID
 from config import ME
 from config import MEDIA_CACHE
+from core import activitypub
+from core.meta import Box
 from utils.migrations import DB
 
 back = activitypub.MicroblogPubBackend()
@@ -48,7 +48,7 @@ def threads_of_interest() -> List[str]:
     return list(out)
 
 
-def _keep(data: Dict[str, Any]):
+def _keep(data: Dict[str, Any]) -> None:
     DB.activities.update_one({"_id": data["_id"]}, {"$set": {"meta.gc_keep": True}})
 
 

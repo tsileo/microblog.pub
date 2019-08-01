@@ -28,8 +28,8 @@ from config import ID
 from config import ME
 from config import USER_AGENT
 from config import USERNAME
-from tasks import Tasks
-from utils.meta import Box
+from core.meta import Box
+from core.tasks import Tasks
 
 logger = logging.getLogger(__name__)
 
