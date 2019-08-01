@@ -1,12 +1,12 @@
 {% extends "layout.html" %}
 {% import 'utils.html' as utils %}
-{% block title %}{% if request.path == url_for('admin_stream') %}Stream{% else %}Notifications{% endif %} - {{ config.NAME }}{% endblock %}
+{% block title %}{% if request.path == url_for('admin.admin_stream') %}Stream{% else %}Notifications{% endif %} - {{ config.NAME }}{% endblock %}
 {% block content %}
 <div class="h-feed" id="container">
 {% include "header.html" %}
 <div id="admin">
 
-{% if request.path == url_for('admin_notifications') and unread_notifications_count %}
+{% if request.path == url_for('admin.admin_notifications') and unread_notifications_count %}
 <div style="clear:both;padding-bottom:60px;">
 <form action="/api/mark_notifications_as_read" method="POST">
 <input type="hidden" name="redirect" value="{{ request.path }}"/>
@@ -28,7 +28,7 @@
     {% if boost_actor %}
     <div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
     <span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> boosted</span>
-    {% if request.path == url_for('admin_notifications') %}
+    {% if request.path == url_for('admin.admin_notifications') %}
     {% if item.meta.notification_unread %}<span class="bar-item-no-bg"><span class="pcolor">new</span></span>{% endif %}
     <span class="bar-item-no-bg">{{ (item.activity.published or item.meta.published) | format_timeago }}</span>
     {% endif %}

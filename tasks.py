@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import timezone
 
 from poussetaches import PousseTaches
+
 from utils import parse_datetime
 
 p = PousseTaches(
