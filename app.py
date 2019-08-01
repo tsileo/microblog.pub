@@ -32,6 +32,7 @@ from u2flib_server import u2f
 
 import activitypub
 import blueprints.admin
+import blueprints.indieauth
 import blueprints.tasks
 import blueprints.well_known
 import config
@@ -59,7 +60,6 @@ from config import MEDIA_CACHE
 from config import VERSION
 from config import MetaKey
 from config import _meta
-from indieauth import indieauth
 from tasks import Tasks
 from utils import now
 from utils.key import get_secret_key
@@ -72,7 +72,7 @@ app.secret_key = get_secret_key("flask")
 app.register_blueprint(filters)
 app.register_blueprint(blueprints.admin.blueprint)
 app.register_blueprint(blueprints.api.blueprint, url_prefix="/api")
-app.register_blueprint(indieauth)
+app.register_blueprint(blueprints.indieauth.blueprint)
 app.register_blueprint(blueprints.tasks.blueprint)
 app.register_blueprint(blueprints.well_known.blueprint)
 app.config.update(WTF_CSRF_CHECK_DEFAULT=False)

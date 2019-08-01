@@ -23,12 +23,12 @@ from app_utils import back
 from app_utils import p
 from app_utils import post_to_outbox
 from config import DB
+from core.notifications import set_inbox_flags
 from tasks import Tasks
 from utils import now
 from utils import opengraph
 from utils.meta import MetaKey
 from utils.meta import _meta
-from utils.notifications import set_inbox_flags
 
 SIG_AUTH = HTTPSigAuth(config.KEY)
 
