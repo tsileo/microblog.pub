@@ -16,8 +16,8 @@ from flask import session
 from flask import url_for
 from itsdangerous import BadSignature
 
-from app_utils import _get_ip
-from app_utils import login_required
+from core.shared import _get_ip
+from core.shared import login_required
 from config import DB
 from config import JWT
 

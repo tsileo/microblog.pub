@@ -20,15 +20,15 @@ from u2flib_server import u2f
 
 import config
 from activitypub import Box
-from app_utils import MY_PERSON
-from app_utils import _build_thread
-from app_utils import _Response
-from app_utils import csrf
-from app_utils import login_required
-from app_utils import noindex
-from app_utils import p
-from app_utils import paginated_query
-from app_utils import post_to_outbox
+from core.shared import MY_PERSON
+from core.shared import _build_thread
+from core.shared import _Response
+from core.shared import csrf
+from core.shared import login_required
+from core.shared import noindex
+from core.shared import p
+from core.shared import paginated_query
+from core.shared import post_to_outbox
 from config import DB
 from config import ID
 from config import PASS

@@ -26,11 +26,11 @@ from werkzeug.utils import secure_filename
 import activitypub
 import config
 from activitypub import Box
-from app_utils import MY_PERSON
-from app_utils import _Response
-from app_utils import back
-from app_utils import csrf
-from app_utils import post_to_outbox
+from core.shared import MY_PERSON
+from core.shared import _Response
+from core.shared import back
+from core.shared import csrf
+from core.shared import post_to_outbox
 from config import BASE_URL
 from config import DB
 from config import DEBUG_MODE

@@ -13,15 +13,15 @@ from little_boxes.errors import NotAnActivityError
 from little_boxes.httpsig import HTTPSigAuth
 from requests.exceptions import HTTPError
 
-import activity_gc
+from core import gc
 import activitypub
 import config
 from activitypub import Box
-from app_utils import MY_PERSON
-from app_utils import _add_answers_to_question
-from app_utils import back
-from app_utils import p
-from app_utils import post_to_outbox
+from core.shared import MY_PERSON
+from core.shared import _add_answers_to_question
+from core.shared import back
+from core.shared import p
+from core.shared import post_to_outbox
 from config import DB
 from core.notifications import set_inbox_flags
 from tasks import Tasks
@@ -457,7 +457,7 @@ def task_fetch_remote_question():
 def task_cleanup():
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
-    activity_gc.perform()
+    gc.perform()
     return ""
 
 

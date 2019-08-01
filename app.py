@@ -38,16 +38,16 @@ import blueprints.well_known
 import config
 from activitypub import Box
 from activitypub import embed_collection
-from app_utils import MY_PERSON
-from app_utils import _add_answers_to_question
-from app_utils import _build_thread
-from app_utils import _get_ip
-from app_utils import back
-from app_utils import csrf
-from app_utils import login_required
-from app_utils import noindex
-from app_utils import paginated_query
-from app_utils import post_to_outbox
+from core.shared import MY_PERSON
+from core.shared import _add_answers_to_question
+from core.shared import _build_thread
+from core.shared import _get_ip
+from core.shared import back
+from core.shared import csrf
+from core.shared import login_required
+from core.shared import noindex
+from core.shared import paginated_query
+from core.shared import post_to_outbox
 from blueprints.api import _api_required
 from config import ADMIN_API_KEY
 from config import BLACKLIST
