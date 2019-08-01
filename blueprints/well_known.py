@@ -1,5 +1,6 @@
 import json
 import mimetypes
+from typing import Any
 
 import flask
 from flask import Response
@@ -16,7 +17,7 @@ blueprint = flask.Blueprint("well_known", __name__)
 
 
 @blueprint.route("/.well-known/webfinger")
-def wellknown_webfinger() -> _Response:
+def wellknown_webfinger() -> Any:
     """Exposes/servers WebFinger data."""
     resource = request.args.get("resource")
     if resource not in [f"acct:{config.USERNAME}@{config.DOMAIN}", config.ID]:
@@ -52,7 +53,7 @@ def wellknown_webfinger() -> _Response:
 
 
 @blueprint.route("/.well-known/nodeinfo")
-def wellknown_nodeinfo() -> _Response:
+def wellknown_nodeinfo() -> Any:
     """Exposes the NodeInfo endpoint (http://nodeinfo.diaspora.software/)."""
     return flask.jsonify(
         links=[
@@ -65,7 +66,7 @@ def wellknown_nodeinfo() -> _Response:
 
 
 @blueprint.route("/nodeinfo")
-def nodeinfo() -> _Response:
+def nodeinfo() -> Any:
     """NodeInfo endpoint."""
     q = {
         "box": Box.OUTBOX.value,
