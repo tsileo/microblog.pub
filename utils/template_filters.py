@@ -17,7 +17,7 @@ from little_boxes.activitypub import _to_list
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import ActivityNotFoundError
 
-from activitypub import _answer_key
+from core.activitypub import _answer_key
 from config import EMOJI_TPL
 from config import ID
 from config import MEDIA_CACHE
