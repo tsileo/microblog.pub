@@ -21,9 +21,9 @@ steps:
       DOCKER_HOST: tcp://docker:2375
     commands:
       - apk update && apk upgrade && apk add --no-cache bash git openssh curl
-      - git clone https://github.com/tsileo/poussetaches.git pt && cd pt && docker build . -t poussetaches:latest && cd - && rm -rf pt
       - docker network create fede
       - docker pull mongo
+      - docker pull poussetaches/poussetaches
       - docker build . -t microblogpub:latest
   
   # Run poussetaches (will be shared by the two microblog.pub instances) "in the background"
@@ -34,7 +34,7 @@ steps:
       DOCKER_HOST: tcp://docker:2375
       POUSSETACHES_AUTH_KEY: lol
     commands:
-      - docker run -p 7991:7991 --net fede -e POUSSETACHES_AUTH_KEY --name poussetaches poussetaches
+      - docker run -p 7991:7991 --net fede -e POUSSETACHES_AUTH_KEY --name poussetaches poussetaches/poussetaches
 
   # Run MongoDB (will be shared by the two microblog.pub instances) "in the background"
   - name: run_mongodb
@@ -90,6 +90,6 @@ services:
   privileged: true
 ---
 kind: signature
-hmac: 75997f4d5da8105b6a0bfa227aadab874c19d5dcf00c94139059899e1243397e
+hmac: ae911176117298c18ecfcd95fbdbd62304c5f32462b42f2aefdd5a5b834fed60
 
 ...
