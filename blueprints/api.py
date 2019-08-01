@@ -31,6 +31,7 @@ from config import DEBUG_MODE
 from config import ID
 from config import JWT
 from config import MEDIA_CACHE
+from config import ADMIN_API_KEY
 from config import _drop_db
 from core import activitypub
 from core.meta import MetaKey
@@ -40,6 +41,7 @@ from core.shared import _Response
 from core.shared import back
 from core.shared import csrf
 from core.shared import post_to_outbox
+from core.shared import login_required
 from core.tasks import Tasks
 from utils import now
 
@@ -124,6 +126,12 @@ def _user_api_response(**kwargs) -> _Response:
     resp = flask.jsonify(**kwargs)
     resp.status_code = 201
     return resp
+
+
+@blueprint.route("/api/key")
+@login_required
+def api_user_key() -> _Response:
+    return flask.jsonify(api_key=ADMIN_API_KEY)
 
 
 @blueprint.route("/note/delete", methods=["POST"])

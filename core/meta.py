@@ -28,6 +28,7 @@ class MetaKey(Enum):
     GC_KEEP = "gc_keep"
     OBJECT = "object"
     OBJECT_ACTOR = "object_actor"
+    PUBLIC = "public"
 
 
 def _meta(mk: MetaKey) -> str:
@@ -56,3 +57,7 @@ def not_undo() -> _SubQuery:
 
 def by_actor(actor: ap.BaseActivity) -> _SubQuery:
     return {_meta(MetaKey.ACTOR_ID): actor.id}
+
+
+def is_public() -> _SubQuery:
+    return {_meta(MetaKey.PUBLIC): True}

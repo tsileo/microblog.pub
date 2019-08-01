@@ -24,7 +24,6 @@ from little_boxes.activitypub import clean_activity
 from little_boxes.activitypub import get_backend
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import Error
-from little_boxes.httpsig import HTTPSigAuth
 from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
@@ -38,18 +37,19 @@ import config
 from core.meta import Box
 from core.activitypub import embed_collection
 from blueprints.api import _api_required
-from config import ADMIN_API_KEY
-from config import BLACKLIST
 from config import DB
 from config import HEADERS
 from config import ID
-from config import KEY
 from config import ME
 from config import MEDIA_CACHE
 from config import VERSION
 from core import activitypub
+from core.db import find_one_activity
 from core.meta import MetaKey
 from core.meta import _meta
+from core.meta import is_public
+from core.meta import by_remote_id
+from core.meta import in_outbox
 from core.shared import MY_PERSON
 from core.shared import _add_answers_to_question
 from core.shared import _build_thread
@@ -61,11 +61,11 @@ from core.shared import noindex
 from core.shared import paginated_query
 from core.shared import post_to_outbox
 from core.tasks import Tasks
+from blueprints.tasks import TaskError
 from utils import now
 from utils.key import get_secret_key
 from utils.template_filters import filters
 
-# p = PousseTaches("http://localhost:7991", "http://localhost:5000")
 
 app = Flask(__name__)
 app.secret_key = get_secret_key("flask")
@@ -91,12 +91,10 @@ else:
     root_logger.handlers = gunicorn_logger.handlers
     root_logger.setLevel(gunicorn_logger.level)
 
-SIG_AUTH = HTTPSigAuth(KEY)
-
 
 def is_blacklisted(url: str) -> bool:
     try:
-        return urlparse(url).netloc in BLACKLIST
+        return urlparse(url).netloc in config.BLACKLIST
     except Exception:
         logger.exception(f"failed to blacklist for {url}")
         return False
@@ -207,13 +205,6 @@ def handle_activitypub_error(error):
     response = flask_jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
-
-
-class TaskError(Exception):
-    """Raised to log the error for poussetaches."""
-
-    def __init__(self):
-        self.message = traceback.format_exc()
 
 
 @app.errorhandler(TaskError)
@@ -575,13 +566,11 @@ def outbox_detail(item_id):
 
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
-    data = DB.activities.find_one(
-        {
-            "box": Box.OUTBOX.value,
-            "remote_id": back.activity_url(item_id),
-            "meta.public": True,
-        }
-    )
+    data = find_one_activity({
+        **in_outbox(),
+        **by_remote_id(back.activity_url(item_id)),
+        **is_public(),
+    })
     if not data:
         abort(404)
 
@@ -709,12 +698,6 @@ def outbox_activity_shares(item_id):
             first_page=request.args.get("page") == "first",
         )
     )
-
-
-@app.route("/api/key")
-@login_required
-def api_user_key():
-    return flask_jsonify(api_key=ADMIN_API_KEY)
 
 
 @app.route("/inbox", methods=["GET", "POST"])  # noqa: C901
