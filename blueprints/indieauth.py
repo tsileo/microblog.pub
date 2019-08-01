@@ -16,10 +16,10 @@ from flask import session
 from flask import url_for
 from itsdangerous import BadSignature
 
-from core.shared import _get_ip
-from core.shared import login_required
 from config import DB
 from config import JWT
+from core.shared import _get_ip
+from core.shared import login_required
 
 blueprint = flask.Blueprint("indieauth", __name__)
 

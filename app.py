@@ -30,24 +30,13 @@ from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
 from u2flib_server import u2f
 
-import activitypub
 import blueprints.admin
 import blueprints.indieauth
 import blueprints.tasks
 import blueprints.well_known
 import config
-from activitypub import Box
-from activitypub import embed_collection
-from core.shared import MY_PERSON
-from core.shared import _add_answers_to_question
-from core.shared import _build_thread
-from core.shared import _get_ip
-from core.shared import back
-from core.shared import csrf
-from core.shared import login_required
-from core.shared import noindex
-from core.shared import paginated_query
-from core.shared import post_to_outbox
+from core.meta import Box
+from core.activitypub import embed_collection
 from blueprints.api import _api_required
 from config import ADMIN_API_KEY
 from config import BLACKLIST
@@ -58,9 +47,20 @@ from config import KEY
 from config import ME
 from config import MEDIA_CACHE
 from config import VERSION
-from config import MetaKey
-from config import _meta
-from tasks import Tasks
+from core import activitypub
+from core.meta import MetaKey
+from core.meta import _meta
+from core.shared import MY_PERSON
+from core.shared import _add_answers_to_question
+from core.shared import _build_thread
+from core.shared import _get_ip
+from core.shared import back
+from core.shared import csrf
+from core.shared import login_required
+from core.shared import noindex
+from core.shared import paginated_query
+from core.shared import post_to_outbox
+from core.tasks import Tasks
 from utils import now
 from utils.key import get_secret_key
 from utils.template_filters import filters

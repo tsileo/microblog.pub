@@ -5,8 +5,8 @@ from urllib.parse import urlparse
 
 from little_boxes import activitypub as ap
 
-import activitypub
 from config import ID
+from core import activitypub
 from utils.migrations import DB
 from utils.migrations import Migration
 from utils.migrations import logger

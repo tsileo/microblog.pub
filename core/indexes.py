@@ -1,7 +1,8 @@
 import pymongo
+
 from config import DB
-from utils.meta import _meta
-from utils.meta import MetaKey
+from core.meta import MetaKey
+from core.meta import _meta
 
 
 def create_indexes():

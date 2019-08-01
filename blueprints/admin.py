@@ -19,7 +19,10 @@ from passlib.hash import bcrypt
 from u2flib_server import u2f
 
 import config
-from activitypub import Box
+from core.activitypub import Box
+from config import DB
+from config import ID
+from config import PASS
 from core.shared import MY_PERSON
 from core.shared import _build_thread
 from core.shared import _Response
@@ -29,9 +32,6 @@ from core.shared import noindex
 from core.shared import p
 from core.shared import paginated_query
 from core.shared import post_to_outbox
-from config import DB
-from config import ID
-from config import PASS
 from utils import now
 from utils.lookup import lookup
 

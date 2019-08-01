@@ -8,12 +8,12 @@ from typing import List
 
 from little_boxes import activitypub as ap
 
-import activitypub
-from activitypub import Box
+from core.meta import Box
 from config import DAYS_TO_KEEP
 from config import ID
 from config import ME
 from config import MEDIA_CACHE
+from core import activitypub
 from utils.migrations import DB
 
 back = activitypub.MicroblogPubBackend()

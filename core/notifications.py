@@ -8,13 +8,13 @@ from little_boxes import activitypub as ap
 
 from config import BASE_URL
 from config import DB
-from config import MetaKey
-from config import _meta
-from tasks import Tasks
-from utils.meta import by_actor
-from utils.meta import by_type
-from utils.meta import in_inbox
-from utils.meta import not_undo
+from core.meta import MetaKey
+from core.meta import _meta
+from core.meta import by_actor
+from core.meta import by_type
+from core.meta import in_inbox
+from core.meta import not_undo
+from core.tasks import Tasks
 
 _logger = logging.getLogger(__name__)
 

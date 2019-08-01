@@ -9,7 +9,7 @@ from flask import request
 from little_boxes import activitypub as ap
 
 import config
-from activitypub import Box
+from core.meta import Box
 from config import DB
 
 blueprint = flask.Blueprint("well_known", __name__)

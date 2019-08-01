@@ -19,12 +19,12 @@ from little_boxes import activitypub as ap
 from little_boxes.activitypub import format_datetime
 from poussetaches import PousseTaches
 
-import activitypub
-from activitypub import Box
-from activitypub import _answer_key
+from core.meta import Box
+from core.activitypub import _answer_key
 from config import DB
 from config import ME
-from tasks import Tasks
+from core import activitypub
+from core.tasks import Tasks
 
 _Response = Union[flask.Response, werkzeug.wrappers.Response, str]
 
