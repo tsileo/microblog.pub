@@ -10,7 +10,6 @@ from little_boxes import activitypub as ap
 
 import config
 from activitypub import Box
-from app_utils import _Response
 from config import DB
 
 blueprint = flask.Blueprint("well_known", __name__)
