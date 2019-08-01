@@ -9,8 +9,8 @@ from flask import request
 from little_boxes import activitypub as ap
 
 import config
-from core.meta import Box
 from config import DB
+from core.meta import Box
 
 blueprint = flask.Blueprint("well_known", __name__)
 

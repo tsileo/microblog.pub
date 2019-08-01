@@ -1,7 +1,7 @@
 from enum import Enum
 from enum import unique
-from typing import Dict
 from typing import Any
+from typing import Dict
 from typing import Optional
 
 from config import DB

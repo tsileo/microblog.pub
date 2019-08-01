@@ -14,10 +14,10 @@ from little_boxes.httpsig import HTTPSigAuth
 from requests.exceptions import HTTPError
 
 import config
-from core.activitypub import Box
 from config import DB
 from core import activitypub
 from core import gc
+from core.activitypub import Box
 from core.meta import MetaKey
 from core.meta import _meta
 from core.notifications import set_inbox_flags

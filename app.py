@@ -34,9 +34,8 @@ import blueprints.indieauth
 import blueprints.tasks
 import blueprints.well_known
 import config
-from core.meta import Box
-from core.activitypub import embed_collection
 from blueprints.api import _api_required
+from blueprints.tasks import TaskError
 from config import DB
 from config import HEADERS
 from config import ID
@@ -44,12 +43,14 @@ from config import ME
 from config import MEDIA_CACHE
 from config import VERSION
 from core import activitypub
+from core.activitypub import embed_collection
 from core.db import find_one_activity
+from core.meta import Box
 from core.meta import MetaKey
 from core.meta import _meta
-from core.meta import is_public
 from core.meta import by_remote_id
 from core.meta import in_outbox
+from core.meta import is_public
 from core.shared import MY_PERSON
 from core.shared import _add_answers_to_question
 from core.shared import _build_thread
@@ -61,11 +62,9 @@ from core.shared import noindex
 from core.shared import paginated_query
 from core.shared import post_to_outbox
 from core.tasks import Tasks
-from blueprints.tasks import TaskError
 from utils import now
 from utils.key import get_secret_key
 from utils.template_filters import filters
-
 
 app = Flask(__name__)
 app.secret_key = get_secret_key("flask")
@@ -566,11 +565,9 @@ def outbox_detail(item_id):
 
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
-    data = find_one_activity({
-        **in_outbox(),
-        **by_remote_id(back.activity_url(item_id)),
-        **is_public(),
-    })
+    data = find_one_activity(
+        {**in_outbox(), **by_remote_id(back.activity_url(item_id)), **is_public()}
+    )
     if not data:
         abort(404)
 

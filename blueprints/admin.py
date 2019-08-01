@@ -19,10 +19,10 @@ from passlib.hash import bcrypt
 from u2flib_server import u2f
 
 import config
-from core.activitypub import Box
 from config import DB
 from config import ID
 from config import PASS
+from core.activitypub import Box
 from core.shared import MY_PERSON
 from core.shared import _build_thread
 from core.shared import _Response
