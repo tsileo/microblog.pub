@@ -41,7 +41,7 @@ def _delete_process_outbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
     )
     _logger.info(f"found local copy of deleted activity: {data}")
     if data:
-        obj = ap.parse_activity(data["activity"])
+        obj = ap.parse_activity(data["activity"]).get_object()
         _logger.info(f"obj={obj!r}")
         in_reply_to = obj.get_in_reply_to()
         if in_reply_to:
