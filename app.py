@@ -3,8 +3,6 @@ import logging
 import os
 import traceback
 from datetime import datetime
-from typing import Any
-from typing import Dict
 from urllib.parse import urlparse
 
 from bson.objectid import ObjectId
@@ -20,6 +18,7 @@ from flask import url_for
 from itsdangerous import BadSignature
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
+from little_boxes.activitypub import activity_from_doc
 from little_boxes.activitypub import clean_activity
 from little_boxes.activitypub import get_backend
 from little_boxes.errors import ActivityGoneError
@@ -43,10 +42,11 @@ from config import ME
 from config import MEDIA_CACHE
 from config import VERSION
 from core import activitypub
+from core import feed
 from core.activitypub import activity_url
-from core.activitypub import embed_collection
 from core.activitypub import post_to_inbox
 from core.activitypub import post_to_outbox
+from core.activitypub import remove_context
 from core.db import find_one_activity
 from core.meta import Box
 from core.meta import MetaKey
@@ -55,7 +55,6 @@ from core.meta import by_remote_id
 from core.meta import in_outbox
 from core.meta import is_public
 from core.shared import MY_PERSON
-from core.shared import _add_answers_to_question
 from core.shared import _build_thread
 from core.shared import _get_ip
 from core.shared import csrf
@@ -334,11 +333,6 @@ def u2f_register():
 
 #######
 # Activity pub routes
-@app.route("/drop_cache")
-@login_required
-def drop_cache():
-    DB.actors.drop()
-    return "Done"
 
 
 @app.route("/")
@@ -466,44 +460,6 @@ def note_by_id(note_id):
     return render_template(
         "note.html", likes=likes, shares=shares, thread=thread, note=data
     )
-
-
-def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
-    if raw_doc["activity"]["type"] != ActivityType.CREATE.value:
-        return raw_doc
-
-    raw_doc["activity"]["object"]["replies"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_direct_reply", 0),
-        f'{raw_doc["remote_id"]}/replies',
-    )
-
-    raw_doc["activity"]["object"]["likes"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_like", 0), f'{raw_doc["remote_id"]}/likes'
-    )
-
-    raw_doc["activity"]["object"]["shares"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_boost", 0), f'{raw_doc["remote_id"]}/shares'
-    )
-
-    return raw_doc
-
-
-def remove_context(activity: Dict[str, Any]) -> Dict[str, Any]:
-    if "@context" in activity:
-        del activity["@context"]
-    return activity
-
-
-def activity_from_doc(raw_doc: Dict[str, Any], embed: bool = False) -> Dict[str, Any]:
-    raw_doc = add_extra_collection(raw_doc)
-    activity = clean_activity(raw_doc["activity"])
-
-    # Handle Questions
-    # TODO(tsileo): what about object embedded by ID/URL?
-    _add_answers_to_question(raw_doc)
-    if embed:
-        return remove_context(activity)
-    return activity
 
 
 @app.route("/outbox", methods=["GET", "POST"])
@@ -986,7 +942,7 @@ def liked():
 @app.route("/feed.json")
 def json_feed():
     return Response(
-        response=json.dumps(activitypub.json_feed("/feed.json")),
+        response=json.dumps(feed.json_feed("/feed.json")),
         headers={"Content-Type": "application/json"},
     )
 
@@ -994,7 +950,7 @@ def json_feed():
 @app.route("/feed.atom")
 def atom_feed():
     return Response(
-        response=activitypub.gen_feed().atom_str(),
+        response=feed.gen_feed().atom_str(),
         headers={"Content-Type": "application/atom+xml"},
     )
 
@@ -1002,6 +958,6 @@ def atom_feed():
 @app.route("/feed.rss")
 def rss_feed():
     return Response(
-        response=activitypub.gen_feed().rss_str(),
+        response=feed.gen_feed().rss_str(),
         headers={"Content-Type": "application/rss+xml"},
     )

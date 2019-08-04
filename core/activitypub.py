@@ -11,12 +11,11 @@ from urllib.parse import urlparse
 
 from bson.objectid import ObjectId
 from cachetools import LRUCache
-from feedgen.feed import FeedGenerator
 from flask import url_for
-from html2text import html2text
 from little_boxes import activitypub as ap
 from little_boxes import strtobool
 from little_boxes.activitypub import _to_list
+from little_boxes.activitypub import clean_activity
 from little_boxes.backend import Backend
 from little_boxes.errors import ActivityGoneError
 
@@ -26,8 +25,8 @@ from config import EXTRA_INBOXES
 from config import ID
 from config import ME
 from config import USER_AGENT
-from config import USERNAME
 from core.meta import Box
+from core.shared import _add_answers_to_question
 from core.tasks import Tasks
 
 logger = logging.getLogger(__name__)
@@ -457,118 +456,6 @@ class MicroblogPubBackend(Backend):
         )
 
 
-def gen_feed():
-    fg = FeedGenerator()
-    fg.id(f"{ID}")
-    fg.title(f"{USERNAME} notes")
-    fg.author({"name": USERNAME, "email": "t@a4.io"})
-    fg.link(href=ID, rel="alternate")
-    fg.description(f"{USERNAME} notes")
-    fg.logo(ME.get("icon", {}).get("url"))
-    fg.language("en")
-    for item in DB.activities.find(
-        {
-            "box": Box.OUTBOX.value,
-            "type": "Create",
-            "meta.deleted": False,
-            "meta.public": True,
-        },
-        limit=10,
-    ).sort("_id", -1):
-        fe = fg.add_entry()
-        fe.id(item["activity"]["object"].get("url"))
-        fe.link(href=item["activity"]["object"].get("url"))
-        fe.title(item["activity"]["object"]["content"])
-        fe.description(item["activity"]["object"]["content"])
-    return fg
-
-
-def json_feed(path: str) -> Dict[str, Any]:
-    """JSON Feed (https://jsonfeed.org/) document."""
-    data = []
-    for item in DB.activities.find(
-        {
-            "box": Box.OUTBOX.value,
-            "type": "Create",
-            "meta.deleted": False,
-            "meta.public": True,
-        },
-        limit=10,
-    ).sort("_id", -1):
-        data.append(
-            {
-                "id": item["activity"]["id"],
-                "url": item["activity"]["object"].get("url"),
-                "content_html": item["activity"]["object"]["content"],
-                "content_text": html2text(item["activity"]["object"]["content"]),
-                "date_published": item["activity"]["object"].get("published"),
-            }
-        )
-    return {
-        "version": "https://jsonfeed.org/version/1",
-        "user_comment": (
-            "This is a microblog feed. You can add this to your feed reader using the following URL: "
-            + ID
-            + path
-        ),
-        "title": USERNAME,
-        "home_page_url": ID,
-        "feed_url": ID + path,
-        "author": {
-            "name": USERNAME,
-            "url": ID,
-            "avatar": ME.get("icon", {}).get("url"),
-        },
-        "items": data,
-    }
-
-
-def build_inbox_json_feed(
-    path: str, request_cursor: Optional[str] = None
-) -> Dict[str, Any]:
-    """Build a JSON feed from the inbox activities."""
-    data = []
-    cursor = None
-
-    q: Dict[str, Any] = {
-        "type": "Create",
-        "meta.deleted": False,
-        "box": Box.INBOX.value,
-    }
-    if request_cursor:
-        q["_id"] = {"$lt": request_cursor}
-
-    for item in DB.activities.find(q, limit=50).sort("_id", -1):
-        actor = ap.get_backend().fetch_iri(item["activity"]["actor"])
-        data.append(
-            {
-                "id": item["activity"]["id"],
-                "url": item["activity"]["object"].get("url"),
-                "content_html": item["activity"]["object"]["content"],
-                "content_text": html2text(item["activity"]["object"]["content"]),
-                "date_published": item["activity"]["object"].get("published"),
-                "author": {
-                    "name": actor.get("name", actor.get("preferredUsername")),
-                    "url": actor.get("url"),
-                    "avatar": actor.get("icon", {}).get("url"),
-                },
-            }
-        )
-        cursor = str(item["_id"])
-
-    resp = {
-        "version": "https://jsonfeed.org/version/1",
-        "title": f"{USERNAME}'s stream",
-        "home_page_url": ID,
-        "feed_url": ID + path,
-        "items": data,
-    }
-    if cursor and len(data) == 50:
-        resp["next_url"] = ID + path + "?cursor=" + cursor
-
-    return resp
-
-
 def embed_collection(total_items, first_page_id):
     """Helper creating a root OrderedCollection with a link to the first page."""
     return {
@@ -672,3 +559,41 @@ def build_ordered_collection(
     # XXX(tsileo): implements prev with prev=<first item cursor>?
 
     return resp
+
+
+def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
+    if raw_doc["activity"]["type"] != ap.ActivityType.CREATE.value:
+        return raw_doc
+
+    raw_doc["activity"]["object"]["replies"] = embed_collection(
+        raw_doc.get("meta", {}).get("count_direct_reply", 0),
+        f'{raw_doc["remote_id"]}/replies',
+    )
+
+    raw_doc["activity"]["object"]["likes"] = embed_collection(
+        raw_doc.get("meta", {}).get("count_like", 0), f'{raw_doc["remote_id"]}/likes'
+    )
+
+    raw_doc["activity"]["object"]["shares"] = embed_collection(
+        raw_doc.get("meta", {}).get("count_boost", 0), f'{raw_doc["remote_id"]}/shares'
+    )
+
+    return raw_doc
+
+
+def remove_context(activity: Dict[str, Any]) -> Dict[str, Any]:
+    if "@context" in activity:
+        del activity["@context"]
+    return activity
+
+
+def activity_from_doc(raw_doc: Dict[str, Any], embed: bool = False) -> Dict[str, Any]:
+    raw_doc = add_extra_collection(raw_doc)
+    activity = clean_activity(raw_doc["activity"])
+
+    # Handle Questions
+    # TODO(tsileo): what about object embedded by ID/URL?
+    _add_answers_to_question(raw_doc)
+    if embed:
+        return remove_context(activity)
+    return activity
