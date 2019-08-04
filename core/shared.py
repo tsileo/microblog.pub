@@ -4,11 +4,9 @@ from datetime import timezone
 from functools import wraps
 from typing import Any
 from typing import Dict
-from typing import Union
 from urllib.parse import urljoin
 
 import flask
-import werkzeug
 from bson.objectid import ObjectId
 from flask import current_app as app
 from flask import redirect
