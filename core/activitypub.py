@@ -118,11 +118,13 @@ class MicroblogPubBackend(Backend):
         is_public = False
         if visibility in [ap.Visibility.PUBLIC, ap.Visibility.UNLISTED]:
             is_public = True
+
         object_id = None
         try:
             object_id = activity.get_object_id()
         except Exception:  # TODO(tsileo): should be ValueError, but replies trigger a KeyError on object
             pass
+
         object_visibility = None
         if activity.has_type(
             [ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE, ap.ActivityType.LIKE]

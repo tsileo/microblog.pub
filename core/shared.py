@@ -1,3 +1,4 @@
+import binascii
 import os
 from datetime import datetime
 from datetime import timezone
@@ -102,7 +103,7 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
         activity = activity.build_create()
 
     # Assign create a random ID
-    obj_id = back.random_object_id()
+    obj_id = binascii.hexlify(os.urandom(8)).decode("utf-8")
     uri = activity_url(obj_id)
     activity._data["id"] = uri
     if activity.has_type(ap.ActivityType.CREATE):
@@ -112,6 +113,7 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
         activity._data["object"]["url"] = urljoin(
             BASE_URL, url_for("note_by_id", note_id=obj_id)
         )
+        activity.reset_object_cache()
 
     back.save(Box.OUTBOX, activity)
     Tasks.cache_actor(activity.id)

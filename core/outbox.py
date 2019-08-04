@@ -7,6 +7,7 @@ from typing import Dict
 from little_boxes import activitypub as ap
 
 from core.db import DB
+from core.db import find_one_activity
 from core.db import update_many_activities
 from core.shared import MY_PERSON
 from core.shared import back
@@ -26,18 +27,26 @@ def process_outbox(activity: ap.BaseActivity, new_meta: _NewMeta) -> None:
 @process_outbox.register
 def _delete_process_outbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
     _logger.info(f"process_outbox activity={delete!r}")
-    obj = delete.get_object()
+    obj_id = delete.get_object_id()
 
+    # Flag everything referencing the deleted object as deleted (except the Delete activity itself)
     update_many_activities(
-        {"meta.object_id": obj.id}, {"$set": {"meta.deleted": True, "meta.undo": True}}
+        {"meta.object_id": obj_id, "remote_id": {"$ne": delete.id}},
+        {"$set": {"meta.deleted": True, "meta.undo": True}},
     )
 
-    in_reply_to = obj.get_in_reply_to()
-    if in_reply_to:
-        DB.activities.update_one(
-            {"activity.object.id": in_reply_to},
-            {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
-        )
+    # If the deleted activity was in DB, decrease some threads-related counter
+    data = find_one_activity(
+        {"meta.object_id": obj_id, "type": ap.ActivityType.CREATE.value}
+    )
+    if data:
+        obj = ap.parse_activity(data["activity"])
+        in_reply_to = obj.get_in_reply_to()
+        if in_reply_to:
+            DB.activities.update_one(
+                {"activity.object.id": in_reply_to},
+                {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
+            )
 
 
 @process_outbox.register

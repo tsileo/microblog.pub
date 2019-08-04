@@ -557,10 +557,8 @@ def outbox_detail(item_id):
         abort(404)
 
     if doc["meta"].get("deleted", False):
-        obj = ap.parse_activity(doc["activity"])
-        resp = jsonify(**obj.get_tombstone().to_dict())
-        resp.status_code = 410
-        return resp
+        abort(404)
+
     return jsonify(**activity_from_doc(doc))
 
 
@@ -574,10 +572,7 @@ def outbox_activity(item_id):
 
     obj = activity_from_doc(data)
     if data["meta"].get("deleted", False):
-        obj = ap.parse_activity(data["activity"])
-        resp = jsonify(**obj.get_object().get_tombstone().to_dict())
-        resp.status_code = 410
-        return resp
+        abort(404)
 
     if obj["type"] != ActivityType.CREATE.value:
         abort(404)
