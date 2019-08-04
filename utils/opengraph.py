@@ -23,7 +23,7 @@ def links_from_note(note):
 
     links = set()
     if "content" in note:
-        soup = BeautifulSoup(note["content"])
+        soup = BeautifulSoup(note["content"], "html5lib")
         for link in soup.find_all("a"):
             h = link.get("href")
             if h.startswith("http") and h not in tags_href and is_url_valid(h):
