@@ -162,20 +162,21 @@ def _follow_process_inbox(activity: ap.Follow, new_meta: _NewMeta) -> None:
 def _undo_process_inbox(activity: ap.Undo, new_meta: _NewMeta) -> None:
     _logger.info(f"process_inbox activity={activity!r}")
     obj = activity.get_object()
+    DB.activities.update_one({"remote_id": obj.id}, {"$set": {"meta.undo": True}})
     if obj.has_type(ap.ActivityType.LIKE):
         liked = activity.get_object()
         # Update the meta counter if the object is published by the server
         DB.activities.update_one(
-            {"box": Box.OUTBOX.value, "activity.object.id": liked.id},
+            {
+                "box": Box.OUTBOX.value,
+                "meta.object_id": liked.id,
+                "type": ap.ActivityType.CREATE.value,
+            },
             {"$inc": {"meta.count_like": -1}},
         )
-        DB.activities.update_one({"remote_id": obj.id}, {"$set": {"meta.undo": True}})
     elif obj.has_type(ap.ActivityType.ANNOUNCE):
         announced = obj.get_object()
         # Update the meta counter if the object is published by the server
         DB.activities.update_one(
             {"activity.object.id": announced.id}, {"$inc": {"meta.count_boost": -1}}
         )
-        DB.activities.update_one({"remote_id": obj.id}, {"$set": {"meta.undo": True}})
-    elif obj.has_type(ap.ActivityType.FOLLOW):
-        DB.activities.update_one({"remote_id": obj.id}, {"$set": {"meta.undo": True}})
