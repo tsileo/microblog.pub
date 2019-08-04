@@ -9,7 +9,9 @@ def create_indexes():
     if "trash" not in DB.collection_names():
         DB.create_collection("trash", capped=True, size=50 << 20)  # 50 MB
 
-    DB.command("compact", "activities")
+    if "activities" in DB.collection_names():
+        DB.command("compact", "activities")
+
     DB.activities.create_index([(_meta(MetaKey.NOTIFICATION), pymongo.ASCENDING)])
     DB.activities.create_index(
         [(_meta(MetaKey.NOTIFICATION_UNREAD), pymongo.ASCENDING)]

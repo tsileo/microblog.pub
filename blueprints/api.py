@@ -32,7 +32,7 @@ from config import ID
 from config import JWT
 from config import MEDIA_CACHE
 from config import _drop_db
-from core import activitypub
+from core import feed
 from core.activitypub import activity_url
 from core.activitypub import post_to_outbox
 from core.meta import Box
@@ -587,7 +587,7 @@ def api_debug() -> _Response:
 def api_stream() -> _Response:
     return Response(
         response=json.dumps(
-            activitypub.build_inbox_json_feed("/api/stream", request.args.get("cursor"))
+            feed.build_inbox_json_feed("/api/stream", request.args.get("cursor"))
         ),
         headers={"Content-Type": "application/json"},
     )
