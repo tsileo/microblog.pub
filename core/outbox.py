@@ -39,8 +39,10 @@ def _delete_process_outbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
     data = find_one_activity(
         {"meta.object_id": obj_id, "type": ap.ActivityType.CREATE.value}
     )
+    _logger.info(f"found local copy of deleted activity: {data}")
     if data:
         obj = ap.parse_activity(data["activity"])
+        _logger.info(f"obj={obj!r}")
         in_reply_to = obj.get_in_reply_to()
         if in_reply_to:
             DB.activities.update_one(
