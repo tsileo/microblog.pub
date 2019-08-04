@@ -32,6 +32,8 @@ class MetaKey(Enum):
     PUBLIC = "public"
 
     DELETED = "deleted"
+    BOOSTED = "boosted"
+    LIKED = "liked"
 
     COUNT_LIKE = "count_like"
     COUNT_BOOST = "count_boost"
