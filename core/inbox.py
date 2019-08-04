@@ -10,7 +10,13 @@ import config
 from core.activitypub import _answer_key
 from core.activitypub import post_to_outbox
 from core.db import DB
+from core.meta import by_remote_id
+from core.meta import MetaKey
+from core.meta import inc
 from core.meta import Box
+from core.meta import in_outbox
+from core.meta import by_object_id
+from core.meta import by_type
 from core.shared import MY_PERSON
 from core.shared import back
 from core.tasks import Tasks
@@ -48,7 +54,8 @@ def _delete_process_inbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
         _logger.exception(f"failed to handle delete replies for {obj_id}")
 
     DB.activities.update_one(
-        {"meta.object_id": obj_id, "type": "Create"}, {"$set": {"meta.deleted": True}}
+        {**by_object_id(obj_id), **by_type(ap.ActivityType.CREATE)},
+        {"$set": {"meta.deleted": True}},
     )
 
     # Foce undo other related activities
@@ -80,7 +87,7 @@ def _update_process_inbox(update: ap.Update, new_meta: _NewMeta) -> None:
         )
         # Also update the cached copies of the question (like Announce and Like)
         DB.activities.update_many(
-            {"meta.object.id": obj.id}, {"$set": {"meta.object": obj.to_dict()}}
+            by_object_id(obj.id), {"$set": {"meta.object": obj.to_dict()}}
         )
 
     # FIXME(tsileo): handle update actor amd inbox_update_note/inbox_update_actor
@@ -115,7 +122,7 @@ def _announce_process_inbox(announce: ap.Announce, new_meta: _NewMeta) -> None:
         Tasks.fetch_remote_question(obj)
 
     DB.activities.update_one(
-        {"remote_id": announce.id},
+        by_remote_id(announce.id),
         {
             "$set": {
                 "meta.object": obj.to_dict(embed=True),
@@ -124,7 +131,8 @@ def _announce_process_inbox(announce: ap.Announce, new_meta: _NewMeta) -> None:
         },
     )
     DB.activities.update_one(
-        {"activity.object.id": obj.id}, {"$inc": {"meta.count_boost": 1}}
+        {**by_type(ap.ActivityType.CREATE), **by_object_id(obj.id)},
+        inc(MetaKey.COUNT_BOOST, 1),
     )
 
 
@@ -134,8 +142,7 @@ def _like_process_inbox(like: ap.Like, new_meta: _NewMeta) -> None:
     obj = like.get_object()
     # Update the meta counter if the object is published by the server
     DB.activities.update_one(
-        {"box": Box.OUTBOX.value, "activity.object.id": obj.id},
-        {"$inc": {"meta.count_like": 1}},
+        {**in_outbox(), **by_object_id(obj.id)}, inc(MetaKey.COUNT_LIKE, 1)
     )
 
 
@@ -167,15 +174,16 @@ def _undo_process_inbox(activity: ap.Undo, new_meta: _NewMeta) -> None:
         # Update the meta counter if the object is published by the server
         DB.activities.update_one(
             {
-                "box": Box.OUTBOX.value,
-                "meta.object_id": obj.get_object_id(),
-                "type": ap.ActivityType.CREATE.value,
+                **in_outbox(),
+                **by_object_id(obj.get_object_id()),
+                **by_type(ap.ActivityType.CREATE),
             },
-            {"$inc": {"meta.count_like": -1}},
+            inc(MetaKey.COUNT_LIKE, -1),
         )
     elif obj.has_type(ap.ActivityType.ANNOUNCE):
         announced = obj.get_object()
         # Update the meta counter if the object is published by the server
         DB.activities.update_one(
-            {"activity.object.id": announced.id}, {"$inc": {"meta.count_boost": -1}}
+            {**by_type(ap.ActivityType.CREATE), **by_object_id(announced.id)},
+            inc(MetaKey.COUNT_BOOST, -1),
         )
