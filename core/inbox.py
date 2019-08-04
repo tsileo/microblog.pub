@@ -164,12 +164,11 @@ def _undo_process_inbox(activity: ap.Undo, new_meta: _NewMeta) -> None:
     obj = activity.get_object()
     DB.activities.update_one({"remote_id": obj.id}, {"$set": {"meta.undo": True}})
     if obj.has_type(ap.ActivityType.LIKE):
-        liked = activity.get_object()
         # Update the meta counter if the object is published by the server
         DB.activities.update_one(
             {
                 "box": Box.OUTBOX.value,
-                "meta.object_id": liked.id,
+                "meta.object_id": obj.get_object_id(),
                 "type": ap.ActivityType.CREATE.value,
             },
             {"$inc": {"meta.count_like": -1}},
