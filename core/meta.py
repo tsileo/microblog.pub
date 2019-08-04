@@ -31,6 +31,8 @@ class MetaKey(Enum):
     OBJECT_ACTOR = "object_actor"
     PUBLIC = "public"
 
+    DELETED = "deleted"
+
     COUNT_LIKE = "count_like"
     COUNT_BOOST = "count_boost"
 
@@ -73,3 +75,12 @@ def is_public() -> _SubQuery:
 
 def inc(mk: MetaKey, val: int) -> _SubQuery:
     return {"$inc": {_meta(mk): val}}
+
+
+def upsert(data: Dict[MetaKey, Any]) -> _SubQuery:
+    sq: Dict[str, Any] = {}
+
+    for mk, val in data.items():
+        sq[_meta(mk)] = val
+
+    return {"$set": sq}
