@@ -8,11 +8,18 @@ from little_boxes.errors import NotAnActivityError
 
 import config
 from core.activitypub import _answer_key
+from core.activitypub import post_to_outbox
 from core.db import DB
-from core.meta import Box
+from core.db import update_one_activity
+from core.meta import MetaKey
+from core.meta import by_object_id
+from core.meta import by_remote_id
+from core.meta import by_type
+from core.meta import in_inbox
+from core.meta import inc
+from core.meta import upsert
 from core.shared import MY_PERSON
 from core.shared import back
-from core.shared import post_to_outbox
 from core.tasks import Tasks
 from utils import now
 
@@ -47,12 +54,13 @@ def _delete_process_inbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
     except Exception:
         _logger.exception(f"failed to handle delete replies for {obj_id}")
 
-    DB.activities.update_one(
-        {"meta.object_id": obj_id, "type": "Create"}, {"$set": {"meta.deleted": True}}
+    update_one_activity(
+        {**by_object_id(obj_id), **by_type(ap.ActivityType.CREATE)},
+        upsert({MetaKey.DELETED: True}),
     )
 
     # Foce undo other related activities
-    DB.activities.update({"meta.object_id": obj_id}, {"$set": {"meta.undo": True}})
+    DB.activities.update(by_object_id(obj_id), upsert({MetaKey.UNDO: True}))
 
 
 @process_inbox.register
@@ -60,7 +68,7 @@ def _update_process_inbox(update: ap.Update, new_meta: _NewMeta) -> None:
     _logger.info(f"process_inbox activity={update!r}")
     obj = update.get_object()
     if obj.ACTIVITY_TYPE == ap.ActivityType.NOTE:
-        DB.activities.update_one(
+        update_one_activity(
             {"activity.object.id": obj.id}, {"$set": {"activity.object": obj.to_dict()}}
         )
     elif obj.has_type(ap.ActivityType.QUESTION):
@@ -75,12 +83,10 @@ def _update_process_inbox(update: ap.Update, new_meta: _NewMeta) -> None:
 
         _set["meta.question_replies"] = total_replies
 
-        DB.activities.update_one(
-            {"box": Box.INBOX.value, "activity.object.id": obj.id}, {"$set": _set}
-        )
+        update_one_activity({**in_inbox(), **by_object_id(obj.id)}, {"$set": _set})
         # Also update the cached copies of the question (like Announce and Like)
         DB.activities.update_many(
-            {"meta.object.id": obj.id}, {"$set": {"meta.object": obj.to_dict()}}
+            by_object_id(obj.id), upsert({MetaKey.OBJECT: obj.to_dict()})
         )
 
     # FIXME(tsileo): handle update actor amd inbox_update_note/inbox_update_actor
@@ -114,17 +120,18 @@ def _announce_process_inbox(announce: ap.Announce, new_meta: _NewMeta) -> None:
     if obj.has_type(ap.ActivityType.QUESTION):
         Tasks.fetch_remote_question(obj)
 
-    DB.activities.update_one(
-        {"remote_id": announce.id},
-        {
-            "$set": {
-                "meta.object": obj.to_dict(embed=True),
-                "meta.object_actor": obj.get_actor().to_dict(embed=True),
+    update_one_activity(
+        by_remote_id(announce.id),
+        upsert(
+            {
+                MetaKey.OBJECT: obj.to_dict(embed=True),
+                MetaKey.OBJECT_ACTOR: obj.get_actor().to_dict(embed=True),
             }
-        },
+        ),
     )
-    DB.activities.update_one(
-        {"activity.object.id": obj.id}, {"$inc": {"meta.count_boost": 1}}
+    update_one_activity(
+        {**by_type(ap.ActivityType.CREATE), **by_object_id(obj.id)},
+        inc(MetaKey.COUNT_BOOST, 1),
     )
 
 
@@ -133,9 +140,9 @@ def _like_process_inbox(like: ap.Like, new_meta: _NewMeta) -> None:
     _logger.info(f"process_inbox activity={like!r}")
     obj = like.get_object()
     # Update the meta counter if the object is published by the server
-    DB.activities.update_one(
-        {"box": Box.OUTBOX.value, "activity.object.id": obj.id},
-        {"$inc": {"meta.count_like": 1}},
+    update_one_activity(
+        {**by_type(ap.ActivityType.CREATE), **by_object_id(obj.id)},
+        inc(MetaKey.COUNT_LIKE, 1),
     )
 
 
@@ -161,21 +168,23 @@ def _follow_process_inbox(activity: ap.Follow, new_meta: _NewMeta) -> None:
 @process_inbox.register
 def _undo_process_inbox(activity: ap.Undo, new_meta: _NewMeta) -> None:
     _logger.info(f"process_inbox activity={activity!r}")
+    # Fetch the object that's been undo'ed
     obj = activity.get_object()
-    DB.activities.update_one({"remote_id": obj.id}, {"$set": {"meta.undo": True}})
+
+    # Set the undo flag on the mentionned activity
+    update_one_activity(by_remote_id(obj.id), upsert({MetaKey.UNDO: True}))
+
+    # Handle cached counters
     if obj.has_type(ap.ActivityType.LIKE):
         # Update the meta counter if the object is published by the server
-        DB.activities.update_one(
-            {
-                "box": Box.OUTBOX.value,
-                "meta.object_id": obj.get_object_id(),
-                "type": ap.ActivityType.CREATE.value,
-            },
-            {"$inc": {"meta.count_like": -1}},
+        update_one_activity(
+            {**by_object_id(obj.get_object_id()), **by_type(ap.ActivityType.CREATE)},
+            inc(MetaKey.COUNT_LIKE, -1),
         )
     elif obj.has_type(ap.ActivityType.ANNOUNCE):
         announced = obj.get_object()
         # Update the meta counter if the object is published by the server
-        DB.activities.update_one(
-            {"activity.object.id": announced.id}, {"$inc": {"meta.count_boost": -1}}
+        update_one_activity(
+            {**by_type(ap.ActivityType.CREATE), **by_object_id(announced.id)},
+            inc(MetaKey.COUNT_BOOST, -1),
         )

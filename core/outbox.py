@@ -6,9 +6,15 @@ from typing import Dict
 
 from little_boxes import activitypub as ap
 
-from core.db import DB
 from core.db import find_one_activity
 from core.db import update_many_activities
+from core.db import update_one_activity
+from core.meta import MetaKey
+from core.meta import by_object_id
+from core.meta import by_remote_id
+from core.meta import by_type
+from core.meta import inc
+from core.meta import upsert
 from core.shared import MY_PERSON
 from core.shared import back
 from core.tasks import Tasks
@@ -31,13 +37,13 @@ def _delete_process_outbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
 
     # Flag everything referencing the deleted object as deleted (except the Delete activity itself)
     update_many_activities(
-        {"meta.object_id": obj_id, "remote_id": {"$ne": delete.id}},
-        {"$set": {"meta.deleted": True, "meta.undo": True}},
+        {**by_object_id(obj_id), "remote_id": {"$ne": delete.id}},
+        upsert({MetaKey.DELETED: True, MetaKey.UNDO: True}),
     )
 
     # If the deleted activity was in DB, decrease some threads-related counter
     data = find_one_activity(
-        {"meta.object_id": obj_id, "type": ap.ActivityType.CREATE.value}
+        {**by_object_id(obj_id), **by_type(ap.ActivityType.CREATE)}
     )
     _logger.info(f"found local copy of deleted activity: {data}")
     if data:
@@ -45,8 +51,8 @@ def _delete_process_outbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
         _logger.info(f"obj={obj!r}")
         in_reply_to = obj.get_in_reply_to()
         if in_reply_to:
-            DB.activities.update_one(
-                {"activity.object.id": in_reply_to},
+            update_one_activity(
+                {**by_type(ap.ActivityType.CREATE), **by_object_id(in_reply_to)},
                 {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
             )
 
@@ -74,7 +80,7 @@ def _update_process_outbox(update: ap.Update, new_meta: _NewMeta) -> None:
         del to_update["$unset"]
 
     _logger.info(f"updating note from outbox {obj!r} {to_update}")
-    DB.activities.update_one({"activity.object.id": obj["id"]}, to_update)
+    update_one_activity({"activity.object.id": obj["id"]}, to_update)
     # FIXME(tsileo): should send an Update (but not a partial one, to all the note's recipients
     # (create a new Update with the result of the update, and send it without saving it?)
 
@@ -93,18 +99,19 @@ def _announce_process_outbox(announce: ap.Announce, new_meta: _NewMeta) -> None:
     if obj.has_type(ap.ActivityType.QUESTION):
         Tasks.fetch_remote_question(obj)
 
-    DB.activities.update_one(
-        {"remote_id": announce.id},
-        {
-            "$set": {
-                "meta.object": obj.to_dict(embed=True),
-                "meta.object_actor": obj.get_actor().to_dict(embed=True),
+    update_one_activity(
+        by_remote_id(announce.id),
+        upsert(
+            {
+                MetaKey.OBJECT: obj.to_dict(embed=True),
+                MetaKey.OBJECT_ACTOR: obj.get_actor().to_dict(embed=True),
             }
-        },
+        ),
     )
 
-    DB.activities.update_one(
-        {"activity.object.id": obj.id}, {"$set": {"meta.boosted": announce.id}}
+    update_one_activity(
+        {**by_object_id(obj.id), **by_type(ap.ActivityType.CREATE)},
+        upsert({MetaKey.BOOSTED: announce.id}),
     )
 
 
@@ -116,9 +123,9 @@ def _like_process_outbox(like: ap.Like, new_meta: _NewMeta) -> None:
     if obj.has_type(ap.ActivityType.QUESTION):
         Tasks.fetch_remote_question(obj)
 
-    DB.activities.update_one(
-        {"activity.object.id": obj.id},
-        {"$inc": {"meta.count_like": 1}, "$set": {"meta.liked": like.id}},
+    update_one_activity(
+        {**by_object_id(obj.id), **by_type(ap.ActivityType.CREATE)},
+        {**inc(MetaKey.COUNT_LIKE, 1), **upsert({MetaKey.LIKED: like.id})},
     )
 
 
@@ -126,20 +133,21 @@ def _like_process_outbox(like: ap.Like, new_meta: _NewMeta) -> None:
 def _undo_process_outbox(undo: ap.Undo, new_meta: _NewMeta) -> None:
     _logger.info(f"process_outbox activity={undo!r}")
     obj = undo.get_object()
-    DB.activities.update_one({"remote_id": obj.id}, {"$set": {"meta.undo": True}})
+    update_one_activity({"remote_id": obj.id}, {"$set": {"meta.undo": True}})
 
     # Undo Like
     if obj.has_type(ap.ActivityType.LIKE):
         liked = obj.get_object_id()
-        DB.activities.update_one(
-            {"activity.object.id": liked},
-            {"$inc": {"meta.count_like": -1}, "$set": {"meta.liked": False}},
+        update_one_activity(
+            {**by_object_id(liked), **by_type(ap.ActivityType.CREATE)},
+            {**inc(MetaKey.COUNT_LIKE, -1), **upsert({MetaKey.LIKED: False})},
         )
 
     elif obj.has_type(ap.ActivityType.ANNOUNCE):
         announced = obj.get_object_id()
-        DB.activities.update_one(
-            {"activity.object.id": announced}, {"$set": {"meta.boosted": False}}
+        update_one_activity(
+            {**by_object_id(announced), **by_type(ap.ActivityType.CREATE)},
+            upsert({MetaKey.BOOSTED: False}),
         )
 
     # Undo Follow (undo new following)

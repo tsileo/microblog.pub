@@ -3,8 +3,6 @@ import logging
 import os
 import traceback
 from datetime import datetime
-from typing import Any
-from typing import Dict
 from urllib.parse import urlparse
 
 from bson.objectid import ObjectId
@@ -25,9 +23,7 @@ from little_boxes.activitypub import get_backend
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import Error
 from little_boxes.httpsig import verify_request
-from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
-from u2flib_server import u2f
 
 import blueprints.admin
 import blueprints.indieauth
@@ -37,13 +33,17 @@ import config
 from blueprints.api import _api_required
 from blueprints.tasks import TaskError
 from config import DB
-from config import HEADERS
 from config import ID
 from config import ME
 from config import MEDIA_CACHE
 from config import VERSION
 from core import activitypub
-from core.activitypub import embed_collection
+from core import feed
+from core.activitypub import activity_from_doc
+from core.activitypub import activity_url
+from core.activitypub import post_to_inbox
+from core.activitypub import post_to_outbox
+from core.activitypub import remove_context
 from core.db import find_one_activity
 from core.meta import Box
 from core.meta import MetaKey
@@ -51,19 +51,14 @@ from core.meta import _meta
 from core.meta import by_remote_id
 from core.meta import in_outbox
 from core.meta import is_public
-from core.shared import MY_PERSON
-from core.shared import _add_answers_to_question
 from core.shared import _build_thread
 from core.shared import _get_ip
-from core.shared import activity_url
-from core.shared import back
 from core.shared import csrf
+from core.shared import is_api_request
+from core.shared import jsonify
 from core.shared import login_required
 from core.shared import noindex
 from core.shared import paginated_query
-from core.shared import post_to_outbox
-from core.tasks import Tasks
-from utils import now
 from utils.key import get_secret_key
 from utils.template_filters import filters
 
@@ -164,29 +159,6 @@ def set_x_powered_by(response):
     return response
 
 
-def jsonify(**data):
-    if "@context" not in data:
-        data["@context"] = config.DEFAULT_CTX
-    return Response(
-        response=json.dumps(data),
-        headers={
-            "Content-Type": "application/json"
-            if app.debug
-            else "application/activity+json"
-        },
-    )
-
-
-def is_api_request():
-    h = request.headers.get("Accept")
-    if h is None:
-        return False
-    h = h.split(",")[0]
-    if h in HEADERS or h == "application/json":
-        return True
-    return False
-
-
 @app.errorhandler(ValueError)
 def handle_value_error(error):
     logger.error(
@@ -271,12 +243,9 @@ def serve_uploads(oid, fname):
     return resp
 
 
-#######
-# Login
-
-
 @app.route("/remote_follow", methods=["GET", "POST"])
 def remote_follow():
+    """Form to allow visitor to perform the remote follow dance."""
     if request.method == "GET":
         return render_template("remote_follow.html")
 
@@ -287,59 +256,8 @@ def remote_follow():
     return redirect(get_remote_follow_template(profile).format(uri=ID))
 
 
-@app.route("/authorize_follow", methods=["GET", "POST"])
-@login_required
-def authorize_follow():
-    if request.method == "GET":
-        return render_template(
-            "authorize_remote_follow.html", profile=request.args.get("profile")
-        )
-
-    actor = get_actor_url(request.form.get("profile"))
-    if not actor:
-        abort(500)
-
-    q = {
-        "box": Box.OUTBOX.value,
-        "type": ActivityType.FOLLOW.value,
-        "meta.undo": False,
-        "activity.object": actor,
-    }
-    if DB.activities.count(q) > 0:
-        return redirect("/following")
-
-    follow = ap.Follow(
-        actor=MY_PERSON.id, object=actor, to=[actor], cc=[ap.AS_PUBLIC], published=now()
-    )
-    post_to_outbox(follow)
-
-    return redirect("/following")
-
-
-@app.route("/u2f/register", methods=["GET", "POST"])
-@login_required
-def u2f_register():
-    # TODO(tsileo): ensure no duplicates
-    if request.method == "GET":
-        payload = u2f.begin_registration(ID)
-        session["challenge"] = payload
-        return render_template("u2f.html", payload=payload)
-    else:
-        resp = json.loads(request.form.get("resp"))
-        device, device_cert = u2f.complete_registration(session["challenge"], resp)
-        session["challenge"] = None
-        DB.u2f.insert_one({"device": device, "cert": device_cert})
-        session["logged_in"] = False
-        return redirect("/login")
-
-
 #######
 # Activity pub routes
-@app.route("/drop_cache")
-@login_required
-def drop_cache():
-    DB.actors.drop()
-    return "Done"
 
 
 @app.route("/")
@@ -467,44 +385,6 @@ def note_by_id(note_id):
     return render_template(
         "note.html", likes=likes, shares=shares, thread=thread, note=data
     )
-
-
-def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
-    if raw_doc["activity"]["type"] != ActivityType.CREATE.value:
-        return raw_doc
-
-    raw_doc["activity"]["object"]["replies"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_direct_reply", 0),
-        f'{raw_doc["remote_id"]}/replies',
-    )
-
-    raw_doc["activity"]["object"]["likes"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_like", 0), f'{raw_doc["remote_id"]}/likes'
-    )
-
-    raw_doc["activity"]["object"]["shares"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_boost", 0), f'{raw_doc["remote_id"]}/shares'
-    )
-
-    return raw_doc
-
-
-def remove_context(activity: Dict[str, Any]) -> Dict[str, Any]:
-    if "@context" in activity:
-        del activity["@context"]
-    return activity
-
-
-def activity_from_doc(raw_doc: Dict[str, Any], embed: bool = False) -> Dict[str, Any]:
-    raw_doc = add_extra_collection(raw_doc)
-    activity = clean_activity(raw_doc["activity"])
-
-    # Handle Questions
-    # TODO(tsileo): what about object embedded by ID/URL?
-    _add_answers_to_question(raw_doc)
-    if embed:
-        return remove_context(activity)
-    return activity
 
 
 @app.route("/outbox", methods=["GET", "POST"])
@@ -987,7 +867,7 @@ def liked():
 @app.route("/feed.json")
 def json_feed():
     return Response(
-        response=json.dumps(activitypub.json_feed("/feed.json")),
+        response=json.dumps(feed.json_feed("/feed.json")),
         headers={"Content-Type": "application/json"},
     )
 
@@ -995,7 +875,7 @@ def json_feed():
 @app.route("/feed.atom")
 def atom_feed():
     return Response(
-        response=activitypub.gen_feed().atom_str(),
+        response=feed.gen_feed().atom_str(),
         headers={"Content-Type": "application/atom+xml"},
     )
 
@@ -1003,27 +883,6 @@ def atom_feed():
 @app.route("/feed.rss")
 def rss_feed():
     return Response(
-        response=activitypub.gen_feed().rss_str(),
+        response=feed.gen_feed().rss_str(),
         headers={"Content-Type": "application/rss+xml"},
     )
-
-
-def post_to_inbox(activity: ap.BaseActivity) -> None:
-    # Check for Block activity
-    actor = activity.get_actor()
-    if back.outbox_is_blocked(MY_PERSON, actor.id):
-        app.logger.info(
-            f"actor {actor!r} is blocked, dropping the received activity {activity!r}"
-        )
-        return
-
-    if back.inbox_check_duplicate(MY_PERSON, activity.id):
-        # The activity is already in the inbox
-        app.logger.info(f"received duplicate activity {activity!r}, dropping it")
-        return
-
-    back.save(Box.INBOX, activity)
-    Tasks.process_new_activity(activity.id)
-
-    app.logger.info(f"spawning task for {activity!r}")
-    Tasks.finish_post_to_inbox(activity.id)

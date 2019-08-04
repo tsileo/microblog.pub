@@ -15,6 +15,7 @@ from flask import request
 from flask import session
 from flask import url_for
 from little_boxes import activitypub as ap
+from little_boxes.webfinger import get_actor_url
 from passlib.hash import bcrypt
 from u2flib_server import u2f
 
@@ -23,6 +24,7 @@ from config import DB
 from config import ID
 from config import PASS
 from core.activitypub import Box
+from core.activitypub import post_to_outbox
 from core.shared import MY_PERSON
 from core.shared import _build_thread
 from core.shared import _Response
@@ -31,7 +33,6 @@ from core.shared import login_required
 from core.shared import noindex
 from core.shared import p
 from core.shared import paginated_query
-from core.shared import post_to_outbox
 from utils import now
 from utils.lookup import lookup
 
@@ -412,3 +413,49 @@ def admin_bookmarks() -> _Response:
     return render_template(
         tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
     )
+
+
+@blueprint.route("/u2f/register", methods=["GET", "POST"])
+@login_required
+def u2f_register():
+    # TODO(tsileo): ensure no duplicates
+    if request.method == "GET":
+        payload = u2f.begin_registration(ID)
+        session["challenge"] = payload
+        return render_template("u2f.html", payload=payload)
+    else:
+        resp = json.loads(request.form.get("resp"))
+        device, device_cert = u2f.complete_registration(session["challenge"], resp)
+        session["challenge"] = None
+        DB.u2f.insert_one({"device": device, "cert": device_cert})
+        session["logged_in"] = False
+        return redirect("/login")
+
+
+@blueprint.route("/authorize_follow", methods=["GET", "POST"])
+@login_required
+def authorize_follow():
+    if request.method == "GET":
+        return render_template(
+            "authorize_remote_follow.html", profile=request.args.get("profile")
+        )
+
+    actor = get_actor_url(request.form.get("profile"))
+    if not actor:
+        abort(500)
+
+    q = {
+        "box": Box.OUTBOX.value,
+        "type": ap.ActivityType.FOLLOW.value,
+        "meta.undo": False,
+        "activity.object": actor,
+    }
+    if DB.activities.count(q) > 0:
+        return redirect("/following")
+
+    follow = ap.Follow(
+        actor=MY_PERSON.id, object=actor, to=[actor], cc=[ap.AS_PUBLIC], published=now()
+    )
+    post_to_outbox(follow)
+
+    return redirect("/following")

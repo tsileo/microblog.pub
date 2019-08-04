@@ -1,14 +1,11 @@
-import binascii
+import json
 import os
-from datetime import datetime
-from datetime import timezone
 from functools import wraps
 from typing import Any
-from typing import Dict
-from urllib.parse import urljoin
 
 import flask
 from bson.objectid import ObjectId
+from flask import Response
 from flask import current_app as app
 from flask import redirect
 from flask import request
@@ -16,16 +13,12 @@ from flask import session
 from flask import url_for
 from flask_wtf.csrf import CSRFProtect
 from little_boxes import activitypub as ap
-from little_boxes.activitypub import format_datetime
 from poussetaches import PousseTaches
 
-from config import BASE_URL
+import config
 from config import DB
 from config import ME
 from core import activitypub
-from core.activitypub import _answer_key
-from core.meta import Box
-from core.tasks import Tasks
 
 # _Response = Union[flask.Response, werkzeug.wrappers.Response, str, Any]
 _Response = Any
@@ -43,6 +36,29 @@ back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)
 
 MY_PERSON = ap.Person(**ME)
+
+
+def jsonify(**data):
+    if "@context" not in data:
+        data["@context"] = config.DEFAULT_CTX
+    return Response(
+        response=json.dumps(data),
+        headers={
+            "Content-Type": "application/json"
+            if app.debug
+            else "application/activity+json"
+        },
+    )
+
+
+def is_api_request():
+    h = request.headers.get("Accept")
+    if h is None:
+        return False
+    h = h.split(",")[0]
+    if h in config.HEADERS or h == "application/json":
+        return True
+    return False
 
 
 def add_response_headers(headers={}):
@@ -92,33 +108,6 @@ def _get_ip():
             + request.headers.get("Broxy-Geoip-Region")
         )
     return ip, geoip
-
-
-def activity_url(item_id: str) -> str:
-    return urljoin(BASE_URL, url_for("outbox_detail", item_id=item_id))
-
-
-def post_to_outbox(activity: ap.BaseActivity) -> str:
-    if activity.has_type(ap.CREATE_TYPES):
-        activity = activity.build_create()
-
-    # Assign create a random ID
-    obj_id = binascii.hexlify(os.urandom(8)).decode("utf-8")
-    uri = activity_url(obj_id)
-    activity._data["id"] = uri
-    if activity.has_type(ap.ActivityType.CREATE):
-        activity._data["object"]["id"] = urljoin(
-            BASE_URL, url_for("outbox_activity", item_id=obj_id)
-        )
-        activity._data["object"]["url"] = urljoin(
-            BASE_URL, url_for("note_by_id", note_id=obj_id)
-        )
-        activity.reset_object_cache()
-
-    back.save(Box.OUTBOX, activity)
-    Tasks.cache_actor(activity.id)
-    Tasks.finish_post_to_outbox(activity.id)
-    return activity.id
 
 
 def _build_thread(data, include_children=True):  # noqa: C901
@@ -225,22 +214,3 @@ def paginated_query(db, q, limit=25, sort_key="_id"):
         older_than = str(outbox_data[-1]["_id"])
 
     return outbox_data, older_than, newer_than
-
-
-def _add_answers_to_question(raw_doc: Dict[str, Any]) -> None:
-    activity = raw_doc["activity"]
-    if (
-        ap._has_type(activity["type"], ap.ActivityType.CREATE)
-        and "object" in activity
-        and ap._has_type(activity["object"]["type"], ap.ActivityType.QUESTION)
-    ):
-        for choice in activity["object"].get("oneOf", activity["object"].get("anyOf")):
-            choice["replies"] = {
-                "type": ap.ActivityType.COLLECTION.value,
-                "totalItems": raw_doc["meta"]
-                .get("question_answers", {})
-                .get(_answer_key(choice["name"]), 0),
-            }
-        now = datetime.now(timezone.utc)
-        if format_datetime(now) >= activity["object"]["endTime"]:
-            activity["object"]["closed"] = activity["object"]["endTime"]

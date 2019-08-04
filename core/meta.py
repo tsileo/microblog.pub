@@ -27,8 +27,16 @@ class MetaKey(Enum):
     PUBLISHED = "published"
     GC_KEEP = "gc_keep"
     OBJECT = "object"
+    OBJECT_ID = "object_id"
     OBJECT_ACTOR = "object_actor"
     PUBLIC = "public"
+
+    DELETED = "deleted"
+    BOOSTED = "boosted"
+    LIKED = "liked"
+
+    COUNT_LIKE = "count_like"
+    COUNT_BOOST = "count_boost"
 
 
 def _meta(mk: MetaKey) -> str:
@@ -59,5 +67,22 @@ def by_actor(actor: ap.BaseActivity) -> _SubQuery:
     return {_meta(MetaKey.ACTOR_ID): actor.id}
 
 
+def by_object_id(object_id: str) -> _SubQuery:
+    return {_meta(MetaKey.OBJECT_ID): object_id}
+
+
 def is_public() -> _SubQuery:
     return {_meta(MetaKey.PUBLIC): True}
+
+
+def inc(mk: MetaKey, val: int) -> _SubQuery:
+    return {"$inc": {_meta(mk): val}}
+
+
+def upsert(data: Dict[MetaKey, Any]) -> _SubQuery:
+    sq: Dict[str, Any] = {}
+
+    for mk, val in data.items():
+        sq[_meta(mk)] = val
+
+    return {"$set": sq}
