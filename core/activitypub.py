@@ -2,6 +2,8 @@ import binascii
 import hashlib
 import logging
 import os
+from datetime import datetime
+from datetime import timezone
 from typing import Any
 from typing import Dict
 from typing import List
@@ -16,6 +18,7 @@ from little_boxes import activitypub as ap
 from little_boxes import strtobool
 from little_boxes.activitypub import _to_list
 from little_boxes.activitypub import clean_activity
+from little_boxes.activitypub import format_datetime
 from little_boxes.backend import Backend
 from little_boxes.errors import ActivityGoneError
 
@@ -26,7 +29,6 @@ from config import ID
 from config import ME
 from config import USER_AGENT
 from core.meta import Box
-from core.shared import _add_answers_to_question
 from core.tasks import Tasks
 
 logger = logging.getLogger(__name__)
@@ -559,6 +561,25 @@ def build_ordered_collection(
     # XXX(tsileo): implements prev with prev=<first item cursor>?
 
     return resp
+
+
+def _add_answers_to_question(raw_doc: Dict[str, Any]) -> None:
+    activity = raw_doc["activity"]
+    if (
+        ap._has_type(activity["type"], ap.ActivityType.CREATE)
+        and "object" in activity
+        and ap._has_type(activity["object"]["type"], ap.ActivityType.QUESTION)
+    ):
+        for choice in activity["object"].get("oneOf", activity["object"].get("anyOf")):
+            choice["replies"] = {
+                "type": ap.ActivityType.COLLECTION.value,
+                "totalItems": raw_doc["meta"]
+                .get("question_answers", {})
+                .get(_answer_key(choice["name"]), 0),
+            }
+        now = datetime.now(timezone.utc)
+        if format_datetime(now) >= activity["object"]["endTime"]:
+            activity["object"]["closed"] = activity["object"]["endTime"]
 
 
 def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:

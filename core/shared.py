@@ -1,9 +1,6 @@
 import os
-from datetime import datetime
-from datetime import timezone
 from functools import wraps
 from typing import Any
-from typing import Dict
 
 import flask
 from bson.objectid import ObjectId
@@ -14,13 +11,11 @@ from flask import session
 from flask import url_for
 from flask_wtf.csrf import CSRFProtect
 from little_boxes import activitypub as ap
-from little_boxes.activitypub import format_datetime
 from poussetaches import PousseTaches
 
 from config import DB
 from config import ME
 from core import activitypub
-from core.activitypub import _answer_key
 
 # _Response = Union[flask.Response, werkzeug.wrappers.Response, str, Any]
 _Response = Any
@@ -193,22 +188,3 @@ def paginated_query(db, q, limit=25, sort_key="_id"):
         older_than = str(outbox_data[-1]["_id"])
 
     return outbox_data, older_than, newer_than
-
-
-def _add_answers_to_question(raw_doc: Dict[str, Any]) -> None:
-    activity = raw_doc["activity"]
-    if (
-        ap._has_type(activity["type"], ap.ActivityType.CREATE)
-        and "object" in activity
-        and ap._has_type(activity["object"]["type"], ap.ActivityType.QUESTION)
-    ):
-        for choice in activity["object"].get("oneOf", activity["object"].get("anyOf")):
-            choice["replies"] = {
-                "type": ap.ActivityType.COLLECTION.value,
-                "totalItems": raw_doc["meta"]
-                .get("question_answers", {})
-                .get(_answer_key(choice["name"]), 0),
-            }
-        now = datetime.now(timezone.utc)
-        if format_datetime(now) >= activity["object"]["endTime"]:
-            activity["object"]["closed"] = activity["object"]["endTime"]
