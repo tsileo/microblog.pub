@@ -1,5 +1,5 @@
 import logging
-import urllib
+from urllib.parse import urlparse
 
 import opengraph
 import requests
@@ -15,18 +15,19 @@ logger = logging.getLogger(__name__)
 
 
 def links_from_note(note):
-    tags_href = set()
-    for t in note.get("tag", []):
-        h = t.get("href")
-        if h:
-            tags_href.add(h)
+    note_host = urlparse(ap._get_id(note["id"]) or "").netloc
 
     links = set()
     if "content" in note:
         soup = BeautifulSoup(note["content"], "html5lib")
         for link in soup.find_all("a"):
             h = link.get("href")
-            if h.startswith("http") and h not in tags_href and is_url_valid(h):
+            ph = urlparse(h)
+            if (
+                ph.scheme in {"http", "https"}
+                and ph.netloc != note_host
+                and is_url_valid(h)
+            ):
                 links.add(h)
 
     # FIXME(tsileo): support summary and name fields
@@ -63,7 +64,7 @@ def fetch_og_metadata(user_agent, links):
 
         # Keep track of the fetched URL as some crappy websites use relative URLs everywhere
         data["_input_url"] = l
-        u = urllib.parse.urlparse(l)
+        u = urlparse(l)
 
         # If it's a relative URL, build the absolute version
         if "image" in data and data["image"].startswith("/"):
