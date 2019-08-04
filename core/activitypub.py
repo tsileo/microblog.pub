@@ -433,7 +433,7 @@ class MicroblogPubBackend(Backend):
         )
         if not creply:
             # It means the activity is not in the inbox, and not in the outbox, we want to save it
-            self.save(Box.REPLIES, reply)
+            save(Box.REPLIES, reply)
             new_threads.append(reply.id)
             # TODO(tsileo): parses the replies collection and import the replies?
 
@@ -445,7 +445,7 @@ class MicroblogPubBackend(Backend):
             reply = ap.fetch_remote_activity(root_reply)
             q = {"activity.object.id": root_reply}
             if not DB.activities.count(q):
-                self.save(Box.REPLIES, reply)
+                save(Box.REPLIES, reply)
                 new_threads.append(reply.id)
 
         DB.activities.update_one(
