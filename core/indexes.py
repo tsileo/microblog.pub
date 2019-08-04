@@ -15,7 +15,8 @@ def create_indexes():
         [(_meta(MetaKey.NOTIFICATION_UNREAD), pymongo.ASCENDING)]
     )
     DB.activities.create_index([("remote_id", pymongo.ASCENDING)])
-    DB.activities.create_index([("activity.object.id", pymongo.ASCENDING)])
+    DB.activities.create_index([("meta.actor_id", pymongo.ASCENDING)])
+    DB.activities.create_index([("meta.object_id", pymongo.ASCENDING)])
     DB.activities.create_index([("meta.thread_root_parent", pymongo.ASCENDING)])
     DB.activities.create_index(
         [
@@ -26,14 +27,9 @@ def create_indexes():
     DB.activities.create_index(
         [("activity.object.id", pymongo.ASCENDING), ("meta.deleted", pymongo.ASCENDING)]
     )
-    DB.cache2.create_index(
-        [
-            ("path", pymongo.ASCENDING),
-            ("type", pymongo.ASCENDING),
-            ("arg", pymongo.ASCENDING),
-        ]
+    DB.activities.create_index(
+        [("meta.object_id", pymongo.ASCENDING), ("type", pymongo.ASCENDING)]
     )
-    DB.cache2.create_index("date", expireAfterSeconds=3600 * 12)
 
     # Index for the block query
     DB.activities.create_index(
