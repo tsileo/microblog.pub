@@ -17,3 +17,11 @@ class CollectionName(Enum):
 
 def find_one_activity(q: _Q) -> _Doc:
     return DB[CollectionName.ACTIVITIES.value].find_one(q)
+
+
+def update_one_activity(q: _Q, update: _Q) -> None:
+    DB[CollectionName.ACTIVITIES.value].update_one(q, update)
+
+
+def update_many_activities(q: _Q, update: _Q) -> None:
+    DB[CollectionName.ACTIVITIES.value].update_many(q, update)

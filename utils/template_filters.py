@@ -17,10 +17,10 @@ from little_boxes.activitypub import _to_list
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import ActivityNotFoundError
 
-from core.activitypub import _answer_key
 from config import EMOJI_TPL
 from config import ID
 from config import MEDIA_CACHE
+from core.activitypub import _answer_key
 from utils import parse_datetime
 from utils.media import Kind
 

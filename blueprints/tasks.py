@@ -14,13 +14,15 @@ from little_boxes.httpsig import HTTPSigAuth
 from requests.exceptions import HTTPError
 
 import config
+from core.shared import _Response
 from config import DB
-from core import activitypub
 from core import gc
 from core.activitypub import Box
+from core.inbox import process_inbox
 from core.meta import MetaKey
 from core.meta import _meta
 from core.notifications import set_inbox_flags
+from core.outbox import process_outbox
 from core.shared import MY_PERSON
 from core.shared import _add_answers_to_question
 from core.shared import back
@@ -43,7 +45,7 @@ class TaskError(Exception):
 
 
 @blueprint.route("/task/update_question", methods=["POST"])
-def task_update_question():
+def task_update_question() -> _Response:
     """Sends an Update."""
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
@@ -84,7 +86,7 @@ def task_update_question():
 
 
 @blueprint.route("/task/fetch_og_meta", methods=["POST"])
-def task_fetch_og_meta():
+def task_fetch_og_meta() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
     iri = task.payload
@@ -123,7 +125,7 @@ def task_fetch_og_meta():
 
 
 @blueprint.route("/task/cache_object", methods=["POST"])
-def task_cache_object():
+def task_cache_object() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
     iri = task.payload
@@ -136,7 +138,8 @@ def task_cache_object():
             {
                 "$set": {
                     "meta.object": obj.to_dict(embed=True),
-                    "meta.object_actor": activitypub._actor_to_meta(obj.get_actor()),
+                    # FIXME(tsileo): set object actor only if different from actor?
+                    "meta.object_actor": obj.get_actor().to_dict(embed=True),
                 }
             },
         )
@@ -151,7 +154,7 @@ def task_cache_object():
 
 
 @blueprint.route("/task/finish_post_to_outbox", methods=["POST"])  # noqa:C901
-def task_finish_post_to_outbox():
+def task_finish_post_to_outbox() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
     iri = task.payload
@@ -161,24 +164,7 @@ def task_finish_post_to_outbox():
 
         recipients = activity.recipients()
 
-        if activity.has_type(ap.ActivityType.DELETE):
-            back.outbox_delete(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.UPDATE):
-            back.outbox_update(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.CREATE):
-            back.outbox_create(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.ANNOUNCE):
-            back.outbox_announce(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.LIKE):
-            back.outbox_like(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.UNDO):
-            obj = activity.get_object()
-            if obj.has_type(ap.ActivityType.LIKE):
-                back.outbox_undo_like(MY_PERSON, obj)
-            elif obj.has_type(ap.ActivityType.ANNOUNCE):
-                back.outbox_undo_announce(MY_PERSON, obj)
-            elif obj.has_type(ap.ActivityType.FOLLOW):
-                back.undo_new_following(MY_PERSON, obj)
+        process_outbox(activity, {})
 
         app.logger.info(f"recipients={recipients}")
         activity = ap.clean_activity(activity.to_dict())
@@ -197,7 +183,7 @@ def task_finish_post_to_outbox():
 
 
 @blueprint.route("/task/finish_post_to_inbox", methods=["POST"])  # noqa: C901
-def task_finish_post_to_inbox():
+def task_finish_post_to_inbox() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
     iri = task.payload
@@ -205,39 +191,8 @@ def task_finish_post_to_inbox():
         activity = ap.fetch_remote_activity(iri)
         app.logger.info(f"activity={activity!r}")
 
-        if activity.has_type(ap.ActivityType.DELETE):
-            back.inbox_delete(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.UPDATE):
-            back.inbox_update(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.CREATE):
-            back.inbox_create(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.ANNOUNCE):
-            back.inbox_announce(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.LIKE):
-            back.inbox_like(MY_PERSON, activity)
-        elif activity.has_type(ap.ActivityType.FOLLOW):
-            # Reply to a Follow with an Accept
-            actor_id = activity.get_actor().id
-            accept = ap.Accept(
-                actor=config.ID,
-                object={
-                    "type": "Follow",
-                    "id": activity.id,
-                    "object": activity.get_object_id(),
-                    "actor": actor_id,
-                },
-                to=[actor_id],
-                published=now(),
-            )
-            post_to_outbox(accept)
-        elif activity.has_type(ap.ActivityType.UNDO):
-            obj = activity.get_object()
-            if obj.has_type(ap.ActivityType.LIKE):
-                back.inbox_undo_like(MY_PERSON, obj)
-            elif obj.has_type(ap.ActivityType.ANNOUNCE):
-                back.inbox_undo_announce(MY_PERSON, obj)
-            elif obj.has_type(ap.ActivityType.FOLLOW):
-                back.undo_new_follower(MY_PERSON, obj)
+        process_inbox(activity, {})
+
     except (ActivityGoneError, ActivityNotFoundError, NotAnActivityError):
         app.logger.exception(f"no retry")
     except Exception as err:
@@ -248,7 +203,7 @@ def task_finish_post_to_inbox():
 
 
 @blueprint.route("/task/cache_attachments", methods=["POST"])
-def task_cache_attachments():
+def task_cache_attachments() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
     iri = task.payload
@@ -278,7 +233,7 @@ def task_cache_attachments():
 
 
 @blueprint.route("/task/cache_actor", methods=["POST"])
-def task_cache_actor() -> str:
+def task_cache_actor() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
     iri = task.payload["iri"]
@@ -329,7 +284,7 @@ def task_cache_actor() -> str:
 
 
 @blueprint.route("/task/forward_activity", methods=["POST"])
-def task_forward_activity():
+def task_forward_activity() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
     iri = task.payload
@@ -350,7 +305,7 @@ def task_forward_activity():
 
 
 @blueprint.route("/task/post_to_remote_inbox", methods=["POST"])
-def task_post_to_remote_inbox():
+def task_post_to_remote_inbox() -> _Response:
     """Post an activity to a remote inbox."""
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
@@ -394,7 +349,7 @@ def task_post_to_remote_inbox():
 
 
 @blueprint.route("/task/fetch_remote_question", methods=["POST"])
-def task_fetch_remote_question():
+def task_fetch_remote_question() -> _Response:
     """Fetch a remote question for implementation that does not send Update."""
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
@@ -454,7 +409,7 @@ def task_fetch_remote_question():
 
 
 @blueprint.route("/task/cleanup", methods=["POST"])
-def task_cleanup():
+def task_cleanup() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
     gc.perform()
@@ -462,7 +417,7 @@ def task_cleanup():
 
 
 @blueprint.route("/task/process_new_activity", methods=["POST"])  # noqa:c901
-def task_process_new_activity():
+def task_process_new_activity() -> _Response:
     """Process an activity received in the inbox"""
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")

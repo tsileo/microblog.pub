@@ -55,6 +55,7 @@ from core.shared import MY_PERSON
 from core.shared import _add_answers_to_question
 from core.shared import _build_thread
 from core.shared import _get_ip
+from core.shared import activity_url
 from core.shared import back
 from core.shared import csrf
 from core.shared import login_required
@@ -410,7 +411,7 @@ def note_by_id(note_id):
         return redirect(url_for("outbox_activity", item_id=note_id))
 
     data = DB.activities.find_one(
-        {"box": Box.OUTBOX.value, "remote_id": back.activity_url(note_id)}
+        {"box": Box.OUTBOX.value, "remote_id": activity_url(note_id)}
     )
     if not data:
         abort(404)
@@ -548,7 +549,7 @@ def outbox_detail(item_id):
     doc = DB.activities.find_one(
         {
             "box": Box.OUTBOX.value,
-            "remote_id": back.activity_url(item_id),
+            "remote_id": activity_url(item_id),
             "meta.public": True,
         }
     )
@@ -566,7 +567,7 @@ def outbox_detail(item_id):
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
     data = find_one_activity(
-        {**in_outbox(), **by_remote_id(back.activity_url(item_id)), **is_public()}
+        {**in_outbox(), **by_remote_id(activity_url(item_id)), **is_public()}
     )
     if not data:
         abort(404)
@@ -590,7 +591,7 @@ def outbox_activity_replies(item_id):
     data = DB.activities.find_one(
         {
             "box": Box.OUTBOX.value,
-            "remote_id": back.activity_url(item_id),
+            "remote_id": activity_url(item_id),
             "meta.deleted": False,
             "meta.public": True,
         }
@@ -627,7 +628,7 @@ def outbox_activity_likes(item_id):
     data = DB.activities.find_one(
         {
             "box": Box.OUTBOX.value,
-            "remote_id": back.activity_url(item_id),
+            "remote_id": activity_url(item_id),
             "meta.deleted": False,
             "meta.public": True,
         }
@@ -666,7 +667,7 @@ def outbox_activity_shares(item_id):
     data = DB.activities.find_one(
         {
             "box": Box.OUTBOX.value,
-            "remote_id": back.activity_url(item_id),
+            "remote_id": activity_url(item_id),
             "meta.deleted": False,
         }
     )

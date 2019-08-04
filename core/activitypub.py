@@ -1,5 +1,4 @@
 import hashlib
-import json
 import logging
 import os
 from datetime import datetime
@@ -32,6 +31,8 @@ from core.meta import Box
 from core.tasks import Tasks
 
 logger = logging.getLogger(__name__)
+
+_NewMeta = Dict[str, Any]
 
 
 ACTORS_CACHE = LRUCache(maxsize=256)
@@ -98,6 +99,9 @@ def _is_local_reply(create: ap.Create) -> bool:
 class MicroblogPubBackend(Backend):
     """Implements a Little Boxes backend, backed by MongoDB."""
 
+    def base_url(self) -> str:
+        return BASE_URL
+
     def debug_mode(self) -> bool:
         return strtobool(os.getenv("MICROBLOGPUB_DEBUG", "false"))
 
@@ -107,18 +111,6 @@ class MicroblogPubBackend(Backend):
 
     def extra_inboxes(self) -> List[str]:
         return EXTRA_INBOXES
-
-    def base_url(self) -> str:
-        """Base URL config."""
-        return BASE_URL
-
-    def activity_url(self, obj_id):
-        """URL for activity link."""
-        return f"{BASE_URL}/outbox/{obj_id}"
-
-    def note_url(self, obj_id):
-        """URL for activity link."""
-        return f"{BASE_URL}/note/{obj_id}"
 
     def save(self, box: Box, activity: ap.BaseActivity) -> None:
         """Custom helper for saving an activity to the DB."""
@@ -694,25 +686,6 @@ class MicroblogPubBackend(Backend):
             {"box": Box.REPLIES.value, "remote_id": {"$in": new_threads}},
             {"$set": {"meta.thread_root_parent": root_reply}},
         )
-
-    def post_to_outbox(self, activity: ap.BaseActivity) -> None:
-        if activity.has_type(ap.CREATE_TYPES):
-            activity = activity.build_create()
-
-        self.save(Box.OUTBOX, activity)
-
-        # Assign create a random ID
-        obj_id = self.random_object_id()
-        activity.set_id(self.activity_url(obj_id), obj_id)
-
-        recipients = activity.recipients()
-        logger.info(f"recipients={recipients}")
-        activity = ap.clean_activity(activity.to_dict())
-
-        payload = json.dumps(activity)
-        for recp in recipients:
-            logger.debug(f"posting to {recp}")
-            self.post_to_remote_inbox(self.get_actor(), payload, recp)
 
 
 def gen_feed():
