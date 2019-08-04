@@ -107,10 +107,10 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
     activity._data["id"] = uri
     if activity.has_type(ap.ActivityType.CREATE):
         activity._data["object"]["id"] = urljoin(
-            BASE_URL, url_for("outbox_activity", node_id=obj_id)
+            BASE_URL, url_for("outbox_activity", item_id=obj_id)
         )
         activity._data["object"]["url"] = urljoin(
-            BASE_URL, url_for("note_by_id", node_id=obj_id)
+            BASE_URL, url_for("note_by_id", note_id=obj_id)
         )
 
     back.save(Box.OUTBOX, activity)
