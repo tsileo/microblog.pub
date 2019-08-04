@@ -41,7 +41,7 @@ from core.shared import _Response
 from core.shared import activity_url
 from core.shared import csrf
 from core.shared import login_required
-from core.shared import post_to_outbox
+from core.outbox import post_to_outbox
 from core.tasks import Tasks
 from utils import now
 

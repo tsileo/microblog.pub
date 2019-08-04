@@ -12,7 +12,7 @@ from core.db import DB
 from core.meta import Box
 from core.shared import MY_PERSON
 from core.shared import back
-from core.shared import post_to_outbox
+from core.outbox import post_to_outbox
 from core.tasks import Tasks
 from utils import now
 

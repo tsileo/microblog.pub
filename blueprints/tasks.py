@@ -27,7 +27,7 @@ from core.shared import _add_answers_to_question
 from core.shared import _Response
 from core.shared import back
 from core.shared import p
-from core.shared import post_to_outbox
+from core.outbox import post_to_outbox
 from core.tasks import Tasks
 from utils import now
 from utils import opengraph

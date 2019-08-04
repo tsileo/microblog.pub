@@ -44,6 +44,7 @@ from config import MEDIA_CACHE
 from config import VERSION
 from core import activitypub
 from core.activitypub import embed_collection
+from core.activitypub import save
 from core.db import find_one_activity
 from core.meta import Box
 from core.meta import MetaKey
@@ -61,7 +62,7 @@ from core.shared import csrf
 from core.shared import login_required
 from core.shared import noindex
 from core.shared import paginated_query
-from core.shared import post_to_outbox
+from core.outbox import post_to_outbox
 from core.tasks import Tasks
 from utils import now
 from utils.key import get_secret_key
@@ -1022,7 +1023,7 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         app.logger.info(f"received duplicate activity {activity!r}, dropping it")
         return
 
-    back.save(Box.INBOX, activity)
+    save(Box.INBOX, activity)
     Tasks.process_new_activity(activity.id)
 
     app.logger.info(f"spawning task for {activity!r}")

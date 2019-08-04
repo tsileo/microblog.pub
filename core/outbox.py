@@ -1,21 +1,52 @@
+import binascii
 import logging
+import os
 from datetime import datetime
 from functools import singledispatch
 from typing import Any
 from typing import Dict
+from urllib.parse import urljoin
 
+from flask import url_for
 from little_boxes import activitypub as ap
 
+from config import BASE_URL
+from core.activitypub import save
 from core.db import DB
 from core.db import find_one_activity
 from core.db import update_many_activities
+from core.meta import Box
 from core.shared import MY_PERSON
+from core.shared import activity_url
 from core.shared import back
 from core.tasks import Tasks
 
 _logger = logging.getLogger(__name__)
 
 _NewMeta = Dict[str, Any]
+
+
+def post_to_outbox(activity: ap.BaseActivity) -> str:
+    if activity.has_type(ap.CREATE_TYPES):
+        activity = activity.build_create()
+
+    # Assign create a random ID
+    obj_id = binascii.hexlify(os.urandom(8)).decode("utf-8")
+    uri = activity_url(obj_id)
+    activity._data["id"] = uri
+    if activity.has_type(ap.ActivityType.CREATE):
+        activity._data["object"]["id"] = urljoin(
+            BASE_URL, url_for("outbox_activity", item_id=obj_id)
+        )
+        activity._data["object"]["url"] = urljoin(
+            BASE_URL, url_for("note_by_id", note_id=obj_id)
+        )
+        activity.reset_object_cache()
+
+    save(Box.OUTBOX, activity)
+    Tasks.cache_actor(activity.id)
+    Tasks.finish_post_to_outbox(activity.id)
+    return activity.id
 
 
 @singledispatch

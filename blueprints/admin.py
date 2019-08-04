@@ -31,7 +31,7 @@ from core.shared import login_required
 from core.shared import noindex
 from core.shared import p
 from core.shared import paginated_query
-from core.shared import post_to_outbox
+from core.outbox import post_to_outbox
 from utils import now
 from utils.lookup import lookup
 
