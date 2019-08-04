@@ -24,9 +24,7 @@ from little_boxes.activitypub import get_backend
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import Error
 from little_boxes.httpsig import verify_request
-from little_boxes.webfinger import get_actor_url
 from little_boxes.webfinger import get_remote_follow_template
-from u2flib_server import u2f
 
 import blueprints.admin
 import blueprints.indieauth
@@ -36,7 +34,6 @@ import config
 from blueprints.api import _api_required
 from blueprints.tasks import TaskError
 from config import DB
-from config import HEADERS
 from config import ID
 from config import ME
 from config import MEDIA_CACHE
@@ -54,14 +51,14 @@ from core.meta import _meta
 from core.meta import by_remote_id
 from core.meta import in_outbox
 from core.meta import is_public
-from core.shared import MY_PERSON
+from core.shared import jsonify
+from core.shared import is_api_request
 from core.shared import _build_thread
 from core.shared import _get_ip
 from core.shared import csrf
 from core.shared import login_required
 from core.shared import noindex
 from core.shared import paginated_query
-from utils import now
 from utils.key import get_secret_key
 from utils.template_filters import filters
 
@@ -162,29 +159,6 @@ def set_x_powered_by(response):
     return response
 
 
-def jsonify(**data):
-    if "@context" not in data:
-        data["@context"] = config.DEFAULT_CTX
-    return Response(
-        response=json.dumps(data),
-        headers={
-            "Content-Type": "application/json"
-            if app.debug
-            else "application/activity+json"
-        },
-    )
-
-
-def is_api_request():
-    h = request.headers.get("Accept")
-    if h is None:
-        return False
-    h = h.split(",")[0]
-    if h in HEADERS or h == "application/json":
-        return True
-    return False
-
-
 @app.errorhandler(ValueError)
 def handle_value_error(error):
     logger.error(
@@ -269,12 +243,9 @@ def serve_uploads(oid, fname):
     return resp
 
 
-#######
-# Login
-
-
 @app.route("/remote_follow", methods=["GET", "POST"])
 def remote_follow():
+    """Form to allow visitor to perform the remote follow dance."""
     if request.method == "GET":
         return render_template("remote_follow.html")
 
@@ -283,52 +254,6 @@ def remote_follow():
     if not profile.startswith("@"):
         profile = f"@{profile}"
     return redirect(get_remote_follow_template(profile).format(uri=ID))
-
-
-@app.route("/authorize_follow", methods=["GET", "POST"])
-@login_required
-def authorize_follow():
-    if request.method == "GET":
-        return render_template(
-            "authorize_remote_follow.html", profile=request.args.get("profile")
-        )
-
-    actor = get_actor_url(request.form.get("profile"))
-    if not actor:
-        abort(500)
-
-    q = {
-        "box": Box.OUTBOX.value,
-        "type": ActivityType.FOLLOW.value,
-        "meta.undo": False,
-        "activity.object": actor,
-    }
-    if DB.activities.count(q) > 0:
-        return redirect("/following")
-
-    follow = ap.Follow(
-        actor=MY_PERSON.id, object=actor, to=[actor], cc=[ap.AS_PUBLIC], published=now()
-    )
-    post_to_outbox(follow)
-
-    return redirect("/following")
-
-
-@app.route("/u2f/register", methods=["GET", "POST"])
-@login_required
-def u2f_register():
-    # TODO(tsileo): ensure no duplicates
-    if request.method == "GET":
-        payload = u2f.begin_registration(ID)
-        session["challenge"] = payload
-        return render_template("u2f.html", payload=payload)
-    else:
-        resp = json.loads(request.form.get("resp"))
-        device, device_cert = u2f.complete_registration(session["challenge"], resp)
-        session["challenge"] = None
-        DB.u2f.insert_one({"device": device, "cert": device_cert})
-        session["logged_in"] = False
-        return redirect("/login")
 
 
 #######

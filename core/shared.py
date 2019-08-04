@@ -1,3 +1,4 @@
+import json
 import os
 from functools import wraps
 from typing import Any
@@ -7,12 +8,14 @@ from bson.objectid import ObjectId
 from flask import current_app as app
 from flask import redirect
 from flask import request
+from flask import Response
 from flask import session
 from flask import url_for
 from flask_wtf.csrf import CSRFProtect
 from little_boxes import activitypub as ap
 from poussetaches import PousseTaches
 
+import config
 from config import DB
 from config import ME
 from core import activitypub
@@ -33,6 +36,29 @@ back = activitypub.MicroblogPubBackend()
 ap.use_backend(back)
 
 MY_PERSON = ap.Person(**ME)
+
+
+def jsonify(**data):
+    if "@context" not in data:
+        data["@context"] = config.DEFAULT_CTX
+    return Response(
+        response=json.dumps(data),
+        headers={
+            "Content-Type": "application/json"
+            if app.debug
+            else "application/activity+json"
+        },
+    )
+
+
+def is_api_request():
+    h = request.headers.get("Accept")
+    if h is None:
+        return False
+    h = h.split(",")[0]
+    if h in config.HEADERS or h == "application/json":
+        return True
+    return False
 
 
 def add_response_headers(headers={}):
