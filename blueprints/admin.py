@@ -1,5 +1,4 @@
 import json
-from little_boxes.webfinger import get_actor_url
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -16,6 +15,7 @@ from flask import request
 from flask import session
 from flask import url_for
 from little_boxes import activitypub as ap
+from little_boxes.webfinger import get_actor_url
 from passlib.hash import bcrypt
 from u2flib_server import u2f
 

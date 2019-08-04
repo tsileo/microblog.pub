@@ -18,7 +18,6 @@ from flask import url_for
 from itsdangerous import BadSignature
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
-from little_boxes.activitypub import activity_from_doc
 from little_boxes.activitypub import clean_activity
 from little_boxes.activitypub import get_backend
 from little_boxes.errors import ActivityGoneError
@@ -40,6 +39,7 @@ from config import MEDIA_CACHE
 from config import VERSION
 from core import activitypub
 from core import feed
+from core.activitypub import activity_from_doc
 from core.activitypub import activity_url
 from core.activitypub import post_to_inbox
 from core.activitypub import post_to_outbox
@@ -51,11 +51,11 @@ from core.meta import _meta
 from core.meta import by_remote_id
 from core.meta import in_outbox
 from core.meta import is_public
-from core.shared import jsonify
-from core.shared import is_api_request
 from core.shared import _build_thread
 from core.shared import _get_ip
 from core.shared import csrf
+from core.shared import is_api_request
+from core.shared import jsonify
 from core.shared import login_required
 from core.shared import noindex
 from core.shared import paginated_query

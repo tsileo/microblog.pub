@@ -5,10 +5,10 @@ from typing import Any
 
 import flask
 from bson.objectid import ObjectId
+from flask import Response
 from flask import current_app as app
 from flask import redirect
 from flask import request
-from flask import Response
 from flask import session
 from flask import url_for
 from flask_wtf.csrf import CSRFProtect
