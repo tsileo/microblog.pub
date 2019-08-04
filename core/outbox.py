@@ -98,7 +98,7 @@ def _announce_process_outbox(announce: ap.Announce, new_meta: _NewMeta) -> None:
         {
             "$set": {
                 "meta.object": obj.to_dict(embed=True),
-                "meta.object_actor": obj.get_actor(embed=True),
+                "meta.object_actor": obj.get_actor().to_dict(embed=True),
             }
         },
     )
