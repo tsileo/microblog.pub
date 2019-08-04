@@ -23,6 +23,7 @@ from config import DB
 from config import ID
 from config import PASS
 from core.activitypub import Box
+from core.activitypub import post_to_outbox
 from core.shared import MY_PERSON
 from core.shared import _build_thread
 from core.shared import _Response
@@ -31,7 +32,6 @@ from core.shared import login_required
 from core.shared import noindex
 from core.shared import p
 from core.shared import paginated_query
-from core.shared import post_to_outbox
 from utils import now
 from utils.lookup import lookup
 

@@ -43,7 +43,10 @@ from config import ME
 from config import MEDIA_CACHE
 from config import VERSION
 from core import activitypub
+from core.activitypub import activity_url
 from core.activitypub import embed_collection
+from core.activitypub import post_to_inbox
+from core.activitypub import post_to_outbox
 from core.db import find_one_activity
 from core.meta import Box
 from core.meta import MetaKey
@@ -55,14 +58,10 @@ from core.shared import MY_PERSON
 from core.shared import _add_answers_to_question
 from core.shared import _build_thread
 from core.shared import _get_ip
-from core.shared import activity_url
-from core.shared import back
 from core.shared import csrf
 from core.shared import login_required
 from core.shared import noindex
 from core.shared import paginated_query
-from core.shared import post_to_outbox
-from core.tasks import Tasks
 from utils import now
 from utils.key import get_secret_key
 from utils.template_filters import filters
@@ -1006,24 +1005,3 @@ def rss_feed():
         response=activitypub.gen_feed().rss_str(),
         headers={"Content-Type": "application/rss+xml"},
     )
-
-
-def post_to_inbox(activity: ap.BaseActivity) -> None:
-    # Check for Block activity
-    actor = activity.get_actor()
-    if back.outbox_is_blocked(MY_PERSON, actor.id):
-        app.logger.info(
-            f"actor {actor!r} is blocked, dropping the received activity {activity!r}"
-        )
-        return
-
-    if back.inbox_check_duplicate(MY_PERSON, activity.id):
-        # The activity is already in the inbox
-        app.logger.info(f"received duplicate activity {activity!r}, dropping it")
-        return
-
-    back.save(Box.INBOX, activity)
-    Tasks.process_new_activity(activity.id)
-
-    app.logger.info(f"spawning task for {activity!r}")
-    Tasks.finish_post_to_inbox(activity.id)

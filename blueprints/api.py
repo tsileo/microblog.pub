@@ -33,15 +33,15 @@ from config import JWT
 from config import MEDIA_CACHE
 from config import _drop_db
 from core import activitypub
+from core.activitypub import activity_url
+from core.activitypub import post_to_outbox
 from core.meta import Box
 from core.meta import MetaKey
 from core.meta import _meta
 from core.shared import MY_PERSON
 from core.shared import _Response
-from core.shared import activity_url
 from core.shared import csrf
 from core.shared import login_required
-from core.shared import post_to_outbox
 from core.tasks import Tasks
 from utils import now
 

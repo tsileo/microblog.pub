@@ -17,6 +17,7 @@ import config
 from config import DB
 from core import gc
 from core.activitypub import Box
+from core.activitypub import post_to_outbox
 from core.inbox import process_inbox
 from core.meta import MetaKey
 from core.meta import _meta
@@ -27,7 +28,6 @@ from core.shared import _add_answers_to_question
 from core.shared import _Response
 from core.shared import back
 from core.shared import p
-from core.shared import post_to_outbox
 from core.tasks import Tasks
 from utils import now
 from utils import opengraph

@@ -8,11 +8,11 @@ from little_boxes.errors import NotAnActivityError
 
 import config
 from core.activitypub import _answer_key
+from core.activitypub import post_to_outbox
 from core.db import DB
 from core.meta import Box
 from core.shared import MY_PERSON
 from core.shared import back
-from core.shared import post_to_outbox
 from core.tasks import Tasks
 from utils import now
 
