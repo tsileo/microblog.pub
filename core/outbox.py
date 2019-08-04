@@ -130,7 +130,7 @@ def _undo_process_outbox(undo: ap.Undo, new_meta: _NewMeta) -> None:
 
     # Undo Like
     if obj.has_type(ap.ActivityType.LIKE):
-        liked = obj.get_objec_id()
+        liked = obj.get_object_id()
         DB.activities.update_one(
             {"activity.object.id": liked},
             {"$inc": {"meta.count_like": -1}, "$set": {"meta.liked": False}},
