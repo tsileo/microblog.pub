@@ -1,13 +1,13 @@
+import binascii
 import os
 from datetime import datetime
 from datetime import timezone
 from functools import wraps
 from typing import Any
 from typing import Dict
-from typing import Union
+from urllib.parse import urljoin
 
 import flask
-import werkzeug
 from bson.objectid import ObjectId
 from flask import current_app as app
 from flask import redirect
@@ -19,6 +19,7 @@ from little_boxes import activitypub as ap
 from little_boxes.activitypub import format_datetime
 from poussetaches import PousseTaches
 
+from config import BASE_URL
 from config import DB
 from config import ME
 from core import activitypub
@@ -26,7 +27,8 @@ from core.activitypub import _answer_key
 from core.meta import Box
 from core.tasks import Tasks
 
-_Response = Union[flask.Response, werkzeug.wrappers.Response, str]
+# _Response = Union[flask.Response, werkzeug.wrappers.Response, str, Any]
+_Response = Any
 
 p = PousseTaches(
     os.getenv("MICROBLOGPUB_POUSSETACHES_HOST", "http://localhost:7991"),
@@ -69,7 +71,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("logged_in"):
-            return redirect(url_for("admin_login", next=request.url))
+            return redirect(url_for("admin.admin_login", next=request.url))
         return f(*args, **kwargs)
 
     return decorated_function
@@ -92,14 +94,26 @@ def _get_ip():
     return ip, geoip
 
 
+def activity_url(item_id: str) -> str:
+    return urljoin(BASE_URL, url_for("outbox_detail", item_id=item_id))
+
+
 def post_to_outbox(activity: ap.BaseActivity) -> str:
     if activity.has_type(ap.CREATE_TYPES):
         activity = activity.build_create()
 
     # Assign create a random ID
-    obj_id = back.random_object_id()
-
-    activity.set_id(back.activity_url(obj_id), obj_id)
+    obj_id = binascii.hexlify(os.urandom(8)).decode("utf-8")
+    uri = activity_url(obj_id)
+    activity._data["id"] = uri
+    if activity.has_type(ap.ActivityType.CREATE):
+        activity._data["object"]["id"] = urljoin(
+            BASE_URL, url_for("outbox_activity", item_id=obj_id)
+        )
+        activity._data["object"]["url"] = urljoin(
+            BASE_URL, url_for("note_by_id", note_id=obj_id)
+        )
+        activity.reset_object_cache()
 
     back.save(Box.OUTBOX, activity)
     Tasks.cache_actor(activity.id)

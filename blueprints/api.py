@@ -38,7 +38,7 @@ from core.meta import MetaKey
 from core.meta import _meta
 from core.shared import MY_PERSON
 from core.shared import _Response
-from core.shared import back
+from core.shared import activity_url
 from core.shared import csrf
 from core.shared import login_required
 from core.shared import post_to_outbox
@@ -291,7 +291,7 @@ def api_undo() -> _Response:
     doc = DB.activities.find_one(
         {
             "box": Box.OUTBOX.value,
-            "$or": [{"remote_id": back.activity_url(oid)}, {"remote_id": oid}],
+            "$or": [{"remote_id": activity_url(oid)}, {"remote_id": oid}],
         }
     )
     if not doc:
