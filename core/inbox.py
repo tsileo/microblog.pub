@@ -38,8 +38,9 @@ def process_inbox(activity: ap.BaseActivity, new_meta: _NewMeta) -> None:
 def _delete_process_inbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
     _logger.info(f"process_inbox activity={delete!r}")
     obj_id = delete.get_object_id()
-    _logger.debug("delete object={obj_id}")
+    _logger.debug(f"delete object={obj_id}")
     try:
+        # FIXME(tsileo): call the DB here instead? like for the oubox
         obj = ap.fetch_remote_activity(obj_id)
         _logger.info(f"inbox_delete handle_replies obj={obj!r}")
         in_reply_to = obj.get_in_reply_to() if obj.inReplyTo else None

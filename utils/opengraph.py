@@ -1,4 +1,7 @@
 import logging
+from typing import Any
+from typing import Dict
+from typing import Set
 from urllib.parse import urlparse
 
 import opengraph
@@ -14,7 +17,7 @@ from .lookup import lookup
 logger = logging.getLogger(__name__)
 
 
-def links_from_note(note):
+def links_from_note(note: Dict[str, Any]) -> Set[str]:
     note_host = urlparse(ap._get_id(note["id"]) or "").netloc
 
     links = set()

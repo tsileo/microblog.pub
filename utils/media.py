@@ -1,6 +1,7 @@
 import base64
 import mimetypes
 from enum import Enum
+from enum import unique
 from gzip import GzipFile
 from io import BytesIO
 from typing import Any
@@ -13,7 +14,7 @@ from little_boxes import activitypub as ap
 from PIL import Image
 
 
-def load(url, user_agent):
+def load(url: str, user_agent: str) -> Image:
     """Initializes a `PIL.Image` from the URL."""
     with requests.get(url, stream=True, headers={"User-Agent": user_agent}) as resp:
         resp.raise_for_status()
@@ -22,7 +23,7 @@ def load(url, user_agent):
         return Image.open(BytesIO(resp.raw.read()))
 
 
-def to_data_uri(img):
+def to_data_uri(img: Image) -> str:
     out = BytesIO()
     img.save(out, format=img.format)
     out.seek(0)
@@ -30,6 +31,7 @@ def to_data_uri(img):
     return f"data:{img.get_format_mimetype()};base64,{data}"
 
 
+@unique
 class Kind(Enum):
     ATTACHMENT = "attachment"
     ACTOR_ICON = "actor_icon"

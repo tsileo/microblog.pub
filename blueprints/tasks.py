@@ -196,7 +196,7 @@ def task_finish_post_to_inbox() -> _Response:
     except (ActivityGoneError, ActivityNotFoundError, NotAnActivityError):
         app.logger.exception(f"no retry")
     except Exception as err:
-        app.logger.exception(f"failed to cache attachments for {iri}")
+        app.logger.exception(f"failed to cfinish post to inbox for {iri}")
         raise TaskError() from err
 
     return ""

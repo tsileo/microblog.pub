@@ -3,12 +3,13 @@ import logging
 import os
 import traceback
 from datetime import datetime
-from urllib.parse import urlparse
+from uuid import uuid4
 
 from bson.objectid import ObjectId
 from flask import Flask
 from flask import Response
 from flask import abort
+from flask import g
 from flask import jsonify as flask_jsonify
 from flask import redirect
 from flask import render_template
@@ -49,8 +50,10 @@ from core.meta import Box
 from core.meta import MetaKey
 from core.meta import _meta
 from core.meta import by_remote_id
+from core.meta import by_type
 from core.meta import in_outbox
 from core.meta import is_public
+from core.meta import not_undo
 from core.shared import _build_thread
 from core.shared import _get_ip
 from core.shared import csrf
@@ -59,6 +62,7 @@ from core.shared import jsonify
 from core.shared import login_required
 from core.shared import noindex
 from core.shared import paginated_query
+from utils.blacklist import is_blacklisted
 from utils.key import get_secret_key
 from utils.template_filters import filters
 
@@ -85,14 +89,6 @@ else:
     gunicorn_logger = logging.getLogger("gunicorn.error")
     root_logger.handlers = gunicorn_logger.handlers
     root_logger.setLevel(gunicorn_logger.level)
-
-
-def is_blacklisted(url: str) -> bool:
-    try:
-        return urlparse(url).netloc in config.BLACKLIST
-    except Exception:
-        logger.exception(f"failed to blacklist for {url}")
-        return False
 
 
 @app.context_processor
@@ -153,18 +149,24 @@ def inject_config():
     )
 
 
+@app.before_request
+def generate_request_id():
+    g.request_id = uuid4().hex
+
+
 @app.after_request
 def set_x_powered_by(response):
     response.headers["X-Powered-By"] = "microblog.pub"
+    response.headers["X-Request-ID"] = g.request_id
     return response
 
 
 @app.errorhandler(ValueError)
 def handle_value_error(error):
     logger.error(
-        f"caught value error: {error!r}, {traceback.format_tb(error.__traceback__)}"
+        f"caught value error for {g.request_id}: {error!r}, {traceback.format_tb(error.__traceback__)}"
     )
-    response = flask_jsonify(message=error.args[0])
+    response = flask_jsonify(message=error.args[0], request_id=g.request_id)
     response.status_code = 400
     return response
 
@@ -172,9 +174,9 @@ def handle_value_error(error):
 @app.errorhandler(Error)
 def handle_activitypub_error(error):
     logger.error(
-        f"caught activitypub error {error!r}, {traceback.format_tb(error.__traceback__)}"
+        f"caught activitypub error for {g.request_id}: {error!r}, {traceback.format_tb(error.__traceback__)}"
     )
-    response = flask_jsonify(error.to_dict())
+    response = flask_jsonify({**error.to_dict(), "request_id": g.request_id})
     response.status_code = error.status_code
     return response
 
@@ -182,9 +184,9 @@ def handle_activitypub_error(error):
 @app.errorhandler(TaskError)
 def handle_task_error(error):
     logger.error(
-        f"caught activitypub error {error!r}, {traceback.format_tb(error.__traceback__)}"
+        f"caught activitypub error for {g.request_id}: {error!r}, {traceback.format_tb(error.__traceback__)}"
     )
-    response = flask_jsonify({"traceback": error.message})
+    response = flask_jsonify({"traceback": error.message, "request_id": g.request_id})
     response.status_code = 500
     return response
 
@@ -274,7 +276,6 @@ def index():
         "meta.public": True,
         "$or": [{"meta.pinned": False}, {"meta.pinned": {"$exists": False}}],
     }
-    print(list(DB.activities.find(q)))
 
     pinned = []
     # Only fetch the pinned notes if we're on the first page
@@ -417,7 +418,6 @@ def outbox():
         abort(401)
 
     data = request.get_json(force=True)
-    print(data)
     activity = ap.parse_activity(data)
     activity_id = post_to_outbox(activity)
 
@@ -603,32 +603,21 @@ def inbox():
         return Response(
             status=422,
             headers={"Content-Type": "application/json"},
-            response=json.dumps({"error": "failed to decode request as JSON"}),
+            response=json.dumps(
+                {
+                    "error": "failed to decode request body as JSON",
+                    "request_id": g.request_id,
+                }
+            ),
         )
 
     # Check the blacklist now to see if we can return super early
-    if (
-        "id" in data
-        and is_blacklisted(data["id"])
-        or (
-            "object" in data
-            and isinstance(data["object"], dict)
-            and "id" in data["object"]
-            and is_blacklisted(data["object"]["id"])
-        )
-        or (
-            "object" in data
-            and isinstance(data["object"], str)
-            and is_blacklisted(data["object"])
-        )
-    ):
+    if is_blacklisted(data):
         logger.info(f"dropping activity from blacklisted host: {data['id']}")
         return Response(status=201)
 
-    print(f"req_headers={request.headers}")
-    print(f"raw_data={data}")
-    logger.debug(f"req_headers={request.headers}")
-    logger.debug(f"raw_data={data}")
+    logger.info(f"request_id={g.request_id} req_headers={request.headers!r}")
+    logger.info(f"request_id={g.request_id} raw_data={data}")
     try:
         if not verify_request(
             request.method, request.path, request.headers, request.data
@@ -636,7 +625,7 @@ def inbox():
             raise Exception("failed to verify request")
     except Exception:
         logger.exception(
-            "failed to verify request, trying to verify the payload by fetching the remote"
+            f"failed to verify request {g.request_id}, trying to verify the payload by fetching the remote"
         )
         try:
             remote_data = get_backend().fetch_iri(data["id"])
@@ -669,7 +658,8 @@ def inbox():
                         headers={"Content-Type": "application/json"},
                         response=json.dumps(
                             {
-                                "error": "failed to verify request (using HTTP signatures or fetching the IRI)"
+                                "error": "failed to verify request (using HTTP signatures or fetching the IRI)",
+                                "request_id": g.request_id,
                             }
                         ),
                     )
@@ -688,6 +678,7 @@ def inbox():
                         "geoip": geoip,
                         "tb": traceback.format_exc(),
                         "headers": dict(request.headers),
+                        "request_id": g.request_id,
                     },
                 }
             )
@@ -697,16 +688,16 @@ def inbox():
                 headers={"Content-Type": "application/json"},
                 response=json.dumps(
                     {
-                        "error": "failed to verify request (using HTTP signatures or fetching the IRI)"
+                        "error": "failed to verify request (using HTTP signatures or fetching the IRI)",
+                        "request_id": g.request_id,
                     }
                 ),
             )
 
         # We fetched the remote data successfully
         data = remote_data
-    print(data)
     activity = ap.parse_activity(data)
-    logger.debug(f"inbox activity={activity}/{data}")
+    logger.debug(f"inbox activity={g.request_id}/{activity}/{data}")
     post_to_inbox(activity)
 
     return Response(status=201)
@@ -741,7 +732,7 @@ def followers():
 
 @app.route("/following")
 def following():
-    q = {"box": Box.OUTBOX.value, "type": ActivityType.FOLLOW.value, "meta.undo": False}
+    q = {**in_outbox(), **by_type(ActivityType.FOLLOW), **not_undo()}
 
     if is_api_request():
         return jsonify(

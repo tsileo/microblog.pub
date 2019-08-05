@@ -170,7 +170,6 @@ def url_or_id(d):
 
 @filters.app_template_filter()
 def get_url(u):
-    print(f"GET_URL({u!r})")
     if isinstance(u, list):
         for l in u:
             if l.get("mimeType") == "text/html":
@@ -191,7 +190,6 @@ def get_actor(url):
         url = url[0]
     if isinstance(url, dict):
         url = url.get("id")
-    print(f"GET_ACTOR {url}")
     try:
         return ap.get_backend().fetch_iri(url)
     except (ActivityNotFoundError, ActivityGoneError):
@@ -203,8 +201,6 @@ def get_actor(url):
 @filters.app_template_filter()
 def get_answer_count(choice, obj, meta):
     count_from_meta = meta.get("question_answers", {}).get(_answer_key(choice), 0)
-    print(count_from_meta)
-    print(choice, obj, meta)
     if count_from_meta:
         return count_from_meta
     for option in obj.get("oneOf", obj.get("anyOf", [])):
@@ -219,7 +215,6 @@ def get_total_answers_count(obj, meta):
         return cached
     cnt = 0
     for choice in obj.get("anyOf", obj.get("oneOf", [])):
-        print(choice)
         cnt += choice.get("replies", {}).get("totalItems", 0)
     return cnt
 

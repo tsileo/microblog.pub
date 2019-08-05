@@ -406,6 +406,8 @@ class MicroblogPubBackend(Backend):
         new_threads = []
         root_reply = in_reply_to
         reply = ap.fetch_remote_activity(root_reply)
+        # FIXME(tsileo): can be a Create here (instead of a Note, Hubzilla's doing that)
+        # FIXME(tsileo): can be a 403 too, in this case what to do? not error at least
 
         # Ensure the this is a local reply, of a question, with a direct "to" addressing
         if (
@@ -427,7 +429,6 @@ class MicroblogPubBackend(Backend):
             )
             return None
 
-        print(f"processing {create!r} and incrementing {in_reply_to}")
         creply = DB.activities.find_one_and_update(
             {"activity.object.id": in_reply_to},
             {"$inc": {"meta.count_reply": 1, "meta.count_direct_reply": 1}},
@@ -444,6 +445,7 @@ class MicroblogPubBackend(Backend):
                 break
             root_reply = in_reply_to
             reply = ap.fetch_remote_activity(root_reply)
+            # FIXME(tsileo): can be a Create here (instead of a Note, Hubzilla's doing that)
             q = {"activity.object.id": root_reply}
             if not DB.activities.count(q):
                 save(Box.REPLIES, reply)
