@@ -5,6 +5,7 @@ import traceback
 from datetime import datetime
 from uuid import uuid4
 
+from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from flask import Flask
 from flask import Response
@@ -16,6 +17,7 @@ from flask import render_template
 from flask import request
 from flask import session
 from flask import url_for
+from gridfs.errors import NoFile
 from itsdangerous import BadSignature
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import ActivityType
@@ -219,7 +221,11 @@ def robots_txt():
 @app.route("/media/<media_id>")
 @noindex
 def serve_media(media_id):
-    f = MEDIA_CACHE.fs.get(ObjectId(media_id))
+    try:
+        f = MEDIA_CACHE.fs.get(ObjectId(media_id))
+    except (InvalidId, NoFile):
+        abort(404)
+
     resp = app.response_class(f, direct_passthrough=True, mimetype=f.content_type)
     resp.headers.set("Content-Length", f.length)
     resp.headers.set("ETag", f.md5)
@@ -233,7 +239,11 @@ def serve_media(media_id):
 
 @app.route("/uploads/<oid>/<fname>")
 def serve_uploads(oid, fname):
-    f = MEDIA_CACHE.fs.get(ObjectId(oid))
+    try:
+        f = MEDIA_CACHE.fs.get(ObjectId(oid))
+    except (InvalidId, NoFile):
+        abort(404)
+
     resp = app.response_class(f, direct_passthrough=True, mimetype=f.content_type)
     resp.headers.set("Content-Length", f.length)
     resp.headers.set("ETag", f.md5)
