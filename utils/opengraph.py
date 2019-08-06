@@ -59,6 +59,9 @@ def fetch_og_metadata(user_agent, links):
         except requests.HTTPError as http_err:
             logger.debug(f"failed to HEAD {l}, got a {http_err.response.status_code}")
             continue
+        except requests.Timeout:
+            logger.debug(f"HEAD {l} timed out")
+            continue
 
         if not h.headers.get("content-type").startswith("text/html"):
             logger.debug(f"skipping {l} for bad content type")
@@ -69,6 +72,9 @@ def fetch_og_metadata(user_agent, links):
             r.raise_for_status()
         except requests.HTTPError as http_err:
             logger.debug(f"failed to GET {l}, got a {http_err.response.status_code}")
+            continue
+        except requests.Timeout:
+            logger.debug(f"GET {l} timed out")
             continue
 
         r.encoding = "UTF-8"
