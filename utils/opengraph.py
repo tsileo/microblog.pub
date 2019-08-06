@@ -43,18 +43,32 @@ def fetch_og_metadata(user_agent, links):
     for l in links:
         check_url(l)
 
-        # Remove any AP actor from the list
+        # Remove any AP objects
         try:
-            p = lookup(l)
-            if p.has_type(ap.ACTOR_TYPES):
-                continue
+            lookup(l)
+            continue
         except NotAnActivityError:
             pass
+        except Exception:
+            logger.exception(f"skipping {l} because of issues during AP lookup")
+            continue
 
-        r = requests.get(l, headers={"User-Agent": user_agent}, timeout=15)
-        r.raise_for_status()
-        if not r.headers.get("content-type").startswith("text/html"):
-            logger.debug(f"skipping {l}")
+        try:
+            h = requests.head(l, headers={"User-Agent": user_agent}, timeout=3)
+            h.raise_for_status()
+        except requests.HTTPError as http_err:
+            logger.debug(f"failed to HEAD {l}, got a {http_err.response.status_code}")
+            continue
+
+        if not h.headers.get("content-type").startswith("text/html"):
+            logger.debug(f"skipping {l} for bad content type")
+            continue
+
+        try:
+            r = requests.get(l, headers={"User-Agent": user_agent}, timeout=5)
+            r.raise_for_status()
+        except requests.HTTPError as http_err:
+            logger.debug(f"failed to GET {l}, got a {http_err.response.status_code}")
             continue
 
         r.encoding = "UTF-8"
