@@ -24,6 +24,8 @@ from core.meta import MetaKey
 from core.meta import _meta
 from core.notifications import set_inbox_flags
 from core.outbox import process_outbox
+from core.remote import track_failed_send
+from core.remote import track_successful_send
 from core.shared import MY_PERSON
 from core.shared import _Response
 from core.shared import back
@@ -315,11 +317,6 @@ def task_post_to_remote_inbox() -> _Response:
         app.logger.info("generating sig")
         signed_payload = json.loads(payload)
 
-        # XXX Disable JSON-LD signature crap for now (as HTTP signatures are enough for most implementations)
-        # Don't overwrite the signature if we're forwarding an activity
-        # if "signature" not in signed_payload:
-        #    generate_signature(signed_payload, KEY)
-
         app.logger.info("to=%s", to)
         resp = requests.post(
             to,
@@ -335,15 +332,24 @@ def task_post_to_remote_inbox() -> _Response:
         app.logger.info("resp_body=%s", resp.text)
         resp.raise_for_status()
     except HTTPError as err:
+        track_failed_send(to)
+
         app.logger.exception("request failed")
         if 400 >= err.response.status_code >= 499:
             app.logger.info("client error, no retry")
             return ""
 
         raise TaskError() from err
+    except requests.RequestException:
+        track_failed_send(to)
+
+        app.logger.exception("request failed")
+
     except Exception as err:
         app.logger.exception("task failed")
         raise TaskError() from err
+
+    track_successful_send(to)
 
     return ""
 

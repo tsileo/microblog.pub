@@ -13,6 +13,7 @@ _Doc = Optional[Dict[str, Any]]
 @unique
 class CollectionName(Enum):
     ACTIVITIES = "activities"
+    REMOTE = "remote"
 
 
 def find_one_activity(q: _Q) -> _Doc:
@@ -25,3 +26,7 @@ def update_one_activity(q: _Q, update: _Q) -> None:
 
 def update_many_activities(q: _Q, update: _Q) -> None:
     DB[CollectionName.ACTIVITIES.value].update_many(q, update)
+
+
+def update_one_remote(filter_: _Q, update: _Q, upsert: bool = False) -> None:
+    DB[CollectionName.REMOTE.value].update_one(filter_, update, upsert)
