@@ -203,6 +203,12 @@ def handle_task_error(error):
 #    return response
 
 
+def _log_sig():
+    sig = request.headers.get("Signature")
+    if sig:
+        app.logger.info(f"received an authenticated fetch: {sig}")
+
+
 # App routes
 
 ROBOTS_TXT = """User-agent: *
@@ -275,6 +281,7 @@ def remote_follow():
 @app.route("/")
 def index():
     if is_api_request():
+        _log_sig()
         return jsonify(**ME)
 
     q = {
@@ -403,6 +410,7 @@ def outbox():
     if request.method == "GET":
         if not is_api_request():
             abort(404)
+        _log_sig()
         # TODO(tsileo): returns the whole outbox if authenticated and look at OCAP support
         q = {
             "box": Box.OUTBOX.value,
@@ -436,10 +444,6 @@ def outbox():
 
 @app.route("/outbox/<item_id>")
 def outbox_detail(item_id):
-    sig = request.headers.get("Signature")
-    if sig:
-        app.logger.info(f"received an authenticated fetch: {sig}")
-
     doc = DB.activities.find_one(
         {
             "box": Box.OUTBOX.value,
@@ -450,6 +454,7 @@ def outbox_detail(item_id):
     if not doc:
         abort(404)
 
+    _log_sig()
     if doc["meta"].get("deleted", False):
         abort(404)
 
@@ -458,16 +463,13 @@ def outbox_detail(item_id):
 
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
-    sig = request.headers.get("Signature")
-    if sig:
-        app.logger.info(f"received an authenticated fetch: {sig}")
-
     data = find_one_activity(
         {**in_outbox(), **by_remote_id(activity_url(item_id)), **is_public()}
     )
     if not data:
         abort(404)
 
+    _log_sig()
     obj = activity_from_doc(data)
     if data["meta"].get("deleted", False):
         abort(404)
@@ -481,6 +483,7 @@ def outbox_activity(item_id):
 def outbox_activity_replies(item_id):
     if not is_api_request():
         abort(404)
+    _log_sig()
     data = DB.activities.find_one(
         {
             "box": Box.OUTBOX.value,
@@ -518,6 +521,7 @@ def outbox_activity_replies(item_id):
 def outbox_activity_likes(item_id):
     if not is_api_request():
         abort(404)
+    _log_sig()
     data = DB.activities.find_one(
         {
             "box": Box.OUTBOX.value,
@@ -566,6 +570,7 @@ def outbox_activity_shares(item_id):
     )
     if not data:
         abort(404)
+    _log_sig()
     obj = ap.parse_activity(data["activity"])
     if obj.ACTIVITY_TYPE != ActivityType.CREATE:
         abort(404)
@@ -728,6 +733,7 @@ def followers():
     q = {"box": Box.INBOX.value, "type": ActivityType.FOLLOW.value, "meta.undo": False}
 
     if is_api_request():
+        _log_sig()
         return jsonify(
             **activitypub.build_ordered_collection(
                 DB.activities,
@@ -755,6 +761,7 @@ def following():
     q = {**in_outbox(), **by_type(ActivityType.FOLLOW), **not_undo()}
 
     if is_api_request():
+        _log_sig()
         return jsonify(
             **activitypub.build_ordered_collection(
                 DB.activities,
@@ -808,6 +815,7 @@ def tags(tag):
                 }
             ),
         )
+    _log_sig()
     q = {
         "box": Box.OUTBOX.value,
         "meta.deleted": False,
@@ -832,6 +840,7 @@ def featured():
     if not is_api_request():
         abort(404)
 
+    _log_sig()
     q = {
         "box": Box.OUTBOX.value,
         "type": ActivityType.CREATE.value,
@@ -859,6 +868,7 @@ def liked():
             "liked.html", liked=liked, older_than=older_than, newer_than=newer_than
         )
 
+    _log_sig()
     q = {"meta.deleted": False, "meta.undo": False, "type": ActivityType.LIKE.value}
     return jsonify(
         **activitypub.build_ordered_collection(
