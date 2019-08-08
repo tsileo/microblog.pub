@@ -54,7 +54,9 @@ def fetch_og_metadata(user_agent, links):
             continue
 
         try:
-            h = requests.head(l, headers={"User-Agent": user_agent}, timeout=3)
+            h = requests.head(
+                l, headers={"User-Agent": user_agent}, timeout=3, allow_redirects=True
+            )
             h.raise_for_status()
         except requests.HTTPError as http_err:
             logger.debug(
@@ -70,7 +72,9 @@ def fetch_og_metadata(user_agent, links):
             continue
 
         try:
-            r = requests.get(l, headers={"User-Agent": user_agent}, timeout=5)
+            r = requests.get(
+                l, headers={"User-Agent": user_agent}, timeout=5, allow_redirects=True
+            )
             r.raise_for_status()
         except requests.HTTPError as http_err:
             logger.debug(
