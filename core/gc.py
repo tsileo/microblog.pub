@@ -16,6 +16,10 @@ from config import ME
 from config import MEDIA_CACHE
 from core import activitypub
 from core.meta import Box
+from core.meta import MetaKey
+from core.meta import _meta
+from core.meta import by_type
+from core.meta import in_inbox
 from utils.migrations import DB
 
 back = activitypub.MicroblogPubBackend()
@@ -62,9 +66,9 @@ def perform() -> None:  # noqa: C901
 
     delete_deleted = DB.activities.delete_many(
         {
-            "box": Box.INBOX.value,
-            "type": ap.ActivityType.DELETE.value,
-            "activity.published": {"$lt": d},
+            **in_inbox(),
+            **by_type(ap.ActivityType.DELETE),
+            _meta(MetaKey.PUBLISHED): {"$lt": d},
         }
     ).deleted_count
     logger.info(f"{delete_deleted} Delete deleted")
@@ -76,7 +80,7 @@ def perform() -> None:  # noqa: C901
         {
             "box": Box.INBOX.value,
             "type": ap.ActivityType.CREATE.value,
-            "activity.published": {"$lt": d},
+            _meta(MetaKey.PUBLISHED): {"$lt": d},
             "meta.gc_keep": {"$exists": False},
         }
     ).limit(500):
@@ -157,7 +161,7 @@ def perform() -> None:  # noqa: C901
         {
             "box": Box.INBOX.value,
             "type": ap.ActivityType.ANNOUNCE.value,
-            "activity.published": {"$lt": d},
+            _meta(MetaKey.PUBLISHED): {"$lt": d},
             "meta.gc_keep": {"$exists": False},
         }
     ).limit(500):
