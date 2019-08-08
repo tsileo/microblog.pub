@@ -7,7 +7,11 @@ from little_boxes import activitypub as ap
 
 from config import ID
 from core import activitypub
-from utils.migrations import DB
+from core.db import DB
+from core.db import find_activities
+from core.db import update_one_activity
+from core.meta import MetaKey
+from core.meta import _meta
 from utils.migrations import Migration
 from utils.migrations import logger
 from utils.migrations import perform  # noqa:  just here for export
@@ -153,3 +157,27 @@ class _2_FollowMigration(Migration):
                     )
             except Exception:
                 logger.exception("failed to process actor {data!r}")
+
+
+class _20190808_MetaPublishedMigration(Migration):
+    """Add the `meta.published` field to old activities."""
+
+    def migrate(self) -> None:
+        for data in find_activities({"meta.published": {"$exists": False}}):
+            try:
+                raw = data["activity"]
+                # If the activity has its own `published` field, we'll use it
+                if "published" in raw:
+                    published = raw["published"]
+                else:
+                    # Otherwise, we take the date we received the activity as the published time
+                    published = ap.format_datetime(data["_id"].generation_time)
+
+                # Set the field in the DB
+                update_one_activity(
+                    {"_id": data["_id"]},
+                    {"$set": {_meta(MetaKey.PUBLISHED): published}},
+                )
+
+            except Exception:
+                logger.exception("failed to process activity {data!r}")

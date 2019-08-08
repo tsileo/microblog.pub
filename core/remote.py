@@ -13,6 +13,9 @@ def _update(url: str, replace: _Q) -> None:
     update_one_remote({"server": server(url)}, replace, upsert=True)
 
 
+# TODO(tsileo): track receive (and the user agent to help debug issues)
+
+
 def track_successful_send(url: str) -> None:
     now_ = now()
     _update(
