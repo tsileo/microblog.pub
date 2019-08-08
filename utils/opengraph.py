@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 from typing import Any
 from typing import Dict
 from typing import Set
@@ -41,6 +42,12 @@ def links_from_note(note: Dict[str, Any]) -> Set[str]:
 def fetch_og_metadata(user_agent, links):
     res = []
     for l in links:
+        # Try to skip media early
+        mimetype, _ = mimetypes.guess_type(l)
+        if mimetype and mimetype.split("/")[0] in ["image", "video", "audio"]:
+            logger.info(f"skipping media link {l}")
+            continue
+
         check_url(l)
 
         # Remove any AP objects
