@@ -629,10 +629,12 @@ def inbox():
     logger.info(f"request_id={g.request_id} req_headers={request.headers!r}")
     logger.info(f"request_id={g.request_id} raw_data={data}")
     try:
-        if not verify_request(
+        req_verified, actor_id = verify_request(
             request.method, request.path, request.headers, request.data
-        ):
+        )
+        if not req_verified:
             raise Exception("failed to verify request")
+        logger.info(f"request_id={g.request_id} signed by {actor_id}")
     except Exception:
         logger.exception(
             f"failed to verify request {g.request_id}, trying to verify the payload by fetching the remote"

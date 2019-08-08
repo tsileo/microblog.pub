@@ -7,6 +7,8 @@ from typing import Dict
 from typing import List
 
 from little_boxes import activitypub as ap
+from little_boxes.errors import ActivityGoneError
+from little_boxes.errors import RemoteServerUnavailableError
 
 from config import DAYS_TO_KEEP
 from config import ID
@@ -58,6 +60,15 @@ def perform() -> None:  # noqa: C901
     toi = threads_of_interest()
     logger.info(f"thread_of_interest={toi!r}")
 
+    delete_deleted = DB.activities.delete_many(
+        {
+            "box": Box.INBOX.value,
+            "type": ap.ActivityType.DELETE.value,
+            "activity.published": {"$lt": d},
+        }
+    ).deleted_count
+    logger.info(f"{delete_deleted} Delete deleted")
+
     create_deleted = 0
     create_count = 0
     # Go over the old Create activities
@@ -70,33 +81,41 @@ def perform() -> None:  # noqa: C901
         }
     ).limit(500):
         try:
+            logger.info(f"data={data!r}")
             create_count += 1
             remote_id = data["remote_id"]
             meta = data["meta"]
-            activity = ap.parse_activity(data["activity"])
-            logger.info(f"activity={activity!r}")
 
             # This activity has been bookmarked, keep it
             if meta.get("bookmarked"):
                 _keep(data)
                 continue
 
-            # Inspect the object
-            obj = activity.get_object()
+            obj = None
+            if not meta.get("deleted"):
+                try:
+                    activity = ap.parse_activity(data["activity"])
+                    logger.info(f"activity={activity!r}")
+                    obj = activity.get_object()
+                except (RemoteServerUnavailableError, ActivityGoneError):
+                    logger.exception(
+                        f"failed to load {remote_id}, this activity will be deleted"
+                    )
 
             # This activity mentions the server actor, keep it
-            if obj.has_mention(ID):
+            if obj and obj.has_mention(ID):
                 _keep(data)
                 continue
 
             # This activity is a direct reply of one the server actor activity, keep it
-            in_reply_to = obj.get_in_reply_to()
-            if in_reply_to and in_reply_to.startswith(ID):
-                _keep(data)
-                continue
+            if obj:
+                in_reply_to = obj.get_in_reply_to()
+                if in_reply_to and in_reply_to.startswith(ID):
+                    _keep(data)
+                    continue
 
             # This activity is part of a thread we want to keep, keep it
-            if in_reply_to and meta.get("thread_root_parent"):
+            if obj and in_reply_to and meta.get("thread_root_parent"):
                 thread_root_parent = meta["thread_root_parent"]
                 if thread_root_parent.startswith(ID) or thread_root_parent in toi:
                     _keep(data)
