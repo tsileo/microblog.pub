@@ -22,7 +22,11 @@ def track_successful_send(url: str) -> None:
         url,
         {
             "$inc": {"successful_send": 1},
-            "$set": {"last_successful_contact": now_, "last_contact": now_},
+            "$set": {
+                "last_successful_contact": now_,
+                "last_successful_send": now_,
+                "last_contact": now_,
+            },
         },
     )
     return None
