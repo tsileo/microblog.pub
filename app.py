@@ -436,6 +436,10 @@ def outbox():
 
 @app.route("/outbox/<item_id>")
 def outbox_detail(item_id):
+    sig = request.headers.get("Signature")
+    if sig:
+        app.logger.info(f"received an authenticated fetch: {sig}")
+
     doc = DB.activities.find_one(
         {
             "box": Box.OUTBOX.value,
@@ -454,6 +458,10 @@ def outbox_detail(item_id):
 
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
+    sig = request.headers.get("Signature")
+    if sig:
+        app.logger.info(f"received an authenticated fetch: {sig}")
+
     data = find_one_activity(
         {**in_outbox(), **by_remote_id(activity_url(item_id)), **is_public()}
     )
