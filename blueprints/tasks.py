@@ -21,6 +21,7 @@ from core.activitypub import _actor_hash
 from core.activitypub import _add_answers_to_question
 from core.activitypub import no_cache
 from core.activitypub import post_to_outbox
+from core.db import update_many_activities
 from core.db import update_one_activity
 from core.inbox import process_inbox
 from core.meta import MetaKey
@@ -276,12 +277,17 @@ def task_cache_actor() -> _Response:
                 )
 
         # Cache the actor info
-        DB.activities.update_many(
+        update_many_activities(
             {
                 **flag(MetaKey.ACTOR_ID, actor.id),
                 **flag(MetaKey.ACTOR_HASH, {"$ne": actor_hash}),
             },
-            upsert({MetaKey.ACTOR: actor.to_dict(embed=True)}),
+            upsert(
+                {
+                    MetaKey.ACTOR: actor.to_dict(embed=True),
+                    MetaKey.ACTOR_HASH: actor_hash,
+                }
+            ),
         )
 
         # TODO(tsileo): Also update following (it's in the object)
