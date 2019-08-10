@@ -7,9 +7,9 @@ from datetime import datetime
 from datetime import timezone
 from typing import Any
 from typing import Dict
+from typing import Iterator
 from typing import List
 from typing import Optional
-from typing import Iterator
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
@@ -311,21 +311,19 @@ class MicroblogPubBackend(Backend):
                 if data["meta"]["deleted"]:
                     raise ActivityGoneError(f"{iri} is gone")
                 return data["activity"]
+            # Check if we're looking for an object wrapped in a Create
             obj = DB.activities.find_one({"meta.object_id": iri, "type": "Create"})
             if obj:
                 if obj["meta"]["deleted"]:
                     raise ActivityGoneError(f"{iri} is gone")
                 return obj["meta"].get("object") or obj["activity"]["object"]
+            # TODO(tsileo): also check the REPLIES box
 
             # Check if it's cached because it's a follower
             # Remove extra info (like the key hash if any)
             cleaned_iri = iri.split("#")[0]
             actor = DB.activities.find_one(
-                {
-                    "meta.actor_id": cleaned_iri,
-                    "type": ap.ActivityType.FOLLOW.value,
-                    "meta.undo": False,
-                }
+                {"meta.actor_id": cleaned_iri, "meta.actor": {"$exists": True}}
             )
 
             # "type" check is here to skip old metadata for "old/buggy" followers

@@ -23,12 +23,16 @@ class MetaKey(Enum):
     POLL_ANSWER = "poll_answer"
     STREAM = "stream"
     ACTOR_ID = "actor_id"
+    ACTOR = "actor"
+    ACTOR_HASH = "actor_hash"
     UNDO = "undo"
     PUBLISHED = "published"
     GC_KEEP = "gc_keep"
     OBJECT = "object"
     OBJECT_ID = "object_id"
     OBJECT_ACTOR = "object_actor"
+    OBJECT_ACTOR_ID = "object_actor_id"
+    OBJECT_ACTOR_HASH = "object_actor_hash"
     PUBLIC = "public"
 
     DELETED = "deleted"
@@ -86,3 +90,7 @@ def upsert(data: Dict[MetaKey, Any]) -> _SubQuery:
         sq[_meta(mk)] = val
 
     return {"$set": sq}
+
+
+def flag(mk: MetaKey, val: Any) -> _SubQuery:
+    return {_meta(mk): val}
