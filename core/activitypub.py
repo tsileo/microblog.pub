@@ -2,12 +2,14 @@ import binascii
 import hashlib
 import logging
 import os
+from contextlib import contextmanager
 from datetime import datetime
 from datetime import timezone
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Iterator
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
@@ -36,8 +38,20 @@ logger = logging.getLogger(__name__)
 _NewMeta = Dict[str, Any]
 
 
+_ACTIVITY_CACHE_ENABLED = True
 ACTORS_CACHE = LRUCache(maxsize=256)
 MY_PERSON = ap.Person(**ME)
+
+
+@contextmanager
+def no_cache() -> Iterator[None]:
+    """Context manager for disabling the "DB cache" when fetching AP activities."""
+    global _ACTIVITY_CACHE_ENABLED
+    _ACTIVITY_CACHE_ENABLED = False
+    try:
+        yield
+    finally:
+        _ACTIVITY_CACHE_ENABLED = True
 
 
 def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
@@ -51,6 +65,22 @@ def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
 def _answer_key(choice: str) -> str:
     h = hashlib.new("sha1")
     h.update(choice.encode())
+    return h.hexdigest()
+
+
+def _actor_hash(actor: ap.ActivityType) -> str:
+    """Used to know when to update the meta actor cache, like an "actor version"."""
+    h = hashlib.new("sha1")
+    h.update(actor.id.encode())
+    h.update((actor.name or "").encode())
+    h.update((actor.preferredUsername or "").encode())
+    h.update((actor.summary or "").encode())
+    h.update((actor.url or "").encode())
+    key = actor.get_key()
+    h.update(key.pubkey_pem.encode())
+    h.update(key.key_id().encode())
+    if isinstance(actor.icon, dict) and "url" in actor.icon:
+        h.update(actor.icon["url"].encode())
     return h.hexdigest()
 
 
@@ -326,13 +356,13 @@ class MicroblogPubBackend(Backend):
         return super().fetch_iri(iri)
 
     def fetch_iri(self, iri: str, no_cache=False) -> ap.ObjectType:
-        if not no_cache:
+        if not no_cache and _ACTIVITY_CACHE_ENABLED:
             # Fetch the activity by checking the local DB first
             data = self._fetch_iri(iri)
+            logger.debug(f"_fetch_iri({iri!r}) == {data!r}")
         else:
             data = super().fetch_iri(iri)
-
-        logger.debug(f"_fetch_iri({iri!r}) == {data!r}")
+            logger.debug(f"fetch_iri({iri!r}) == {data!r}")
 
         return data
 
