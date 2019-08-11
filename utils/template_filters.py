@@ -251,7 +251,12 @@ def get_attachment_url(url, size):
 
 @filters.app_template_filter()
 def get_video_url(url):
-    return _get_file_url(url, None, Kind.ATTACHMENT)
+    if isinstance(url, list):
+        for link in url:
+            if link.get("mimeType", "").startswith("video/"):
+                return _get_file_url(link.get("href"), None, Kind.ATTACHMENT)
+    else:
+        return _get_file_url(url, None, Kind.ATTACHMENT)
 
 
 @filters.app_template_filter()
