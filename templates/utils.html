@@ -67,7 +67,7 @@
 	{% if obj.summary %}<p class="p-summary">{{ obj.summary | clean | safe }}</p>{% endif %}
     {% if obj | has_type('Video') %}
     <div class="note-video">
-    <video controls preload="metadata"  src="{{ obj.url | get_video_link }}" width="480">
+    <video controls preload="metadata"  src="{{ obj.url | get_video_url }}" width="480">
     </video>
     </div>
     {% endif %}

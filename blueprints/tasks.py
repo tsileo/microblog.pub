@@ -230,6 +230,17 @@ def task_cache_attachments() -> _Response:
 
         obj = activity.get_object()
 
+        if obj.has_type(ap.ActivityType.VIDEO):
+            if isinstance(obj.url, list):
+                for link in obj.url:
+                    if link.get("mimeType", "").startswith("video/"):
+                        config.MEDIA_CACHE.cache_attachment({"url": link["href"]}, iri)
+                        break
+            elif isinstance(obj.url, str):
+                config.MEDIA_CACHE.cache_attachment({"url": obj.url}, iri)
+            else:
+                app.logger.warning(f"failed to parse video link {obj!r} for {iri}")
+
         # Iter the attachments
         for attachment in obj._data.get("attachment", []):
             try:
@@ -284,9 +295,12 @@ def task_cache_actor() -> _Response:
         # )
 
         app.logger.info(f"actor cached for {iri}")
-        if activity.has_type(
-            [ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]
-        ) and activity.get_object()._data.get("attachment", []):
+        if not activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
+            return ""
+
+        if activity.get_object()._data.get(
+            "attachment", []
+        ) or activity.get_object().has_type(ap.ActivityType.VIDEO):
             Tasks.cache_attachments(iri)
 
     except (ActivityGoneError, ActivityNotFoundError):

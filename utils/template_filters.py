@@ -250,6 +250,11 @@ def get_attachment_url(url, size):
 
 
 @filters.app_template_filter()
+def get_video_url(url):
+    return _get_file_url(url, None, Kind.ATTACHMENT)
+
+
+@filters.app_template_filter()
 def get_og_image_url(url, size=100):
     try:
         return _get_file_url(url, size, Kind.OG_IMAGE)
@@ -271,9 +276,12 @@ def remove_mongo_id(dat):
 
 @filters.app_template_filter()
 def get_video_link(data):
-    for link in data:
-        if link.get("mimeType", "").startswith("video/"):
-            return link.get("href")
+    if isinstance(data, list):
+        for link in data:
+            if link.get("mimeType", "").startswith("video/"):
+                return link.get("href")
+    elif isinstance(data, str):
+        return data
     return None
 
 
