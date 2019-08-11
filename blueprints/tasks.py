@@ -10,13 +10,13 @@ from little_boxes import activitypub as ap
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import ActivityNotFoundError
 from little_boxes.errors import NotAnActivityError
-from little_boxes.httpsig import HTTPSigAuth
 from requests.exceptions import HTTPError
 
 import config
 from config import DB
 from config import MEDIA_CACHE
 from core import gc
+from core.activitypub import SIG_AUTH
 from core.activitypub import Box
 from core.activitypub import _actor_hash
 from core.activitypub import _add_answers_to_question
@@ -40,8 +40,6 @@ from core.shared import p
 from core.tasks import Tasks
 from utils import now
 from utils import opengraph
-
-SIG_AUTH = HTTPSigAuth(config.KEY)
 
 blueprint = flask.Blueprint("tasks", __name__)
 

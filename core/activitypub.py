@@ -23,11 +23,13 @@ from little_boxes.activitypub import clean_activity
 from little_boxes.activitypub import format_datetime
 from little_boxes.backend import Backend
 from little_boxes.errors import ActivityGoneError
+from little_boxes.httpsig import HTTPSigAuth
 
 from config import BASE_URL
 from config import DB
 from config import EXTRA_INBOXES
 from config import ID
+from config import KEY
 from config import ME
 from config import USER_AGENT
 from core.db import update_many_activities
@@ -41,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 _NewMeta = Dict[str, Any]
 
+SIG_AUTH = HTTPSigAuth(KEY)
 
 _ACTIVITY_CACHE_ENABLED = True
 ACTORS_CACHE = LRUCache(maxsize=256)
@@ -364,7 +367,8 @@ class MicroblogPubBackend(Backend):
             data = self._fetch_iri(iri)
             logger.debug(f"_fetch_iri({iri!r}) == {data!r}")
         else:
-            data = super().fetch_iri(iri)
+            # Pass the SIG_AUTH to enable "authenticated fetch"
+            data = super().fetch_iri(iri, auth=SIG_AUTH)
             logger.debug(f"fetch_iri({iri!r}) == {data!r}")
 
         return data
