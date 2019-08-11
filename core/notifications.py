@@ -131,8 +131,6 @@ def _announce_set_inbox_flags(activity: ap.Announce, new_meta: _NewMeta) -> None
         # Also set the "keep mark" for the GC (as we want to keep it forever)
         _set_flag(new_meta, MetaKey.GC_KEEP)
 
-    # Cache the object in all case (for display on the notifcation page **and** the stream page)
-    Tasks.cache_object(activity.id)
     # Display it in the stream
     _set_flag(new_meta, MetaKey.STREAM)
 

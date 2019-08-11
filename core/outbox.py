@@ -11,7 +11,6 @@ from core.db import update_many_activities
 from core.db import update_one_activity
 from core.meta import MetaKey
 from core.meta import by_object_id
-from core.meta import by_remote_id
 from core.meta import by_type
 from core.meta import inc
 from core.meta import upsert
@@ -99,15 +98,7 @@ def _announce_process_outbox(announce: ap.Announce, new_meta: _NewMeta) -> None:
     if obj.has_type(ap.ActivityType.QUESTION):
         Tasks.fetch_remote_question(obj)
 
-    update_one_activity(
-        by_remote_id(announce.id),
-        upsert(
-            {
-                MetaKey.OBJECT: obj.to_dict(embed=True),
-                MetaKey.OBJECT_ACTOR: obj.get_actor().to_dict(embed=True),
-            }
-        ),
-    )
+    Tasks.cache_object(announce.id)
 
     update_one_activity(
         {**by_object_id(obj.id), **by_type(ap.ActivityType.CREATE)},
@@ -122,6 +113,9 @@ def _like_process_outbox(like: ap.Like, new_meta: _NewMeta) -> None:
     obj = like.get_object()
     if obj.has_type(ap.ActivityType.QUESTION):
         Tasks.fetch_remote_question(obj)
+
+    # Cache the object for display on the "Liked" public page
+    Tasks.cache_object(like.id)
 
     update_one_activity(
         {**by_object_id(obj.id), **by_type(ap.ActivityType.CREATE)},

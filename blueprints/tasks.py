@@ -141,19 +141,28 @@ def task_cache_object() -> _Response:
         activity = ap.fetch_remote_activity(iri)
         app.logger.info(f"activity={activity!r}")
         obj = activity.get_object()
-        obj_actor = obj.get_actor()
-        obj_actor_hash = _actor_hash(obj_actor)
+
+        # Refetch the object actor (without cache)
+        with no_cache():
+            obj_actor = ap.fetch_remote_activity(obj.get_actor().id)
 
         cache = {MetaKey.OBJECT: obj.to_dict(embed=True)}
 
         if activity.get_actor().id != obj_actor.id:
+            # Cache the object actor
+            obj_actor_hash = _actor_hash(obj_actor)
             cache[MetaKey.OBJECT_ACTOR] = obj_actor.to_dict(embed=True)
             cache[MetaKey.OBJECT_ACTOR_ID] = obj_actor.id
             cache[MetaKey.OBJECT_ACTOR_HASH] = obj_actor_hash
 
-        # FIXME(tsileo): set OBJECT_ACTOR_HASH (like in "cache actor"  and do an update_many even for ACTOR (not only
-        # OBJECT_ACTOR) ; a migration for OBJECT_ACTOR_ID/OBJECT_ACTOR_HASH needed?
+            # Cache the actor icon if any
+            _cache_actor_icon(obj_actor)
+
+            # Update the actor cache for the other activities
+            _update_cached_actor(obj_actor)
+
         update_one_activity(by_remote_id(activity.id), upsert(cache))
+
     except (ActivityGoneError, ActivityNotFoundError, NotAnActivityError):
         DB.activities.update_one({"remote_id": iri}, {"$set": {"meta.deleted": True}})
         app.logger.exception(f"flagging activity {iri} as deleted, no object caching")
@@ -243,6 +252,39 @@ def task_cache_attachments() -> _Response:
     return ""
 
 
+def _update_cached_actor(actor: ap.BaseActivity) -> None:
+    actor_hash = _actor_hash(actor)
+    update_many_activities(
+        {
+            **flag(MetaKey.ACTOR_ID, actor.id),
+            **flag(MetaKey.ACTOR_HASH, {"$ne": actor_hash}),
+        },
+        upsert(
+            {MetaKey.ACTOR: actor.to_dict(embed=True), MetaKey.ACTOR_HASH: actor_hash}
+        ),
+    )
+    update_many_activities(
+        {
+            **flag(MetaKey.OBJECT_ACTOR_ID, actor.id),
+            **flag(MetaKey.OBJECT_ACTOR_HASH, {"$ne": actor_hash}),
+        },
+        upsert(
+            {
+                MetaKey.OBJECT_ACTOR: actor.to_dict(embed=True),
+                MetaKey.OBJECT_ACTOR_HASH: actor_hash,
+            }
+        ),
+    )
+
+
+def _cache_actor_icon(actor: ap.BaseActivity) -> None:
+    if actor.icon:
+        if isinstance(actor.icon, dict) and "url" in actor.icon:
+            config.MEDIA_CACHE.cache_actor_icon(actor.icon["url"])
+        else:
+            app.logger.warning(f"failed to parse icon {actor.icon} for {actor!r}")
+
+
 @blueprint.route("/task/cache_actor", methods=["POST"])
 def task_cache_actor() -> _Response:
     task = p.parse(flask.request)
@@ -256,17 +298,12 @@ def task_cache_actor() -> _Response:
         with no_cache():
             actor = ap.fetch_remote_activity(activity.get_actor().id)
 
-        actor_hash = _actor_hash(actor)
-
         # Fetch the Open Grah metadata if it's a `Create`
         if activity.has_type(ap.ActivityType.CREATE):
             Tasks.fetch_og_meta(iri)
 
-        if actor.icon:
-            if isinstance(actor.icon, dict) and "url" in actor.icon:
-                config.MEDIA_CACHE.cache_actor_icon(actor.icon["url"])
-            else:
-                app.logger.warning(f"failed to parse icon {actor.icon} for {iri}")
+        # Cache the actor icon if any
+        _cache_actor_icon(actor)
 
         if activity.has_type(ap.ActivityType.FOLLOW):
             if actor.id == config.ID:
@@ -277,18 +314,7 @@ def task_cache_actor() -> _Response:
                 )
 
         # Cache the actor info
-        update_many_activities(
-            {
-                **flag(MetaKey.ACTOR_ID, actor.id),
-                **flag(MetaKey.ACTOR_HASH, {"$ne": actor_hash}),
-            },
-            upsert(
-                {
-                    MetaKey.ACTOR: actor.to_dict(embed=True),
-                    MetaKey.ACTOR_HASH: actor_hash,
-                }
-            ),
-        )
+        _update_cached_actor(actor)
 
         # TODO(tsileo): Also update following (it's in the object)
         # DB.activities.update_many(

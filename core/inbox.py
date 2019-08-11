@@ -121,15 +121,9 @@ def _announce_process_inbox(announce: ap.Announce, new_meta: _NewMeta) -> None:
     if obj.has_type(ap.ActivityType.QUESTION):
         Tasks.fetch_remote_question(obj)
 
-    update_one_activity(
-        by_remote_id(announce.id),
-        upsert(
-            {
-                MetaKey.OBJECT: obj.to_dict(embed=True),
-                MetaKey.OBJECT_ACTOR: obj.get_actor().to_dict(embed=True),
-            }
-        ),
-    )
+    # Cache the announced object
+    Tasks.cache_object(announce.id)
+
     update_one_activity(
         {**by_type(ap.ActivityType.CREATE), **by_object_id(obj.id)},
         inc(MetaKey.COUNT_BOOST, 1),
