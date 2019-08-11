@@ -29,7 +29,6 @@ from config import DB
 from config import EXTRA_INBOXES
 from config import ID
 from config import ME
-from config import MEDIA_CACHE
 from config import USER_AGENT
 from core.db import update_many_activities
 from core.meta import Box
@@ -658,13 +657,12 @@ def activity_from_doc(raw_doc: Dict[str, Any], embed: bool = False) -> Dict[str,
 def _cache_actor_icon(actor: ap.BaseActivity) -> None:
     if actor.icon:
         if isinstance(actor.icon, dict) and "url" in actor.icon:
-            MEDIA_CACHE.cache_actor_icon(actor.icon["url"])
+            Tasks.cache_actor_icon(actor.icon["url"], actor.id)
         else:
             logger.warning(f"failed to parse icon {actor.icon} for {actor!r}")
 
 
 def update_cached_actor(actor: ap.BaseActivity) -> None:
-    _cache_actor_icon(actor)
     actor_hash = _actor_hash(actor)
     update_many_activities(
         {
@@ -687,3 +685,4 @@ def update_cached_actor(actor: ap.BaseActivity) -> None:
             }
         ),
     )
+    _cache_actor_icon(actor)

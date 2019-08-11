@@ -15,6 +15,7 @@ from requests.exceptions import HTTPError
 
 import config
 from config import DB
+from config import MEDIA_CACHE
 from core import gc
 from core.activitypub import Box
 from core.activitypub import _actor_hash
@@ -292,6 +293,22 @@ def task_cache_actor() -> _Response:
     except Exception as err:
         app.logger.exception(f"failed to cache actor for {iri}")
         raise TaskError() from err
+
+    return ""
+
+
+@blueprint.route("/task/cache_actor_icon", methods=["POST"])
+def task_cache_actor_icon() -> _Response:
+    task = p.parse(flask.request)
+    app.logger.info(f"task={task!r}")
+    actor_iri = task.payload["actor_iri"]
+    icon_url = task.payload["icon_url"]
+    try:
+        MEDIA_CACHE.cache_actor_icon(icon_url)
+    except Exception as exc:
+        err = f"failed to cache actor icon {icon_url} for {actor_iri}"
+        app.logger.exception(err)
+        raise TaskError() from exc
 
     return ""
 

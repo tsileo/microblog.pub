@@ -95,7 +95,7 @@ def _update_process_inbox(update: ap.Update, new_meta: _NewMeta) -> None:
     elif obj.has_type(ap.ACTOR_TYPES):
         with no_cache():
             actor = ap.fetch_remote_activity(obj.get_actor().id)
-            update_cached_actor(actor)
+        update_cached_actor(actor)
 
 
 @process_inbox.register

@@ -25,6 +25,10 @@ class Tasks:
         )
 
     @staticmethod
+    def cache_actor_icon(icon_url: str, actor_iri: str):
+        p.push({"icon_url": icon_url, "actor_iri": actor_iri}, "/task/cache_actor_icon")
+
+    @staticmethod
     def post_to_remote_inbox(payload: str, recp: str) -> None:
         p.push({"payload": payload, "to": recp}, "/task/post_to_remote_inbox")
 
