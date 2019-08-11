@@ -1,6 +1,7 @@
 import pymongo
 
 from config import DB
+from config import MEDIA_CACHE
 from core.meta import MetaKey
 from core.meta import _meta
 
@@ -73,3 +74,6 @@ def create_indexes():
             ("meta.deleted", pymongo.ASCENDING),
         ]
     )
+
+    # For the is_actor_icon_cached query
+    MEDIA_CACHE.fs._GridFS__files.create_index([("url", 1), ("kind", 1)])

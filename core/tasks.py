@@ -4,6 +4,7 @@ from datetime import timezone
 
 from poussetaches import PousseTaches
 
+from config import MEDIA_CACHE
 from utils import parse_datetime
 
 p = PousseTaches(
@@ -25,7 +26,10 @@ class Tasks:
         )
 
     @staticmethod
-    def cache_actor_icon(icon_url: str, actor_iri: str):
+    def cache_actor_icon(icon_url: str, actor_iri: str) -> None:
+        if MEDIA_CACHE.is_actor_icon_cached(icon_url):
+            return None
+
         p.push({"icon_url": icon_url, "actor_iri": actor_iri}, "/task/cache_actor_icon")
 
     @staticmethod

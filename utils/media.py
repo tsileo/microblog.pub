@@ -136,8 +136,11 @@ class MediaCache(object):
                     remote_id=remote_id,
                 )
 
+    def is_actor_icon_cached(self, url: str) -> bool:
+        return bool(self.fs.find_one({"url": url, "kind": Kind.ACTOR_ICON.value}))
+
     def cache_actor_icon(self, url: str) -> None:
-        if self.fs.find_one({"url": url, "kind": Kind.ACTOR_ICON.value}):
+        if self.is_actor_icon_cached(url):
             return
         i = load(url, self.user_agent)
         for size in [50, 80]:
