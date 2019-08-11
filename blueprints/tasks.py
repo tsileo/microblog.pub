@@ -21,7 +21,7 @@ from core.activitypub import _actor_hash
 from core.activitypub import _add_answers_to_question
 from core.activitypub import no_cache
 from core.activitypub import post_to_outbox
-from core.db import update_many_activities
+from core.activitypub import update_cached_actor
 from core.db import update_one_activity
 from core.inbox import process_inbox
 from core.meta import MetaKey
@@ -155,11 +155,8 @@ def task_cache_object() -> _Response:
             cache[MetaKey.OBJECT_ACTOR_ID] = obj_actor.id
             cache[MetaKey.OBJECT_ACTOR_HASH] = obj_actor_hash
 
-            # Cache the actor icon if any
-            _cache_actor_icon(obj_actor)
-
             # Update the actor cache for the other activities
-            _update_cached_actor(obj_actor)
+            update_cached_actor(obj_actor)
 
         update_one_activity(by_remote_id(activity.id), upsert(cache))
 
@@ -252,39 +249,6 @@ def task_cache_attachments() -> _Response:
     return ""
 
 
-def _update_cached_actor(actor: ap.BaseActivity) -> None:
-    actor_hash = _actor_hash(actor)
-    update_many_activities(
-        {
-            **flag(MetaKey.ACTOR_ID, actor.id),
-            **flag(MetaKey.ACTOR_HASH, {"$ne": actor_hash}),
-        },
-        upsert(
-            {MetaKey.ACTOR: actor.to_dict(embed=True), MetaKey.ACTOR_HASH: actor_hash}
-        ),
-    )
-    update_many_activities(
-        {
-            **flag(MetaKey.OBJECT_ACTOR_ID, actor.id),
-            **flag(MetaKey.OBJECT_ACTOR_HASH, {"$ne": actor_hash}),
-        },
-        upsert(
-            {
-                MetaKey.OBJECT_ACTOR: actor.to_dict(embed=True),
-                MetaKey.OBJECT_ACTOR_HASH: actor_hash,
-            }
-        ),
-    )
-
-
-def _cache_actor_icon(actor: ap.BaseActivity) -> None:
-    if actor.icon:
-        if isinstance(actor.icon, dict) and "url" in actor.icon:
-            config.MEDIA_CACHE.cache_actor_icon(actor.icon["url"])
-        else:
-            app.logger.warning(f"failed to parse icon {actor.icon} for {actor!r}")
-
-
 @blueprint.route("/task/cache_actor", methods=["POST"])
 def task_cache_actor() -> _Response:
     task = p.parse(flask.request)
@@ -302,9 +266,6 @@ def task_cache_actor() -> _Response:
         if activity.has_type(ap.ActivityType.CREATE):
             Tasks.fetch_og_meta(iri)
 
-        # Cache the actor icon if any
-        _cache_actor_icon(actor)
-
         if activity.has_type(ap.ActivityType.FOLLOW):
             if actor.id == config.ID:
                 # It's a new following, cache the "object" (which is the actor we follow)
@@ -314,7 +275,7 @@ def task_cache_actor() -> _Response:
                 )
 
         # Cache the actor info
-        _update_cached_actor(actor)
+        update_cached_actor(actor)
 
         # TODO(tsileo): Also update following (it's in the object)
         # DB.activities.update_many(

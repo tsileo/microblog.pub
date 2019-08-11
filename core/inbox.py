@@ -8,7 +8,9 @@ from little_boxes.errors import NotAnActivityError
 
 import config
 from core.activitypub import _answer_key
+from core.activitypub import no_cache
 from core.activitypub import post_to_outbox
+from core.activitypub import update_cached_actor
 from core.db import DB
 from core.db import update_one_activity
 from core.meta import MetaKey
@@ -90,7 +92,10 @@ def _update_process_inbox(update: ap.Update, new_meta: _NewMeta) -> None:
             by_object_id(obj.id), upsert({MetaKey.OBJECT: obj.to_dict()})
         )
 
-    # FIXME(tsileo): handle update actor amd inbox_update_note/inbox_update_actor
+    elif obj.has_type(ap.ACTOR_TYPES):
+        with no_cache():
+            actor = ap.fetch_remote_activity(obj.get_actor().id)
+            update_cached_actor(actor)
 
 
 @process_inbox.register
