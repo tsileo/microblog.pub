@@ -265,7 +265,9 @@ def task_cache_actor() -> _Response:
 
         # Fetch the Open Grah metadata if it's a `Create`
         if activity.has_type(ap.ActivityType.CREATE):
-            Tasks.fetch_og_meta(iri)
+            links = opengraph.links_from_note(activity.get_object().to_dict())
+            if links:
+                Tasks.fetch_og_meta(iri)
 
         if activity.has_type(ap.ActivityType.FOLLOW):
             if actor.id == config.ID:
@@ -475,8 +477,6 @@ def task_process_new_activity() -> _Response:
             DB.activities.update_one({"remote_id": activity.id}, {"$set": flags})
 
         app.logger.info(f"new activity {iri} processed")
-        if not activity.has_type(ap.ActivityType.DELETE):
-            Tasks.cache_actor(iri)
     except (ActivityGoneError, ActivityNotFoundError):
         app.logger.exception(f"dropping activity {iri}, skip processing")
         return ""
