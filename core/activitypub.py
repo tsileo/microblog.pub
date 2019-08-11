@@ -690,4 +690,8 @@ def update_cached_actor(actor: ap.BaseActivity) -> None:
             }
         ),
     )
+    # TODO(tsileo): Also update following (it's in the object)
+    # DB.activities.update_many(
+    #     {"meta.object_id": actor.id}, {"$set": {"meta.object": actor.to_dict(embed=True)}}
+    # )
     _cache_actor_icon(actor)

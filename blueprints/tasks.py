@@ -289,11 +289,6 @@ def task_cache_actor() -> _Response:
         # Cache the actor info
         update_cached_actor(actor)
 
-        # TODO(tsileo): Also update following (it's in the object)
-        # DB.activities.update_many(
-        #     {"meta.object_id": actor.id}, {"$set": {"meta.object": actor.to_dict(embed=True)}}
-        # )
-
         app.logger.info(f"actor cached for {iri}")
         if not activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
             return ""

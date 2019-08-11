@@ -13,6 +13,12 @@ def create_indexes():
     if "activities" in DB.collection_names():
         DB.command("compact", "activities")
 
+    try:
+        MEDIA_CACHE.fs._GridFS__database.command("compact", "fs.files")
+        MEDIA_CACHE.fs._GridFS__database.command("compact", "fs.chunks")
+    except Exception:
+        pass
+
     DB.activities.create_index([(_meta(MetaKey.NOTIFICATION), pymongo.ASCENDING)])
     DB.activities.create_index(
         [(_meta(MetaKey.NOTIFICATION_UNREAD), pymongo.ASCENDING)]
