@@ -97,6 +97,9 @@ def _update_process_inbox(update: ap.Update, new_meta: _NewMeta) -> None:
             actor = ap.fetch_remote_activity(obj.get_actor().id)
         update_cached_actor(actor)
 
+    else:
+        raise ValueError(f"don't know how to update {obj!r}")
+
 
 @process_inbox.register
 def _create_process_inbox(create: ap.Create, new_meta: _NewMeta) -> None:

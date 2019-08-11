@@ -284,7 +284,9 @@ def task_cache_actor() -> _Response:
         # )
 
         app.logger.info(f"actor cached for {iri}")
-        if activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
+        if activity.has_type(
+            [ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]
+        ) and activity.get_object()._data.get("attachment", []):
             Tasks.cache_attachments(iri)
 
     except (ActivityGoneError, ActivityNotFoundError):
