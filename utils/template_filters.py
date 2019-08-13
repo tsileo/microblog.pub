@@ -1,7 +1,9 @@
 import logging
+import mimetypes
 import urllib
 from datetime import datetime
 from datetime import timezone
+from functools import lru_cache
 from typing import Dict
 from typing import Optional
 from typing import Tuple
@@ -79,6 +81,15 @@ ALLOWED_TAGS = [
     "h4",
     "h5",
     "h6",
+    "table",
+    "th",
+    "tr",
+    "td",
+    "thead",
+    "tbody",
+    "tfoot",
+    "colgroup",
+    "caption",
 ]
 
 
@@ -219,20 +230,11 @@ def get_total_answers_count(obj, meta):
     return cnt
 
 
-_GRIDFS_CACHE: Dict[Tuple[Kind, str, Optional[int]], str] = {}
-
-
-def _get_file_url(url, size, kind):
-    k = (kind, url, size)
-    cached = _GRIDFS_CACHE.get(k)
-    if cached:
-        return cached
-
+@lru_cache(512)
+def _get_file_url(url, size, kind) -> str:
     doc = MEDIA_CACHE.get_file(url, size, kind)
     if doc:
-        u = f"/media/{str(doc._id)}"
-        _GRIDFS_CACHE[k] = u
-        return u
+        return f"/media/{str(doc._id)}"
 
     # MEDIA_CACHE.cache(url, kind)
     _logger.error(f"cache not available for {url}/{size}/{kind}")
@@ -308,15 +310,10 @@ def has_actor_type(doc):
     return False
 
 
+@lru_cache(512)
 def _is_img(filename):
-    filename = filename.lower()
-    if (
-        filename.endswith(".png")
-        or filename.endswith(".jpg")
-        or filename.endswith(".jpeg")
-        or filename.endswith(".gif")
-        or filename.endswith(".svg")
-    ):
+    mimetype, _ = mimetypes.guess_type(filename.lower())
+    if mimetype and mimetype.split("/")[0] in ["image"]:
         return True
     return False
 

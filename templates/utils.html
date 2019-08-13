@@ -129,7 +129,7 @@
     {% if (a.mediaType and a.mediaType.startswith("image/")) or (a.type and a.type == 'Image') %}
     <a href="{{ a.url | get_attachment_url(None) }}"><img src="{{a.url | get_attachment_url(720) }}" class="img-attachment"></a>
     {% elif (a.mediaType and a.mediaType.startswith("video/")) %}
-    <li><video controls preload="metadata"  src="{{ a.url }}" width="480"></video></li>
+    <li><video controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" width="480"></video></li>
 	{% else %}
 	<li><a href="{{a.url }}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
 	{% endif  %}
