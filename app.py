@@ -114,7 +114,7 @@ def inject_config():
         "meta.poll_answer": False,
     }
     liked_q = {
-        **in_outbox,
+        **in_outbox(),
         "meta.deleted": False,
         "meta.undo": False,
         "type": ActivityType.LIKE.value,
