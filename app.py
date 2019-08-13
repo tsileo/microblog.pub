@@ -34,6 +34,7 @@ import blueprints.tasks
 import blueprints.well_known
 import config
 from blueprints.api import _api_required
+from blueprints.api import api_required
 from blueprints.tasks import TaskError
 from config import DB
 from config import ID
@@ -112,14 +113,12 @@ def inject_config():
         "meta.deleted": False,
         "meta.poll_answer": False,
     }
-    liked_count = DB.activities.count(
-        {
-            "box": Box.OUTBOX.value,
-            "meta.deleted": False,
-            "meta.undo": False,
-            "type": ActivityType.LIKE.value,
-        }
-    )
+    liked_q = {
+        **in_outbox,
+        "meta.deleted": False,
+        "meta.undo": False,
+        "type": ActivityType.LIKE.value,
+    }
     followers_q = {
         "box": Box.INBOX.value,
         "type": ActivityType.FOLLOW.value,
@@ -141,7 +140,7 @@ def inject_config():
         followers_count=DB.activities.count(followers_q),
         following_count=DB.activities.count(following_q) if logged_in else 0,
         notes_count=notes_count,
-        liked_count=liked_count,
+        liked_count=DB.activities.count(liked_q) if logged_in else 0,
         with_replies_count=DB.activities.count(all_q) if logged_in else 0,
         unread_notifications_count=DB.activities.count(unread_notifications_q)
         if logged_in
@@ -853,6 +852,7 @@ def featured():
 
 
 @app.route("/liked")
+@api_required
 def liked():
     if not is_api_request():
         q = {
@@ -868,7 +868,6 @@ def liked():
             "liked.html", liked=liked, older_than=older_than, newer_than=newer_than
         )
 
-    _log_sig()
     q = {"meta.deleted": False, "meta.undo": False, "type": ActivityType.LIKE.value}
     return jsonify(
         **activitypub.build_ordered_collection(
