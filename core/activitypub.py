@@ -178,7 +178,7 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
 
     save(Box.INBOX, activity)
     logger.info(f"spawning tasks for {activity!r}")
-    if not activity.has_type(ap.ActivityType.DELETE):
+    if not activity.has_type([ap.ActivityType.DELETE, ap.ActivityType.UPDATE]):
         Tasks.cache_actor(activity.id)
     Tasks.process_new_activity(activity.id)
     Tasks.finish_post_to_inbox(activity.id)
