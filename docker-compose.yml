@@ -14,7 +14,7 @@ services:
      - POUSSETACHES_AUTH_KEY=${POUSSETACHES_AUTH_KEY}
      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
   mongo:
-    image: "mongo:latest"
+    image: "mongo:3"
     volumes:
      - "${DATA_DIR}/mongodb:/data/db"
   poussetaches:

@@ -40,7 +40,7 @@ microblogpub:
 run: microblogpub
 	# (poussetaches and microblogpub Docker image will updated)
 	# Update MongoDB
-	docker pull mongo
+	docker pull mongo:3
 	docker pull poussetaches/poussetaches
 	# Restart the project
 	docker-compose stop
