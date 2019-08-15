@@ -243,7 +243,7 @@ def task_cache_attachments() -> _Response:
     iri = task.payload
     try:
         activity = ap.fetch_remote_activity(iri)
-        app.logger.info(f"activity={activity!r}")
+        app.logger.info(f"caching attachment for activity={activity!r}")
         # Generates thumbnails for the actor's icon and the attachments if any
 
         obj = activity.get_object()
@@ -310,13 +310,7 @@ def task_cache_actor() -> _Response:
         if not activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
             return ""
 
-        if (
-            activity.has_type(ap.ActivityType.CREATE)
-            and activity.get_object()._data.get("attachment", [])
-        ) or (
-            activity.has_type(ap.ActivityType.ANNOUNCE)
-            and activity.get_object().has_type(ap.ActivityType.VIDEO)
-        ):
+        if activity.get_object()._data.get("attachment", []) or activity.get_object().has_type(ap.ActivityType.VIDEO):
             Tasks.cache_attachments(iri)
 
     except (ActivityGoneError, ActivityNotFoundError):

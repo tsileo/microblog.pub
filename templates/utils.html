@@ -151,6 +151,17 @@
 
 	{% if obj.attachment and obj | has_type('Note') %}
 	<div style="padding:20px 0;">
+
+ {% if obj.sensitive and not request.args.get("show_sensitive") == perma_id %}
+ <div style="clear:both">
+ <form action="{{redir}}" class="action-form"  method="GET" style="display:inline-block">
+<input type="hidden" name="show_sensitive" value="{{perma_id}}">
+<input type="hidden" name="url" value="{{obj.id}}">
+<button type="submit" class="bar-item-reverse">display sensitive content</button>
+</form>
+ </div>
+ {% else %}
+
 	{% if obj.attachment | not_only_imgs %}
 	<h3 class="l">Attachments</h3>
 	<ul style="padding:0;">
@@ -167,6 +178,8 @@
 	{% if obj.attachment | not_only_imgs %}
 	</ul>
 	{% endif %}
+
+{% endif %}
 </div>
 	{% endif %}
 

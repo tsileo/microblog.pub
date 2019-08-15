@@ -6,10 +6,9 @@
 {% include "header.html" %}
 <div style="margin-top:50px;">
 
-<form id="lookup-form" method="POST">
-	 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-     <input type="text" name="url" value="{{url or '' }}" placeholder="https://url-of-a-user-or-a-note.tld">
-	<input type="submit" value="Lookup">
+<form id="lookup-form" method="GET">
+ <input type="text" name="url" value="{{url or '' }}" placeholder="https://url-of-a-user-or-a-note.tld">
+<input type="submit" value="Lookup">
 </form>
 
 {% if data %}

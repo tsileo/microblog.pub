@@ -167,27 +167,26 @@ def admin_tasks() -> _Response:
     )
 
 
-@blueprint.route("/admin/lookup", methods=["GET", "POST"])
+@blueprint.route("/admin/lookup", methods=["GET"])
 @login_required
 def admin_lookup() -> _Response:
     data = None
     meta = None
-    if request.method == "POST":
-        if request.form.get("url"):
-            data = lookup(request.form.get("url"))  # type: ignore
-            if data:
-                if data.has_type(ap.ActivityType.ANNOUNCE):
-                    meta = dict(
-                        object=data.get_object().to_dict(),
-                        object_actor=data.get_object().get_actor().to_dict(),
-                        actor=data.get_actor().to_dict(),
-                    )
+    if request.args.get("url"):
+        data = lookup(request.args.get("url"))  # type: ignore
+        if data:
+            if data.has_type(ap.ActivityType.ANNOUNCE):
+                meta = dict(
+                    object=data.get_object().to_dict(),
+                    object_actor=data.get_object().get_actor().to_dict(),
+                    actor=data.get_actor().to_dict(),
+                )
 
-                elif data.has_type(ap.ActivityType.QUESTION):
-                    p.push(data.id, "/task/fetch_remote_question")
+            elif data.has_type(ap.ActivityType.QUESTION):
+                p.push(data.id, "/task/fetch_remote_question")
 
-            print(data)
-            app.logger.debug(data.to_dict())
+        print(data)
+        app.logger.debug(data.to_dict())
     return render_template(
         "lookup.html", data=data, meta=meta, url=request.form.get("url")
     )

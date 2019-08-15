@@ -295,6 +295,20 @@ a:hover {
   background: inherit;
   cursor: default;
 }
+.bar-item-reverse {
+  background: $primary-color;
+  color: $background-color;
+  padding: 5px;
+  margin-right: 10px;
+  float: left;
+  border-radius:2px;
+  border: 0;
+}
+.bar-item-reverse:hover {
+  background: $color-menu-background;
+  color: $color-light;
+}
+
 button.bar-item {
   border: 0
 }
