@@ -1,5 +1,4 @@
 import logging
-import mimetypes
 import urllib
 from datetime import datetime
 from datetime import timezone
@@ -22,6 +21,7 @@ from config import MEDIA_CACHE
 from core.activitypub import _answer_key
 from utils import parse_datetime
 from utils.media import Kind
+from utils.media import _is_img
 
 _logger = logging.getLogger(__name__)
 
@@ -309,14 +309,6 @@ def has_actor_type(doc):
     for t in ap.ACTOR_TYPES[:-1]:
         if has_type(doc, t.value):
             return True
-    return False
-
-
-@lru_cache(512)
-def _is_img(filename):
-    mimetype, _ = mimetypes.guess_type(filename.lower())
-    if mimetype and mimetype.split("/")[0] in ["image"]:
-        return True
     return False
 
 

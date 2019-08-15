@@ -2,6 +2,7 @@ import base64
 import mimetypes
 from enum import Enum
 from enum import unique
+from functools import lru_cache
 from gzip import GzipFile
 from io import BytesIO
 from typing import Any
@@ -12,6 +13,22 @@ import piexif
 import requests
 from little_boxes import activitypub as ap
 from PIL import Image
+
+
+@lru_cache(2048)
+def _is_img(filename):
+    mimetype, _ = mimetypes.guess_type(filename.lower())
+    if mimetype and mimetype.split("/")[0] in ["image"]:
+        return True
+    return False
+
+
+@lru_cache(2048)
+def is_video(filename):
+    mimetype, _ = mimetypes.guess_type(filename.lower())
+    if mimetype and mimetype.split("/")[0] in ["video"]:
+        return True
+    return False
 
 
 def load(url: str, user_agent: str) -> Image:
@@ -74,10 +91,7 @@ class MediaCache(object):
 
         # If it's an image, make some thumbnails
         if (
-            url.endswith(".png")
-            or url.endswith(".jpg")
-            or url.endswith(".jpeg")
-            or url.endswith(".gif")
+            _is_img(url)
             or attachment.get("mediaType", "").startswith("image/")
             or ap._has_type(attachment.get("type"), ap.ActivityType.IMAGE)
         ):
@@ -123,8 +137,9 @@ class MediaCache(object):
             resp.raise_for_status()
             with BytesIO() as buf:
                 with GzipFile(mode="wb", fileobj=buf) as f1:
-                    for chunk in resp.iter_content():
+                    for chunk in resp.iter_content(chunk_size=2 << 20):
                         if chunk:
+                            print(len(chunk))
                             f1.write(chunk)
                 buf.seek(0)
                 self.fs.put(
