@@ -122,7 +122,7 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item">vote</button>
     </form></span>
-    {% elif session.logged_in and already_voted %}
+    {% elif session.logged_in and already_voted and not (real_end_time | gtnow) %}
     <span style="position:relative;top:5px;height:10px;width:50px;display:inline-block;"></span>
     {% endif %}
         <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
