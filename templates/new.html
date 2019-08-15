@@ -49,12 +49,10 @@
     <option value="10080">7 days</option>
     </select></p>
 
-    <input type="hidden" name="of" value="oneOf" />
-    <!--
     <p><select name="of">
         <option value="oneOf">Single choice</option>
         <option value="anyOf">Multiple choices</option>
-    </select></p>-->
+    </select></p>
 
     {% for i in range(4) %}
     <p><input type="text" name="answer{{i}}" placeholder="Answer #{{i+1}}"></p>

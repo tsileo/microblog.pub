@@ -20,7 +20,6 @@ from core.activitypub import SIG_AUTH
 from core.activitypub import Box
 from core.activitypub import _actor_hash
 from core.activitypub import _add_answers_to_question
-from core.activitypub import no_cache
 from core.activitypub import post_to_outbox
 from core.activitypub import update_cached_actor
 from core.db import update_one_activity
@@ -142,8 +141,7 @@ def task_cache_object() -> _Response:
         obj = activity.get_object()
 
         # Refetch the object actor (without cache)
-        with no_cache():
-            obj_actor = ap.fetch_remote_activity(obj.get_actor().id)
+        obj_actor = ap.fetch_remote_activity(obj.get_actor().id, no_cache=True)
 
         cache = {MetaKey.OBJECT: obj.to_dict(embed=True)}
 
@@ -269,8 +267,7 @@ def task_cache_actor() -> _Response:
         app.logger.info(f"activity={activity!r}")
 
         # Reload the actor without caching (in case it got upated)
-        with no_cache():
-            actor = ap.fetch_remote_activity(activity.get_actor().id)
+        actor = ap.fetch_remote_activity(activity.get_actor().id, no_cache=True)
 
         # Fetch the Open Grah metadata if it's a `Create`
         if activity.has_type(ap.ActivityType.CREATE):

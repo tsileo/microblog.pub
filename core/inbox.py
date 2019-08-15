@@ -8,7 +8,6 @@ from little_boxes.errors import NotAnActivityError
 
 import config
 from core.activitypub import _answer_key
-from core.activitypub import no_cache
 from core.activitypub import post_to_outbox
 from core.activitypub import update_cached_actor
 from core.db import DB
@@ -93,8 +92,7 @@ def _update_process_inbox(update: ap.Update, new_meta: _NewMeta) -> None:
         )
 
     elif obj.has_type(ap.ACTOR_TYPES):
-        with no_cache():
-            actor = ap.fetch_remote_activity(obj.get_actor().id)
+        actor = ap.fetch_remote_activity(obj.get_actor().id, no_cache=True)
         update_cached_actor(actor)
 
     else:

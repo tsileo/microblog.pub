@@ -493,11 +493,13 @@ def api_new_question() -> _Response:
         )
     }
     of = _user_api_arg("of")
+    print(of)
     if of == "anyOf":
         choices["anyOf"] = answers
     else:
         choices["oneOf"] = answers
 
+    print(choices)
     raw_question = dict(
         attributedTo=MY_PERSON.id,
         cc=list(set(cc)),

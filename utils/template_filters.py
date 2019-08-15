@@ -207,6 +207,11 @@ def get_actor(url):
 
 
 @filters.app_template_filter()
+def poll_answer_key(choice: str) -> str:
+    return _answer_key(choice)
+
+
+@filters.app_template_filter()
 def get_answer_count(choice, obj, meta):
     count_from_meta = meta.get("question_answers", {}).get(_answer_key(choice), 0)
     if count_from_meta:

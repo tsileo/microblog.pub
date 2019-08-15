@@ -2,12 +2,11 @@ import binascii
 import hashlib
 import logging
 import os
-from contextlib import contextmanager
+import time
 from datetime import datetime
 from datetime import timezone
 from typing import Any
 from typing import Dict
-from typing import Iterator
 from typing import List
 from typing import Optional
 from urllib.parse import urljoin
@@ -45,20 +44,8 @@ _NewMeta = Dict[str, Any]
 
 SIG_AUTH = HTTPSigAuth(KEY)
 
-_ACTIVITY_CACHE_ENABLED = True
 ACTORS_CACHE = LRUCache(maxsize=256)
 MY_PERSON = ap.Person(**ME)
-
-
-@contextmanager
-def no_cache() -> Iterator[None]:
-    """Context manager for disabling the "DB cache" when fetching AP activities."""
-    global _ACTIVITY_CACHE_ENABLED
-    _ACTIVITY_CACHE_ENABLED = False
-    try:
-        yield
-    finally:
-        _ACTIVITY_CACHE_ENABLED = True
 
 
 def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
@@ -177,6 +164,7 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         return
 
     save(Box.INBOX, activity)
+    time.sleep(1)
     logger.info(f"spawning tasks for {activity!r}")
     if not activity.has_type([ap.ActivityType.DELETE, ap.ActivityType.UPDATE]):
         Tasks.cache_actor(activity.id)
@@ -202,6 +190,7 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
         activity.reset_object_cache()
 
     save(Box.OUTBOX, activity)
+    time.sleep(5)
     Tasks.cache_actor(activity.id)
     Tasks.finish_post_to_outbox(activity.id)
     return activity.id
@@ -361,8 +350,8 @@ class MicroblogPubBackend(Backend):
         logger.info(f"dereference {iri} via HTTP")
         return super().fetch_iri(iri)
 
-    def fetch_iri(self, iri: str, no_cache=False) -> ap.ObjectType:
-        if not no_cache and _ACTIVITY_CACHE_ENABLED:
+    def fetch_iri(self, iri: str, **kwargs: Any) -> ap.ObjectType:
+        if not kwargs.pop("no_cache", False):
             # Fetch the activity by checking the local DB first
             data = self._fetch_iri(iri)
             logger.debug(f"_fetch_iri({iri!r}) == {data!r}")
@@ -397,21 +386,26 @@ class MicroblogPubBackend(Backend):
             logger.info("invalid choice")
             return
 
+        # Hash the choice/answer (so we can use it as a key)
+        answer_key = _answer_key(choice)
+
+        is_single_choice = bool(question._data.get("oneOf", []))
+        dup_query = {
+            "activity.object.actor": create.get_actor().id,
+            "meta.answer_to": question.id,
+            **({} if is_single_choice else {"meta.poll_answer_choice": choice}),
+        }
+
+        print(f"dup_q={dup_query}")
         # Check for duplicate votes
-        if DB.activities.find_one(
-            {
-                "activity.object.actor": create.get_actor().id,
-                "meta.answer_to": question.id,
-            }
-        ):
+        if DB.activities.find_one(dup_query):
             logger.info("duplicate response")
             return
 
         # Update the DB
-        answer_key = _answer_key(choice)
 
         DB.activities.update_one(
-            {"activity.object.id": question.id},
+            {"meta.object_id": question.id},
             {
                 "$inc": {
                     "meta.question_replies": 1,
@@ -425,6 +419,7 @@ class MicroblogPubBackend(Backend):
             {
                 "$set": {
                     "meta.answer_to": question.id,
+                    "meta.poll_answer_choice": choice,
                     "meta.stream": False,
                     "meta.poll_answer": True,
                 }
@@ -462,7 +457,11 @@ class MicroblogPubBackend(Backend):
             # Keep track of our own votes
             DB.activities.update_one(
                 {"activity.object.id": reply.id, "box": "inbox"},
-                {"$set": {"meta.voted_for": create.get_object().name}},
+                {
+                    "$set": {
+                        f"meta.poll_answers_sent.{_answer_key(create.get_object().name)}": True
+                    }
+                },
             )
             return None
 

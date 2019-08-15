@@ -88,7 +88,7 @@
                 {% set pct = cnt * 100.0 / total_votes %}
             {% endif %}
             <li class="answer">
-                {% if session.logged_in and not meta.voted_for and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
+                {% if session.logged_in and not meta.poll_answers_sent and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
 <span><form action="/api/vote" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
 <input type="hidden" name="id" value="{{ obj.id }}">
@@ -100,10 +100,40 @@
                 <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
                 <span class="answer-text">
                     <span>{{ '%0.0f'| format(pct) }}%</span>
-                    {{ oneOf.name }} {% if oneOf.name == meta.voted_for %}(your vote){% endif %}
+                    {{ oneOf.name }} {% if oneOf.name | poll_answer_key in meta.poll_answers_sent %}(your vote){% endif %}
                 </span>
             </li>
         {% endfor %}
+        {% if obj.anyOf %}
+        
+        {% for anyOf in obj.anyOf %}
+            {% set pct = 0 %}
+            {% if total_votes > 0 %}
+                {% set cnt = anyOf.name | get_answer_count(obj, meta) %}
+                {% set pct = cnt * 100.0 / total_votes %}
+            {% endif %}
+        <li class="answer">
+            {% set already_voted = anyOf.name | poll_answer_key in meta.poll_answers_sent %}
+         {% if session.logged_in and not already_voted and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
+<span><form action="/api/vote" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ redir }}">
+<input type="hidden" name="id" value="{{ obj.id }}">
+<input type="hidden" name="choice" value="{{ anyOf.name }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item">vote</button>
+    </form></span>
+    {% elif session.logged_in and already_voted %}
+    <span style="position:relative;top:5px;height:10px;width:50px;display:inline-block;"></span>
+    {% endif %}
+        <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
+                <span class="answer-text">
+                    <span>{{ '%0.0f'| format(pct) }}%</span>
+                    {{ anyOf.name }} {% if anyOf.name | poll_answer_key in meta.poll_answers_sent %}(your vote){% endif %}
+                </span>
+        </li>
+        {% endfor %}
+
+        {% endif %}
     </ul>
     <p><small>
     {% if real_end_time | gtnow %}
