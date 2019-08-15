@@ -310,7 +310,9 @@ def task_cache_actor() -> _Response:
         if not activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
             return ""
 
-        if activity.get_object()._data.get("attachment", []) or activity.get_object().has_type(ap.ActivityType.VIDEO):
+        if activity.get_object()._data.get(
+            "attachment", []
+        ) or activity.get_object().has_type(ap.ActivityType.VIDEO):
             Tasks.cache_attachments(iri)
 
     except (ActivityGoneError, ActivityNotFoundError):
