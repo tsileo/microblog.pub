@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from enum import unique
 from typing import Any
@@ -47,6 +48,10 @@ def _meta(mk: MetaKey) -> str:
     return f"meta.{mk.value}"
 
 
+def flag(mk: MetaKey, val: Any) -> _SubQuery:
+    return {_meta(mk): val}
+
+
 def by_remote_id(remote_id: str) -> _SubQuery:
     return {"remote_id": remote_id}
 
@@ -64,23 +69,23 @@ def by_type(type_: ap.ActivityType) -> _SubQuery:
 
 
 def not_undo() -> _SubQuery:
-    return {_meta(MetaKey.UNDO): False}
+    return flag(MetaKey.UNDO, False)
 
 
 def by_actor(actor: ap.BaseActivity) -> _SubQuery:
-    return {_meta(MetaKey.ACTOR_ID): actor.id}
+    return flag(MetaKey.ACTOR_ID, actor.id)
 
 
 def by_object_id(object_id: str) -> _SubQuery:
-    return {_meta(MetaKey.OBJECT_ID): object_id}
+    return flag(MetaKey.OBJECT_ID, object_id)
 
 
 def is_public() -> _SubQuery:
-    return {_meta(MetaKey.PUBLIC): True}
+    return flag(MetaKey.PUBLIC, True)
 
 
 def inc(mk: MetaKey, val: int) -> _SubQuery:
-    return {"$inc": {_meta(mk): val}}
+    return {"$inc": flag(mk, val)}
 
 
 def upsert(data: Dict[MetaKey, Any]) -> _SubQuery:
@@ -92,5 +97,5 @@ def upsert(data: Dict[MetaKey, Any]) -> _SubQuery:
     return {"$set": sq}
 
 
-def flag(mk: MetaKey, val: Any) -> _SubQuery:
-    return {_meta(mk): val}
+def published_after(dt: datetime) -> _SubQuery:
+    return flag(MetaKey.PUBLISHED, {"gt": ap.format(dt)})

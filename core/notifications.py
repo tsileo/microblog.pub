@@ -1,4 +1,7 @@
 import logging
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from functools import singledispatch
 from typing import Any
 from typing import Dict
@@ -8,12 +11,16 @@ from little_boxes import activitypub as ap
 
 from config import BASE_URL
 from config import DB
+from core.db import find_one_activity
 from core.meta import MetaKey
 from core.meta import _meta
 from core.meta import by_actor
+from core.meta import by_object_id
 from core.meta import by_type
+from core.meta import flag
 from core.meta import in_inbox
 from core.meta import not_undo
+from core.meta import published_after
 from core.tasks import Tasks
 
 _logger = logging.getLogger(__name__)
@@ -123,16 +130,26 @@ def _like_set_inbox_flags(activity: ap.Like, new_meta: _NewMeta) -> None:
 @set_inbox_flags.register
 def _announce_set_inbox_flags(activity: ap.Announce, new_meta: _NewMeta) -> None:
     _logger.info(f"set_inbox_flags activity={activity!r}")
-    # Is it a Like of local acitivty/from the outbox
-    if _is_from_outbox(activity.get_object()):
+    obj = activity.get_object()
+    # Is it a Annnounce/boost of local acitivty/from the outbox
+    if _is_from_outbox(obj):
         # Flag it as a notification
         _flag_as_notification(activity, new_meta)
 
         # Also set the "keep mark" for the GC (as we want to keep it forever)
         _set_flag(new_meta, MetaKey.GC_KEEP)
 
-    # Display it in the stream
-    _set_flag(new_meta, MetaKey.STREAM)
+    # Dedup boosts (it's annoying to see the same note multipe times on the same page)
+    if not find_one_activity(
+        {
+            **in_inbox(),
+            **by_object_id(obj.id),
+            **flag(MetaKey.STREAM, True),
+            **published_after(datetime.now(timezone.utc) - timedelta(hours=12)),
+        }
+    ):
+        # Display it in the stream only it not there already (only looking at the last 12 hours)
+        _set_flag(new_meta, MetaKey.STREAM)
 
     return None
 
