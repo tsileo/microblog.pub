@@ -140,16 +140,16 @@ def _announce_set_inbox_flags(activity: ap.Announce, new_meta: _NewMeta) -> None
         _set_flag(new_meta, MetaKey.GC_KEEP)
 
     # Dedup boosts (it's annoying to see the same note multipe times on the same page)
-    if not find_one_activity(
-        {
-            **in_inbox(),
-            **by_object_id(obj.id),
-            **flag(MetaKey.STREAM, True),
-            **published_after(datetime.now(timezone.utc) - timedelta(hours=12)),
-        }
-    ):
-        # Display it in the stream only it not there already (only looking at the last 12 hours)
-        _set_flag(new_meta, MetaKey.STREAM)
+    # if not find_one_activity(
+    #    {
+    #        **in_inbox(),
+    #        **by_object_id(obj.id),
+    #        **flag(MetaKey.STREAM, True),
+    #        **published_after(datetime.now(timezone.utc) - timedelta(hours=12)),
+    #    }
+    # ):
+    # Display it in the stream only it not there already (only looking at the last 12 hours)
+    _set_flag(new_meta, MetaKey.STREAM)
 
     return None
 
