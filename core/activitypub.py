@@ -2,7 +2,6 @@ import binascii
 import hashlib
 import logging
 import os
-import time
 from datetime import datetime
 from datetime import timezone
 from typing import Any
@@ -164,7 +163,6 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         return
 
     save(Box.INBOX, activity)
-    time.sleep(1)
     logger.info(f"spawning tasks for {activity!r}")
     if not activity.has_type([ap.ActivityType.DELETE, ap.ActivityType.UPDATE]):
         Tasks.cache_actor(activity.id)
@@ -190,7 +188,6 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
         activity.reset_object_cache()
 
     save(Box.OUTBOX, activity)
-    time.sleep(5)
     Tasks.cache_actor(activity.id)
     Tasks.finish_post_to_outbox(activity.id)
     return activity.id
