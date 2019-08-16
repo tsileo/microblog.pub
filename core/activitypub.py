@@ -383,6 +383,10 @@ class MicroblogPubBackend(Backend):
             ):
                 return actor2["meta"]["object"]
 
+        reply = DB.replies.find_one(by_remote_id(iri))
+        if reply:
+            return reply["activity"]
+
         # Fetch the URL via HTTP
         logger.info(f"dereference {iri} via HTTP")
         return super().fetch_iri(iri)
