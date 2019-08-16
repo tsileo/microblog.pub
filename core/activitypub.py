@@ -29,9 +29,11 @@ from config import ID
 from config import KEY
 from config import ME
 from config import USER_AGENT
+from core.db import find_one_activity
 from core.db import update_many_activities
 from core.meta import Box
 from core.meta import MetaKey
+from core.meta import by_object_id
 from core.meta import flag
 from core.meta import upsert
 from core.tasks import Tasks
@@ -160,6 +162,7 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         actor.has_type(ap.ActivityType.APPLICATION)
         and actor.id.endswith("/relay")
         and activity.has_type(ap.ActivityType.ANNOUNCE)
+        and not find_one_activity(by_object_id(activity.get_object_id()))
         and not DB.replies.find_one({"remote_id": activity.id})
     ):
         Tasks.process_reply(activity.get_object_id())
