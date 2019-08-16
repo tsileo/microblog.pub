@@ -21,6 +21,7 @@ from core.activitypub import SIG_AUTH
 from core.activitypub import Box
 from core.activitypub import _actor_hash
 from core.activitypub import _add_answers_to_question
+from core.activitypub import _cache_actor_icon
 from core.activitypub import post_to_outbox
 from core.activitypub import save_reply
 from core.activitypub import update_cached_actor
@@ -30,7 +31,9 @@ from core.inbox import process_inbox
 from core.meta import MetaKey
 from core.meta import by_object_id
 from core.meta import by_remote_id
+from core.meta import by_type
 from core.meta import flag
+from core.meta import inc
 from core.meta import upsert
 from core.notifications import set_inbox_flags
 from core.outbox import process_outbox
@@ -250,7 +253,10 @@ def task_cache_attachments() -> _Response:
         app.logger.info(f"caching attachment for activity={activity!r}")
         # Generates thumbnails for the actor's icon and the attachments if any
 
-        obj = activity.get_object()
+        if activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
+            obj = activity.get_object()
+        else:
+            obj = activity
 
         if obj.has_type(ap.ActivityType.VIDEO):
             if isinstance(obj.url, list):
@@ -515,20 +521,26 @@ def task_process_reply() -> _Response:
             app.logger.info(f"activity={activity!r} is not a reply, dropping it")
             return ""
 
-        # new_threads = []
         root_reply = in_reply_to
-        reply = ap.fetch_remote_activity(root_reply)
+
+        reply = ap.fetch_remote_activity(in_reply_to)
         if reply.has_type(ap.ActivityType.CREATE):
             reply = reply.get_object()
 
-        while reply is not None:
+        new_replies = [activity, reply]
+
+        while 1:
             in_reply_to = reply.get_in_reply_to()
             if not in_reply_to:
                 break
+
             root_reply = in_reply_to
             reply = ap.fetch_remote_activity(root_reply)
+
             if reply.has_type(ap.ActivityType.CREATE):
                 reply = reply.get_object()
+
+            new_replies.append(reply)
 
         app.logger.info(f"root_reply={reply!r} for activity={activity!r}")
 
@@ -536,16 +548,40 @@ def task_process_reply() -> _Response:
         if not find_one_activity(by_object_id(root_reply)):
             return ""
 
-        actor = activity.get_actor()
+        for new_reply in new_replies:
+            if find_one_activity(by_object_id(new_reply.id)) or DB.replies.find_one(
+                {"remote_id": root_reply}
+            ):
+                continue
 
-        save_reply(
-            activity,
-            {
-                "meta.thread_root_parent": root_reply,
-                **flag(MetaKey.ACTOR, actor.to_dict(embed=True)),
-            },
-        )
-        # FIXME(tsileo): cache actor here, spawn a task to cache attachment if needed
+            actor = new_reply.get_actor()
+            save_reply(
+                new_reply,
+                {
+                    "meta.thread_root_parent": root_reply,
+                    **flag(MetaKey.ACTOR, actor.to_dict(embed=True)),
+                    **flag(MetaKey.ACTOR_HASH, _actor_hash(actor)),
+                },
+            )
+
+            # Update the reply counters
+            if new_reply.get_in_reply_to():
+                update_one_activity(
+                    {
+                        **by_object_id(new_reply.get_in_reply_to()),
+                        **by_type(ap.ActivityType.CREATE),
+                    },
+                    inc(MetaKey.COUNT_REPLY, 1),
+                )
+                DB.replies.update_one(
+                    by_remote_id(new_reply.get_in_reply_to()),
+                    inc(MetaKey.COUNT_REPLY, 1),
+                )
+
+            # Cache the actor icon
+            _cache_actor_icon(actor)
+            # And cache the attachments
+            Tasks.cache_attachments(new_reply.id)
     except (ActivityGoneError, ActivityNotFoundError):
         app.logger.exception(f"dropping activity {iri}, skip processing")
         return ""

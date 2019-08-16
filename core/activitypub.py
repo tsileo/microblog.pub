@@ -34,9 +34,12 @@ from core.db import update_many_activities
 from core.meta import Box
 from core.meta import MetaKey
 from core.meta import by_object_id
+from core.meta import by_remote_id
 from core.meta import flag
+from core.meta import inc
 from core.meta import upsert
 from core.tasks import Tasks
+from utils import now
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +190,7 @@ def save_reply(activity: ap.BaseActivity, meta: Dict[str, Any] = {}) -> None:
     if visibility in [ap.Visibility.PUBLIC, ap.Visibility.UNLISTED]:
         is_public = True
 
+    published = activity.published if activity.published else now()
     DB.replies.insert_one(
         {
             "activity": activity.to_dict(),
@@ -199,6 +203,7 @@ def save_reply(activity: ap.BaseActivity, meta: Dict[str, Any] = {}) -> None:
                 "server": urlparse(activity.id).netloc,
                 "visibility": visibility.name,
                 "actor_id": activity.get_actor().id,
+                MetaKey.PUBLISHED.value: published,
                 **meta,
             },
         }
@@ -467,10 +472,9 @@ class MicroblogPubBackend(Backend):
         if not in_reply_to:
             return
 
-        new_threads = []
-        root_reply = in_reply_to
-        reply = ap.fetch_remote_activity(root_reply)
-        # FIXME(tsileo): can be a Create here (instead of a Note, Hubzilla's doing that)
+        reply = ap.fetch_remote_activity(in_reply_to)
+        if reply.has_type(ap.ActivityType.CREATE):
+            reply = reply.get_object()
         # FIXME(tsileo): can be a 403 too, in this case what to do? not error at least
 
         # Ensure the this is a local reply, of a question, with a direct "to" addressing
@@ -497,35 +501,17 @@ class MicroblogPubBackend(Backend):
             )
             return None
 
+        # It's a regular reply, try to increment the reply counter
         creply = DB.activities.find_one_and_update(
-            {"activity.object.id": in_reply_to},
-            {"$inc": {"meta.count_reply": 1, "meta.count_direct_reply": 1}},
+            by_object_id(in_reply_to), inc(MetaKey.COUNT_REPLY, 1)
         )
         if not creply:
-            # It means the activity is not in the inbox, and not in the outbox, we want to save it
-            save(Box.REPLIES, reply)
-            new_threads.append(reply.id)
-            # TODO(tsileo): parses the replies collection and import the replies?
-
-        while reply is not None:
-            in_reply_to = reply.get_in_reply_to()
-            if not in_reply_to:
-                break
-            root_reply = in_reply_to
-            reply = ap.fetch_remote_activity(root_reply)
-            # FIXME(tsileo): can be a Create here (instead of a Note, Hubzilla's doing that)
-            q = {"activity.object.id": root_reply}
-            if not DB.activities.count(q):
-                save(Box.REPLIES, reply)
-                new_threads.append(reply.id)
-
-        DB.activities.update_one(
-            {"remote_id": create.id}, {"$set": {"meta.thread_root_parent": root_reply}}
-        )
-        DB.activities.update(
-            {"box": Box.REPLIES.value, "remote_id": {"$in": new_threads}},
-            {"$set": {"meta.thread_root_parent": root_reply}},
-        )
+            # Maybe it's the reply of a reply?
+            if not DB.replies.find_one_and_update(
+                by_remote_id(in_reply_to), inc(MetaKey.COUNT_REPLY, 1)
+            ):
+                # We don't have the reply stored, spawn a task to process it (and determine if it needs to be saved)
+                Tasks.process_reply(create.get_object().id)
 
 
 def embed_collection(total_items, first_page_id):

@@ -42,6 +42,7 @@ class MetaKey(Enum):
 
     COUNT_LIKE = "count_like"
     COUNT_BOOST = "count_boost"
+    COUNT_REPLY = "count_reply"
 
 
 def _meta(mk: MetaKey) -> str:
