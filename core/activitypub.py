@@ -511,11 +511,12 @@ class MicroblogPubBackend(Backend):
         )
         if not creply:
             # Maybe it's the reply of a reply?
-            if not DB.replies.find_one_and_update(
+            DB.replies.find_one_and_update(
                 by_remote_id(in_reply_to), inc(MetaKey.COUNT_REPLY, 1)
-            ):
-                # We don't have the reply stored, spawn a task to process it (and determine if it needs to be saved)
-                Tasks.process_reply(create.get_object().id)
+            )
+
+        # Spawn a task to process it (and determine if it needs to be saved)
+        Tasks.process_reply(create.get_object().id)
 
 
 def embed_collection(total_items, first_page_id):
@@ -643,20 +644,22 @@ def _add_answers_to_question(raw_doc: Dict[str, Any]) -> None:
 
 
 def add_extra_collection(raw_doc: Dict[str, Any]) -> Dict[str, Any]:
-    if raw_doc["activity"]["type"] != ap.ActivityType.CREATE.value:
+    if not ap._has_type(raw_doc["activity"]["type"], ap.ActivityType.CREATE.value):
         return raw_doc
 
     raw_doc["activity"]["object"]["replies"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_direct_reply", 0),
+        raw_doc.get("meta", {}).get(MetaKey.COUNT_REPLY.value, 0),
         f'{raw_doc["remote_id"]}/replies',
     )
 
     raw_doc["activity"]["object"]["likes"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_like", 0), f'{raw_doc["remote_id"]}/likes'
+        raw_doc.get("meta", {}).get(MetaKey.COUNT_LIKE.value, 0),
+        f'{raw_doc["remote_id"]}/likes',
     )
 
     raw_doc["activity"]["object"]["shares"] = embed_collection(
-        raw_doc.get("meta", {}).get("count_boost", 0), f'{raw_doc["remote_id"]}/shares'
+        raw_doc.get("meta", {}).get(MetaKey.COUNT_BOOST.value, 0),
+        f'{raw_doc["remote_id"]}/shares',
     )
 
     return raw_doc

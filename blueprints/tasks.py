@@ -548,6 +548,12 @@ def task_process_reply() -> _Response:
         if not find_one_activity(by_object_id(root_reply)):
             return ""
 
+        # In case the activity was from the inbox
+        update_one_activity(
+            {**by_object_id(activity.id), **by_type(ap.ActivityType.CREATE)},
+            upsert({MetaKey.THREAD_ROOT_PARENT: root_reply}),
+        )
+
         for new_reply in new_replies:
             if find_one_activity(by_object_id(new_reply.id)) or DB.replies.find_one(
                 {"remote_id": root_reply}
@@ -558,7 +564,7 @@ def task_process_reply() -> _Response:
             save_reply(
                 new_reply,
                 {
-                    "meta.thread_root_parent": root_reply,
+                    **flag(MetaKey.THREAD_ROOT_PARENT, root_reply),
                     **flag(MetaKey.ACTOR, actor.to_dict(embed=True)),
                     **flag(MetaKey.ACTOR_HASH, _actor_hash(actor)),
                 },

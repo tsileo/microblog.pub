@@ -35,6 +35,7 @@ class MetaKey(Enum):
     OBJECT_ACTOR_ID = "object_actor_id"
     OBJECT_ACTOR_HASH = "object_actor_hash"
     PUBLIC = "public"
+    THREAD_ROOT_PARENT = "thread_root_parent"
 
     DELETED = "deleted"
     BOOSTED = "boosted"
