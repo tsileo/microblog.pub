@@ -722,6 +722,7 @@ def inbox():
         data = remote_data
     activity = ap.parse_activity(data)
     logger.debug(f"inbox activity={g.request_id}/{activity}/{data}")
+
     post_to_inbox(activity)
 
     return Response(status=201)

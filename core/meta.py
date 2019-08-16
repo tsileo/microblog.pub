@@ -98,4 +98,4 @@ def upsert(data: Dict[MetaKey, Any]) -> _SubQuery:
 
 
 def published_after(dt: datetime) -> _SubQuery:
-    return flag(MetaKey.PUBLISHED, {"gt": ap.format(dt)})
+    return flag(MetaKey.PUBLISHED, {"gt": ap.format_datetime(dt)})

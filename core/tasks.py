@@ -45,6 +45,10 @@ class Tasks:
         p.push(iri, "/task/fetch_og_meta")
 
     @staticmethod
+    def process_reply(iri: str) -> None:
+        p.push(iri, "/task/process_reply")
+
+    @staticmethod
     def process_new_activity(iri: str) -> None:
         p.push(iri, "/task/process_new_activity")
 

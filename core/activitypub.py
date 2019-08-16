@@ -12,7 +12,6 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 from bson.objectid import ObjectId
-from cachetools import LRUCache
 from flask import url_for
 from little_boxes import activitypub as ap
 from little_boxes import strtobool
@@ -43,7 +42,6 @@ _NewMeta = Dict[str, Any]
 
 SIG_AUTH = HTTPSigAuth(KEY)
 
-ACTORS_CACHE = LRUCache(maxsize=256)
 MY_PERSON = ap.Person(**ME)
 
 
@@ -157,6 +155,16 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         )
         return
 
+    # If the message is coming from a Pleroma relay, we process it as a possible reply for a stream activity
+    if (
+        actor.has_type(ap.ActivityType.APPLICATION)
+        and actor.id.endswith("/relay")
+        and activity.has_type(ap.ActivityType.ANNOUNCE)
+        and not DB.replies.find_one({"remote_id": activity.id})
+    ):
+        Tasks.process_reply(activity.get_object_id())
+        return
+
     if DB.activities.find_one({"box": Box.INBOX.value, "remote_id": activity.id}):
         # The activity is already in the inbox
         logger.info(f"received duplicate activity {activity!r}, dropping it")
@@ -168,6 +176,30 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         Tasks.cache_actor(activity.id)
     Tasks.process_new_activity(activity.id)
     Tasks.finish_post_to_inbox(activity.id)
+
+
+def save_reply(activity: ap.BaseActivity, meta: Dict[str, Any] = {}) -> None:
+    visibility = ap.get_visibility(activity)
+    is_public = False
+    if visibility in [ap.Visibility.PUBLIC, ap.Visibility.UNLISTED]:
+        is_public = True
+
+    DB.replies.insert_one(
+        {
+            "activity": activity.to_dict(),
+            "type": _to_list(activity.type),
+            "remote_id": activity.id,
+            "meta": {
+                "undo": False,
+                "deleted": False,
+                "public": is_public,
+                "server": urlparse(activity.id).netloc,
+                "visibility": visibility.name,
+                "actor_id": activity.get_actor().id,
+                **meta,
+            },
+        }
+    )
 
 
 def post_to_outbox(activity: ap.BaseActivity) -> str:

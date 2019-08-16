@@ -7,6 +7,7 @@ import flask
 import requests
 from flask import current_app as app
 from little_boxes import activitypub as ap
+from little_boxes.activitypub import _to_list
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import ActivityNotFoundError
 from little_boxes.errors import NotAnActivityError
@@ -21,10 +22,13 @@ from core.activitypub import Box
 from core.activitypub import _actor_hash
 from core.activitypub import _add_answers_to_question
 from core.activitypub import post_to_outbox
+from core.activitypub import save_reply
 from core.activitypub import update_cached_actor
+from core.db import find_one_activity
 from core.db import update_one_activity
 from core.inbox import process_inbox
 from core.meta import MetaKey
+from core.meta import by_object_id
 from core.meta import by_remote_id
 from core.meta import flag
 from core.meta import upsert
@@ -310,9 +314,10 @@ def task_cache_actor() -> _Response:
         if not activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
             return ""
 
-        if activity.get_object()._data.get(
-            "attachment", []
-        ) or activity.get_object().has_type(ap.ActivityType.VIDEO):
+        if activity.has_type(ap.ActivityType.CREATE) and (
+            activity.get_object()._data.get("attachment", [])
+            or activity.get_object().has_type(ap.ActivityType.VIDEO)
+        ):
             Tasks.cache_attachments(iri)
 
     except (ActivityGoneError, ActivityNotFoundError):
@@ -475,6 +480,79 @@ def task_cleanup() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
     gc.perform()
+    return ""
+
+
+def _is_local_reply(activity: ap.BaseActivity) -> bool:
+    for dest in _to_list(activity.to or []):
+        if dest.startswith(config.BASE_URL):
+            return True
+
+    for dest in _to_list(activity.cc or []):
+        if dest.startswith(config.BASE_URL):
+            return True
+
+    return False
+
+
+@blueprint.route("/task/process_reply", methods=["POST"])
+def task_process_reply() -> _Response:
+    """Process `Announce`d posts from Pleroma relays in order to process replies of activities that are in the inbox."""
+    task = p.parse(flask.request)
+    app.logger.info(f"task={task!r}")
+    iri = task.payload
+    try:
+        activity = ap.fetch_remote_activity(iri)
+        app.logger.info(f"checking for reply activity={activity!r}")
+
+        # Some AP server always return Create when requesting an object
+        if activity.has_type(ap.ActivityType.CREATE):
+            activity = activity.get_object()
+
+        in_reply_to = activity.get_in_reply_to()
+        if not in_reply_to:
+            # If it's not reply, we can drop it
+            app.logger.info(f"activity={activity!r} is not a reply, dropping it")
+            return ""
+
+        # new_threads = []
+        root_reply = in_reply_to
+        reply = ap.fetch_remote_activity(root_reply)
+        if reply.has_type(ap.ActivityType.CREATE):
+            reply = reply.get_object()
+
+        while reply is not None:
+            in_reply_to = reply.get_in_reply_to()
+            if not in_reply_to:
+                break
+            root_reply = in_reply_to
+            reply = ap.fetch_remote_activity(root_reply)
+            if reply.has_type(ap.ActivityType.CREATE):
+                reply = reply.get_object()
+
+        app.logger.info(f"root_reply={reply!r} for activity={activity!r}")
+
+        # Ensure the "root reply" is present in the inbox/outbox
+        if not find_one_activity(by_object_id(root_reply)):
+            return ""
+
+        actor = activity.get_actor()
+
+        save_reply(
+            activity,
+            {
+                "meta.thread_root_parent": root_reply,
+                **flag(MetaKey.ACTOR, actor.to_dict(embed=True)),
+            },
+        )
+        # FIXME(tsileo): cache actor here, spawn a task to cache attachment if needed
+    except (ActivityGoneError, ActivityNotFoundError):
+        app.logger.exception(f"dropping activity {iri}, skip processing")
+        return ""
+    except Exception as err:
+        app.logger.exception(f"failed to process new activity {iri}")
+        raise TaskError() from err
+
     return ""
 
 
