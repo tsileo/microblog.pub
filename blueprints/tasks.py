@@ -564,9 +564,9 @@ def task_process_reply() -> _Response:
             save_reply(
                 new_reply,
                 {
-                    **flag(MetaKey.THREAD_ROOT_PARENT, root_reply),
-                    **flag(MetaKey.ACTOR, actor.to_dict(embed=True)),
-                    **flag(MetaKey.ACTOR_HASH, _actor_hash(actor)),
+                    MetaKey.THREAD_ROOT_PARENT.value: root_reply,
+                    MetaKey.ACTOR.value: actor.to_dict(embed=True),
+                    MetaKey.ACTOR_HASH.value: _actor_hash(actor),
                 },
             )
 
