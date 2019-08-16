@@ -25,6 +25,9 @@ from config import ID
 from config import PASS
 from core.activitypub import Box
 from core.activitypub import post_to_outbox
+from core.db import find_one_activity
+from core.meta import by_object_id
+from core.meta import by_type
 from core.shared import MY_PERSON
 from core.shared import _build_thread
 from core.shared import _Response
@@ -195,12 +198,11 @@ def admin_lookup() -> _Response:
 @blueprint.route("/admin/thread")
 @login_required
 def admin_thread() -> _Response:
-    data = DB.activities.find_one(
-        {
-            "type": ap.ActivityType.CREATE.value,
-            "activity.object.id": request.args.get("oid"),
-        }
-    )
+    oid = request.args.get("oid")
+    if not oid:
+        abort(404)
+
+    data = find_one_activity({**by_type(ap.ActivityType.CREATE), **by_object_id(oid)})
 
     if not data:
         abort(404)

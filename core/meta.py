@@ -74,6 +74,10 @@ def not_undo() -> _SubQuery:
     return flag(MetaKey.UNDO, False)
 
 
+def not_deleted() -> _SubQuery:
+    return flag(MetaKey.DELETED, False)
+
+
 def by_actor(actor: ap.BaseActivity) -> _SubQuery:
     return flag(MetaKey.ACTOR_ID, actor.id)
 

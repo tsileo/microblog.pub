@@ -19,6 +19,11 @@ import config
 from config import DB
 from config import ME
 from core import activitypub
+from core.db import find_activities
+from core.meta import MetaKey
+from core.meta import by_type
+from core.meta import flag
+from core.meta import not_deleted
 
 # _Response = Union[flask.Response, werkzeug.wrappers.Response, str, Any]
 _Response = Any
@@ -113,29 +118,30 @@ def _get_ip():
 def _build_thread(data, include_children=True):  # noqa: C901
     data["_requested"] = True
     app.logger.info(f"_build_thread({data!r})")
-    root_id = data["meta"].get("thread_root_parent", data["activity"]["object"]["id"])
+    root_id = data["meta"][MetaKey.OBJECT_ID.value]
 
-    query = {
-        "$or": [{"meta.thread_root_parent": root_id}, {"activity.object.id": root_id}],
-        "meta.deleted": False,
-    }
     replies = [data]
-    for dat in DB.activities.find(query):
-        print(dat["type"])
-        if dat["type"][0] == ap.ActivityType.CREATE.value:
-            replies.append(dat)
-        if dat["type"][0] == ap.ActivityType.UPDATE.value:
-            continue
-        else:
-            # Make a Note/Question/... looks like a Create
-            dat = {
-                "activity": {"object": dat["activity"]},
-                "meta": dat["meta"],
-                "_id": dat["_id"],
-            }
-            replies.append(dat)
+    for dat in find_activities(
+        {
+            **flag(MetaKey.THREAD_ROOT_PARENT, root_id),
+            **not_deleted(),
+            **by_type(ap.ActivityType.CREATE),
+        }
+    ):
+        replies.append(dat)
 
-    replies = sorted(replies, key=lambda d: d["activity"]["object"]["published"])
+    for dat in DB.replies.find(
+        {**flag(MetaKey.THREAD_ROOT_PARENT, root_id), **not_deleted()}
+    ):
+        # Make a Note/Question/... looks like a Create
+        dat = {
+            "activity": {"object": dat["activity"]},
+            "meta": dat["meta"],
+            "_id": dat["_id"],
+        }
+        replies.append(dat)
+
+    replies = sorted(replies, key=lambda d: d["meta"]["published"])
 
     # Index all the IDs in order to build a tree
     idx = {}
