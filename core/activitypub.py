@@ -39,7 +39,7 @@ from core.meta import flag
 from core.meta import inc
 from core.meta import upsert
 from core.tasks import Tasks
-from croe.meta import by_type
+from core.meta import by_type
 from utils import now
 
 logger = logging.getLogger(__name__)
