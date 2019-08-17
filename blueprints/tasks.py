@@ -263,18 +263,15 @@ def task_cache_attachments() -> _Response:
                 # TODO: filter only videogt
                 link = select_video_to_cache(obj.url)
                 if link:
-                    config.MEDIA_CACHE.cache_attachment({"url": link["href"]}, iri)
+                    Tasks.cache_attachment({"url": link["href"]}, iri)
             elif isinstance(obj.url, str):
-                config.MEDIA_CACHE.cache_attachment({"url": obj.url}, iri)
+                Tasks.cache_attachment({"url": obj.url}, iri)
             else:
                 app.logger.warning(f"failed to parse video link {obj!r} for {iri}")
 
         # Iter the attachments
         for attachment in obj._data.get("attachment", []):
-            try:
-                config.MEDIA_CACHE.cache_attachment(attachment, iri)
-            except ValueError:
-                app.logger.exception(f"failed to cache {attachment}")
+            Tasks.cache_attachment(attachment, iri)
 
         app.logger.info(f"attachments cached for {iri}")
 
@@ -282,6 +279,25 @@ def task_cache_attachments() -> _Response:
         app.logger.exception(f"dropping activity {iri}, no attachment caching")
     except Exception as err:
         app.logger.exception(f"failed to cache attachments for {iri}")
+        raise TaskError() from err
+
+    return ""
+
+
+@blueprint.route("/task/cache_attachment", methods=["POST"])
+def task_cache_attachment() -> _Response:
+    task = p.parse(flask.request)
+    app.logger.info(f"task={task!r}")
+    iri = task.payload["iri"]
+    attachment = task.payload["attachment"]
+    try:
+        app.logger.info(f"caching attachment {attachment!r} for {iri}")
+
+        config.MEDIA_CACHE.cache_attachment(attachment, iri)
+
+        app.logger.info(f"attachment {attachment!r} cached for {iri}")
+    except Exception as err:
+        app.logger.exception(f"failed to cache attachment {attachment!r} for {iri}")
         raise TaskError() from err
 
     return ""
@@ -320,10 +336,9 @@ def task_cache_actor() -> _Response:
         if not activity.has_type([ap.ActivityType.CREATE, ap.ActivityType.ANNOUNCE]):
             return ""
 
-        if activity.has_type(ap.ActivityType.CREATE) and (
-            activity.get_object()._data.get("attachment", [])
-            or activity.get_object().has_type(ap.ActivityType.VIDEO)
-        ):
+        if activity.get_object()._data.get(
+            "attachment", []
+        ) or activity.get_object().has_type(ap.ActivityType.VIDEO):
             Tasks.cache_attachments(iri)
 
     except (ActivityGoneError, ActivityNotFoundError):

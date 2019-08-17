@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
 from datetime import timezone
+from typing import Any
+from typing import Dict
 
 from poussetaches import PousseTaches
 
@@ -55,6 +57,10 @@ class Tasks:
     @staticmethod
     def cache_attachments(iri: str) -> None:
         p.push(iri, "/task/cache_attachments")
+
+    @staticmethod
+    def cache_attachment(attachment: Dict[str, Any], iri: str) -> None:
+        p.push({"iri": iri, "attachment": attachment}, "/task/cache_attachment")
 
     @staticmethod
     def finish_post_to_inbox(iri: str) -> None:
