@@ -155,7 +155,7 @@ if conf.get("emojis"):
     EMOJIS = conf["emojis"]
 
 # Emoji template for the FE
-EMOJI_TPL = '<img src="https://cdn.jsdelivr.net/npm/twemoji@12.0.0/2/svg/{filename}.svg" alt="{raw}" class="emoji">'
+EMOJI_TPL = '<img src="/static/twemoji/{filename}.svg" alt="{raw}" class="emoji">'
 if conf.get("emoji_tpl"):
     EMOJI_TPL = conf["emoji_tpl"]
 
