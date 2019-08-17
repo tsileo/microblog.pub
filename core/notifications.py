@@ -143,6 +143,7 @@ def _announce_set_inbox_flags(activity: ap.Announce, new_meta: _NewMeta) -> None
     if not find_one_activity(
         {
             **in_inbox(),
+            **by_type([ap.ActivityType.CRETATE, ap.ActivityType.ANNOUNCE]),
             **by_object_id(obj.id),
             **flag(MetaKey.STREAM, True),
             **published_after(datetime.now(timezone.utc) - timedelta(hours=12)),

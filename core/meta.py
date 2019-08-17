@@ -3,6 +3,8 @@ from enum import Enum
 from enum import unique
 from typing import Any
 from typing import Dict
+from typing import List
+from typing import Union
 
 from little_boxes import activitypub as ap
 
@@ -66,7 +68,10 @@ def in_outbox() -> _SubQuery:
     return {"box": Box.OUTBOX.value}
 
 
-def by_type(type_: ap.ActivityType) -> _SubQuery:
+def by_type(type_: Union[ap.ActivityType, List[ap.ActivityType]]) -> _SubQuery:
+    if isinstance(type_, list):
+        return {"type": {"$in": [t.value for t in type_]}}
+
     return {"type": type_.value}
 
 
@@ -104,4 +109,4 @@ def upsert(data: Dict[MetaKey, Any]) -> _SubQuery:
 
 
 def published_after(dt: datetime) -> _SubQuery:
-    return flag(MetaKey.PUBLISHED, {"gt": ap.format_datetime(dt)})
+    return flag(MetaKey.PUBLISHED, {"$gt": ap.format_datetime(dt)})
