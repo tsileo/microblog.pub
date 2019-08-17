@@ -74,7 +74,9 @@ def fetch_og_metadata(user_agent, links):
             logger.debug(f"failed to HEAD {l}: {err!r}")
             continue
 
-        if not h.headers.get("content-type").startswith("text/html"):
+        if h.headers.get("content-type") and not h.headers.get(
+            "content-type"
+        ).startswith("text/html"):
             logger.debug(f"skipping {l} for bad content type")
             continue
 
@@ -90,6 +92,12 @@ def fetch_og_metadata(user_agent, links):
             continue
         except requests.RequestException as err:
             logger.debug(f"failed to GET {l}: {err!r}")
+            continue
+
+        # FIXME(tsileo): check mimetype via the URL too (like we do for images)
+        if not r.headers.get("content-type") or not r.headers.get(
+            "content-type"
+        ).startswith("text/html"):
             continue
 
         r.encoding = "UTF-8"
