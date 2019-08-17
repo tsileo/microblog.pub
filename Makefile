@@ -40,7 +40,7 @@ css:
 	# Download pure.css if needed
 	[[ ! -f static/pure.css ]] && curl https://unpkg.com/purecss@1.0.1/build/pure-min.css > static/pure.css
 	# Download the emojis from twemoji if needded
-	[[ ! -d static/twemoji ]] && wget https://github.com/twitter/twemoji/archive/v12.1.2.tar.gz && tar xvzf https://github.com/twitter/twemoji/archive/v12.1.2.tar.gz && mv twemoji-12.1.2/assets/svg static/twemoji && rm -rf twemoji-12.1.2
+	[[ ! -d static/twemoji ]] && wget https://github.com/twitter/twemoji/archive/v12.1.2.tar.gz && tar xvzf v12.1.2.tar.gz  && mv twemoji-12.1.2/assets/svg static/twemoji && rm -rf twemoji-12.1.2 && rm -f v12.1.2.tar.gz
 
 # Run the docker-compose project locally (will perform a update if the project is already running)
 .PHONY: run
