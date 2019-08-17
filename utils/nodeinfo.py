@@ -69,7 +69,7 @@ def get_software_name(server: str) -> str:
 
             return SoftwareName.UNKNOWN.value
         except requests.RequestException:
-            pass
+            return SoftwareName.UNKNOWN.value
 
     if _try_mastodon_api(server):
         return SoftwareName.MASTODON.value

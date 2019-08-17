@@ -572,12 +572,13 @@ def task_process_reply() -> _Response:
         )
 
         for new_reply in new_replies:
-            if find_one_activity(by_object_id(new_reply.id)) or DB.replies.find_one(
-                {"remote_id": root_reply}
-            ):
+            if find_one_activity(
+                {**by_object_id(new_reply.id), **by_type(ap.ActivityType.CREATE)}
+            ) or DB.replies.find_one(by_remote_id(new_reply.id)):
                 continue
 
             actor = new_reply.get_actor()
+            # Save the reply with the cached actor and the thread flag/ID
             save_reply(
                 new_reply,
                 {

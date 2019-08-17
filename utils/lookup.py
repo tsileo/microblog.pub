@@ -35,7 +35,10 @@ def lookup(url: str) -> ap.BaseActivity:
     except requests.RequestException as err:
         raise RemoteServerUnavailableError(f"failed to GET {url}: {err!r}")
 
-    resp.raise_for_status()
+    try:
+        resp.raise_for_status()
+    except Exception:
+        return ap.fetch_remote_activity(url)
 
     # If the page is HTML, maybe it contains an alternate link pointing to an AP object
     for alternate in mf2py.parse(resp.text).get("alternates", []):
