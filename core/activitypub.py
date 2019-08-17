@@ -39,6 +39,7 @@ from core.meta import flag
 from core.meta import inc
 from core.meta import upsert
 from core.tasks import Tasks
+from croe.meta import by_type
 from utils import now
 
 logger = logging.getLogger(__name__)
@@ -507,7 +508,8 @@ class MicroblogPubBackend(Backend):
 
         # It's a regular reply, try to increment the reply counter
         creply = DB.activities.find_one_and_update(
-            by_object_id(in_reply_to), inc(MetaKey.COUNT_REPLY, 1)
+            {**by_object_id(in_reply_to), **by_type(ap.ActivityType.CREATE)},
+            inc(MetaKey.COUNT_REPLY, 1),
         )
         if not creply:
             # Maybe it's the reply of a reply?
