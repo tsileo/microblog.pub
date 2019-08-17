@@ -2,7 +2,6 @@ import logging
 import urllib
 from datetime import datetime
 from datetime import timezone
-from functools import lru_cache
 from urllib.parse import urlparse
 
 import bleach
@@ -10,6 +9,7 @@ import emoji_unicode
 import flask
 import html2text
 import timeago
+from cachetools import LRUCache
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import _to_list
 from little_boxes.errors import ActivityGoneError
@@ -232,11 +232,20 @@ def get_total_answers_count(obj, meta):
     return cnt
 
 
-@lru_cache(512)
+_FILE_URL_CACHE = LRUCache(4096)
+
+
 def _get_file_url(url, size, kind) -> str:
-    doc = MEDIA_CACHE.get_file(url, size, kind)
+    k = (url, size, kind)
+    cached = _FILE_URL_CACHE.get(k)
+    if cached:
+        return cached
+
+    doc = MEDIA_CACHE.get_file(*k)
     if doc:
-        return f"/media/{str(doc._id)}"
+        out = f"/media/{str(doc._id)}"
+        _FILE_URL_CACHE[k] = out
+        return out
 
     # MEDIA_CACHE.cache(url, kind)
     _logger.error(f"cache not available for {url}/{size}/{kind}")
