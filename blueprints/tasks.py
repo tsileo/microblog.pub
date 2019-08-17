@@ -545,7 +545,9 @@ def task_process_reply() -> _Response:
         app.logger.info(f"root_reply={reply!r} for activity={activity!r}")
 
         # Ensure the "root reply" is present in the inbox/outbox
-        if not find_one_activity(by_object_id(root_reply)):
+        if not find_one_activity(
+            {**by_object_id(root_reply), **by_type(ap.ActivityType.CREATE)}
+        ):
             return ""
 
         # In case the activity was from the inbox
