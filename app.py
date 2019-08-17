@@ -43,6 +43,7 @@ from config import MEDIA_CACHE
 from config import VERSION
 from core import activitypub
 from core import feed
+from core import jsonld
 from core.activitypub import activity_from_doc
 from core.activitypub import activity_url
 from core.activitypub import post_to_inbox
@@ -223,6 +224,14 @@ def robots_txt():
     return Response(response=ROBOTS_TXT, headers={"Content-Type": "text/plain"})
 
 
+@app.route("/microblogpub-0.0.jsonld")
+def microblogpub_jsonld():
+    return Response(
+        response=json.dumps(jsonld.MICROBLOGPUB),
+        headers={"Content-Type": "application/ld+json"},
+    )
+
+
 @app.route("/media/<media_id>")
 @noindex
 def serve_media(media_id):
@@ -281,6 +290,7 @@ def remote_follow():
 def index():
     if is_api_request():
         _log_sig()
+        print(ME)
         return jsonify(**ME)
 
     q = {

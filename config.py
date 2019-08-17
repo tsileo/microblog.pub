@@ -7,7 +7,7 @@ from enum import Enum
 import yaml
 from itsdangerous import JSONWebSignatureSerializer
 from little_boxes import strtobool
-from little_boxes.activitypub import DEFAULT_CTX
+from little_boxes.activitypub import DEFAULT_CTX as AP_DEFAULT_CTX
 from pymongo import MongoClient
 
 import sass
@@ -72,6 +72,12 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
     THEME_STYLE = ThemeStyle(theme_conf.get("style", DEFAULT_THEME_STYLE))
     THEME_COLOR = theme_conf.get("color", DEFAULT_THEME_PRIMARY_COLOR[THEME_STYLE])
 
+
+DEFAULT_CTX = [
+    AP_DEFAULT_CTX,
+    f"{BASE_URL}/microblogpub-0.0.jsonld",
+    {"@language": "und"},
+]
 
 SASS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sass")
 theme_css = f"$primary-color: {THEME_COLOR};\n"
