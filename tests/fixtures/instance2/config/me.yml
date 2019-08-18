@@ -5,3 +5,4 @@ domain: 'instance2_web:5005'
 summary: 'instance2 summary'
 pass: '$2b$12$nEgJMgaYbXSPOvgnqM4jSeYnleKhXqsFgv/o3hg12x79uEdsR4cUy'  # hello
 https: false
+hide_following: false
