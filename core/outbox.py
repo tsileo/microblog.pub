@@ -6,6 +6,7 @@ from typing import Dict
 
 from little_boxes import activitypub as ap
 
+from core.activitypub import handle_replies
 from core.db import find_one_activity
 from core.db import update_many_activities
 from core.db import update_one_activity
@@ -15,7 +16,6 @@ from core.meta import by_type
 from core.meta import inc
 from core.meta import upsert
 from core.shared import MY_PERSON
-from core.shared import back
 from core.tasks import Tasks
 
 _logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ def _update_process_outbox(update: ap.Update, new_meta: _NewMeta) -> None:
 @process_outbox.register
 def _create_process_outbox(create: ap.Create, new_meta: _NewMeta) -> None:
     _logger.info(f"process_outbox activity={create!r}")
-    back._handle_replies(MY_PERSON, create)
+    handle_replies(create)
 
 
 @process_outbox.register

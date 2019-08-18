@@ -8,6 +8,7 @@ from little_boxes.errors import NotAnActivityError
 
 import config
 from core.activitypub import _answer_key
+from core.activitypub import handle_replies
 from core.activitypub import post_to_outbox
 from core.activitypub import update_cached_actor
 from core.db import DB
@@ -108,7 +109,7 @@ def _create_process_inbox(create: ap.Create, new_meta: _NewMeta) -> None:
     if question.has_type(ap.ActivityType.QUESTION):
         Tasks.fetch_remote_question(question)
 
-    back._handle_replies(MY_PERSON, create)
+    handle_replies(create)
 
 
 @process_inbox.register
