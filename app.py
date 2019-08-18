@@ -219,6 +219,7 @@ Disallow: /login
 Disallow: /admin/
 Disallow: /static/
 Disallow: /media/
+Disallow: /p/
 Disallow: /uploads/"""
 
 
@@ -237,6 +238,7 @@ def microblogpub_jsonld():
 
 
 @app.route("/p/<scheme>/<path:url>")
+@noindex
 def proxy(scheme: str, url: str) -> Any:
     url = f"{scheme}://{url}"
     req_headers = {
