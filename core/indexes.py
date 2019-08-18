@@ -83,3 +83,13 @@ def create_indexes():
 
     # For the is_actor_icon_cached query
     MEDIA_CACHE.fs._GridFS__files.create_index([("url", 1), ("kind", 1)])
+
+    # Replies index
+    DB.replies.create_index([("remote_id", pymongo.ASCENDING)])
+    DB.replies.create_index([("meta.thread_root_parent", pymongo.ASCENDING)])
+    DB.replies.create_index(
+        [
+            ("meta.thread_root_parent", pymongo.ASCENDING),
+            ("meta.deleted", pymongo.ASCENDING),
+        ]
+    )
