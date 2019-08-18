@@ -20,8 +20,6 @@ from core.meta import by_type
 from core.meta import in_inbox
 from core.meta import inc
 from core.meta import upsert
-from core.shared import MY_PERSON
-from core.shared import back
 from core.tasks import Tasks
 from utils import now
 
@@ -47,13 +45,14 @@ def _delete_process_inbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
         _logger.info(f"inbox_delete handle_replies obj={obj!r}")
         in_reply_to = obj.get_in_reply_to() if obj.inReplyTo else None
         if obj.has_type(ap.CREATE_TYPES):
+            post_query = {**by_object_id(obj_id), **by_type(ap.ActivityType.CREATE)}
             in_reply_to = ap._get_id(
-                DB.activities.find_one(
-                    {"meta.object_id": obj_id, "type": ap.ActivityType.CREATE.value}
-                )["activity"]["object"].get("inReplyTo")
+                DB.activities.find_one(post_query)["activity"]["object"].get(
+                    "inReplyTo"
+                )
             )
             if in_reply_to:
-                back._handle_replies_delete(MY_PERSON, in_reply_to)
+                DB.activities.update_one(post_query, inc(MetaKey.COUNT_REPLY, -1))
     except Exception:
         _logger.exception(f"failed to handle delete replies for {obj_id}")
 

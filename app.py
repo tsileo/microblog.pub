@@ -258,7 +258,15 @@ def proxy(scheme: str, url: str) -> Any:
         k: v
         for k, v in dict(resp.raw.headers).items()
         if k.lower()
-        in ["content-type", "etag", "cache-control", "expires", "date", "last-modified"]
+        in [
+            "content-length",
+            "content-type",
+            "etag",
+            "cache-control",
+            "expires",
+            "date",
+            "last-modified",
+        ]
     }
     return Response(data(), headers=resp_headers)
 

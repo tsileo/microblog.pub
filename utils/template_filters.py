@@ -95,7 +95,7 @@ def clean_html(html):
     try:
         return bleach.clean(html, tags=ALLOWED_TAGS, strip=True)
     except Exception:
-        return ""
+        return "failed to clean HTML"
 
 
 @filters.app_template_filter()

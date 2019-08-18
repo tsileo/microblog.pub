@@ -410,20 +410,6 @@ class MicroblogPubBackend(Backend):
 
         return data
 
-    def set_post_to_remote_inbox(self, cb):
-        self.post_to_remote_inbox_cb = cb
-
-    def _handle_replies_delete(
-        self, as_actor: ap.Person, in_reply_to: Optional[str]
-    ) -> None:
-        if not in_reply_to:
-            pass
-
-        DB.activities.update_one(
-            {"activity.object.id": in_reply_to},
-            {"$inc": {"meta.count_reply": -1, "meta.count_direct_reply": -1}},
-        )
-
 
 def embed_collection(total_items, first_page_id):
     """Helper creating a root OrderedCollection with a link to the first page."""
