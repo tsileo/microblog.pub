@@ -191,7 +191,7 @@ def admin_lookup() -> _Response:
         print(data)
         app.logger.debug(data.to_dict())
     return render_template(
-        "lookup.html", data=data, meta=meta, url=request.form.get("url")
+        "lookup.html", data=data, meta=meta, url=request.args.get("url")
     )
 
 
