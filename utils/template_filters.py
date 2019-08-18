@@ -15,6 +15,7 @@ from little_boxes.activitypub import _to_list
 from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import ActivityNotFoundError
 
+from config import BASE_URL
 from config import EMOJI_TPL
 from config import ID
 from config import MEDIA_CACHE
@@ -249,6 +250,8 @@ def _get_file_url(url, size, kind) -> str:
 
     # MEDIA_CACHE.cache(url, kind)
     _logger.error(f"cache not available for {url}/{size}/{kind}")
+    if url.startswith(BASE_URL):
+        return url
     return f"/p/{url}"
 
 

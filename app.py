@@ -4,6 +4,7 @@ import os
 import traceback
 from datetime import datetime
 from typing import Any
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import requests
@@ -242,6 +243,7 @@ def proxy(url: str) -> Any:
         for k, v in dict(request.headers).items()
         if k.lower() not in ["host", "cookie"]
     }
+    req_headers["Host"] = urlparse(url).netloc
     resp = requests.get(url, stream=True, headers=req_headers)
     app.logger.info(f"proxied req {url}: {resp!r}")
 
