@@ -166,8 +166,13 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         actor.has_type(ap.ActivityType.APPLICATION)
         and actor.id.endswith("/relay")
         and activity.has_type(ap.ActivityType.ANNOUNCE)
-        and not find_one_activity(by_object_id(activity.get_object_id()))
-        and not DB.replies.find_one({"remote_id": activity.id})
+        and not find_one_activity(
+            {
+                **by_object_id(activity.get_object_id()),
+                **by_type(ap.ActivityType.CREATE),
+            }
+        )
+        and not DB.replies.find_one(by_remote_id(activity.get_object_id()))
     ):
         Tasks.process_reply(activity.get_object_id())
         return
@@ -714,6 +719,15 @@ def update_cached_actor(actor: ap.BaseActivity) -> None:
                 MetaKey.OBJECT_ACTOR: actor.to_dict(embed=True),
                 MetaKey.OBJECT_ACTOR_HASH: actor_hash,
             }
+        ),
+    )
+    DB.replies.update_many(
+        {
+            **flag(MetaKey.ACTOR_ID, actor.id),
+            **flag(MetaKey.ACTOR_HASH, {"$ne": actor_hash}),
+        },
+        upsert(
+            {MetaKey.ACTOR: actor.to_dict(embed=True), MetaKey.ACTOR_HASH: actor_hash}
         ),
     )
     # TODO(tsileo): Also update following (it's in the object)
