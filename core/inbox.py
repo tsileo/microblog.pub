@@ -92,7 +92,7 @@ def _update_process_inbox(update: ap.Update, new_meta: _NewMeta) -> None:
         )
 
     elif obj.has_type(ap.ACTOR_TYPES):
-        actor = ap.fetch_remote_activity(obj.get_actor().id, no_cache=True)
+        actor = ap.fetch_remote_activity(obj.id, no_cache=True)
         update_cached_actor(actor)
 
     else:
