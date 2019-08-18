@@ -93,7 +93,7 @@ ALLOWED_TAGS = [
 
 def clean_html(html):
     try:
-        return bleach.clean(html, tags=ALLOWED_TAGS)
+        return bleach.clean(html, tags=ALLOWED_TAGS, strip=True)
     except Exception:
         return ""
 

@@ -254,7 +254,13 @@ def proxy(scheme: str, url: str) -> Any:
         for chunk in resp.raw.stream(decode_content=False):
             yield chunk
 
-    return Response(data(), headers=dict(resp.raw.headers))
+    resp_headers = {
+        k: v
+        for k, v in dict(resp.raw.headers).items()
+        if k.lower()
+        in ["content-type", "etag", "cache-control", "expires", "date", "last-modified"]
+    }
+    return Response(data(), headers=resp_headers)
 
 
 @app.route("/media/<media_id>")
