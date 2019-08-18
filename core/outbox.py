@@ -15,7 +15,6 @@ from core.meta import by_object_id
 from core.meta import by_type
 from core.meta import inc
 from core.meta import upsert
-from core.shared import MY_PERSON
 from core.tasks import Tasks
 
 _logger = logging.getLogger(__name__)
