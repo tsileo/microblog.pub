@@ -248,11 +248,11 @@ def _get_file_url(url, size, kind) -> str:
         _FILE_URL_CACHE[k] = out
         return out
 
-    # MEDIA_CACHE.cache(url, kind)
     _logger.error(f"cache not available for {url}/{size}/{kind}")
     if url.startswith(BASE_URL):
         return url
-    return f"/p/{url}"
+    p = urlparse(url)
+    return f"/p/{p.scheme}" + p._replace(scheme="").geturl()[1:]
 
 
 @filters.app_template_filter()

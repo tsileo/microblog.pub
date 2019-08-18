@@ -236,8 +236,9 @@ def microblogpub_jsonld():
     )
 
 
-@app.route("/p/<path:url>")
-def proxy(url: str) -> Any:
+@app.route("/p/<scheme>/<path:url>")
+def proxy(scheme: str, url: str) -> Any:
+    url = f"{scheme}://{url}"
     req_headers = {
         k: v
         for k, v in dict(request.headers).items()
