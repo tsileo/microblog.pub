@@ -49,9 +49,10 @@ def jsonify(**data):
     return Response(
         response=json.dumps(data),
         headers={
+            "Cache-Control": "max-age=0, private, must-revalidate",
             "Content-Type": "application/json"
             if app.debug
-            else "application/activity+json"
+            else "application/activity+json",
         },
     )
 
