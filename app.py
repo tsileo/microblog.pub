@@ -772,6 +772,11 @@ def following():
 
     if is_api_request():
         _log_sig()
+        if config.HIDE_FOLLOWING:
+            return jsonify(
+                **activitypub.simple_build_ordered_collection("following", [])
+            )
+
         return jsonify(
             **activitypub.build_ordered_collection(
                 DB.activities,

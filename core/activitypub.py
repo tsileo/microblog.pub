@@ -24,6 +24,7 @@ from little_boxes.httpsig import HTTPSigAuth
 
 from config import BASE_URL
 from config import DB
+from config import DEFAULT_CTX
 from config import EXTRA_INBOXES
 from config import ID
 from config import KEY
@@ -538,7 +539,7 @@ def embed_collection(total_items, first_page_id):
 
 def simple_build_ordered_collection(col_name, data):
     return {
-        "@context": ap.COLLECTION_CTX,
+        "@context": DEFAULT_CTX,
         "id": BASE_URL + "/" + col_name,
         "totalItems": len(data),
         "type": ap.ActivityType.ORDERED_COLLECTION.value,
