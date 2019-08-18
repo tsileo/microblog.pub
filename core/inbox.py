@@ -52,7 +52,13 @@ def _delete_process_inbox(delete: ap.Delete, new_meta: _NewMeta) -> None:
                 )
             )
             if in_reply_to:
-                DB.activities.update_one(post_query, inc(MetaKey.COUNT_REPLY, -1))
+                DB.activities.update_one(
+                    {**by_object_id(in_reply_to), **by_type(ap.ActivityType.CREATE)},
+                    inc(MetaKey.COUNT_REPLY, -1),
+                )
+                DB.replies.update_one(
+                    by_remote_id(in_reply_to), inc(MetaKey.COUNT_REPLY, -1)
+                )
     except Exception:
         _logger.exception(f"failed to handle delete replies for {obj_id}")
 
