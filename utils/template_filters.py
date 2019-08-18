@@ -249,7 +249,7 @@ def _get_file_url(url, size, kind) -> str:
 
     # MEDIA_CACHE.cache(url, kind)
     _logger.error(f"cache not available for {url}/{size}/{kind}")
-    return url
+    return f"/p/{url}"
 
 
 @filters.app_template_filter()

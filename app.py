@@ -3,8 +3,10 @@ import logging
 import os
 import traceback
 from datetime import datetime
+from typing import Any
 from uuid import uuid4
 
+import requests
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from flask import Flask
@@ -226,10 +228,28 @@ def robots_txt():
 
 @app.route("/microblogpub-0.0.jsonld")
 def microblogpub_jsonld():
+    """Returns our AP context (embedded in activities @context)."""
     return Response(
         response=json.dumps(jsonld.MICROBLOGPUB),
         headers={"Content-Type": "application/ld+json"},
     )
+
+
+@app.route("/p/<path:url>")
+def proxy(url: str) -> Any:
+    req_headers = {
+        k: v
+        for k, v in dict(request.headers).items()
+        if k.lower() not in ["host", "cookie"]
+    }
+    resp = requests.get(url, stream=True, headers=req_headers)
+    app.logger.info(f"proxied req {url}: {resp!r}")
+
+    def data():
+        for chunk in resp.raw.stream(decode_content=False):
+            yield chunk
+
+    return Response(data(), headers=dict(resp.raw.headers))
 
 
 @app.route("/media/<media_id>")
