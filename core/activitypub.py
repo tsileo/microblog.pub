@@ -40,6 +40,7 @@ from core.meta import by_type
 from core.meta import flag
 from core.meta import inc
 from core.meta import upsert
+from core.remote import server
 from core.tasks import Tasks
 from utils import now
 
@@ -174,6 +175,13 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
             }
         )
         and not DB.replies.find_one(by_remote_id(activity.get_object_id()))
+    ):
+        Tasks.process_reply(activity.get_object_id())
+        return
+
+    # Hubzilla forward activities in a Create, process them as possible replies
+    if activity.has_type(ap.ActivityType.CREATE) and server(activity.id) != server(
+        activity.get_object_id()
     ):
         Tasks.process_reply(activity.get_object_id())
         return
