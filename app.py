@@ -210,6 +210,13 @@ def _log_sig():
     sig = request.headers.get("Signature")
     if sig:
         app.logger.info(f"received an authenticated fetch: {sig}")
+        try:
+            req_verified, actor_id = verify_request(
+                request.method, request.path, request.headers, None
+            )
+            app.logger.info(f"authenticated fetch: {req_verified}: {actor_id}")
+        except Exception:
+            app.logger.exception("failed to verify authenticated fetch")
 
 
 # App routes
