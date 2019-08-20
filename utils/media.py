@@ -196,17 +196,20 @@ class MediaCache(object):
     def cache_emoji(self, url: str, iri: str) -> None:
         if self.is_emoji_cached(url):
             return
-        src, content_type = _load(url, self.user_agent)
-        with BytesIO() as buf:
-            with GzipFile(mode="wb", fileobj=buf) as g:
-                copyfileobj(src, g)
+        i = load(url, self.user_agent)
+        for size in [25]:
+            t1 = i.copy()
+            t1.thumbnail((size, size))
+            with BytesIO() as buf:
+                with GzipFile(mode="wb", fileobj=buf) as f1:
+                    t1.save(f1, format=i.format)
                 buf.seek(0)
                 self.fs.put(
                     buf,
                     url=url,
+                    size=size,
                     remote_id=iri,
-                    size=None,
-                    content_type=content_type or mimetypes.guess_type(url)[0],
+                    content_type=i.get_format_mimetype(),
                     kind=Kind.EMOJI.value,
                 )
 

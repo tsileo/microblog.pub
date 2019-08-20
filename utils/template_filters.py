@@ -99,7 +99,7 @@ def replace_custom_emojis(content, note):
     for tag in note.get("tag", []):
         if tag.get("type") == "Emoji":
             # try:
-            idx[tag["name"]] = _get_file_url(tag["icon"]["url"], None, Kind.EMOJI)
+            idx[tag["name"]] = _get_file_url(tag["icon"]["url"], 25, Kind.EMOJI)
 
     for emoji_name, emoji_url in idx.items():
         content = content.replace(
