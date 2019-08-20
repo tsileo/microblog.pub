@@ -258,7 +258,7 @@ def proxy(scheme: str, url: str) -> Any:
     }
     req_headers["Host"] = urlparse(url).netloc
     resp = requests.get(url, stream=True, headers=req_headers)
-    app.logger.info(f"proxied req {url}: {resp!r}")
+    app.logger.info(f"proxied req {url} {req_headers}: {resp!r}")
 
     def data():
         for chunk in resp.raw.stream(decode_content=False):
@@ -278,7 +278,7 @@ def proxy(scheme: str, url: str) -> Any:
             "last-modified",
         ]
     }
-    return Response(data(), headers=resp_headers)
+    return Response(data(), headers=resp_headers, status=resp.status_code)
 
 
 @app.route("/media/<media_id>")
