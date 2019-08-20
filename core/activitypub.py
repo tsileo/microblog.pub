@@ -179,7 +179,16 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         Tasks.process_reply(activity.get_object_id())
         return
 
-    # Hubzilla forward activities in a Create, process them as possible replies
+    # Hubzilla sends Update with the same ID as the actor, and it poisons the cache
+    if (
+        activity.has_type(ap.ActivityType.UPDATE)
+        and activity.id == activity.get_object_id()
+    ):
+        # Start a task to update the cached actor
+        Tasks.cache_actor(activity.id)
+        return
+
+    # Hubzilla forwards activities in a Create, process them as possible replies
     if activity.has_type(ap.ActivityType.CREATE) and server(activity.id) != server(
         activity.get_object_id()
     ):
