@@ -32,6 +32,9 @@
 {% for emoji in emojis %}
 <span class="ji">{{ emoji | emojify | safe }}</span>
 {% endfor %}
+{% for emoji in custom_emojis.values() %}
+<span class="ji"><img src="{{emoji.get_icon_url()}}" alt="{{emoji.name}}" title="{{emoji.name}}" class="custom-emoji"></span>
+{% endfor %}
 </p>
 
 <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on">{{ content }}</textarea>

@@ -3,6 +3,7 @@ import os
 import subprocess
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 
 import yaml
 from itsdangerous import JSONWebSignatureSerializer
@@ -11,10 +12,13 @@ from little_boxes.activitypub import DEFAULT_CTX as AP_DEFAULT_CTX
 from pymongo import MongoClient
 
 import sass
+from utils.emojis import _load_emojis
 from utils.key import KEY_DIR
 from utils.key import get_key
 from utils.key import get_secret_key
 from utils.media import MediaCache
+
+ROOT_DIR = Path(__file__).parent.absolute()
 
 
 class ThemeStyle(Enum):
@@ -75,7 +79,7 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
 
 DEFAULT_CTX = [
     AP_DEFAULT_CTX,
-    f"{BASE_URL}/microblogpub-0.0.jsonld",
+    f"{BASE_URL}/microblogpub-0.1.jsonld",
     {"@language": "und"},
 ]
 
@@ -164,3 +168,6 @@ BLACKLIST = conf.get("blacklist", [])
 
 # By default, we keep 14 of inbox data ; outbox is kept forever (along with bookmarked stuff, outbox replies, liked...)
 DAYS_TO_KEEP = 14
+
+# Load custom emojis (stored in static/emojis)
+_load_emojis(ROOT_DIR, BASE_URL)

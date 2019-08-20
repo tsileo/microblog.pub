@@ -91,6 +91,25 @@ ALLOWED_TAGS = [
 ]
 
 
+@filters.app_template_filter()
+def replace_custom_emojis(content, note):
+    print("\n" * 50)
+    print("custom_replace", note)
+    idx = {}
+    for tag in note.get("tag", []):
+        if tag.get("type") == "Emoji":
+            # try:
+            idx[tag["name"]] = _get_file_url(tag["icon"]["url"], None, Kind.EMOJI)
+
+    for emoji_name, emoji_url in idx.items():
+        content = content.replace(
+            emoji_name,
+            f'<img class="custom-emoji" src="{emoji_url}" title="{emoji_name}" alt="{emoji_name}">',
+        )
+
+    return content
+
+
 def clean_html(html):
     try:
         return bleach.clean(html, tags=ALLOWED_TAGS, strip=True)
@@ -237,6 +256,9 @@ _FILE_URL_CACHE = LRUCache(4096)
 
 
 def _get_file_url(url, size, kind) -> str:
+    if url.startswith(BASE_URL):
+        return url
+
     k = (url, size, kind)
     cached = _FILE_URL_CACHE.get(k)
     if cached:
@@ -249,8 +271,6 @@ def _get_file_url(url, size, kind) -> str:
         return out
 
     _logger.error(f"cache not available for {url}/{size}/{kind}")
-    if url.startswith(BASE_URL):
-        return url
     p = urlparse(url)
     return f"/p/{p.scheme}" + p._replace(scheme="").geturl()[1:]
 

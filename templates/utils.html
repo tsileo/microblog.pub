@@ -8,7 +8,7 @@
 <img class="actor-icon" src="{{ follower.icon.url | get_actor_icon_url(size) }}" style="width:{{ size }}px;">{% endif %}
 </span>
 <div class="actor-inline">
-<div style="font-weight:bold">{{ follower.name or follower.preferredUsername }}</div>
+<div style="font-weight:bold">{{ (follower.name or follower.preferredUsername) | clean | replace_custom_emojis(follower) | safe }}</div>
 <small class="lcolor">@{{ follower.preferredUsername }}@{{ follower | url_or_id | get_url | domain }}</small>
 </div>
 </a>
@@ -53,8 +53,9 @@
 
 <div class="note-wrapper">
     <div style="clear:both;height:20px;">
-	<a href="{{ actor | url_or_id | get_url }}" style="margin:0;text-decoration:none;margin: 0;text-decoration: none;display: block;width: 75%;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;float: left;" class="no-hover"><strong>{{ actor.name or actor.preferredUsername }}</strong>
-        <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername }}</span>{% else %}{{ actor.preferredUsername }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span></a>
+	<a href="{{ actor | url_or_id | get_url }}" style="margin:0;text-decoration:none;margin: 0;text-decoration: none;display: block;width: 75%;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;float: left;" class="no-hover">
+        <strong>{{ (actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</strong>
+        <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}</span>{% else %}{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span></a>
 
 	{% if not perma %}
 	<span style="float:right;width: 25%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
@@ -64,7 +65,7 @@
 	{% endif %}
     </div>
 
-	{% if obj.summary %}<p class="p-summary">{{ obj.summary | clean | safe }}</p>{% endif %}
+	{% if obj.summary %}<p class="p-summary">{{ obj.summary | clean | replace_custom_emojis(obj) | safe }}</p>{% endif %}
     {% if obj | has_type('Video') %}
     <div class="note-video">
     <video controls preload="metadata"  src="{{ obj.url | get_video_url }}" width="480">
@@ -76,7 +77,7 @@
     {% if obj | has_type(['Article', 'Page']) %}
         {{ obj.name }} <a href="{{ obj | url_or_id | get_url }}">{{ obj | url_or_id | get_url }}</a>
     {% elif obj | has_type('Question') %}
-        {{ obj.content | clean | safe }}
+        {{ obj.content | clean | replace_custom_emojis(obj) | safe }}
 
         
         <ul style="list-style:none;padding:0;">
@@ -145,7 +146,7 @@
 
 
     {% else %}
-	{{ obj.content | clean | safe }}
+	{{ obj.content | clean | replace_custom_emojis(obj) | safe }}
     {% endif %}
 	</div>
 

@@ -37,6 +37,7 @@ from core.shared import noindex
 from core.shared import p
 from core.shared import paginated_query
 from utils import now
+from utils.emojis import EMOJIS_BY_NAME
 from utils.lookup import lookup
 
 blueprint = flask.Blueprint("admin", __name__)
@@ -252,6 +253,7 @@ def admin_new() -> _Response:
         thread=thread,
         visibility=ap.Visibility,
         emojis=config.EMOJIS.split(" "),
+        custom_emojis=EMOJIS_BY_NAME,
     )
 
 

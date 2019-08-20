@@ -110,9 +110,11 @@ def _create_process_inbox(create: ap.Create, new_meta: _NewMeta) -> None:
     _logger.info(f"process_inbox activity={create!r}")
     # If it's a `Quesiion`, trigger an async task for updating it later (by fetching the remote and updating the
     # local copy)
-    question = create.get_object()
-    if question.has_type(ap.ActivityType.QUESTION):
-        Tasks.fetch_remote_question(question)
+    obj = create.get_object()
+    if obj.has_type(ap.ActivityType.QUESTION):
+        Tasks.fetch_remote_question(obj)
+
+    Tasks.cache_emojis(obj)
 
     handle_replies(create)
 

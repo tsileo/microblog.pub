@@ -147,6 +147,7 @@ def task_cache_object() -> _Response:
         activity = ap.fetch_remote_activity(iri)
         app.logger.info(f"activity={activity!r}")
         obj = activity.get_object()
+        Tasks.cache_emojis(obj)
 
         # Refetch the object actor (without cache)
         obj_actor = ap.fetch_remote_activity(obj.get_actor().id, no_cache=True)
@@ -361,6 +362,22 @@ def task_cache_actor_icon() -> _Response:
         MEDIA_CACHE.cache_actor_icon(icon_url)
     except Exception as exc:
         err = f"failed to cache actor icon {icon_url} for {actor_iri}"
+        app.logger.exception(err)
+        raise TaskError() from exc
+
+    return ""
+
+
+@blueprint.route("/task/cache_emoji", methods=["POST"])
+def task_cache_emoji() -> _Response:
+    task = p.parse(flask.request)
+    app.logger.info(f"task={task!r}")
+    iri = task.payload["iri"]
+    url = task.payload["url"]
+    try:
+        MEDIA_CACHE.cache_emoji(url, iri)
+    except Exception as exc:
+        err = f"failed to cache emoji {url} at {iri}"
         app.logger.exception(err)
         raise TaskError() from exc
 

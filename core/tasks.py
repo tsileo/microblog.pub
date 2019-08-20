@@ -4,6 +4,7 @@ from datetime import timezone
 from typing import Any
 from typing import Dict
 
+from little_boxes import activitypub as ap
 from poussetaches import PousseTaches
 
 from config import MEDIA_CACHE
@@ -32,7 +33,21 @@ class Tasks:
         if MEDIA_CACHE.is_actor_icon_cached(icon_url):
             return None
 
-        p.push({"icon_url": icon_url, "actor_iri": actor_iri}, "/task/cache_actor_icon")
+    @staticmethod
+    def cache_emoji(url: str, iri: str) -> None:
+        if MEDIA_CACHE.is_emoji_cached(iri):
+            return None
+
+        p.push({"url": url, "iri": iri}, "/task/cache_emoji")
+
+    @staticmethod
+    def cache_emojis(activity: ap.BaseActivity) -> None:
+        for emoji in activity.get_emojis():
+            try:
+                Tasks.cache_emoji(emoji.get_icon_url(), emoji.id)
+            except KeyError:
+                # TODO(tsileo): log invalid emoji
+                pass
 
     @staticmethod
     def post_to_remote_inbox(payload: str, recp: str) -> None:

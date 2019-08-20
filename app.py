@@ -70,6 +70,7 @@ from core.shared import login_required
 from core.shared import noindex
 from core.shared import paginated_query
 from utils.blacklist import is_blacklisted
+from utils.emojis import EMOJIS
 from utils.key import get_secret_key
 from utils.template_filters import filters
 
@@ -214,7 +215,9 @@ def _log_sig():
             req_verified, actor_id = verify_request(
                 request.method, request.path, request.headers, None
             )
-            app.logger.info(f"authenticated fetch: {req_verified}: {actor_id}")
+            app.logger.info(
+                f"authenticated fetch: {req_verified}: {actor_id} {request.headers}"
+            )
         except Exception:
             app.logger.exception("failed to verify authenticated fetch")
 
@@ -235,7 +238,7 @@ def robots_txt():
     return Response(response=ROBOTS_TXT, headers={"Content-Type": "text/plain"})
 
 
-@app.route("/microblogpub-0.0.jsonld")
+@app.route("/microblogpub-0.1.jsonld")
 def microblogpub_jsonld():
     """Returns our AP context (embedded in activities @context)."""
     return Response(
@@ -495,6 +498,13 @@ def outbox():
     activity_id = post_to_outbox(activity)
 
     return Response(status=201, headers={"Location": activity_id})
+
+
+@app.route("/emoji/<name>")
+def ap_emoji(name):
+    if name in EMOJIS:
+        return jsonify(**{**EMOJIS[name].to_dict(), "@context": config.DEFAULT_CTX})
+    abort(404)
 
 
 @app.route("/outbox/<item_id>")

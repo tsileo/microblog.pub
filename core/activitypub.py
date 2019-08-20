@@ -628,6 +628,7 @@ def update_cached_actor(actor: ap.BaseActivity) -> None:
     #     {"meta.object_id": actor.id}, {"$set": {"meta.object": actor.to_dict(embed=True)}}
     # )
     _cache_actor_icon(actor)
+    Tasks.cache_emojis(actor)
 
 
 def handle_question_reply(create: ap.Create, question: ap.Question) -> None:

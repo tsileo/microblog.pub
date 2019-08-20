@@ -12,6 +12,7 @@ MICROBLOGPUB = {
             "toot": "http://joinmastodon.org/ns#",
             "totalItems": "as:totalItems",
             "value": "schema:value",
+            "Emoji": "toot:Emoji",
         },
     ]
 }

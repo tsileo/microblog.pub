@@ -43,6 +43,7 @@ from core.shared import _Response
 from core.shared import csrf
 from core.shared import login_required
 from core.tasks import Tasks
+from utils import emojis
 from utils import now
 
 blueprint = flask.Blueprint("api", __name__)
@@ -398,6 +399,9 @@ def api_new_note() -> _Response:
 
     content, tags = parse_markdown(source)
 
+    # Check for custom emojis
+    tags = tags + emojis.tags(content)
+
     to: List[str] = []
     cc: List[str] = []
 
@@ -467,6 +471,8 @@ def api_new_question() -> _Response:
         raise ValueError("missing content")
 
     content, tags = parse_markdown(source)
+    tags = tags + emojis.tags(content)
+
     cc = [ID + "/followers"]
 
     for tag in tags:

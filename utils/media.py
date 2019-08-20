@@ -5,8 +5,11 @@ from enum import unique
 from functools import lru_cache
 from gzip import GzipFile
 from io import BytesIO
+from shutil import copyfileobj
 from typing import Any
 from typing import Dict
+from typing import Optional
+from typing import Tuple
 
 import gridfs
 import piexif
@@ -31,13 +34,26 @@ def is_video(filename):
     return False
 
 
-def load(url: str, user_agent: str) -> Image:
+def _load(url: str, user_agent: str) -> Tuple[BytesIO, Optional[str]]:
     """Initializes a `PIL.Image` from the URL."""
+    out = BytesIO()
     with requests.get(url, stream=True, headers={"User-Agent": user_agent}) as resp:
         resp.raise_for_status()
 
         resp.raw.decode_content = True
-        return Image.open(BytesIO(resp.raw.read()))
+        while 1:
+            buf = resp.raw.read()
+            if not buf:
+                break
+            out.write(buf)
+    out.seek(0)
+    return out, resp.headers.get("content-type")
+
+
+def load(url: str, user_agent: str) -> Image:
+    """Initializes a `PIL.Image` from the URL."""
+    out, _ = _load(url, user_agent)
+    return Image.open(out)
 
 
 def to_data_uri(img: Image) -> str:
@@ -54,6 +70,7 @@ class Kind(Enum):
     ACTOR_ICON = "actor_icon"
     UPLOAD = "upload"
     OG_IMAGE = "og"
+    EMOJI = "emoji"
 
 
 class MediaCache(object):
@@ -171,6 +188,26 @@ class MediaCache(object):
                     size=size,
                     content_type=i.get_format_mimetype(),
                     kind=Kind.ACTOR_ICON.value,
+                )
+
+    def is_emoji_cached(self, url: str) -> bool:
+        return bool(self.fs.find_one({"url": url, "kind": Kind.EMOJI.value}))
+
+    def cache_emoji(self, url: str, iri: str) -> None:
+        if self.is_emoji_cached(url):
+            return
+        src, content_type = _load(url, self.user_agent)
+        with BytesIO() as buf:
+            with GzipFile(mode="wb", fileobj=buf) as g:
+                copyfileobj(src, g)
+                buf.seek(0)
+                self.fs.put(
+                    buf,
+                    url=url,
+                    remote_id=iri,
+                    size=None,
+                    content_type=content_type or mimetypes.guess_type(url)[0],
+                    kind=Kind.EMOJI.value,
                 )
 
     def save_upload(self, obuf: BytesIO, filename: str) -> str:
