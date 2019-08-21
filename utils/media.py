@@ -5,7 +5,6 @@ from enum import unique
 from functools import lru_cache
 from gzip import GzipFile
 from io import BytesIO
-from shutil import copyfileobj
 from typing import Any
 from typing import Dict
 from typing import Optional
