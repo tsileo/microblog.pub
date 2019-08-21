@@ -32,9 +32,9 @@ from core.meta import MetaKey
 from core.meta import by_object_id
 from core.meta import by_remote_id
 from core.meta import by_type
-from core.meta import flag
 from core.meta import inc
 from core.meta import upsert
+from core.notifications import _NewMeta
 from core.notifications import set_inbox_flags
 from core.outbox import process_outbox
 from core.remote import track_failed_send
@@ -44,7 +44,6 @@ from core.shared import _Response
 from core.shared import back
 from core.shared import p
 from core.tasks import Tasks
-from utils import now
 from utils import opengraph
 from utils.media import is_video
 
@@ -643,12 +642,7 @@ def task_process_new_activity() -> _Response:
         activity = ap.fetch_remote_activity(iri)
         app.logger.info(f"activity={activity!r}")
 
-        flags = {}
-
-        if not activity.published:
-            flags.update(flag(MetaKey.PUBLISHED, now()))
-        else:
-            flags.update(flag(MetaKey.PUBLISHED, activity.published))
+        flags: _NewMeta = {}
 
         set_inbox_flags(activity, flags)
         app.logger.info(f"a={activity}, flags={flags!r}")

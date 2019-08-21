@@ -39,6 +39,10 @@ class MetaKey(Enum):
     PUBLIC = "public"
     THREAD_ROOT_PARENT = "thread_root_parent"
 
+    SERVER = "server"
+    VISIBILITY = "visibility"
+    OBJECT_VISIBILITY = "object_visibility"
+
     DELETED = "deleted"
     BOOSTED = "boosted"
     LIKED = "liked"

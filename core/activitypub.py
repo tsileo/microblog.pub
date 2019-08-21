@@ -123,15 +123,18 @@ def save(box: Box, activity: ap.BaseActivity) -> None:
             "type": _to_list(activity.type),
             "remote_id": activity.id,
             "meta": {
-                "undo": False,
-                "deleted": False,
-                "public": is_public,
-                "server": urlparse(activity.id).netloc,
-                "visibility": visibility.name,
-                "actor_id": actor_id,
-                "object_id": object_id,
-                "object_visibility": object_visibility,
-                "poll_answer": False,
+                MetaKey.UNDO.value: False,
+                MetaKey.DELETED.value: False,
+                MetaKey.PUBLIC.value: is_public,
+                MetaKey.SERVER.value: urlparse(activity.id).netloc,
+                MetaKey.VISIBILITY.value: visibility.name,
+                MetaKey.ACTOR_ID.value: actor_id,
+                MetaKey.OBJECT_ID.value: object_id,
+                MetaKey.OBJECT_VISIBILITY.value: object_visibility,
+                MetaKey.POLL_ANSWER.value: False,
+                MetaKey.PUBLISHED.value: activity.published
+                if activity.published
+                else now(),
             },
         }
     )
