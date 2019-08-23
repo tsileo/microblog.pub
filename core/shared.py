@@ -3,8 +3,6 @@ import json
 import os
 from functools import wraps
 from typing import Any
-from typing import Dict
-from typing import Tuple
 
 import flask
 from bson.objectid import ObjectId
