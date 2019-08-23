@@ -1,7 +1,10 @@
+import gzip
 import json
 import os
 from functools import wraps
 from typing import Any
+from typing import Dict
+from typing import Tuple
 
 import flask
 from bson.objectid import ObjectId
@@ -43,12 +46,27 @@ ap.use_backend(back)
 MY_PERSON = ap.Person(**ME)
 
 
+def build_resp(resp):
+    """Encode the response to gzip if supported by the client."""
+    headers = {}
+    accept_encoding = request.headers.get("Accept-Encoding", "")
+    if "gzip" in accept_encoding.lower():
+        return (
+            gzip.compress(resp.encode(), compresslevel=6),
+            {"Vary": "Accept-Encoding", "Content-Encoding": "gzip"},
+        )
+
+    return resp, headers
+
+
 def jsonify(**data):
     if "@context" not in data:
         data["@context"] = config.DEFAULT_CTX
+    resp, headers = build_resp(json.dumps(data))
     return Response(
-        response=json.dumps(data),
+        response=resp,
         headers={
+            **headers,
             "Cache-Control": "max-age=0, private, must-revalidate",
             "Content-Type": "application/json"
             if app.debug
