@@ -1,6 +1,7 @@
 import gzip
 import json
 import os
+from functools import lru_cache
 from functools import wraps
 from typing import Any
 
@@ -44,6 +45,7 @@ ap.use_backend(back)
 MY_PERSON = ap.Person(**ME)
 
 
+@lru_cache(512)
 def build_resp(resp):
     """Encode the response to gzip if supported by the client."""
     headers = {}
