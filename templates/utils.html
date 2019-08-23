@@ -185,6 +185,8 @@
     <a href="{{ a.url | get_attachment_url(None) }}"><img src="{{a.url | get_attachment_url(720) }}" class="img-attachment"></a>
     {% elif (a.mediaType and a.mediaType.startswith("video/")) %}
     <li><video controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" width="480"></video></li>
+    {% elif (a.mediaType and a.mediaType.startswith("audio/")) %}
+    <li><audio controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}"></audio></li>
 	{% else %}
 	<li><a href="{{a.url }}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
 	{% endif  %}
@@ -320,7 +322,8 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item" onclick="return confirm('Confirm the block action?');">block</button>
 </form>
-{% endif %}
+<!--<a class="bar-item" href="/admin/profile?id={{actor.id}}">profile</a>
+-->{% endif %}
 
 {% endif %}
 
