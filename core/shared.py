@@ -53,7 +53,7 @@ def build_resp(resp):
     if "gzip" in accept_encoding.lower():
         return (
             gzip.compress(resp.encode(), compresslevel=6),
-            {"Vary": "Accept-Encoding", "Content-Encoding": "gzip"},
+            {**headers, "Vary": "Accept-Encoding", "Content-Encoding": "gzip"},
         )
 
     return resp, headers
