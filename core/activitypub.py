@@ -470,7 +470,7 @@ def build_ordered_collection(
         # Returns an empty page if there's a cursor
         if cursor:
             return {
-                "@context": ap.COLLECTION_CTX,
+                "@context": DEFAULT_CTX,
                 "type": ap.ActivityType.ORDERED_COLLECTION_PAGE.value,
                 "id": BASE_URL + "/" + col_name + "?cursor=" + cursor,
                 "partOf": BASE_URL + "/" + col_name,
@@ -478,7 +478,7 @@ def build_ordered_collection(
                 "orderedItems": [],
             }
         return {
-            "@context": ap.COLLECTION_CTX,
+            "@context": DEFAULT_CTX,
             "id": BASE_URL + "/" + col_name,
             "totalItems": 0,
             "type": ap.ActivityType.ORDERED_COLLECTION.value,
@@ -496,7 +496,7 @@ def build_ordered_collection(
     # No cursor, this is the first page and we return an OrderedCollection
     if not cursor:
         resp = {
-            "@context": ap.COLLECTION_CTX,
+            "@context": DEFAULT_CTX,
             "id": f"{BASE_URL}/{col_name}",
             "totalItems": total_items,
             "type": ap.ActivityType.ORDERED_COLLECTION.value,
@@ -521,7 +521,7 @@ def build_ordered_collection(
 
     # If there's a cursor, then we return an OrderedCollectionPage
     resp = {
-        "@context": ap.COLLECTION_CTX,
+        "@context": DEFAULT_CTX,
         "type": ap.ActivityType.ORDERED_COLLECTION_PAGE.value,
         "id": BASE_URL + "/" + col_name + "?cursor=" + start_cursor,
         "totalItems": total_items,
