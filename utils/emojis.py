@@ -11,8 +11,8 @@ from little_boxes import activitypub as ap
 
 EMOJI_REGEX = re.compile(r"(:[\d\w]+:)")
 
-EMOJIS: Dict[str, ap.Emoji] = {}
-EMOJIS_BY_NAME: Dict[str, ap.Emoji] = {}
+EMOJIS: Dict[str, Dict[str, Any]] = {}
+EMOJIS_BY_NAME: Dict[str, Dict[str, Any]] = {}
 
 
 def _load_emojis(root_dir: Path, base_url: str) -> None:
@@ -22,7 +22,8 @@ def _load_emojis(root_dir: Path, base_url: str) -> None:
         mt = mimetypes.guess_type(emoji.name)[0]
         if mt and mt.startswith("image/"):
             name = emoji.name.split(".")[0]
-            ap_emoji = ap.Emoji(
+            ap_emoji = dict(
+                type=ap.ActivityType.EMOJI.value,
                 name=f":{name}:",
                 updated=ap.format_datetime(datetime.fromtimestamp(0.0).astimezone()),
                 id=f"{base_url}/emoji/{name}",
@@ -33,7 +34,7 @@ def _load_emojis(root_dir: Path, base_url: str) -> None:
                 },
             )
             EMOJIS[emoji.name] = ap_emoji
-            EMOJIS_BY_NAME[ap_emoji.name] = ap_emoji
+            EMOJIS_BY_NAME[ap_emoji["name"]] = ap_emoji
 
 
 def tags(content: str) -> List[Dict[str, Any]]:
@@ -41,7 +42,7 @@ def tags(content: str) -> List[Dict[str, Any]]:
     added: Set[str] = set()
     for e in re.findall(EMOJI_REGEX, content):
         if e not in added and e in EMOJIS_BY_NAME:
-            tags.append(EMOJIS_BY_NAME[e].to_dict())
+            tags.append(EMOJIS_BY_NAME[e])
             added.add(e)
 
     return tags
