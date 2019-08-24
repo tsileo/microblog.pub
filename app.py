@@ -72,6 +72,7 @@ from core.shared import noindex
 from core.shared import paginated_query
 from utils.blacklist import is_blacklisted
 from utils.emojis import EMOJIS
+from utils.highlight import HIGHLIGHT_CSS
 from utils.key import get_secret_key
 from utils.template_filters import filters
 
@@ -153,6 +154,7 @@ def inject_config():
         else 0,
         me=ME,
         base_url=config.BASE_URL,
+        highlight_css=HIGHLIGHT_CSS,
     )
 
 

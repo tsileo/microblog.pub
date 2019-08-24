@@ -21,6 +21,7 @@ from config import ID
 from config import MEDIA_CACHE
 from core.activitypub import _answer_key
 from utils import parse_datetime
+from utils.highlight import highlight
 from utils.media import Kind
 from utils.media import _is_img
 
@@ -45,6 +46,11 @@ def visibility(v: str) -> str:
 @filters.app_template_filter()
 def visibility_is_public(v: str) -> bool:
     return v in [ap.Visibility.PUBLIC.name, ap.Visibility.UNLISTED.name]
+
+
+@filters.app_template_filter()
+def code_highlight(content):
+    return highlight(content)
 
 
 @filters.app_template_filter()
