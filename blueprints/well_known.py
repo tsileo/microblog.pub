@@ -1,9 +1,7 @@
-import json
 import mimetypes
 from typing import Any
 
 import flask
-from flask import Response
 from flask import abort
 from flask import request
 from little_boxes import activitypub as ap
@@ -11,6 +9,7 @@ from little_boxes import activitypub as ap
 import config
 from config import DB
 from core.meta import Box
+from core.shared import jsonify
 
 blueprint = flask.Blueprint("well_known", __name__)
 
@@ -45,22 +44,21 @@ def wellknown_webfinger() -> Any:
         ],
     }
 
-    return Response(
-        response=json.dumps(out),
-        headers={"Content-Type": "application/jrd+json; charset=utf-8"},
-    )
+    return jsonify(out, "application/jrd+json; charset=utf-8")
 
 
 @blueprint.route("/.well-known/nodeinfo")
 def wellknown_nodeinfo() -> Any:
     """Exposes the NodeInfo endpoint (http://nodeinfo.diaspora.software/)."""
-    return flask.jsonify(
-        links=[
-            {
-                "rel": "http://nodeinfo.diaspora.software/ns/schema/2.1",
-                "href": f"{config.ID}/nodeinfo",
-            }
-        ]
+    return jsonify(
+        {
+            "links": [
+                {
+                    "rel": "http://nodeinfo.diaspora.software/ns/schema/2.1",
+                    "href": f"{config.ID}/nodeinfo",
+                }
+            ]
+        }
     )
 
 
@@ -73,29 +71,25 @@ def nodeinfo() -> Any:
         "type": {"$in": [ap.ActivityType.CREATE.value, ap.ActivityType.ANNOUNCE.value]},
     }
 
-    response = json.dumps(
-        {
-            "version": "2.1",
-            "software": {
-                "name": "microblogpub",
-                "version": config.VERSION,
-                "repository": "https://github.com/tsileo/microblog.pub",
-            },
-            "protocols": ["activitypub"],
-            "services": {"inbound": [], "outbound": []},
-            "openRegistrations": False,
-            "usage": {"users": {"total": 1}, "localPosts": DB.activities.count(q)},
-            "metadata": {
-                "nodeName": f"@{config.USERNAME}@{config.DOMAIN}",
-                "version": config.VERSION,
-                "versionDate": config.VERSION_DATE,
-            },
-        }
-    )
-
-    return Response(
-        headers={
-            "Content-Type": "application/json; profile=http://nodeinfo.diaspora.software/ns/schema/2.1#"
+    out = {
+        "version": "2.1",
+        "software": {
+            "name": "microblogpub",
+            "version": config.VERSION,
+            "repository": "https://github.com/tsileo/microblog.pub",
         },
-        response=response,
+        "protocols": ["activitypub"],
+        "services": {"inbound": [], "outbound": []},
+        "openRegistrations": False,
+        "usage": {"users": {"total": 1}, "localPosts": DB.activities.count(q)},
+        "metadata": {
+            "nodeName": f"@{config.USERNAME}@{config.DOMAIN}",
+            "version": config.VERSION,
+            "versionDate": config.VERSION_DATE,
+        },
+    }
+
+    return jsonify(
+        out,
+        "application/json; profile=http://nodeinfo.diaspora.software/ns/schema/2.1#",
     )

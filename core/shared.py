@@ -48,7 +48,7 @@ MY_PERSON = ap.Person(**ME)
 @lru_cache(512)
 def build_resp(resp):
     """Encode the response to gzip if supported by the client."""
-    headers = {}
+    headers = {"Cache-Control": "max-age=0, private, must-revalidate"}
     accept_encoding = request.headers.get("Accept-Encoding", "")
     if "gzip" in accept_encoding.lower():
         return (
@@ -59,15 +59,15 @@ def build_resp(resp):
     return resp, headers
 
 
+def jsonify(data, content_type="application/json"):
+    resp, headers = build_resp(json.dumps(data))
+    return Response(headers={**headers, "Content-Type": content_type}, response=resp)
+
+
 def htmlify(data):
     resp, headers = build_resp(data)
     return Response(
-        response=resp,
-        headers={
-            **headers,
-            "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "max-age=0, private, must-revalidate",
-        },
+        response=resp, headers={**headers, "Content-Type": "text/html; charset=utf-8"}
     )
 
 
@@ -76,12 +76,7 @@ def activitypubify(**data):
         data["@context"] = config.DEFAULT_CTX
     resp, headers = build_resp(json.dumps(data))
     return Response(
-        response=resp,
-        headers={
-            **headers,
-            "Cache-Control": "max-age=0, private, must-revalidate",
-            "Content-Type": "application/activity+json",
-        },
+        response=resp, headers={**headers, "Content-Type": "application/activity+json"}
     )
 
 

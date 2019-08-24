@@ -14,7 +14,6 @@ from flask import Flask
 from flask import Response
 from flask import abort
 from flask import g
-from flask import jsonify as flask_jsonify
 from flask import redirect
 from flask import render_template
 from flask import request
@@ -67,6 +66,7 @@ from core.shared import activitypubify
 from core.shared import csrf
 from core.shared import htmlify
 from core.shared import is_api_request
+from core.shared import jsonify
 from core.shared import login_required
 from core.shared import noindex
 from core.shared import paginated_query
@@ -173,7 +173,7 @@ def handle_value_error(error):
     logger.error(
         f"caught value error for {g.request_id}: {error!r}, {traceback.format_tb(error.__traceback__)}"
     )
-    response = flask_jsonify(message=error.args[0], request_id=g.request_id)
+    response = jsonify({"message": error.args[0], "request_id": g.request_id})
     response.status_code = 400
     return response
 
@@ -183,7 +183,7 @@ def handle_activitypub_error(error):
     logger.error(
         f"caught activitypub error for {g.request_id}: {error!r}, {traceback.format_tb(error.__traceback__)}"
     )
-    response = flask_jsonify({**error.to_dict(), "request_id": g.request_id})
+    response = jsonify({**error.to_dict(), "request_id": g.request_id})
     response.status_code = error.status_code
     return response
 
@@ -193,7 +193,7 @@ def handle_task_error(error):
     logger.error(
         f"caught activitypub error for {g.request_id}: {error!r}, {traceback.format_tb(error.__traceback__)}"
     )
-    response = flask_jsonify({"traceback": error.message, "request_id": g.request_id})
+    response = jsonify({"traceback": error.message, "request_id": g.request_id})
     response.status_code = 500
     return response
 

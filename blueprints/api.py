@@ -1,4 +1,3 @@
-import json
 import mimetypes
 from datetime import datetime
 from datetime import timedelta
@@ -10,7 +9,6 @@ from typing import List
 
 import flask
 from bson.objectid import ObjectId
-from flask import Response
 from flask import abort
 from flask import current_app as app
 from flask import redirect
@@ -41,6 +39,7 @@ from core.meta import _meta
 from core.shared import MY_PERSON
 from core.shared import _Response
 from core.shared import csrf
+from core.shared import jsonify
 from core.shared import login_required
 from core.tasks import Tasks
 from utils import emojis
@@ -124,7 +123,7 @@ def _user_api_response(**kwargs) -> _Response:
     if _redirect:
         return redirect(_redirect)
 
-    resp = flask.jsonify(**kwargs)
+    resp = jsonify(kwargs)
     resp.status_code = 201
     return resp
 
@@ -132,7 +131,7 @@ def _user_api_response(**kwargs) -> _Response:
 @blueprint.route("/api/key")
 @login_required
 def api_user_key() -> _Response:
-    return flask.jsonify(api_key=ADMIN_API_KEY)
+    return jsonify({"api_key": ADMIN_API_KEY})
 
 
 @blueprint.route("/note/delete", methods=["POST"])
@@ -575,25 +574,24 @@ def api_follow() -> _Response:
 def api_debug() -> _Response:
     """Endpoint used/needed for testing, only works in DEBUG_MODE."""
     if not DEBUG_MODE:
-        return flask.jsonify(message="DEBUG_MODE is off")
+        return jsonify({"message": "DEBUG_MODE is off"})
 
     if request.method == "DELETE":
         _drop_db()
-        return flask.jsonify(message="DB dropped")
+        return jsonify(dict(message="DB dropped"))
 
-    return flask.jsonify(
-        inbox=DB.activities.count({"box": Box.INBOX.value}),
-        outbox=DB.activities.count({"box": Box.OUTBOX.value}),
-        outbox_data=without_id(DB.activities.find({"box": Box.OUTBOX.value})),
+    return jsonify(
+        dict(
+            inbox=DB.activities.count({"box": Box.INBOX.value}),
+            outbox=DB.activities.count({"box": Box.OUTBOX.value}),
+            outbox_data=without_id(DB.activities.find({"box": Box.OUTBOX.value})),
+        )
     )
 
 
 @blueprint.route("/stream")
 @api_required
 def api_stream() -> _Response:
-    return Response(
-        response=json.dumps(
-            feed.build_inbox_json_feed("/api/stream", request.args.get("cursor"))
-        ),
-        headers={"Content-Type": "application/json"},
+    return jsonify(
+        feed.build_inbox_json_feed("/api/stream", request.args.get("cursor"))
     )

@@ -1,5 +1,4 @@
 import binascii
-import json
 import os
 from datetime import datetime
 from datetime import timedelta
@@ -20,6 +19,7 @@ from config import DB
 from config import JWT
 from core.shared import _get_ip
 from core.shared import htmlify
+from core.shared import jsonify
 from core.shared import login_required
 
 blueprint = flask.Blueprint("indieauth", __name__)
@@ -27,11 +27,7 @@ blueprint = flask.Blueprint("indieauth", __name__)
 
 def build_auth_resp(payload):
     if request.headers.get("Accept") == "application/json":
-        return Response(
-            status=200,
-            headers={"Content-Type": "application/json"},
-            response=json.dumps(payload),
-        )
+        return jsonify(payload)
     return Response(
         status=200,
         headers={"Content-Type": "application/x-www-form-urlencoded"},
