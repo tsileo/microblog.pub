@@ -265,7 +265,9 @@ def admin_new() -> _Response:
             thread=thread,
             visibility=ap.Visibility,
             emojis=config.EMOJIS.split(" "),
-            custom_emojis=EMOJIS_BY_NAME,
+            custom_emojis={
+                name: ap.Emoji(**dat) for name, dat in EMOJIS_BY_NAME.items()
+            },
         )
     )
 

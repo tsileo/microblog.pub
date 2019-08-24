@@ -508,9 +508,7 @@ def outbox():
 @app.route("/emoji/<name>")
 def ap_emoji(name):
     if name in EMOJIS:
-        return activitypubify(
-            **{**EMOJIS[name].to_dict(), "@context": config.DEFAULT_CTX}
-        )
+        return activitypubify(**{**EMOJIS[name], "@context": config.DEFAULT_CTX})
     abort(404)
 
 
