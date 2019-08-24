@@ -59,7 +59,19 @@ def build_resp(resp):
     return resp, headers
 
 
-def jsonify(**data):
+def htmlify(data):
+    resp, headers = build_resp(data)
+    return Response(
+        response=resp,
+        headers={
+            **headers,
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "max-age=0, private, must-revalidate",
+        },
+    )
+
+
+def activitypubify(**data):
     if "@context" not in data:
         data["@context"] = config.DEFAULT_CTX
     resp, headers = build_resp(json.dumps(data))
@@ -68,9 +80,7 @@ def jsonify(**data):
         headers={
             **headers,
             "Cache-Control": "max-age=0, private, must-revalidate",
-            "Content-Type": "application/json"
-            if app.debug
-            else "application/activity+json",
+            "Content-Type": "application/activity+json",
         },
     )
 

@@ -32,6 +32,7 @@ from core.shared import MY_PERSON
 from core.shared import _build_thread
 from core.shared import _Response
 from core.shared import csrf
+from core.shared import htmlify
 from core.shared import login_required
 from core.shared import noindex
 from core.shared import p
@@ -113,7 +114,9 @@ def admin_login() -> _Response:
         payload = u2f.begin_authentication(ID, devices)
         session["challenge"] = payload
 
-    return render_template("login.html", u2f_enabled=u2f_enabled, payload=payload)
+    return htmlify(
+        render_template("login.html", u2f_enabled=u2f_enabled, payload=payload)
+    )
 
 
 @blueprint.route("/admin", methods=["GET"])
@@ -127,47 +130,53 @@ def admin_index() -> _Response:
     }
     col_liked = DB.activities.count(q)
 
-    return render_template(
-        "admin.html",
-        instances=list(DB.instances.find()),
-        inbox_size=DB.activities.count({"box": Box.INBOX.value}),
-        outbox_size=DB.activities.count({"box": Box.OUTBOX.value}),
-        col_liked=col_liked,
-        col_followers=DB.activities.count(
-            {
-                "box": Box.INBOX.value,
-                "type": ap.ActivityType.FOLLOW.value,
-                "meta.undo": False,
-            }
-        ),
-        col_following=DB.activities.count(
-            {
-                "box": Box.OUTBOX.value,
-                "type": ap.ActivityType.FOLLOW.value,
-                "meta.undo": False,
-            }
-        ),
+    return htmlify(
+        render_template(
+            "admin.html",
+            instances=list(DB.instances.find()),
+            inbox_size=DB.activities.count({"box": Box.INBOX.value}),
+            outbox_size=DB.activities.count({"box": Box.OUTBOX.value}),
+            col_liked=col_liked,
+            col_followers=DB.activities.count(
+                {
+                    "box": Box.INBOX.value,
+                    "type": ap.ActivityType.FOLLOW.value,
+                    "meta.undo": False,
+                }
+            ),
+            col_following=DB.activities.count(
+                {
+                    "box": Box.OUTBOX.value,
+                    "type": ap.ActivityType.FOLLOW.value,
+                    "meta.undo": False,
+                }
+            ),
+        )
     )
 
 
 @blueprint.route("/admin/indieauth", methods=["GET"])
 @login_required
 def admin_indieauth() -> _Response:
-    return render_template(
-        "admin_indieauth.html",
-        indieauth_actions=DB.indieauth.find().sort("ts", -1).limit(100),
+    return htmlify(
+        render_template(
+            "admin_indieauth.html",
+            indieauth_actions=DB.indieauth.find().sort("ts", -1).limit(100),
+        )
     )
 
 
 @blueprint.route("/admin/tasks", methods=["GET"])
 @login_required
 def admin_tasks() -> _Response:
-    return render_template(
-        "admin_tasks.html",
-        success=p.get_success(),
-        dead=p.get_dead(),
-        waiting=p.get_waiting(),
-        cron=p.get_cron(),
+    return htmlify(
+        render_template(
+            "admin_tasks.html",
+            success=p.get_success(),
+            dead=p.get_dead(),
+            waiting=p.get_waiting(),
+            cron=p.get_cron(),
+        )
     )
 
 
@@ -191,8 +200,10 @@ def admin_lookup() -> _Response:
 
         print(data)
         app.logger.debug(data.to_dict())
-    return render_template(
-        "lookup.html", data=data, meta=meta, url=request.args.get("url")
+    return htmlify(
+        render_template(
+            "lookup.html", data=data, meta=meta, url=request.args.get("url")
+        )
     )
 
 
@@ -214,7 +225,7 @@ def admin_thread() -> _Response:
     tpl = "note.html"
     if request.args.get("debug"):
         tpl = "note_debug.html"
-    return render_template(tpl, thread=thread, note=data)
+    return htmlify(render_template(tpl, thread=thread, note=data))
 
 
 @blueprint.route("/admin/new", methods=["GET"])
@@ -246,14 +257,16 @@ def admin_new() -> _Response:
         content = f"@{actor.preferredUsername}@{domain} "
         thread = _build_thread(data)
 
-    return render_template(
-        "new.html",
-        reply=reply_id,
-        content=content,
-        thread=thread,
-        visibility=ap.Visibility,
-        emojis=config.EMOJIS.split(" "),
-        custom_emojis=EMOJIS_BY_NAME,
+    return htmlify(
+        render_template(
+            "new.html",
+            reply=reply_id,
+            content=content,
+            thread=thread,
+            visibility=ap.Visibility,
+            emojis=config.EMOJIS.split(" "),
+            custom_emojis=EMOJIS_BY_NAME,
+        )
     )
 
 
@@ -262,7 +275,7 @@ def admin_new() -> _Response:
 def admin_lists() -> _Response:
     lists = list(DB.lists.find())
 
-    return render_template("lists.html", lists=lists)
+    return htmlify(render_template("lists.html", lists=lists))
 
 
 @blueprint.route("/admin/notifications")
@@ -341,12 +354,14 @@ def admin_notifications() -> _Response:
         inbox_data, reverse=True, key=lambda doc: doc["_id"].generation_time
     )
 
-    return render_template(
-        "stream.html",
-        inbox_data=inbox_data,
-        older_than=older_than,
-        newer_than=newer_than,
-        nid=nid,
+    return htmlify(
+        render_template(
+            "stream.html",
+            inbox_data=inbox_data,
+            older_than=older_than,
+            newer_than=newer_than,
+            nid=nid,
+        )
     )
 
 
@@ -365,8 +380,10 @@ def admin_stream() -> _Response:
         DB.activities, q, limit=int(request.args.get("limit", 25))
     )
 
-    return render_template(
-        tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
+    return htmlify(
+        render_template(
+            tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
+        )
     )
 
 
@@ -393,8 +410,10 @@ def admin_list(name: str) -> _Response:
         DB.activities, q, limit=int(request.args.get("limit", 25))
     )
 
-    return render_template(
-        tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
+    return htmlify(
+        render_template(
+            tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
+        )
     )
 
 
@@ -413,8 +432,10 @@ def admin_bookmarks() -> _Response:
         DB.activities, q, limit=int(request.args.get("limit", 25))
     )
 
-    return render_template(
-        tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
+    return htmlify(
+        render_template(
+            tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
+        )
     )
 
 
@@ -425,7 +446,7 @@ def u2f_register():
     if request.method == "GET":
         payload = u2f.begin_registration(ID)
         session["challenge"] = payload
-        return render_template("u2f.html", payload=payload)
+        return htmlify(render_template("u2f.html", payload=payload))
     else:
         resp = json.loads(request.form.get("resp"))
         device, device_cert = u2f.complete_registration(session["challenge"], resp)
@@ -439,8 +460,10 @@ def u2f_register():
 @login_required
 def authorize_follow():
     if request.method == "GET":
-        return render_template(
-            "authorize_remote_follow.html", profile=request.args.get("profile")
+        return htmlify(
+            render_template(
+                "authorize_remote_follow.html", profile=request.args.get("profile")
+            )
         )
 
     actor = get_actor_url(request.form.get("profile"))

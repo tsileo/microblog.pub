@@ -554,9 +554,13 @@ def task_process_reply() -> _Response:
 
         root_reply = in_reply_to
 
+        # Fetch the activity reply
         reply = ap.fetch_remote_activity(in_reply_to)
         if reply.has_type(ap.ActivityType.CREATE):
             reply = reply.get_object()
+
+        # Store some metadata for the UI
+        # FIXME(tsileo): be able to display: "In reply to @user@domain.tld"?
 
         new_replies = [activity, reply]
 

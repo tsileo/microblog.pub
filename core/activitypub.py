@@ -263,6 +263,9 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
 class MicroblogPubBackend(Backend):
     """Implements a Little Boxes backend, backed by MongoDB."""
 
+    def ap_context(self) -> Any:
+        return DEFAULT_CTX
+
     def base_url(self) -> str:
         return BASE_URL
 

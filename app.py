@@ -63,9 +63,10 @@ from core.meta import is_public
 from core.meta import not_undo
 from core.shared import _build_thread
 from core.shared import _get_ip
+from core.shared import activitypubify
 from core.shared import csrf
+from core.shared import htmlify
 from core.shared import is_api_request
-from core.shared import jsonify
 from core.shared import login_required
 from core.shared import noindex
 from core.shared import paginated_query
@@ -322,7 +323,7 @@ def serve_uploads(oid, fname):
 def remote_follow():
     """Form to allow visitor to perform the remote follow dance."""
     if request.method == "GET":
-        return render_template("remote_follow.html")
+        return htmlify(render_template("remote_follow.html"))
 
     csrf.protect()
     profile = request.form.get("profile")
@@ -339,8 +340,7 @@ def remote_follow():
 def index():
     if is_api_request():
         _log_sig()
-        print(ME)
-        return jsonify(**ME)
+        return activitypubify(**ME)
 
     q = {
         "box": Box.OUTBOX.value,
@@ -369,14 +369,15 @@ def index():
         DB.activities, q, limit=25 - len(pinned)
     )
 
-    resp = render_template(
-        "index.html",
-        outbox_data=outbox_data,
-        older_than=older_than,
-        newer_than=newer_than,
-        pinned=pinned,
+    return htmlify(
+        render_template(
+            "index.html",
+            outbox_data=outbox_data,
+            older_than=older_than,
+            newer_than=newer_than,
+            pinned=pinned,
+        )
     )
-    return resp
 
 
 @app.route("/all")
@@ -391,11 +392,13 @@ def all():
     }
     outbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
-    return render_template(
-        "index.html",
-        outbox_data=outbox_data,
-        older_than=older_than,
-        newer_than=newer_than,
+    return htmlify(
+        render_template(
+            "index.html",
+            outbox_data=outbox_data,
+            older_than=older_than,
+            newer_than=newer_than,
+        )
     )
 
 
@@ -458,8 +461,10 @@ def note_by_id(note_id):
             app.logger.exception(f"invalid doc: {doc!r}")
     app.logger.info(f"shares={shares!r}")
 
-    return render_template(
-        "note.html", likes=likes, shares=shares, thread=thread, note=data
+    return htmlify(
+        render_template(
+            "note.html", likes=likes, shares=shares, thread=thread, note=data
+        )
     )
 
 
@@ -477,7 +482,7 @@ def outbox():
             "meta.public": True,
             "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
         }
-        return jsonify(
+        return activitypubify(
             **activitypub.build_ordered_collection(
                 DB.activities,
                 q=q,
@@ -503,7 +508,9 @@ def outbox():
 @app.route("/emoji/<name>")
 def ap_emoji(name):
     if name in EMOJIS:
-        return jsonify(**{**EMOJIS[name].to_dict(), "@context": config.DEFAULT_CTX})
+        return activitypubify(
+            **{**EMOJIS[name].to_dict(), "@context": config.DEFAULT_CTX}
+        )
     abort(404)
 
 
@@ -523,7 +530,7 @@ def outbox_detail(item_id):
     if doc["meta"].get("deleted", False):
         abort(404)
 
-    return jsonify(**activity_from_doc(doc))
+    return activitypubify(**activity_from_doc(doc))
 
 
 @app.route("/outbox/<item_id>/activity")
@@ -541,7 +548,7 @@ def outbox_activity(item_id):
 
     if obj["type"] != ActivityType.CREATE.value:
         abort(404)
-    return jsonify(**obj["object"])
+    return activitypubify(**obj["object"])
 
 
 @app.route("/outbox/<item_id>/replies")
@@ -570,7 +577,7 @@ def outbox_activity_replies(item_id):
         "activity.object.inReplyTo": obj.get_object().id,
     }
 
-    return jsonify(
+    return activitypubify(
         **activitypub.build_ordered_collection(
             DB.activities,
             q=q,
@@ -610,7 +617,7 @@ def outbox_activity_likes(item_id):
         ],
     }
 
-    return jsonify(
+    return activitypubify(
         **activitypub.build_ordered_collection(
             DB.activities,
             q=q,
@@ -649,7 +656,7 @@ def outbox_activity_shares(item_id):
         ],
     }
 
-    return jsonify(
+    return activitypubify(
         **activitypub.build_ordered_collection(
             DB.activities,
             q=q,
@@ -672,7 +679,7 @@ def inbox():
         except BadSignature:
             abort(404)
 
-        return jsonify(
+        return activitypubify(
             **activitypub.build_ordered_collection(
                 DB.activities,
                 q={"meta.deleted": False, "box": Box.INBOX.value},
@@ -800,7 +807,7 @@ def followers():
 
     if is_api_request():
         _log_sig()
-        return jsonify(
+        return activitypubify(
             **activitypub.build_ordered_collection(
                 DB.activities,
                 q=q,
@@ -814,11 +821,13 @@ def followers():
     followers = [
         doc["meta"]["actor"] for doc in raw_followers if "actor" in doc.get("meta", {})
     ]
-    return render_template(
-        "followers.html",
-        followers_data=followers,
-        older_than=older_than,
-        newer_than=newer_than,
+    return htmlify(
+        render_template(
+            "followers.html",
+            followers_data=followers,
+            older_than=older_than,
+            newer_than=newer_than,
+        )
     )
 
 
@@ -829,11 +838,11 @@ def following():
     if is_api_request():
         _log_sig()
         if config.HIDE_FOLLOWING:
-            return jsonify(
+            return activitypubify(
                 **activitypub.simple_build_ordered_collection("following", [])
             )
 
-        return jsonify(
+        return activitypubify(
             **activitypub.build_ordered_collection(
                 DB.activities,
                 q=q,
@@ -853,12 +862,14 @@ def following():
         if "remote_id" in doc and "object" in doc.get("meta", {})
     ]
     lists = list(DB.lists.find())
-    return render_template(
-        "following.html",
-        following_data=following,
-        older_than=older_than,
-        newer_than=newer_than,
-        lists=lists,
+    return htmlify(
+        render_template(
+            "following.html",
+            following_data=following,
+            older_than=older_than,
+            newer_than=newer_than,
+            lists=lists,
+        )
     )
 
 
@@ -873,18 +884,20 @@ def tags(tag):
     ):
         abort(404)
     if not is_api_request():
-        return render_template(
-            "tags.html",
-            tag=tag,
-            outbox_data=DB.activities.find(
-                {
-                    "box": Box.OUTBOX.value,
-                    "type": ActivityType.CREATE.value,
-                    "meta.deleted": False,
-                    "activity.object.tag.type": "Hashtag",
-                    "activity.object.tag.name": "#" + tag,
-                }
-            ),
+        return htmlify(
+            render_template(
+                "tags.html",
+                tag=tag,
+                outbox_data=DB.activities.find(
+                    {
+                        "box": Box.OUTBOX.value,
+                        "type": ActivityType.CREATE.value,
+                        "meta.deleted": False,
+                        "activity.object.tag.type": "Hashtag",
+                        "activity.object.tag.name": "#" + tag,
+                    }
+                ),
+            )
         )
     _log_sig()
     q = {
@@ -895,7 +908,7 @@ def tags(tag):
         "activity.object.tag.type": "Hashtag",
         "activity.object.tag.name": "#" + tag,
     }
-    return jsonify(
+    return activitypubify(
         **activitypub.build_ordered_collection(
             DB.activities,
             q=q,
@@ -920,7 +933,9 @@ def featured():
         "meta.pinned": True,
     }
     data = [clean_activity(doc["activity"]["object"]) for doc in DB.activities.find(q)]
-    return jsonify(**activitypub.simple_build_ordered_collection("featured", data))
+    return activitypubify(
+        **activitypub.simple_build_ordered_collection("featured", data)
+    )
 
 
 @app.route("/liked")
@@ -936,12 +951,14 @@ def liked():
 
         liked, older_than, newer_than = paginated_query(DB.activities, q)
 
-        return render_template(
-            "liked.html", liked=liked, older_than=older_than, newer_than=newer_than
+        return htmlify(
+            render_template(
+                "liked.html", liked=liked, older_than=older_than, newer_than=newer_than
+            )
         )
 
     q = {"meta.deleted": False, "meta.undo": False, "type": ActivityType.LIKE.value}
-    return jsonify(
+    return activitypubify(
         **activitypub.build_ordered_collection(
             DB.activities,
             q=q,

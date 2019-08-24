@@ -19,6 +19,7 @@ from itsdangerous import BadSignature
 from config import DB
 from config import JWT
 from core.shared import _get_ip
+from core.shared import htmlify
 from core.shared import login_required
 
 blueprint = flask.Blueprint("indieauth", __name__)
@@ -105,15 +106,17 @@ def indieauth_endpoint():
         scope = request.args.get("scope", "").split()
 
         print("STATE", state)
-        return render_template(
-            "indieauth_flow.html",
-            client=get_client_id_data(client_id),
-            scopes=scope,
-            redirect_uri=redirect_uri,
-            state=state,
-            response_type=response_type,
-            client_id=client_id,
-            me=me,
+        return htmlify(
+            render_template(
+                "indieauth_flow.html",
+                client=get_client_id_data(client_id),
+                scopes=scope,
+                redirect_uri=redirect_uri,
+                state=state,
+                response_type=response_type,
+                client_id=client_id,
+                me=me,
+            )
         )
 
     # Auth verification via POST

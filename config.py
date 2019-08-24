@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 from itsdangerous import JSONWebSignatureSerializer
 from little_boxes import strtobool
-from little_boxes.activitypub import DEFAULT_CTX as AP_DEFAULT_CTX
+from little_boxes.activitypub import CTX_AS as AP_DEFAULT_CTX
 from pymongo import MongoClient
 
 import sass
