@@ -25,7 +25,6 @@ from little_boxes.httpsig import HTTPSigAuth
 from config import BASE_URL
 from config import DB
 from config import DEFAULT_CTX
-from config import EXTRA_INBOXES
 from config import ID
 from config import KEY
 from config import ME
@@ -275,9 +274,6 @@ class MicroblogPubBackend(Backend):
     def user_agent(self) -> str:
         """Setup a custom user agent."""
         return USER_AGENT
-
-    def extra_inboxes(self) -> List[str]:
-        return EXTRA_INBOXES
 
     def followers(self) -> List[str]:
         q = {

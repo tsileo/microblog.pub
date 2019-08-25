@@ -67,7 +67,6 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
     SUMMARY = conf["summary"]
     ICON_URL = conf["icon_url"]
     PASS = conf["pass"]
-    EXTRA_INBOXES = conf.get("extra_inboxes", [])
 
     HIDE_FOLLOWING = conf.get("hide_following", True)
 
