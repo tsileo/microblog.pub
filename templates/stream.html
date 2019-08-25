@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% import 'utils.html' as utils %}
-{% block title %}{% if request.path == url_for('admin.admin_stream') %}Stream{% else %}Notifications{% endif %} - {{ config.NAME }}{% endblock %}
+{% block title %}{% if request.path == url_for('admin.admin_stream') %}Stream{% elif actor_id %}Profile {{ actor.name }}{% else %}Notifications{% endif %} - {{ config.NAME }}{% endblock %}
 {% block content %}
 <div class="h-feed" id="container">
 {% include "header.html" %}
@@ -107,6 +107,16 @@
 <div style="margin-top:70px;margin-bottom:20px;">
     {{ actor.summary | clean | replace_custom_emojis(actor) | safe }}
 </div>
+{% endif %}
+
+{% if actor.attachment %}
+<ul>
+    {% for item in actor.attachment %}
+    {% if item.type == "PropertyValue" %}
+    <li>{{ item.name }}: {{ item.value | clean | replace_custom_emojis(actor) | safe }}</li>
+    {% endif %}
+    {% endfor %}
+</ul>
 {% endif %}
 </div>
 
