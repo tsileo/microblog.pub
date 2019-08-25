@@ -31,6 +31,7 @@ from config import ME
 from config import USER_AGENT
 from core.db import find_one_activity
 from core.db import update_many_activities
+from core.db import update_one_activity
 from core.meta import Box
 from core.meta import MetaKey
 from core.meta import by_object_id
@@ -682,7 +683,7 @@ def handle_question_reply(create: ap.Create, question: ap.Question) -> None:
         by_remote_id(create.id),
         {
             "$set": {
-                "meta.answer_to": question.id,
+                "meta.poll_answer_to": question.id,
                 "meta.poll_answer_choice": choice,
                 "meta.stream": False,
                 "meta.poll_answer": True,
@@ -726,6 +727,11 @@ def handle_replies(create: ap.Create) -> None:
                     f"meta.poll_answers_sent.{_answer_key(create.get_object().name)}": True
                 }
             },
+        )
+        # Mark our reply as a poll answers, to "hide" it from the UI
+        update_one_activity(
+            by_remote_id(create.id),
+            upsert({MetaKey.POLL_ANSWER: True, MetaKey.POLL_ANSWER_TO: reply.id}),
         )
         return None
 
