@@ -60,7 +60,7 @@
 	{% if not perma %}
 	<span style="float:right;width: 25%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
 		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj | url_or_id | get_url }}">
-			<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}">{{ obj.published | format_timeago }}</time></a>
+            <time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
 	</span>
 	{% endif %}
     </div>
@@ -316,18 +316,16 @@
 {% endif %}
 
 {% else %}
-<form action="/api/block" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="actor" value="{{ actor.id }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item" onclick="return confirm('Confirm the block action?');">block</button>
-</form>
 <a class="bar-item" href="/admin/profile?actor_id={{actor.id}}">profile</a>
 {% endif %}
 
 {% endif %}
 
+{% if obj | url_or_id | is_from_outbox %}
 <a class="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
+{% else %}
+<a class="bar-item" href="{{ obj | url_or_id | get_url }}" rel="external noreferrer">source</a>
+{% endif %}
 {% if session.logged_in %}
 <a class="bar-item bar-item-no-border">{{ meta.object_visibility | visibility }}</a>
 {% endif %}
