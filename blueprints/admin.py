@@ -207,6 +207,49 @@ def admin_lookup() -> _Response:
     )
 
 
+@blueprint.route("/admin/profile", methods=["GET"])
+@login_required
+def admin_profile() -> _Response:
+    if not request.args.get("actor_id"):
+        abort(404)
+
+    actor_id = request.args.get("actor_id")
+    actor = ap.fetch_remote_activity(actor_id)
+    q = {
+        "meta.actor_id": actor_id,
+        "box": "inbox",
+        "type": {"$in": [ap.ActivityType.CREATE.value, ap.ActivityType.ANNOUNCE.value]},
+    }
+    inbox_data, older_than, newer_than = paginated_query(
+        DB.activities, q, limit=int(request.args.get("limit", 25))
+    )
+    follower = find_one_activity(
+        {
+            "box": "inbox",
+            "type": ap.ActivityType.FOLLOW.value,
+            "meta.actor_id": actor.id,
+            "meta.undo": False,
+        }
+    )
+    following = find_one_activity(
+        {"type": ap.ActivityType.ACCEPT.value, "meta.actor_id": actor.id}
+    )
+
+    return htmlify(
+        render_template(
+            "stream.html",
+            actor_id=actor_id,
+            actor=actor.to_dict(),
+            inbox_data=inbox_data,
+            older_than=older_than,
+            newer_than=newer_than,
+            follower=follower,
+            following=following,
+            lists=list(DB.lists.find()),
+        )
+    )
+
+
 @blueprint.route("/admin/thread")
 @login_required
 def admin_thread() -> _Response:

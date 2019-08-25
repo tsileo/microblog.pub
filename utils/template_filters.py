@@ -99,8 +99,6 @@ ALLOWED_TAGS = [
 
 @filters.app_template_filter()
 def replace_custom_emojis(content, note):
-    print("\n" * 50)
-    print("custom_replace", note)
     idx = {}
     for tag in note.get("tag", []):
         if tag.get("type") == "Emoji":

@@ -17,6 +17,101 @@
 </div>
 {% endif %}
 
+{% if actor %}
+{% set actor_redir = request.path + "?actor_id=" + request.args.get('actor_id') %}
+
+<div id="profile" style="margin-bottom:80px;">
+<div style="clear:both;margin-left:100px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
+    {% if follower %}<span class="bar-item-no-hover">follows you!</span>{% endif %}
+
+{% if following %}
+<form action="/api/undo" class="action-form"  method="post">
+<input type="hidden" name="redirect" value="{{ actor_redir }}"/>
+<input type="hidden" name="id" value="{{ actor.id }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item">unfollow</button>
+</form>
+<form action="/api/block" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ actor_redir }}">
+<input type="hidden" name="actor" value="{{ actor.id }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item" onclick="return confirm('Confirm the block action?');">block</button>
+</form>
+
+
+{% if lists %}
+<form action="/api/add_to_list" class="action-form"  method="post">
+<input type="hidden" name="redirect" value="{{ actor_redir }}"/>
+<input type="hidden" name="actor_id" value="{{ actor.id }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<select name="list_name" style="float:left;">
+<option></option>
+{% for l in lists %}
+{% if actor.id not in l.members %}
+<option value="{{l.name}}">{{l.name}}</option>
+{% endif %}
+{% endfor %}
+</select>
+<button type="submit" class="bar-item">add to list</button>
+</form>
+{% endif %}
+
+{% for l in lists %}
+{% if actor.id in l.members %}
+<form action="/api/remove_from_list" class="action-form"  method="post">
+<input type="hidden" name="redirect" value="{{ actor_redir }}"/>
+<input type="hidden" name="actor_id" value="{{ actor.id }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item">remove from {{ l.name }}</button>
+</form>
+
+
+{% endif %}
+{% endfor %}
+ 
+
+
+
+{% else %}
+<form action="/api/follow" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ actor_redir }}"/>
+<input type="hidden" name="actor" value="{{ actor.id }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item">follow</button>
+</form>
+<form action="/api/block" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ actor_redir }}">
+<input type="hidden" name="actor" value="{{ actor.id }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item" onclick="return confirm('Confirm the block action?');">block</button>
+</form>
+
+
+{% endif %}
+</div>
+
+<a class="actor-box" href="{{actor | url_or_id | get_url }}" style="clear:both;">
+<span style="float:left;padding-right:15px;">
+{% if not actor.icon %}
+<img class="actor-icon" src="/static/nopic.png" style="width:80px">
+{% else %}
+<img class="actor-icon" src="{{ actor.icon.url | get_actor_icon_url(80) }}" style="width:80px;">{% endif %}
+</span>
+<div class="actor-inline">
+<div style="font-weight:bold">{{ (actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</div>
+<small class="lcolor">@{{ actor.preferredUsername }}@{{ actor | url_or_id | get_url | domain }}</small>
+</div>
+</a>
+
+{% if actor.summary %}
+<div style="margin-top:70px;margin-bottom:20px;">
+    {{ actor.summary | clean | replace_custom_emojis(actor) | safe }}
+</div>
+{% endif %}
+</div>
+
+{% endif %}
+
 <div id="notes" style="clear:both;">
 	{% for item in inbox_data %}
 	{% if 'actor' in item.meta %}

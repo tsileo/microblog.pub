@@ -322,8 +322,8 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="bar-item" onclick="return confirm('Confirm the block action?');">block</button>
 </form>
-<!--<a class="bar-item" href="/admin/profile?id={{actor.id}}">profile</a>
--->{% endif %}
+<a class="bar-item" href="/admin/profile?actor_id={{actor.id}}">profile</a>
+{% endif %}
 
 {% endif %}
 
