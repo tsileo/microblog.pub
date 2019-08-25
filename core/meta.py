@@ -40,6 +40,9 @@ class MetaKey(Enum):
     PUBLIC = "public"
     THREAD_ROOT_PARENT = "thread_root_parent"
 
+    IN_REPLY_TO_SELF = "in_reply_to_self"
+    IN_REPLY_TO_ACTOR = "in_reply_to_actor"
+
     SERVER = "server"
     VISIBILITY = "visibility"
     OBJECT_VISIBILITY = "object_visibility"

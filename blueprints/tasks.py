@@ -2,6 +2,8 @@ import json
 import traceback
 from datetime import datetime
 from datetime import timezone
+from typing import Any
+from typing import Dict
 
 import flask
 import requests
@@ -559,9 +561,6 @@ def task_process_reply() -> _Response:
         if reply.has_type(ap.ActivityType.CREATE):
             reply = reply.get_object()
 
-        # Store some metadata for the UI
-        # FIXME(tsileo): be able to display: "In reply to @user@domain.tld"?
-
         new_replies = [activity, reply]
 
         while 1:
@@ -579,29 +578,36 @@ def task_process_reply() -> _Response:
 
         app.logger.info(f"root_reply={reply!r} for activity={activity!r}")
 
-        # Ensure the "root reply" is present in the inbox/outbox
-        if not find_one_activity(
-            {**by_object_id(root_reply), **by_type(ap.ActivityType.CREATE)}
-        ):
-            return ""
-
         # In case the activity was from the inbox
         update_one_activity(
             {**by_object_id(activity.id), **by_type(ap.ActivityType.CREATE)},
             upsert({MetaKey.THREAD_ROOT_PARENT: root_reply}),
         )
 
-        for new_reply in new_replies:
+        for (new_reply_idx, new_reply) in enumerate(new_replies):
             if find_one_activity(
                 {**by_object_id(new_reply.id), **by_type(ap.ActivityType.CREATE)}
             ) or DB.replies.find_one(by_remote_id(new_reply.id)):
                 continue
 
             actor = new_reply.get_actor()
+            is_root_reply = new_reply_idx == len(new_replies) - 1
+            if is_root_reply:
+                reply_flags: Dict[str, Any] = {}
+            else:
+                reply_actor = new_replies[new_reply_idx + 1].get_actor()
+                is_in_reply_to_self = actor.id == reply_actor.id
+                reply_flags = {MetaKey.IN_REPLY_TO_SELF.value: is_in_reply_to_self}
+                if not is_in_reply_to_self:
+                    reply_flags[MetaKey.IN_REPLY_TO_ACTOR.value] = reply_actor.to_dict(
+                        embed=True
+                    )
+
             # Save the reply with the cached actor and the thread flag/ID
             save_reply(
                 new_reply,
                 {
+                    **reply_flags,
                     MetaKey.THREAD_ROOT_PARENT.value: root_reply,
                     MetaKey.ACTOR.value: actor.to_dict(embed=True),
                     MetaKey.ACTOR_HASH.value: _actor_hash(actor),
