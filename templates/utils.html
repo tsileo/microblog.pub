@@ -327,9 +327,9 @@
 {% else %}
 <a class="bar-item" href="{{ obj | url_or_id | get_url }}" rel="external noreferrer">source</a>
 {% endif %}
+{% endif %}
 {% if session.logged_in %}
 <a class="bar-item bar-item-no-border">{{ meta.object_visibility | visibility }}</a>
-{% endif %}
 {% endif %}
 
 </div>
