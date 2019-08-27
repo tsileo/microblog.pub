@@ -284,6 +284,7 @@ a:hover {
 .bar-item:hover {
   background: $primary-color;
   color: $background-color;
+  text-decoration: none;
 }
 .bar-item-no-border {
   color: $color-light;

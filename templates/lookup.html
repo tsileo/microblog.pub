@@ -16,6 +16,7 @@
 <div id="lookup-result" style="margin-top:30px;">
     {% if data | has_actor_type %}
 <div style="margin-left:95px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
+<a class="bar-item" href="/admin/profile?actor_id={{data.id}}">profile</a>
 <form action="/api/follow" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ request.path }}"/>
 <input type="hidden" name="actor" value="{{ data.id }}"/>
@@ -26,6 +27,7 @@
 
 
     {{ utils.display_actor_inline(data, size=80) }}
+
     {% elif data | has_type('Create') %}
 	{{ utils.display_note(data.object, ui=True) }}
     {% elif data | has_type(['Note', 'Article', 'Video', 'Audio', 'Page', 'Question']) %}
