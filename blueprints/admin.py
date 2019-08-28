@@ -51,6 +51,7 @@ def verify_pass(pwd):
 @blueprint.route("/admin/update_actor")
 @login_required
 def admin_update_actor() -> _Response:
+    # FIXME(tsileo): make this a task, and keep track of our own actor_hash at startup
     update = ap.Update(
         actor=MY_PERSON.id,
         object=MY_PERSON.to_dict(),

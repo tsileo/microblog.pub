@@ -3,7 +3,7 @@ services:
   web:
     image: 'microblogpub:latest'
     ports:
-     - "${WEB_PORT}:5005"
+     - "127.0.0.1:${WEB_PORT}:5005"
     volumes:
      - "${CONFIG_DIR}:/app/config"
      - "./static:/app/static"
@@ -23,3 +23,5 @@ services:
      - "${DATA_DIR}/poussetaches:/app/poussetaches_data"
     environment:
      - POUSSETACHES_AUTH_KEY=${POUSSETACHES_AUTH_KEY}
+#    ports:
+# - "127.0.0.1:${POUSSETACHES_PORT}:7991"
