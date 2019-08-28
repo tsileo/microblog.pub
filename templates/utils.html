@@ -325,6 +325,9 @@
 <a class="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
 {% else %}
 <a class="bar-item" href="{{ obj | url_or_id | get_url }}" rel="external noreferrer">source</a>
+{% if session.logged_in %}
+<a class="bar-item" href="/admin/profile?actor_id={{actor.id}}">profile</a>
+{% endif %}
 {% endif %}
 {% endif %}
 {% if session.logged_in %}
