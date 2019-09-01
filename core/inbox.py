@@ -9,10 +9,12 @@ from little_boxes.errors import NotAnActivityError
 import config
 from core.activitypub import _answer_key
 from core.activitypub import handle_replies
+from core.activitypub import is_from_outbox
 from core.activitypub import post_to_outbox
 from core.activitypub import update_cached_actor
 from core.db import DB
 from core.db import update_one_activity
+from core.meta import FollowStatus
 from core.meta import MetaKey
 from core.meta import by_object_id
 from core.meta import by_remote_id
@@ -172,6 +174,33 @@ def _follow_process_inbox(activity: ap.Follow, new_meta: _NewMeta) -> None:
         published=now(),
     )
     post_to_outbox(accept)
+
+
+def _update_follow_status(follow: ap.BaseActivity, status: FollowStatus) -> None:
+    if not follow.has_type(ap.Follow) or not is_from_outbox(follow):
+        _logger.warning(
+            "received an Accept/Reject from an unexpected activity: {follow!r}"
+        )
+        return None
+
+    update_one_activity(
+        by_remote_id(follow.id), upsert({MetaKey.FOLLOW_STATUS: status.value})
+    )
+
+
+@process_inbox.register
+def _accept_process_inbox(activity: ap.Accept, new_meta: _NewMeta) -> None:
+    _logger.info(f"process_inbox activity={activity!r}")
+    # Set a flag on the follow
+    follow = activity.get_object()
+    _update_follow_status(follow, FollowStatus.ACCEPTED)
+
+
+@process_inbox.register
+def _reject_process_inbox(activity: ap.Reject, new_meta: _NewMeta) -> None:
+    _logger.info(f"process_inbox activity={activity!r}")
+    follow = activity.get_object()
+    _update_follow_status(follow, FollowStatus.REJECTED)
 
 
 @process_inbox.register

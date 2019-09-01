@@ -33,6 +33,7 @@ from core.db import find_one_activity
 from core.db import update_many_activities
 from core.db import update_one_activity
 from core.meta import Box
+from core.meta import FollowStatus
 from core.meta import MetaKey
 from core.meta import by_object_id
 from core.meta import by_remote_id
@@ -51,6 +52,16 @@ _NewMeta = Dict[str, Any]
 SIG_AUTH = HTTPSigAuth(KEY)
 
 MY_PERSON = ap.Person(**ME)
+
+_LOCAL_NETLOC = urlparse(BASE_URL).netloc
+
+
+def is_from_outbox(activity: ap.BaseActivity) -> bool:
+    return activity.id.startswith(BASE_URL)
+
+
+def is_local_url(url: str) -> bool:
+    return urlparse(url).netloc == _LOCAL_NETLOC
 
 
 def _remove_id(doc: ap.ObjectType) -> ap.ObjectType:
@@ -116,6 +127,11 @@ def save(box: Box, activity: ap.BaseActivity) -> None:
 
     actor_id = activity.get_actor().id
 
+    # Set some "type"-related neta
+    extra = {}
+    if box == Box.OUTBOX and activity.has_type(ap.Follow):
+        extra[MetaKey.FOLLOW_STATUS.value] = FollowStatus.WAITING.value
+
     DB.activities.insert_one(
         {
             "box": box.value,
@@ -135,6 +151,7 @@ def save(box: Box, activity: ap.BaseActivity) -> None:
                 MetaKey.PUBLISHED.value: activity.published
                 if activity.published
                 else now(),
+                **extra,
             },
         }
     )

@@ -19,6 +19,13 @@ class Box(Enum):
 
 
 @unique
+class FollowStatus(Enum):
+    WAITING = "waiting"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
+@unique
 class MetaKey(Enum):
     NOTIFICATION = "notification"
     NOTIFICATION_UNREAD = "notification_unread"
@@ -38,6 +45,9 @@ class MetaKey(Enum):
     OBJECT_ACTOR_ID = "object_actor_id"
     OBJECT_ACTOR_HASH = "object_actor_hash"
     PUBLIC = "public"
+
+    FOLLOW_STATUS = "follow_status"
+
     THREAD_ROOT_PARENT = "thread_root_parent"
 
     IN_REPLY_TO_SELF = "in_reply_to_self"
@@ -83,6 +93,10 @@ def by_type(type_: Union[ap.ActivityType, List[ap.ActivityType]]) -> _SubQuery:
     return {"type": type_.value}
 
 
+def follow_request_accepted() -> _SubQuery:
+    return flag(MetaKey.FOLLOW_STATUS, FollowStatus.ACCEPTED.value)
+
+
 def not_undo() -> _SubQuery:
     return flag(MetaKey.UNDO, False)
 
@@ -93,6 +107,10 @@ def not_deleted() -> _SubQuery:
 
 def by_actor(actor: ap.BaseActivity) -> _SubQuery:
     return flag(MetaKey.ACTOR_ID, actor.id)
+
+
+def by_actor_id(actor_id: str) -> _SubQuery:
+    return flag(MetaKey.ACTOR_ID, actor_id)
 
 
 def by_object_id(object_id: str) -> _SubQuery:

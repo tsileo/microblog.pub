@@ -10,8 +10,16 @@ from core import activitypub
 from core.db import DB
 from core.db import find_activities
 from core.db import update_one_activity
+from core.meta import FollowStatus
 from core.meta import MetaKey
 from core.meta import _meta
+from core.meta import by_actor_id
+from core.meta import by_actor
+from core.meta import by_remote_id
+from core.meta import by_type
+from core.meta import in_inbox
+from core.meta import not_undo
+from core.meta import upsert
 from utils.migrations import Migration
 from utils.migrations import logger
 from utils.migrations import perform  # noqa:  just here for export
@@ -156,10 +164,10 @@ class _2_FollowMigration(Migration):
                         {"_id": data["_id"]}, {"$set": {"meta.actor": actor}}
                     )
             except Exception:
-                logger.exception("failed to process actor {data!r}")
+                logger.exception(f"failed to process actor {data!r}")
 
 
-class _20190808_MetaPublishedMigration(Migration):
+class _20190830_MetaPublishedMigration(Migration):
     """Add the `meta.published` field to old activities."""
 
     def migrate(self) -> None:
@@ -180,4 +188,68 @@ class _20190808_MetaPublishedMigration(Migration):
                 )
 
             except Exception:
-                logger.exception("failed to process activity {data!r}")
+                logger.exception(f"failed to process activity {data!r}")
+
+
+class _20190830_FollowFollowBackMigration(Migration):
+    """Add the new meta flags for tracking accepted/rejected status and following/follows back info."""
+
+    def migrate(self) -> None:
+        for data in find_activities({**by_type(ap.ActivityType.ACCEPT), **in_inbox()}):
+            try:
+                update_one_activity(
+                    {**by_type(ap.ActivityType.FOLLOW), **by_remote_id(data["meta"]["object_id"])},
+                    upsert({MetaKey.FOLLOW_STATUS: FollowStatus.ACCEPTED.value}),
+                )
+                # Check if we are following this actor
+                follow_query = {
+                    **in_inbox(),
+                    **by_type(ap.ActivityType.FOLLOW),
+                    **by_actor_id(data["meta"]["actor_id"]),
+                    **not_undo(),
+                }
+                raw_follow = DB.activities.find_one(follow_query)
+                if raw_follow:
+                    DB.activities.update_many(
+                        follow_query,
+                        {"$set": {_meta(MetaKey.NOTIFICATION_FOLLOWS_BACK): True}},
+                    )
+
+            except Exception:
+                logger.exception(f"failed to process activity {data!r}")
+
+        for data in find_activities({**by_type(ap.ActivityType.REJECT), **in_inbox()}):
+            try:
+                update_one_activity(
+                    {**by_type(ap.ActivityType.FOLLOW), **by_remote_id(data["meta"]["object_id"])},
+                    upsert({MetaKey.FOLLOW_STATUS: FollowStatus.REJECTED.value}),
+                )
+            except Exception:
+                logger.exception(f"failed to process activity {data!r}")
+
+        for data in find_activities({**by_type(ap.ActivityType.FOLLOW), **in_inbox()}):
+            try:
+                accept_query = {
+                    **in_inbox(),
+                    **by_type(ap.ActivityType.ACCEPT),
+                    **by_actor_id(data["meta"]["actor_id"]),
+                    **not_undo(),
+                }
+                raw_accept = DB.activities.find_one(accept_query)
+                if raw_accept:
+                    DB.activities.update_many(
+                        accept_query,
+                        {"$set": {_meta(MetaKey.NOTIFICATION_FOLLOWS_BACK): True}},
+                    )
+
+            except Exception:
+                logger.exception(f"failed to process activity {data!r}")
+
+        DB.activities.update_many(
+            {
+                **by_type(ap.ActivityType.FOLLOW),
+                **in_inbox(),
+                "meta.follow_status": {"$exists": False},
+            },
+            {"$set": {"meta.follow_status": "waiting"}},
+        )

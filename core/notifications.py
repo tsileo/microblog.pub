@@ -5,12 +5,12 @@ from datetime import timezone
 from functools import singledispatch
 from typing import Any
 from typing import Dict
-from urllib.parse import urlparse
 
 from little_boxes import activitypub as ap
 
-from config import BASE_URL
 from config import DB
+from core.activitypub import is_from_outbox
+from core.activitypub import is_local_url
 from core.db import find_one_activity
 from core.meta import MetaKey
 from core.meta import _meta
@@ -26,16 +26,6 @@ from core.tasks import Tasks
 _logger = logging.getLogger(__name__)
 
 _NewMeta = Dict[str, Any]
-
-_LOCAL_NETLOC = urlparse(BASE_URL).netloc
-
-
-def _is_from_outbox(activity: ap.BaseActivity) -> bool:
-    return activity.id.startswith(BASE_URL)
-
-
-def _is_local(url: str) -> bool:
-    return urlparse(url).netloc == _LOCAL_NETLOC
 
 
 def _flag_as_notification(activity: ap.BaseActivity, new_meta: _NewMeta) -> None:
@@ -84,6 +74,16 @@ def _accept_set_inbox_flags(activity: ap.Accept, new_meta: _NewMeta) -> None:
 
 
 @set_inbox_flags.register
+def _reject_set_inbox_flags(activity: ap.Reject, new_meta: _NewMeta) -> None:
+    """Handle notifications for "rejected" following requests."""
+    _logger.info(f"set_inbox_flags activity={activity!r}")
+    # This Accept will be a "You started following $actor" notification
+    _flag_as_notification(activity, new_meta)
+    _set_flag(new_meta, MetaKey.GC_KEEP)
+    return None
+
+
+@set_inbox_flags.register
 def _follow_set_inbox_flags(activity: ap.Follow, new_meta: _NewMeta) -> None:
     """Handle notification for new followers."""
     _logger.info(f"set_inbox_flags activity={activity!r}")
@@ -114,7 +114,7 @@ def _follow_set_inbox_flags(activity: ap.Follow, new_meta: _NewMeta) -> None:
 def _like_set_inbox_flags(activity: ap.Like, new_meta: _NewMeta) -> None:
     _logger.info(f"set_inbox_flags activity={activity!r}")
     # Is it a Like of local acitivty/from the outbox
-    if _is_from_outbox(activity.get_object()):
+    if is_from_outbox(activity.get_object()):
         # Flag it as a notification
         _flag_as_notification(activity, new_meta)
 
@@ -132,7 +132,7 @@ def _announce_set_inbox_flags(activity: ap.Announce, new_meta: _NewMeta) -> None
     _logger.info(f"set_inbox_flags activity={activity!r}")
     obj = activity.get_object()
     # Is it a Annnounce/boost of local acitivty/from the outbox
-    if _is_from_outbox(obj):
+    if is_from_outbox(obj):
         # Flag it as a notification
         _flag_as_notification(activity, new_meta)
 
@@ -180,7 +180,7 @@ def _create_set_inbox_flags(activity: ap.Create, new_meta: _NewMeta) -> None:
     in_reply_to = obj.get_in_reply_to()
 
     # Check if it's a local reply
-    if in_reply_to and _is_local(in_reply_to):
+    if in_reply_to and is_local_url(in_reply_to):
         # TODO(tsileo): fetch the reply to check for poll answers more precisely
         # reply_of = ap.fetch_remote_activity(in_reply_to)
 
@@ -199,7 +199,7 @@ def _create_set_inbox_flags(activity: ap.Create, new_meta: _NewMeta) -> None:
 
     # Check for mention
     for mention in obj.get_mentions():
-        if mention.href and _is_local(mention.href):
+        if mention.href and is_local_url(mention.href):
             # Flag it as a notification
             _flag_as_notification(activity, new_meta)
 
