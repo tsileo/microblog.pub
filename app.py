@@ -109,9 +109,14 @@ else:
 def inject_config():
     q = {
         **in_outbox(),
-        **by_type([ActivityType.CREATE, ActivityType.ANNOUNCE]),
-        **not_deleted(),
-        **by_visibility(ap.Visibility.PUBLIC),
+        "$or": [
+            {
+                **by_type(ActivityType.CREATE),
+                **not_deleted(),
+                **by_visibility(ap.Visibility.PUBLIC),
+            },
+            {**by_type(ActivityType.ANNOUNCE), **not_undo()},
+        ],
     }
     notes_count = DB.activities.count(q)
     # FIXME(tsileo): rename to all_count, and remove poll answers from it
@@ -348,10 +353,15 @@ def index():
 
     q = {
         **in_outbox(),
-        **by_type([ActivityType.CREATE, ActivityType.ANNOUNCE]),
-        **not_deleted(),
-        **by_visibility(ap.Visibility.PUBLIC),
-        "$or": [{"meta.pinned": False}, {"meta.pinned": {"$exists": False}}],
+        "$or": [
+            {
+                **by_type(ActivityType.CREATE),
+                **not_deleted(),
+                **by_visibility(ap.Visibility.PUBLIC),
+                "$or": [{"meta.pinned": False}, {"meta.pinned": {"$exists": False}}],
+            },
+            {**by_type(ActivityType.ANNOUNCE), **not_undo()},
+        ],
     }
 
     apinned = []
@@ -478,9 +488,14 @@ def outbox():
         # TODO(tsileo): returns the whole outbox if authenticated and look at OCAP support
         q = {
             **in_outbox(),
-            **by_type([ActivityType.CREATE, ActivityType.ANNOUNCE]),
-            **not_deleted(),
-            **by_visibility(ap.Visibility.PUBLIC),
+            "$or": [
+                {
+                    **by_type(ActivityType.CREATE),
+                    **not_deleted(),
+                    **by_visibility(ap.Visibility.PUBLIC),
+                },
+                {**by_type(ActivityType.ANNOUNCE), **not_undo()},
+            ],
         }
         return activitypubify(
             **activitypub.build_ordered_collection(
