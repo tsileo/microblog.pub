@@ -26,6 +26,10 @@ from config import PASS
 from core.activitypub import Box
 from core.activitypub import post_to_outbox
 from core.db import find_one_activity
+from core.meta import in_outbox
+from core.meta import by_actor
+from core.meta import not_undo
+from core.meta import follow_request_accepted
 from core.meta import by_object_id
 from core.meta import by_type
 from core.shared import MY_PERSON
@@ -233,7 +237,13 @@ def admin_profile() -> _Response:
         }
     )
     following = find_one_activity(
-        {"type": ap.ActivityType.ACCEPT.value, "meta.actor_id": actor.id}
+        {
+            **by_type(ap.ActivityType.FOLLOW),
+            **by_object_id(actor.id),
+            **not_undo(),
+            **in_outbox(),
+            **follow_request_accepted(),
+        }
     )
 
     return htmlify(

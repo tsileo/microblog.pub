@@ -27,7 +27,7 @@
 {% if following %}
 <form action="/api/undo" class="action-form"  method="post">
 <input type="hidden" name="redirect" value="{{ actor_redir }}"/>
-<input type="hidden" name="id" value="{{ actor.id }}"/>
+<input type="hidden" name="id" value="{{ following.id }}"/>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 <button type="submit" class="bar-item">unfollow</button>
 </form>
