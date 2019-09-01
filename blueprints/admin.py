@@ -26,12 +26,11 @@ from config import PASS
 from core.activitypub import Box
 from core.activitypub import post_to_outbox
 from core.db import find_one_activity
-from core.meta import in_outbox
-from core.meta import by_actor
-from core.meta import not_undo
-from core.meta import follow_request_accepted
 from core.meta import by_object_id
 from core.meta import by_type
+from core.meta import follow_request_accepted
+from core.meta import in_outbox
+from core.meta import not_undo
 from core.shared import MY_PERSON
 from core.shared import _build_thread
 from core.shared import _Response
