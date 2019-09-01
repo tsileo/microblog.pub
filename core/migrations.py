@@ -198,7 +198,10 @@ class _20190830_FollowFollowBackMigration(Migration):
         for data in find_activities({**by_type(ap.ActivityType.ACCEPT), **in_inbox()}):
             try:
                 update_one_activity(
-                    {**by_type(ap.ActivityType.FOLLOW), **by_remote_id(data["meta"]["object_id"])},
+                    {
+                        **by_type(ap.ActivityType.FOLLOW),
+                        **by_remote_id(data["meta"]["object_id"]),
+                    },
                     upsert({MetaKey.FOLLOW_STATUS: FollowStatus.ACCEPTED.value}),
                 )
                 # Check if we are following this actor
@@ -221,7 +224,10 @@ class _20190830_FollowFollowBackMigration(Migration):
         for data in find_activities({**by_type(ap.ActivityType.REJECT), **in_inbox()}):
             try:
                 update_one_activity(
-                    {**by_type(ap.ActivityType.FOLLOW), **by_remote_id(data["meta"]["object_id"])},
+                    {
+                        **by_type(ap.ActivityType.FOLLOW),
+                        **by_remote_id(data["meta"]["object_id"]),
+                    },
                     upsert({MetaKey.FOLLOW_STATUS: FollowStatus.REJECTED.value}),
                 )
             except Exception:
