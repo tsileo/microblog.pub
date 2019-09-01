@@ -14,7 +14,6 @@ from core.meta import FollowStatus
 from core.meta import MetaKey
 from core.meta import _meta
 from core.meta import by_actor_id
-from core.meta import by_actor
 from core.meta import by_remote_id
 from core.meta import by_type
 from core.meta import in_inbox
