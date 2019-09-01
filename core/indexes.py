@@ -26,6 +26,8 @@ def create_indexes():
     DB.activities.create_index([("remote_id", pymongo.ASCENDING)])
     DB.activities.create_index([("meta.actor_id", pymongo.ASCENDING)])
     DB.activities.create_index([("meta.object_id", pymongo.ASCENDING)])
+    DB.activities.create_index([("meta.mentions", pymongo.ASCENDING)])
+    DB.activities.create_index([("meta.hashtags", pymongo.ASCENDING)])
     DB.activities.create_index([("meta.thread_root_parent", pymongo.ASCENDING)])
     DB.activities.create_index(
         [

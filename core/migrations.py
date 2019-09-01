@@ -19,6 +19,7 @@ from core.meta import by_remote_id
 from core.meta import by_type
 from core.meta import in_inbox
 from core.meta import in_outbox
+from core.meta import not_deleted
 from core.meta import not_undo
 from core.meta import upsert
 from utils.migrations import Migration
@@ -290,6 +291,30 @@ class _20190901_FollowFollowBackMigrationFix(Migration):
                         by_remote_id(data["remote_id"]),
                         {"$set": {_meta(MetaKey.NOTIFICATION_FOLLOWS_BACK): True}},
                     )
+
+            except Exception:
+                logger.exception(f"failed to process activity {data!r}")
+
+
+class _20190901_MetaHashtagsAndMentions(Migration):
+    def migrate(self) -> None:
+        for data in find_activities(
+            {**by_type(ap.ActivityType.CREATE), **not_deleted()}
+        ):
+            try:
+                activity = ap.parse_activity(data["activity"])
+                mentions = []
+                obj = activity.get_object()
+                for m in obj.get_mentions():
+                    mentions.append(m.href)
+                hashtags = []
+                for h in obj.get_hashtags():
+                    hashtags.append(h.name[1:])  # Strip the #
+
+                update_one_activity(
+                    by_remote_id(data["remote_id"]),
+                    upsert({MetaKey.MENTIONS: mentions, MetaKey.HASHTAGS: hashtags}),
+                )
 
             except Exception:
                 logger.exception(f"failed to process activity {data!r}")

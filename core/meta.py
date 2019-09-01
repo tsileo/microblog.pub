@@ -46,6 +46,9 @@ class MetaKey(Enum):
     OBJECT_ACTOR_HASH = "object_actor_hash"
     PUBLIC = "public"
 
+    HASHTAGS = "hashtags"
+    MENTIONS = "mentions"
+
     FOLLOW_STATUS = "follow_status"
 
     THREAD_ROOT_PARENT = "thread_root_parent"
@@ -119,6 +122,14 @@ def by_object_id(object_id: str) -> _SubQuery:
 
 def is_public() -> _SubQuery:
     return flag(MetaKey.PUBLIC, True)
+
+
+def by_visibility(vis: ap.Visibility) -> _SubQuery:
+    return flag(MetaKey.VISIBILITY, vis.name)
+
+
+def by_hashtag(ht: str) -> _SubQuery:
+    return flag(MetaKey.HASHTAGS, ht)
 
 
 def inc(mk: MetaKey, val: int) -> _SubQuery:

@@ -128,9 +128,20 @@ def save(box: Box, activity: ap.BaseActivity) -> None:
     actor_id = activity.get_actor().id
 
     # Set some "type"-related neta
-    extra = {}
-    if box == Box.OUTBOX and activity.has_type(ap.Follow):
+    extra: Dict[str, Any] = {}
+    if box == Box.OUTBOX and activity.has_type(ap.ActivityType.FOLLOW):
         extra[MetaKey.FOLLOW_STATUS.value] = FollowStatus.WAITING.value
+    elif activity.has_type(ap.ActivityType.CREATE):
+        mentions = []
+        obj = activity.get_object()
+        for m in obj.get_mentions():
+            mentions.append(m.href)
+        hashtags = []
+        for h in obj.get_hashtags():
+            hashtags.append(h.name[1:])  # Strip the #
+        extra.update(
+            {MetaKey.MENTIONS.value: mentions, MetaKey.HASHTAGS.value: hashtags}
+        )
 
     DB.activities.insert_one(
         {

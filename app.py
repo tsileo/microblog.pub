@@ -55,10 +55,13 @@ from core.db import find_one_activity
 from core.meta import Box
 from core.meta import MetaKey
 from core.meta import _meta
+from core.meta import by_hashtag
 from core.meta import by_remote_id
 from core.meta import by_type
+from core.meta import by_visibility
 from core.meta import in_outbox
 from core.meta import is_public
+from core.meta import not_deleted
 from core.meta import not_undo
 from core.shared import _build_thread
 from core.shared import _get_ip
@@ -875,9 +878,10 @@ def following():
 def tags(tag):
     if not DB.activities.count(
         {
-            "box": Box.OUTBOX.value,
-            "activity.object.tag.type": "Hashtag",
-            "activity.object.tag.name": "#" + tag,
+            **in_outbox(),
+            **by_hashtag(tag),
+            **by_visibility(ap.Visibility.PUBLIC),
+            **not_deleted(),
         }
     ):
         abort(404)
@@ -888,23 +892,20 @@ def tags(tag):
                 tag=tag,
                 outbox_data=DB.activities.find(
                     {
-                        "box": Box.OUTBOX.value,
-                        "type": ActivityType.CREATE.value,
-                        "meta.deleted": False,
-                        "activity.object.tag.type": "Hashtag",
-                        "activity.object.tag.name": "#" + tag,
+                        **in_outbox(),
+                        **by_hashtag(tag),
+                        **by_visibility(ap.Visibility.PUBLIC),
+                        **not_deleted(),
                     }
                 ),
             )
         )
     _log_sig()
     q = {
-        "box": Box.OUTBOX.value,
-        "meta.deleted": False,
-        "meta.undo": False,
-        "type": ActivityType.CREATE.value,
-        "activity.object.tag.type": "Hashtag",
-        "activity.object.tag.name": "#" + tag,
+        **in_outbox(),
+        **by_hashtag(tag),
+        **by_visibility(ap.Visibility.PUBLIC),
+        **not_deleted(),
     }
     return activitypubify(
         **activitypub.build_ordered_collection(
