@@ -22,7 +22,7 @@ def highlight(html: str) -> str:
         if not code.parent.name == "pre":
             continue
         lexer = guess_lexer(code.text)
-        tag = BeautifulSoup(phighlight(code.text, lexer, _FORMATTER)).body.next
+        tag = BeautifulSoup(phighlight(code.text, lexer, _FORMATTER), "html5lib").body.next
         pre = code.parent
         pre.replaceWith(tag)
     out = soup.body
