@@ -15,6 +15,17 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro display_actor_oneline(follower) -%}
+{% if follower and follower.id %}
+<span class="actor-inline">
+<a href="{{follower | url_or_id | get_url }}" style="clear:both;">
+{{ (follower.name or follower.preferredUsername) | clean | replace_custom_emojis(follower) | safe }}
+<small class="lcolor">@{{ follower.preferredUsername }}@{{ follower | url_or_id | get_url | domain }}</small>
+</a>
+</span>
+{% endif %}
+{%- endmacro %}
+
 {% macro display_note(obj, perma=False, ui=False, likes=[], shares=[], meta={}, no_color=False) -%}
 
 {% if meta.object_actor %}
@@ -60,10 +71,21 @@
 	{% if not perma %}
 	<span style="float:right;width: 25%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
 		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj | url_or_id | get_url }}">
-            <time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
+            <time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
 	</span>
 	{% endif %}
     </div>
+
+{% if meta.in_reply_to_actor %}
+<div style="margin:10px 0 15px 0;padding:0;">
+<a href="{{ obj.inReplyTo }}">in reply to</a> {{ display_actor_oneline(meta.in_reply_to_actor) }}
+</div>
+{% elif meta.in_reply_to_self %}
+<div style="margin:10px 0 15px 0;padding:0;">
+self reply
+</div>
+{% endif %}
+
 
 	{% if obj.summary %}<p class="p-summary">{{ obj.summary | clean | replace_custom_emojis(obj) | safe }}</p>{% endif %}
     {% if obj | has_type('Video') %}
@@ -321,7 +343,9 @@
 {% endif %}
 
 {% if meta.object_visibility | visibility_is_public %}
-{% if obj | url_or_id | is_from_outbox %}
+{% if obj.inReplyTo and not meta.count_reply and not perma %}
+<a class="bar-item" href="/admin/thread?oid={{aid}}">thread</a>{% endif %}
+{% if obj | url_or_id | get_url | is_from_outbox %}
 <a class="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
 {% else %}
 <a class="bar-item" href="{{ obj | url_or_id | get_url }}" rel="external noreferrer">source</a>
