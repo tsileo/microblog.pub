@@ -63,6 +63,7 @@ from core.meta import in_outbox
 from core.meta import is_public
 from core.meta import not_deleted
 from core.meta import not_undo
+from core.meta import pinned
 from core.shared import _build_thread
 from core.shared import _get_ip
 from core.shared import activitypubify
@@ -107,14 +108,12 @@ else:
 @app.context_processor
 def inject_config():
     q = {
-        "type": "Create",
-        "activity.object.inReplyTo": None,
-        "meta.deleted": False,
-        "meta.public": True,
+        **in_outbox(),
+        **by_type([ActivityType.CREATE, ActivityType.ANNOUNCE]),
+        **not_deleted(),
+        **by_visibility(ap.Visibility.PUBLIC),
     }
-    notes_count = DB.activities.find(
-        {"box": Box.OUTBOX.value, "$or": [q, {"type": "Announce", "meta.undo": False}]}
-    ).count()
+    notes_count = DB.activities.count(q)
     # FIXME(tsileo): rename to all_count, and remove poll answers from it
     all_q = {
         "box": Box.OUTBOX.value,
@@ -348,30 +347,27 @@ def index():
         return activitypubify(**ME)
 
     q = {
-        "box": Box.OUTBOX.value,
-        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
-        "activity.object.inReplyTo": None,
-        "meta.deleted": False,
-        "meta.undo": False,
-        "meta.public": True,
+        **in_outbox(),
+        **by_type([ActivityType.CREATE, ActivityType.ANNOUNCE]),
+        **not_deleted(),
+        **by_visibility(ap.Visibility.PUBLIC),
         "$or": [{"meta.pinned": False}, {"meta.pinned": {"$exists": False}}],
     }
 
-    pinned = []
+    apinned = []
     # Only fetch the pinned notes if we're on the first page
     if not request.args.get("older_than") and not request.args.get("newer_than"):
         q_pinned = {
-            "box": Box.OUTBOX.value,
-            "type": ActivityType.CREATE.value,
-            "meta.deleted": False,
-            "meta.undo": False,
-            "meta.public": True,
-            "meta.pinned": True,
+            **in_outbox(),
+            **by_type(ActivityType.CREATE),
+            **not_deleted(),
+            **pinned(),
+            **by_visibility(ap.Visibility.PUBLIC),
         }
-        pinned = list(DB.activities.find(q_pinned))
+        apinned = list(DB.activities.find(q_pinned))
 
     outbox_data, older_than, newer_than = paginated_query(
-        DB.activities, q, limit=25 - len(pinned)
+        DB.activities, q, limit=25 - len(apinned)
     )
 
     return htmlify(
@@ -380,7 +376,7 @@ def index():
             outbox_data=outbox_data,
             older_than=older_than,
             newer_than=newer_than,
-            pinned=pinned,
+            pinned=apinned,
         )
     )
 
@@ -481,11 +477,10 @@ def outbox():
         _log_sig()
         # TODO(tsileo): returns the whole outbox if authenticated and look at OCAP support
         q = {
-            "box": Box.OUTBOX.value,
-            "meta.deleted": False,
-            "meta.undo": False,
-            "meta.public": True,
-            "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
+            **in_outbox(),
+            **by_type([ActivityType.CREATE, ActivityType.ANNOUNCE]),
+            **not_deleted(),
+            **by_visibility(ap.Visibility.PUBLIC),
         }
         return activitypubify(
             **activitypub.build_ordered_collection(
@@ -497,7 +492,7 @@ def outbox():
             )
         )
 
-    # Handle POST request
+    # Handle POST request aka C2S API
     try:
         _api_required()
     except BadSignature:

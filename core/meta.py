@@ -46,6 +46,7 @@ class MetaKey(Enum):
     OBJECT_ACTOR_HASH = "object_actor_hash"
     PUBLIC = "public"
 
+    PINNED = "pinned"
     HASHTAGS = "hashtags"
     MENTIONS = "mentions"
 
@@ -100,12 +101,20 @@ def follow_request_accepted() -> _SubQuery:
     return flag(MetaKey.FOLLOW_STATUS, FollowStatus.ACCEPTED.value)
 
 
+def not_in_reply_to() -> _SubQuery:
+    return {"activity.object.inReplyTo": None}
+
+
 def not_undo() -> _SubQuery:
     return flag(MetaKey.UNDO, False)
 
 
 def not_deleted() -> _SubQuery:
     return flag(MetaKey.DELETED, False)
+
+
+def pinned() -> _SubQuery:
+    return flag(MetaKey.PINNED, True)
 
 
 def by_actor(actor: ap.BaseActivity) -> _SubQuery:
