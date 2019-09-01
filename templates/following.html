@@ -8,7 +8,8 @@
 {% include "header.html" %}
 
 <div id="following">
-	{% for (follow_id, follow) in following_data %}
+	{% for (follow_id, meta) in following_data %}
+    {% set follow = meta.object %}
     {% if session.logged_in %}
 <div style="margin-left:90px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
 <a class="bar-item" href="/admin/profile?actor_id={{follow.id}}">profile</a>
@@ -18,6 +19,9 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 <button type="submit" class="bar-item">unfollow</button>
 </form>
+{% if meta.notification_follows_back %}
+<span class="bar-item-no-hover">follows you back</span>
+{% endif %}
 
 {% if lists %}
 <form action="/api/add_to_list" class="action-form"  method="post">
@@ -48,6 +52,7 @@
 
 {% endif %}
 {% endfor %}
+
  
         </div>
 

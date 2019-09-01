@@ -818,9 +818,7 @@ def followers():
         )
 
     raw_followers, older_than, newer_than = paginated_query(DB.activities, q)
-    followers = [
-        doc["meta"]["actor"] for doc in raw_followers if "actor" in doc.get("meta", {})
-    ]
+    followers = [doc["meta"] for doc in raw_followers if "actor" in doc.get("meta", {})]
     return htmlify(
         render_template(
             "followers.html",
@@ -857,7 +855,7 @@ def following():
 
     following, older_than, newer_than = paginated_query(DB.activities, q)
     following = [
-        (doc["remote_id"], doc["meta"]["object"])
+        (doc["remote_id"], doc["meta"])
         for doc in following
         if "remote_id" in doc and "object" in doc.get("meta", {})
     ]

@@ -8,10 +8,16 @@
 {% include "header.html" %}
 
 <div id="followers">
-	{% for follower in followers_data %}
+	{% for meta in followers_data %}
+    {% set follower = meta.actor %}
     {% if session.logged_in %}
 <div style="margin-left:90px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
 <a class="bar-item" href="/admin/profile?actor_id={{follower.id}}">profile</a>
+
+{% if meta.notification_follows_back %}
+<span class="bar-item-no-hover">following</span>
+{% endif %}
+
 </div>
     {% endif %}
     <div style="height: 100px;">
