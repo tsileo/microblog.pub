@@ -342,9 +342,11 @@ self reply
 
 {% endif %}
 
+{% if session.logged_in and obj.inReplyTo and not meta.count_reply and not perma %}
+<a class="bar-item" href="/admin/thread?oid={{aid}}">thread</a>
+{% endif %}
+
 {% if meta.object_visibility | visibility_is_public %}
-{% if obj.inReplyTo and not meta.count_reply and not perma %}
-<a class="bar-item" href="/admin/thread?oid={{aid}}">thread</a>{% endif %}
 {% if obj | url_or_id | get_url | is_from_outbox %}
 <a class="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
 {% else %}
