@@ -56,12 +56,15 @@ from core.meta import Box
 from core.meta import MetaKey
 from core.meta import _meta
 from core.meta import by_hashtag
+from core.meta import by_object_id
 from core.meta import by_remote_id
 from core.meta import by_type
 from core.meta import by_visibility
+from core.meta import in_inbox
 from core.meta import in_outbox
 from core.meta import is_public
 from core.meta import not_deleted
+from core.meta import not_poll_answer
 from core.meta import not_undo
 from core.meta import pinned
 from core.shared import _build_thread
@@ -121,27 +124,29 @@ def inject_config():
     notes_count = DB.activities.count(q)
     # FIXME(tsileo): rename to all_count, and remove poll answers from it
     all_q = {
-        "box": Box.OUTBOX.value,
-        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
-        "meta.undo": False,
-        "meta.deleted": False,
-        "meta.poll_answer": False,
+        **in_outbox(),
+        **by_type([ActivityType.CREATE, ActivityType.ANNOUNCE]),
+        **not_deleted(),
+        **not_undo(),
+        **not_poll_answer(),
     }
     liked_q = {
         **in_outbox(),
-        "meta.deleted": False,
-        "meta.undo": False,
-        "type": ActivityType.LIKE.value,
+        **by_type(ActivityType.LIKE),
+        **not_undo(),
+        **not_deleted(),
     }
     followers_q = {
-        "box": Box.INBOX.value,
-        "type": ActivityType.FOLLOW.value,
-        "meta.undo": False,
+        **in_inbox(),
+        **by_type(ActivityType.FOLLOW),
+        **not_undo(),
+        **not_deleted(),
     }
     following_q = {
-        "box": Box.OUTBOX.value,
-        "type": ActivityType.FOLLOW.value,
-        "meta.undo": False,
+        **in_outbox(),
+        **by_type(ActivityType.FOLLOW),
+        **not_undo(),
+        **not_deleted(),
     }
     unread_notifications_q = {_meta(MetaKey.NOTIFICATION_UNREAD): True}
 
@@ -395,11 +400,11 @@ def index():
 @login_required
 def all():
     q = {
-        "box": Box.OUTBOX.value,
-        "type": {"$in": [ActivityType.CREATE.value, ActivityType.ANNOUNCE.value]},
-        "meta.deleted": False,
-        "meta.undo": False,
-        "meta.poll_answer": False,
+        **in_outbox(),
+        **by_type([ActivityType.CREATE, ActivityType.ANNOUNCE]),
+        **not_deleted(),
+        **not_undo(),
+        **not_poll_answer(),
     }
     outbox_data, older_than, newer_than = paginated_query(DB.activities, q)
 
@@ -419,7 +424,7 @@ def note_by_id(note_id):
         return redirect(url_for("outbox_activity", item_id=note_id))
 
     data = DB.activities.find_one(
-        {"box": Box.OUTBOX.value, "remote_id": activity_url(note_id)}
+        {**in_outbox(), **by_remote_id(activity_url(note_id))}
     )
     if not data:
         abort(404)
@@ -432,14 +437,10 @@ def note_by_id(note_id):
     raw_likes = list(
         DB.activities.find(
             {
-                "meta.undo": False,
-                "meta.deleted": False,
-                "type": ActivityType.LIKE.value,
-                "$or": [
-                    # FIXME(tsileo): remove all the useless $or
-                    {"activity.object.id": data["activity"]["object"]["id"]},
-                    {"activity.object": data["activity"]["object"]["id"]},
-                ],
+                **not_undo(),
+                **not_deleted(),
+                **by_type(ActivityType.LIKE),
+                **by_object_id(data["activity"]["object"]["id"]),
             }
         )
     )
@@ -454,13 +455,10 @@ def note_by_id(note_id):
     raw_shares = list(
         DB.activities.find(
             {
-                "meta.undo": False,
-                "meta.deleted": False,
-                "type": ActivityType.ANNOUNCE.value,
-                "$or": [
-                    {"activity.object.id": data["activity"]["object"]["id"]},
-                    {"activity.object": data["activity"]["object"]["id"]},
-                ],
+                **not_undo(),
+                **not_deleted(),
+                **by_type(ActivityType.ANNOUNCE),
+                **by_object_id(data["activity"]["object"]["id"]),
             }
         )
     )
@@ -531,9 +529,10 @@ def ap_emoji(name):
 def outbox_detail(item_id):
     doc = DB.activities.find_one(
         {
-            "box": Box.OUTBOX.value,
-            "remote_id": activity_url(item_id),
-            "meta.public": True,
+            **in_outbox(),
+            **by_remote_id(activity_url(item_id)),
+            **not_deleted(),
+            **is_public(),
         }
     )
     if not doc:
@@ -571,10 +570,10 @@ def outbox_activity_replies(item_id):
     _log_sig()
     data = DB.activities.find_one(
         {
-            "box": Box.OUTBOX.value,
-            "remote_id": activity_url(item_id),
-            "meta.deleted": False,
-            "meta.public": True,
+            **in_outbox(),
+            **by_remote_id(activity_url(item_id)),
+            **not_deleted(),
+            **is_public(),
         }
     )
     if not data:
@@ -584,9 +583,9 @@ def outbox_activity_replies(item_id):
         abort(404)
 
     q = {
-        "meta.deleted": False,
-        "meta.public": True,
-        "type": ActivityType.CREATE.value,
+        **is_public(),
+        **not_deleted(),
+        **by_type(ActivityType.CREATE),
         "activity.object.inReplyTo": obj.get_object().id,
     }
 

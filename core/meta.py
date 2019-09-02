@@ -101,6 +101,10 @@ def follow_request_accepted() -> _SubQuery:
     return flag(MetaKey.FOLLOW_STATUS, FollowStatus.ACCEPTED.value)
 
 
+def not_poll_answer() -> _SubQuery:
+    return flag(MetaKey.POLL_ANSWER, False)
+
+
 def not_in_reply_to() -> _SubQuery:
     return {"activity.object.inReplyTo": None}
 
