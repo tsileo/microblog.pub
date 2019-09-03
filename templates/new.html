@@ -12,11 +12,13 @@
 <h3 style="padding-bottom: 30px">Replying to {{ content }}</h3>
 {{ utils.display_thread(thread) }}
 {% else %}
+<div class="tabbar">
 {% if request.args.get("question") == "1" %}
-<h3 style="padding-bottom:20px;">New question <small><a href="/admin/new">make it a note?</a></small></h3>
+<a href="{{ url_for('admin.admin_new') }}" class="tab">Note</a><a href="{{ url_for('admin.admin_new') }}?question=1" class="tab selected">Question</a>
 {% else %}
-<h3 style="padding-bottom:20px;">New note <small><a href="/admin/new?question=1">make it a question?</a></small></h3>
+<a href="{{ url_for('admin.admin_new') }}" class="tab selected">Note</a><a href="{{ url_for('admin.admin_new') }}?question=1" class="tab">Question</a>
 {% endif %}
+</div>
 {% endif %}
 <form action="/api/new_{% if request.args.get("question") == "1" %}question{%else%}note{%endif%}" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="redirect" value="/">
@@ -37,13 +39,15 @@
 {% endfor %}
 </p>
 
-<textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on">{{ content }}</textarea>
+<textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;">{{ content }}</textarea>
 <input type="file" name="file">
 
 {% if request.args.get("question") == "1" %}
 <div style="margin-top:20px;">
     <p>Open for: <select name="open_for">
-    <option value="1">1 minutes</option>
+    <option value="5">5 minutes</option>
+    <option value="10">10 minutes</option>
+    <option value="15">15 minutes</option>
     <option value="30">30 minutes</option>
     <option value="60">1 hour</option>
     <option value="360">6 hour</option>

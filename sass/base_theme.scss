@@ -350,6 +350,27 @@ form.action-form {
 #admin {
   margin-top: 50px;
 }
+.tabbar {
+    margin-bottom:50px;
+}
+.tab {
+  padding: 10px;
+  text-decoration: none;
+}
+.tab.selected {
+  background: $color-menu-background;
+  color: $primary-color;
+  border-top: 1px solid $primary-color;
+  border-right: 1px solid $primary-color;
+  border-left: 1px solid $primary-color;
+  padding: 9px;
+  
+}
+.tab:hover {
+  text-decoration: none;
+  background: $color-menu-background;
+  color: $color-light;
+}
 textarea, input, select {
   background: $color-menu-background;
   padding: 10px;
