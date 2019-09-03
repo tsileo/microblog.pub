@@ -18,20 +18,25 @@
 ## Features
 
  - Implements a basic [ActivityPub](https://activitypub.rocks/) server (with federation)
-   - Compatible with [Mastodon](https://joinmastodon.org/) and others ([Pleroma](https://pleroma.social/), Plume, PixelFed, Hubzilla...)
-   - Also implements a remote follow compatible with Mastodon instances
+   - S2S (Server to Server) and C2S (Client to Server) protocols
+   - Compatible with [Mastodon](https://joinmastodon.org/) and others ([Pleroma](https://pleroma.social/), Misskey, Plume, PixelFed, Hubzilla...)
  - Exposes your outbox as a basic microblog
    - Support all content types from the Fediverse (`Note`, `Article`, `Page`, `Video`, `Image`, `Question`...)
- - Comes with an admin UI with notifications and the stream of people you follow
+ - Comes with an admin UI with notifications and the stream of pOeople you follow
+   - Private "bookmark" support
+   - List support
  - Allows you to attach files to your notes
-   - Privacy-aware image upload endpoint that strip EXIF meta data before storing the file
+ - Cares about your privacy
+   - The image upload endpoint strips EXIF meta data before storing the file
+   - Every attachment/media is cached (or proxied) by the server
  - No JavaScript, **that's it**. Even the admin UI is pure HTML/CSS
    - (well except for the Emoji picker within the admin, but it's only few line of hand-written JavaScript)
  - Easy to customize (the theme is written Sass)
    - mobile-friendly theme
    - with dark and light version
- - Microformats aware (exports `h-feed`, `h-entry`, `h-cards`, ...)
- - Exports RSS/Atom/[JSON](https://jsonfeed.org/) feeds
+ - IndieWeb stuff
+   - Microformats aware (exports `h-feed`, `h-entry`, `h-cards`, ...)
+   - Exports RSS/Atom/[JSON](https://jsonfeed.org/) feeds
     - You stream/timeline is also available in an (authenticated) JSON feed
  - Comes with a tiny HTTP API to help posting new content and and read your inbox/notifications
  - Deployable with Docker (Docker compose for everything: dev, test and deployment)
@@ -39,10 +44,9 @@
    - U2F support
    - You can use your ActivityPub identity to login to other websites/app
  - Focused on testing
-   - Tested against the [official ActivityPub test suite](https://test.activitypub.rocks/) ([report submitted](https://github.com/w3c/activitypub/issues/308))
+   - Tested against the [official ActivityPub test suite](https://test.activitypub.rocks/), see [the results](https://activitypub.rocks/implementation-report/)
    - [CI runs "federation" tests against two instances](https://d.a4.io/tsileo/microblog.pub)
    - Project is running 2 up-to-date instances ([here](https://microblog.pub) and [there](https://a4.io))
-   - The core ActivityPub code/tests are in [Little Boxes](https://github.com/tsileo/little-boxes) (but needs some cleanup)
    - Manually tested against other major platforms
 
 
@@ -56,7 +60,6 @@ First install [Docker](https://docs.docker.com/install/) and [Docker Compose](ht
 Python is not needed on the host system.
 
 Note that all the generated data (config included) will be stored on the host (i.e. not only in Docker) in `config/` and `data/`.
-
 
 ### Installation
 
