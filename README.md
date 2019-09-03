@@ -22,10 +22,10 @@
    - Compatible with [Mastodon](https://joinmastodon.org/) and others ([Pleroma](https://pleroma.social/), Misskey, Plume, PixelFed, Hubzilla...)
  - Exposes your outbox as a basic microblog
    - Support all content types from the Fediverse (`Note`, `Article`, `Page`, `Video`, `Image`, `Question`...)
- - Comes with an admin UI with notifications and the stream of pOeople you follow
+ - Comes with an admin UI with notifications and the stream of people you follow
    - Private "bookmark" support
    - List support
- - Allows you to attach files to your notes
+   - Allows you to attach files to your notes
  - Cares about your privacy
    - The image upload endpoint strips EXIF meta data before storing the file
    - Every attachment/media is cached (or proxied) by the server
@@ -34,15 +34,15 @@
  - Easy to customize (the theme is written Sass)
    - mobile-friendly theme
    - with dark and light version
- - IndieWeb stuff
+ - IndieWeb citizen
    - Microformats aware (exports `h-feed`, `h-entry`, `h-cards`, ...)
    - Exports RSS/Atom/[JSON](https://jsonfeed.org/) feeds
     - You stream/timeline is also available in an (authenticated) JSON feed
+   - Implements [IndieAuth](https://indieauth.spec.indieweb.org/) endpoints (authorization and token endpoint)
+     - U2F support
+     - You can use your ActivityPub identity to login to other websites/app
  - Comes with a tiny HTTP API to help posting new content and and read your inbox/notifications
  - Deployable with Docker (Docker compose for everything: dev, test and deployment)
- - Implements [IndieAuth](https://indieauth.spec.indieweb.org/) endpoints (authorization and token endpoint)
-   - U2F support
-   - You can use your ActivityPub identity to login to other websites/app
  - Focused on testing
    - Tested against the [official ActivityPub test suite](https://test.activitypub.rocks/), see [the results](https://activitypub.rocks/implementation-report/)
    - [CI runs "federation" tests against two instances](https://d.a4.io/tsileo/microblog.pub)
