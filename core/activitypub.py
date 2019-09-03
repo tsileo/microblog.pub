@@ -763,13 +763,17 @@ def handle_replies(create: ap.Create) -> None:
         )
         return None
 
+    in_reply_to_data = {
+        MetaKey.IN_REPLY_TO: in_reply_to,
+        MetaKey.IN_REPLY_TO_URL: reply.get_url(),
+    }
     # Update the activity to save some data about the reply
     if reply.get_actor().id == create.get_actor().id:
-        in_reply_to_data = {MetaKey.IN_REPLY_TO_SELF: True}
+        in_reply_to_data.update({MetaKey.IN_REPLY_TO_SELF: True})
     else:
-        in_reply_to_data = {
-            MetaKey.IN_REPLY_TO_ACTOR: reply.get_actor().to_dict(embed=True)
-        }
+        in_reply_to_data.update(
+            {MetaKey.IN_REPLY_TO_ACTOR: reply.get_actor().to_dict(embed=True)}
+        )
     update_one_activity(by_remote_id(create.id), upsert(in_reply_to_data))
 
     # It's a regular reply, try to increment the reply counter
