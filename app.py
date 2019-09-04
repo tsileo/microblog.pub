@@ -912,7 +912,7 @@ def tags(tag):
                         **by_visibility(ap.Visibility.PUBLIC),
                         **not_deleted(),
                     }
-                ),
+                ).sort("meta.published", -1),
             )
         )
     _log_sig()
