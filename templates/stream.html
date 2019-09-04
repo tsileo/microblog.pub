@@ -100,6 +100,7 @@
 <div class="actor-inline">
 <div style="font-weight:bold">{{ (actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</div>
 <small class="lcolor">@{{ actor.preferredUsername }}@{{ actor | url_or_id | get_url | domain }}</small>
+{% if actor.manuallyApprovesFollowers %}<p><small>Manually approves followers</small></p>{% endif %}
 </div>
 </a>
 
