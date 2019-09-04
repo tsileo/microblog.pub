@@ -23,6 +23,7 @@ from config import ME
 from core import activitypub
 from core.db import find_activities
 from core.meta import MetaKey
+from core.meta import by_object_id
 from core.meta import by_type
 from core.meta import flag
 from core.meta import not_deleted
@@ -147,6 +148,11 @@ def _build_thread(data, include_children=True):  # noqa: C901
     )
 
     replies = [data]
+    for dat in find_activities(
+        {**by_object_id(root_id), **not_deleted(), **by_type(ap.ActivityType.CREATE)}
+    ):
+        replies.append(dat)
+
     for dat in find_activities(
         {
             **flag(MetaKey.THREAD_ROOT_PARENT, root_id),
