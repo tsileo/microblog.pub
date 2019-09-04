@@ -166,6 +166,9 @@ def _build_thread(data, include_children=True):  # noqa: C901
         {**flag(MetaKey.THREAD_ROOT_PARENT, root_id), **not_deleted()}
     ):
         # Make a Note/Question/... looks like a Create
+        dat["meta"].update(
+            {MetaKey.OBJECT_VISIBILITY.value: dat["meta"][MetaKey.VISIBILITY.value]}
+        )
         dat = {
             "activity": {"object": dat["activity"]},
             "meta": dat["meta"],
