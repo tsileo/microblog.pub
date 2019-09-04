@@ -527,6 +527,9 @@ def ap_emoji(name):
 
 @app.route("/outbox/<item_id>")
 def outbox_detail(item_id):
+    if "text/html" in request.headers.get("Accept", ""):
+        return redirect(url_for("note_by_id", note_id=item_id))
+
     doc = DB.activities.find_one(
         {
             **in_outbox(),
@@ -547,6 +550,9 @@ def outbox_detail(item_id):
 
 @app.route("/outbox/<item_id>/activity")
 def outbox_activity(item_id):
+    if "text/html" in request.headers.get("Accept", ""):
+        return redirect(url_for("note_by_id", note_id=item_id))
+
     data = find_one_activity(
         {**in_outbox(), **by_remote_id(activity_url(item_id)), **is_public()}
     )
