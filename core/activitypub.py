@@ -763,10 +763,7 @@ def handle_replies(create: ap.Create) -> None:
         )
         return None
 
-    in_reply_to_data = {
-        MetaKey.IN_REPLY_TO: in_reply_to,
-        MetaKey.IN_REPLY_TO_URL: reply.get_url(),
-    }
+    in_reply_to_data = {MetaKey.IN_REPLY_TO: in_reply_to}
     # Update the activity to save some data about the reply
     if reply.get_actor().id == create.get_actor().id:
         in_reply_to_data.update({MetaKey.IN_REPLY_TO_SELF: True})

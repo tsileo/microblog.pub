@@ -597,7 +597,10 @@ def task_process_reply() -> _Response:
             else:
                 reply_actor = new_replies[new_reply_idx + 1].get_actor()
                 is_in_reply_to_self = actor.id == reply_actor.id
-                reply_flags = {MetaKey.IN_REPLY_TO_SELF.value: is_in_reply_to_self}
+                reply_flags = {
+                    MetaKey.IN_REPLY_TO_SELF.value: is_in_reply_to_self,
+                    MetaKey.IN_REPLY_TO.value: new_reply.get_in_reply_to(),
+                }
                 if not is_in_reply_to_self:
                     reply_flags[MetaKey.IN_REPLY_TO_ACTOR.value] = reply_actor.to_dict(
                         embed=True

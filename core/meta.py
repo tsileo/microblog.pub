@@ -55,7 +55,6 @@ class MetaKey(Enum):
     THREAD_ROOT_PARENT = "thread_root_parent"
 
     IN_REPLY_TO = "in_reply_to"
-    IN_REPLY_TO_URL = "in_reply_to_url"
     IN_REPLY_TO_SELF = "in_reply_to_self"
     IN_REPLY_TO_ACTOR = "in_reply_to_actor"
 
