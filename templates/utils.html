@@ -204,7 +204,8 @@ self reply
 	{% endif %}
 	{% for a in obj.attachment %}
     {% if (a.mediaType and a.mediaType.startswith("image/")) or (a.type and a.type == 'Image') %}
-    <a href="{{ a.url | get_attachment_url(None) }}"><img src="{{a.url | get_attachment_url(720) }}" class="img-attachment"></a>
+    <a href="{{ a.url | get_attachment_url(None) }}">
+        <img src="{{a.url | get_attachment_url(720) }}" title="{{ a.name }}" class="img-attachment"></a>
     {% elif (a.mediaType and a.mediaType.startswith("video/")) %}
     <li><video controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" width="480"></video></li>
     {% elif (a.mediaType and a.mediaType.startswith("audio/")) %}

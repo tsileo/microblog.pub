@@ -27,7 +27,7 @@
 {% if following %}
 <form action="/api/undo" class="action-form"  method="post">
 <input type="hidden" name="redirect" value="{{ actor_redir }}"/>
-<input type="hidden" name="id" value="{{ following.id }}"/>
+<input type="hidden" name="id" value="{{ following.remote_id }}"/>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 <button type="submit" class="bar-item">unfollow</button>
 </form>
@@ -163,6 +163,7 @@
     <span class="bar-item-no-hover">new follower</span>
     {% if item.meta.notification_unread %}<span class="bar-item-no-bg"><span class="pcolor">new</span></span>{% endif %}
     <span class="bar-item-no-bg">{{ (item.activity.published or item.meta.published) | format_timeago }}</span>
+    <a class="bar-item" href="/admin/profile?actor_id={{item.meta.actor_id}}">profile</a>
     {% if item.meta.notification_follows_back %}<span class="bar-item-no-hover">already following</span>
     {% else %}
     <form action="/api/follow" class="action-form"  method="POST">
@@ -182,7 +183,21 @@
     <span class="bar-item-no-hover">you started following</span>
     {% if item.meta.notification_unread %}<span class="bar-item-no-bg"><span class="pcolor">new</span></span>{% endif %}
     <span class="bar-item-no-bg">{{ (item.activity.published or item.meta.published) | format_timeago }}</span>
+    <a class="bar-item" href="/admin/profile?actor_id={{item.meta.actor_id}}">profile</a>
     {% if item.meta.notification_follows_back %}<span class="bar-item-no-hover">follows you back</span>{% endif %}
+    </div>
+    
+    <div style="height: 100px;">
+	{{ utils.display_actor_inline(item.meta.actor, size=50) }}
+    </div>
+
+	{% elif item | has_type('Reject') %}
+    <div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
+    <span class="bar-item-no-hover">rejected your follow request</span>
+    {% if item.meta.notification_unread %}<span class="bar-item-no-bg"><span class="pcolor">new</span></span>{% endif %}
+    <span class="bar-item-no-bg">{{ (item.activity.published or item.meta.published) | format_timeago }}</span>
+    <a class="bar-item" href="/admin/profile?actor_id={{item.meta.actor_id}}">profile</a>
+    {% if item.meta.notification_follows_back %}<span class="bar-item-no-hover">follows you</span>{% endif %}
     </div>
     
     <div style="height: 100px;">
