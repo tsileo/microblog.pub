@@ -176,15 +176,10 @@ def _follow_process_inbox(activity: ap.Follow, new_meta: _NewMeta) -> None:
     post_to_outbox(accept)
 
 
-def _update_follow_status(follow: ap.BaseActivity, status: FollowStatus) -> None:
-    if not follow.has_type(ap.Follow) or not is_from_outbox(follow):
-        _logger.warning(
-            "received an Accept/Reject from an unexpected activity: {follow!r}"
-        )
-        return None
-
+def _update_follow_status(follow_id: str, status: FollowStatus) -> None:
+    _logger.info(f"{follow_id} is {status}")
     update_one_activity(
-        by_remote_id(follow.id), upsert({MetaKey.FOLLOW_STATUS: status.value})
+        by_remote_id(follow_id), upsert({MetaKey.FOLLOW_STATUS: status.value})
     )
 
 
@@ -192,14 +187,14 @@ def _update_follow_status(follow: ap.BaseActivity, status: FollowStatus) -> None
 def _accept_process_inbox(activity: ap.Accept, new_meta: _NewMeta) -> None:
     _logger.info(f"process_inbox activity={activity!r}")
     # Set a flag on the follow
-    follow = activity.get_object()
+    follow = activity.get_object_id()
     _update_follow_status(follow, FollowStatus.ACCEPTED)
 
 
 @process_inbox.register
 def _reject_process_inbox(activity: ap.Reject, new_meta: _NewMeta) -> None:
     _logger.info(f"process_inbox activity={activity!r}")
-    follow = activity.get_object()
+    follow = activity.get_object_id()
     _update_follow_status(follow, FollowStatus.REJECTED)
 
 

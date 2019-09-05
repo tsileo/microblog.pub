@@ -379,6 +379,7 @@ def admin_notifications() -> _Response:
         "activity.object": {"$regex": f"^{config.BASE_URL}"},
     }
     followed_query = {"type": ap.ActivityType.ACCEPT.value}
+    rejected_query = {"type": ap.ActivityType.REJECT.value}
     q = {
         "box": Box.INBOX.value,
         "$or": [
@@ -387,6 +388,7 @@ def admin_notifications() -> _Response:
             replies_query,
             new_followers_query,
             followed_query,
+            rejected_query,
             unfollow_query,
             likes_query,
         ],

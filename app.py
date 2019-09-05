@@ -60,6 +60,7 @@ from core.meta import by_object_id
 from core.meta import by_remote_id
 from core.meta import by_type
 from core.meta import by_visibility
+from core.meta import follow_request_accepted
 from core.meta import in_inbox
 from core.meta import in_outbox
 from core.meta import is_public
@@ -145,6 +146,7 @@ def inject_config():
     following_q = {
         **in_outbox(),
         **by_type(ActivityType.FOLLOW),
+        **follow_request_accepted(),
         **not_undo(),
         **not_deleted(),
     }
@@ -849,7 +851,13 @@ def followers():
 
 @app.route("/following")
 def following():
-    q = {**in_outbox(), **by_type(ActivityType.FOLLOW), **not_undo()}
+    q = {
+        **in_outbox(),
+        **by_type(ActivityType.FOLLOW),
+        **not_deleted(),
+        **follow_request_accepted(),
+        **not_undo(),
+    }
 
     if is_api_request():
         _log_sig()
