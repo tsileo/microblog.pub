@@ -9,7 +9,6 @@ from little_boxes.errors import NotAnActivityError
 import config
 from core.activitypub import _answer_key
 from core.activitypub import handle_replies
-from core.activitypub import is_from_outbox
 from core.activitypub import post_to_outbox
 from core.activitypub import update_cached_actor
 from core.db import DB
