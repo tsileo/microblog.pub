@@ -219,6 +219,13 @@ def post_to_inbox(activity: ap.BaseActivity) -> None:
         Tasks.cache_actor(activity.id)
         return
 
+    # Honk forwards activities in a Read, process them as replies
+    if activity.has_type(ap.ActivityType.READ):
+        Tasks.process_reply(activity.get_object_id())
+        return
+
+    # TODO(tsileo): support ignore from Honk
+
     # Hubzilla forwards activities in a Create, process them as possible replies
     if activity.has_type(ap.ActivityType.CREATE) and server(activity.id) != server(
         activity.get_object_id()
