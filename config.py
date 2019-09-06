@@ -10,6 +10,7 @@ from itsdangerous import JSONWebSignatureSerializer
 from little_boxes import strtobool
 from little_boxes.activitypub import CTX_AS as AP_DEFAULT_CTX
 from pymongo import MongoClient
+from bleach import linkify
 
 import sass
 from utils.emojis import _load_emojis
@@ -128,6 +129,13 @@ def _admin_jwt_token() -> str:
 
 ADMIN_API_KEY = get_secret_key("admin_api_key", _admin_jwt_token)
 
+attachments = []
+if conf.get("profile_metadata"):
+    for key, value in conf["profile_metadata"].items():
+        attachments.append(
+            {"type": "PropertyValue", "name": key, "value": linkify(value)}
+        )
+
 ME = {
     "@context": DEFAULT_CTX,
     "type": "Person",
@@ -143,7 +151,7 @@ ME = {
     "endpoints": {},
     "url": ID,
     "manuallyApprovesFollowers": False,
-    "attachment": [],
+    "attachment": attachments,
     "icon": {
         "mediaType": mimetypes.guess_type(ICON_URL)[0],
         "type": "Image",
