@@ -318,3 +318,34 @@ class _20190901_MetaHashtagsAndMentions(Migration):
 
             except Exception:
                 logger.exception(f"failed to process activity {data!r}")
+
+
+class _20190906_RedoFollowFollowBack(_20190901_FollowFollowBackMigrationFix):
+    """Add the new meta flags for tracking accepted/rejected status and following/follows back info."""
+
+
+class _20190906_InReplyToMigration(Migration):
+    def migrate(self) -> None:
+        for data in find_activities(
+            {**by_type(ap.ActivityType.CREATE), **not_deleted()}
+        ):
+            try:
+                in_reply_to = data["activity"]["object"].get("inReplyTo")
+                if in_reply_to:
+                    update_one_activity(
+                        by_remote_id(data["remote_id"]),
+                        upsert({MetaKey.IN_REPLY_TO: in_reply_to}),
+                    )
+            except Exception:
+                logger.exception(f"failed to process activity {data!r}")
+
+        for data in DB.replies.find({**not_deleted()}):
+            try:
+                in_reply_to = data["activity"].get("inReplyTo")
+                if in_reply_to:
+                    DB.replies.update_one(
+                        by_remote_id(data["remote_id"]),
+                        upsert({MetaKey.IN_REPLY_TO: in_reply_to}),
+                    )
+            except Exception:
+                logger.exception(f"failed to process activity {data!r}")
