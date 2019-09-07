@@ -246,7 +246,8 @@ self reply
 
 <div class="bottom-bar">
 {% if perma %}
-<span class="perma-item" style="float:left;padding:5px;">{{ obj.published | format_time }}</span>
+<time class="perma-item dt-published" style="float:left;padding:5px;" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
+
 {% endif %}
 
 {% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> replies</a>
@@ -349,7 +350,9 @@ self reply
 
 {% if meta.object_visibility | visibility_is_public %}
 {% if obj | url_or_id | get_url | is_from_outbox %}
-<a class="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a> 
+{% if not perma %}
+<a class="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a>
+{% endif %}
 {% else %}
 <a class="bar-item" href="{{ obj | url_or_id | get_url }}" rel="external noreferrer">source</a>
 {% if session.logged_in %}
@@ -357,9 +360,7 @@ self reply
 {% endif %}
 {% endif %}
 {% endif %}
-{% if session.logged_in %}
 <a class="bar-item bar-item-no-border">{{ meta.object_visibility | visibility }}</a>
-{% endif %}
 
 </div>
 
