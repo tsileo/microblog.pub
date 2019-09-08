@@ -11,6 +11,16 @@
 
 <div class="p-note summary">
 {{ config.SUMMARY | safe }}
+
+{% if config.PROFILE_METADATA %}
+<dl>
+{% for item in config.ME.attachment %}
+{% if item.type == "PropertyValue" %}
+<dt>{{item.name | safe }}</dt><dd>{{ item.value | safe }}</dd>
+{% endif %}
+{% endfor %}
+</dl>
+{% endif %}
 </div>
 
 </div>

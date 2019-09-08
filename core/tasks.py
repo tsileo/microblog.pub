@@ -8,8 +8,8 @@ from typing import Set
 from little_boxes import activitypub as ap
 from poussetaches import PousseTaches
 
-from config import MEDIA_CACHE
 from config import DISABLE_WEBMENTIONS
+from config import MEDIA_CACHE
 from utils import parse_datetime
 
 p = PousseTaches(
@@ -101,6 +101,10 @@ class Tasks:
     @staticmethod
     def finish_post_to_outbox(iri: str) -> None:
         p.push(iri, "/task/finish_post_to_outbox")
+
+    @staticmethod
+    def send_actor_update() -> None:
+        p.push({}, "/task/send_actor_update", delay=2)
 
     @staticmethod
     def update_question_outbox(iri: str, open_for: int) -> None:

@@ -69,6 +69,7 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
     ICON_URL = conf["icon_url"]
     PASS = conf["pass"]
 
+    PROFILE_METADATA = conf.get("profile_metadata", {})
     HIDE_FOLLOWING = conf.get("hide_following", True)
 
     # Theme-related config
@@ -130,8 +131,8 @@ def _admin_jwt_token() -> str:
 ADMIN_API_KEY = get_secret_key("admin_api_key", _admin_jwt_token)
 
 attachments = []
-if conf.get("profile_metadata"):
-    for key, value in conf["profile_metadata"].items():
+if PROFILE_METADATA:
+    for key, value in PROFILE_METADATA.items():
         attachments.append(
             {"type": "PropertyValue", "name": key, "value": linkify(value)}
         )
@@ -176,7 +177,7 @@ BLACKLIST = conf.get("blacklist", [])
 DISABLE_WEBMENTIONS = conf.get("disable_webmentions", False)
 
 # By default, we keep 14 of inbox data ; outbox is kept forever (along with bookmarked stuff, outbox replies, liked...)
-DAYS_TO_KEEP = 14
+DAYS_TO_KEEP = int(conf.get("days_to_keep", 14))
 
 # Load custom emojis (stored in static/emojis)
 _load_emojis(ROOT_DIR, BASE_URL)

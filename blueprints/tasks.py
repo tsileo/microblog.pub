@@ -25,6 +25,7 @@ from core.activitypub import _actor_hash
 from core.activitypub import _add_answers_to_question
 from core.activitypub import _cache_actor_icon
 from core.activitypub import is_from_outbox
+from core.activitypub import new_context
 from core.activitypub import post_to_outbox
 from core.activitypub import save_reply
 from core.activitypub import update_cached_actor
@@ -47,6 +48,7 @@ from core.shared import _Response
 from core.shared import back
 from core.shared import p
 from core.tasks import Tasks
+from utils import now
 from utils import opengraph
 from utils.media import is_video
 from utils.webmentions import discover_webmention_endpoint
@@ -97,6 +99,28 @@ def task_update_question() -> _Response:
         raise TaskError() from err
     except Exception as err:
         app.logger.exception("task failed")
+        raise TaskError() from err
+
+    return ""
+
+
+@blueprint.route("/task/send_actor_update", methods=["POST"])
+def task_send_actor_update() -> _Response:
+    task = p.parse(flask.request)
+    app.logger.info(f"task={task!r}")
+    try:
+        update = ap.Update(
+            actor=MY_PERSON.id,
+            object=MY_PERSON.to_dict(),
+            to=[MY_PERSON.followers],
+            cc=[ap.AS_PUBLIC],
+            published=now(),
+            context=new_context(),
+        )
+
+        post_to_outbox(update)
+    except Exception as err:
+        app.logger.exception(f"failed to send actor update")
         raise TaskError() from err
 
     return ""

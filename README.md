@@ -22,10 +22,13 @@
    - Compatible with [Mastodon](https://joinmastodon.org/) and others ([Pleroma](https://pleroma.social/), Misskey, Plume, PixelFed, Hubzilla...)
  - Exposes your outbox as a basic microblog
    - Support all content types from the Fediverse (`Note`, `Article`, `Page`, `Video`, `Image`, `Question`...)
+   - Markdown support
+   - Server-side code syntax highlighting
  - Comes with an admin UI with notifications and the stream of people you follow
    - Private "bookmark" support
    - List support
    - Allows you to attach files to your notes
+   - Custom emojus
  - Cares about your privacy
    - The image upload endpoint strips EXIF meta data before storing the file
    - Every attachment/media is cached (or proxied) by the server

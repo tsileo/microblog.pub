@@ -78,7 +78,7 @@ def _answer_key(choice: str) -> str:
     return h.hexdigest()
 
 
-def _actor_hash(actor: ap.ActivityType) -> str:
+def _actor_hash(actor: ap.ActivityType, local: bool = False) -> str:
     """Used to know when to update the meta actor cache, like an "actor version"."""
     h = hashlib.new("sha1")
     h.update(actor.id.encode())
@@ -91,6 +91,12 @@ def _actor_hash(actor: ap.ActivityType) -> str:
     h.update(key.key_id().encode())
     if isinstance(actor.icon, dict) and "url" in actor.icon:
         h.update(actor.icon["url"].encode())
+    if local:
+        # The local hash helps us detect when to send an Update
+        for item in actor.attachment:
+            h.update(item["name"].encode())
+            h.update(item["value"].encode())
+        h.update(("1" if actor.manuallyApprovesFollowers else "0").encode())
     return h.hexdigest()
 
 
