@@ -36,10 +36,10 @@
    - with dark and light version
  - IndieWeb citizen
    - Microformats aware (exports `h-feed`, `h-entry`, `h-cards`, ...)
+     - Export a feed in the HTML that is WebSub compatible
    - Implements [IndieAuth](https://indieauth.spec.indieweb.org/) endpoints (authorization and token endpoint)
-     - U2F support
-     - You can use your ActivityPub identity to login to other websites/app
-   - Send [Webmentions](https://www.w3.org/TR/webmention/) (only for public notes)
+     - You can use your ActivityPub identity to login to other websites/app (with U2F support)
+   - Send [Webmentions](https://www.w3.org/TR/webmention/) to linked website (only for public notes)
    - Exports RSS/Atom/[JSON](https://jsonfeed.org/) feeds
     - You stream/timeline is also available in an (authenticated) JSON feed
   - Comes with a tiny HTTP API to help posting new content and and read your inbox/notifications
