@@ -23,12 +23,14 @@
 <form action="/api/new_{% if request.args.get("question") == "1" %}question{%else%}note{%endif%}" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="redirect" value="/">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<select name="visibility">
+<select name="visibility" style="padding:8px 10px;">
 {% for v in visibility %}
 <option value="{{v.name}}">{{ v.value }}</option>
 {% endfor %}
 </select>
 {% if reply %}<input type="hidden" name="reply" value="{{reply}}">{% endif %}
+
+<p><input type="text" name="summary" placeholder="summary/CW (optional)"></p>
 
 <p>
 {% for emoji in emojis %}
@@ -39,7 +41,7 @@
 {% endfor %}
 </p>
 
-<textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;">{{ content }}</textarea>
+<textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;">{{ content }}</textarea>
 <input type="file" name="file">
 
 {% if request.args.get("question") == "1" %}

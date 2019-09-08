@@ -432,6 +432,7 @@ def api_new_note() -> _Response:
         attributedTo=MY_PERSON.id,
         cc=list(set(cc)),
         to=list(set(to)),
+        summary=_user_api_arg("summary", default=""),
         content=content,
         tag=tags,
         source={"mediaType": "text/markdown", "content": source},
