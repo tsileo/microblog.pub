@@ -27,7 +27,7 @@
 </head>
 <body>
 {% if logged_in %}
-<div id="admin-menu-wrapper">
+<nav id="admin-menu-wrapper">
 <ul id="admin-menu">
 <li class="left"><a href="/admin" class="admin-title{% if request.path.startswith("/admin") %} selected{% endif %}">Admin</a></li>
 <li class="left"><a href="/" class="admin-title {% if not request.path.startswith("/admin") %} selected{% endif %}">Public</a></li>
@@ -42,17 +42,17 @@
 <li class="left"><a href="/admin/lookup"{% if request.path == "/admin/lookup" %} class="selected" {% endif %}>Lookup</a></li>
 <li class="left"><a href="/admin/logout">Logout</a></li>
 </ul>
-</div>
+</nav>
 {% endif %}
 
 
-<div class="base-container">
+<main class="base-container">
 {% block content %}{% endblock %}
-</div>
-<div class="footer">
+</main>
+<footer class="footer">
 <div>
 	Powered by <a href="https://microblog.pub">microblog.pub</a> <small class="microblogpub-version"><code>{{ microblogpub_version }}</code></small> (<a href="https://github.com/tsileo/microblog.pub">source code</a>) and the <a href="https://activitypub.rocks/">ActivityPub</a> protocol
 </div>
-</div>
+</footer>
 </body>
 </html>

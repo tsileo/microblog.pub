@@ -53,17 +53,17 @@
 
 {% set real_end_time = obj.closed or obj.endTime %}
 
-<div class="note-box">
+<article class="note-box">
 <div class="note h-entry" id="activity-{{ obj.id | permalink_id }}">
 
 <div class="h-card p-author">
-<a class="u-url u-uid no-hover" href="{{ actor | url_or_id | get_url }}"><img class="u-photo" src="{% if not actor.icon %}/static/nopic.png{% else %}{{ actor.icon.url | get_actor_icon_url(50) }}{% endif %}">
+<a class="u-url u-uid no-hover" rel="author" href="{{ actor | url_or_id | get_url }}"><img class="u-photo" src="{% if not actor.icon %}/static/nopic.png{% else %}{{ actor.icon.url | get_actor_icon_url(50) }}{% endif %}">
 </a>
 <data class="p-name" value="{{ actor.name or actor.preferredUsername }}"></data>
 </div>
 
 <div class="note-wrapper">
-    <div style="clear:both;height:20px;">
+    <aside style="clear:both;height:20px;">
 	<a href="{{ actor | url_or_id | get_url }}" style="margin:0;text-decoration:none;margin: 0;text-decoration: none;display: block;width: 75%;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;float: left;" class="no-hover">
         <strong>{{ (actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</strong>
         <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}</span>{% else %}{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span></a>
@@ -74,7 +74,7 @@
             <time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
 	</span>
 	{% endif %}
-    </div>
+    </aside>
 
 {% if meta.in_reply_to_actor %}
 <div style="margin:10px 0 15px 0;padding:0;">
@@ -244,7 +244,7 @@ self reply
 
 
 
-<div class="bottom-bar">
+<aside class="bottom-bar">
 {% if perma %}
 <time class="perma-item dt-published" style="float:left;padding:5px;" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
 
@@ -362,10 +362,10 @@ self reply
 {% endif %}
 <a class="bar-item bar-item-no-border">{{ meta.object_visibility | visibility }}</a>
 
-</div>
+</aside>
 
 {% if likes or shares %}
-<div style="padding-top:20px;" class="pure-g">
+<aside style="padding-top:20px;" class="pure-g">
 {% if likes %}
 <div class="pure-u-1-2">
 <h4 style="font-weight:normal"><strong>{{ likes|length }}</strong> likes</h4>{% for like in likes %}
@@ -380,13 +380,13 @@ self reply
 {% endfor %}
 </div>
 {% endif %}
-</div>
+</aside>
 {% endif %}
 
 
 </div>
 </div>                       
-</div>
+</article>
 
 
 {%- endmacro %}
