@@ -272,12 +272,29 @@ def save_reply(activity: ap.BaseActivity, meta: Dict[str, Any] = {}) -> None:
     )
 
 
+def new_context(parent: Optional[ap.BaseActivity] = None) -> str:
+    """`context` is here to group related activities, it's not meant to be resolved.
+    We're just following the convention."""
+    # Copy the context from the parent if any
+    if parent and (parent.context or parent.conversation):
+        if parent.context:
+            if isinstance(parent.context, str):
+                return parent.context
+            elif isinstance(parent.context, dict) and parent.context.get("id"):
+                return parent.context["id"]
+        return parent.conversation
+
+    # Generate a new context
+    ctx_id = binascii.hexlify(os.urandom(12)).decode("utf-8")
+    return urljoin(BASE_URL, f"/contexts/{ctx_id}")
+
+
 def post_to_outbox(activity: ap.BaseActivity) -> str:
     if activity.has_type(ap.CREATE_TYPES):
         activity = activity.build_create()
 
     # Assign create a random ID
-    obj_id = binascii.hexlify(os.urandom(8)).decode("utf-8")
+    obj_id = binascii.hexlify(os.urandom(12)).decode("utf-8")
     uri = activity_url(obj_id)
     activity._data["id"] = uri
     if activity.has_type(ap.ActivityType.CREATE):

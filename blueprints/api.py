@@ -33,6 +33,7 @@ from config import _drop_db
 from core import feed
 from core.activitypub import activity_url
 from core.activitypub import post_to_outbox
+from core.activitypub import new_context
 from core.meta import Box
 from core.meta import MetaKey
 from core.meta import _meta
@@ -142,6 +143,7 @@ def api_delete() -> _Response:
 
     # Create the delete, same audience as the Create object
     delete = ap.Delete(
+        context=new_context(note),
         actor=ID,
         object=ap.Tombstone(id=note.id).to_dict(embed=True),
         to=note.to,
@@ -169,6 +171,7 @@ def api_boost() -> _Response:
         to=[MY_PERSON.followers, note.attributedTo],
         cc=[ap.AS_PUBLIC],
         published=now(),
+        context=new_context(note),
     )
     announce_id = post_to_outbox(announce)
 
@@ -202,6 +205,7 @@ def api_vote() -> _Response:
         to=note.get_actor().id,
         name=choice,
         tag=[],
+        context=new_context(note),
         inReplyTo=note.id,
     )
     raw_note["@context"] = config.DEFAULT_CTX
@@ -232,7 +236,14 @@ def api_like() -> _Response:
     else:
         to = [note.get_actor().id]
 
-    like = ap.Like(object=note.id, actor=MY_PERSON.id, to=to, cc=cc, published=now())
+    like = ap.Like(
+        object=note.id,
+        actor=MY_PERSON.id,
+        to=to,
+        cc=cc,
+        published=now(),
+        context=new_context(note),
+    )
 
     like_id = post_to_outbox(like)
 
@@ -301,6 +312,7 @@ def api_undo() -> _Response:
 
     undo = ap.Undo(
         actor=MY_PERSON.id,
+        context=new_context(obj),
         object=obj.to_dict(embed=True, embed_object_id_only=True),
         published=now(),
         to=obj.to,
@@ -421,12 +433,11 @@ def api_new_note() -> _Response:
         else:
             cc.append(reply.attributedTo)
 
+    context = new_context(reply)
+
     for tag in tags:
         if tag["type"] == "Mention":
-            if visibility == ap.Visibility.DIRECT:
-                to.append(tag["href"])
-            else:
-                cc.append(tag["href"])
+            to.append(tag["href"])
 
     raw_note = dict(
         attributedTo=MY_PERSON.id,
@@ -437,6 +448,7 @@ def api_new_note() -> _Response:
         tag=tags,
         source={"mediaType": "text/markdown", "content": source},
         inReplyTo=reply.id if reply else None,
+        context=context,
     )
 
     if "file" in request.files and request.files["file"].filename:
@@ -450,7 +462,7 @@ def api_new_note() -> _Response:
         raw_note["attachment"] = [
             {
                 "mediaType": mtype,
-                "name": rfilename,
+                "name": _user_api_arg("file_description", default=rfilename),
                 "type": "Document",
                 "url": f"{BASE_URL}/uploads/{oid}/{rfilename}",
             }
@@ -508,6 +520,7 @@ def api_new_question() -> _Response:
         attributedTo=MY_PERSON.id,
         cc=list(set(cc)),
         to=[ap.AS_PUBLIC],
+        context=new_context(),
         content=content,
         tag=tags,
         source={"mediaType": "text/markdown", "content": source},
@@ -563,7 +576,12 @@ def api_follow() -> _Response:
         return _user_api_response(activity=existing["activity"]["id"])
 
     follow = ap.Follow(
-        actor=MY_PERSON.id, object=actor, to=[actor], cc=[ap.AS_PUBLIC], published=now()
+        actor=MY_PERSON.id,
+        object=actor,
+        to=[actor],
+        cc=[ap.AS_PUBLIC],
+        published=now(),
+        context=new_context(),
     )
     follow_id = post_to_outbox(follow)
 
