@@ -296,6 +296,7 @@ def admin_new() -> _Response:
     content = ""
     thread: List[Any] = []
     print(request.args)
+    default_visibility = None  # ap.Visibility.PUBLIC
     if request.args.get("reply"):
         data = DB.activities.find_one({"activity.object.id": request.args.get("reply")})
         if data:
@@ -308,10 +309,16 @@ def admin_new() -> _Response:
                 ),
             )
             reply = ap.parse_activity(data["activity"]["object"])
+        # Fetch the post visibility, in case it's follower only
+        default_visibility = ap.get_visibility(reply)
+        # If it's public, we default the reply to unlisted
+        if default_visibility == ap.Visibility.PUBLIC:
+            default_visibility = ap.Visibility.UNLISTED
 
         reply_id = reply.id
         if reply.ACTIVITY_TYPE == ap.ActivityType.CREATE:
             reply_id = reply.get_object().id
+
         actor = reply.get_actor()
         domain = urlparse(actor.id).netloc
         # FIXME(tsileo): if reply of reply, fetch all participants
@@ -324,6 +331,7 @@ def admin_new() -> _Response:
             reply=reply_id,
             content=content,
             thread=thread,
+            default_visibility=default_visibility,
             visibility=ap.Visibility,
             emojis=config.EMOJIS.split(" "),
             custom_emojis={

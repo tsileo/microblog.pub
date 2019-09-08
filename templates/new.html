@@ -25,7 +25,7 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <select name="visibility" style="padding:8px 10px;">
 {% for v in visibility %}
-<option value="{{v.name}}">{{ v.value }}</option>
+<option value="{{v.name}}" {% if v == default_visibility %}selected="selected"{% endif %}>{{ v.value }}</option>
 {% endfor %}
 </select>
 {% if reply %}<input type="hidden" name="reply" value="{{reply}}">{% endif %}
