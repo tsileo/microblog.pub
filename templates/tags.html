@@ -20,13 +20,14 @@
 <data class="p-name" value="#{{tag}}">
 
 {% include "header.html" %}
+<main>
 <h2>#{{ tag }}</h2>
 <div id="notes">
 	{% for item in outbox_data %}
 	{{ utils.display_note(item.activity.object, meta=item.meta) }}
 	{% endfor %}
 </div>
-
+</main>
 </div>
 {% endblock %}
 {% block links %}

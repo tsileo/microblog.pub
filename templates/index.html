@@ -20,7 +20,7 @@
 
 {% include "header.html" %}
 
-<div id="notes">
+<main id="notes">
 	{% for item in pinned %}
     {% if item.meta.pinned %}
     <p style="margin-left:65px;padding-bottom:5px;">
@@ -62,7 +62,7 @@
 	{% endfor %}
 
     {{ utils.display_pagination(older_than, newer_than) }}
-    </div>
+    </main>
 
 </div>
 {% endblock %}

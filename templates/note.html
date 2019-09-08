@@ -16,7 +16,9 @@
 {% block content %}
 <div id="container">
 {% include "header.html" %}
+<main>
 {{ utils.display_thread(thread, likes=likes, shares=shares) }}
+</main>
 </div>
 {% endblock %}
 {% block links %}<link rel="alternate" href="{{ note.activity.object.id}}" type="application/activity+json">{% endblock %}

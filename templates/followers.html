@@ -7,6 +7,7 @@
 <div id="container">
 {% include "header.html" %}
 
+<main>
 <div id="followers">
 	{% for meta in followers_data %}
     {% set follower = meta.actor %}
@@ -27,6 +28,7 @@
     {{ utils.display_pagination(older_than, newer_than) }}
 </div>
 
+</main>
 </div>
 {% endblock %}
 {% block links %}

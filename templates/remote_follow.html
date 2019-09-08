@@ -5,6 +5,7 @@
 {% block content %}
 <div id="container">
 {% include "header.html" %}
+<main>
 <h2 style="font-weight:normal">Remote follow @<span class="gold">{{ config.USERNAME }}</span>@<span class="gold">{{ config.DOMAIN }}</span></h2>
 
 <form method="POST" action="">
@@ -12,6 +13,6 @@
 	<input type="text" name="profile" placeholder="you@your-instance">
 	<input type="submit" value="Follow">
 </form>
-
+</main>
 </div>
 {% endblock %}
