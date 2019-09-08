@@ -1,5 +1,3 @@
-import json
-
 import little_boxes.activitypub as ap
 import mf2py
 import requests
@@ -49,7 +47,7 @@ def lookup(url: str) -> ap.BaseActivity:
         # Maybe the page was JSON-LD?
         data = resp.json()
         return ap.parse_activity(data)
-    except json.JSONDecodeError:
+    except Exception:
         pass
 
     # Try content negotiation (retry with the AP Accept header)

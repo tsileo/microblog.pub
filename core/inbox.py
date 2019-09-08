@@ -9,6 +9,7 @@ from little_boxes.errors import NotAnActivityError
 import config
 from core.activitypub import _answer_key
 from core.activitypub import handle_replies
+from core.activitypub import new_context
 from core.activitypub import post_to_outbox
 from core.activitypub import update_cached_actor
 from core.db import DB
@@ -163,6 +164,7 @@ def _follow_process_inbox(activity: ap.Follow, new_meta: _NewMeta) -> None:
     actor_id = activity.get_actor().id
     accept = ap.Accept(
         actor=config.ID,
+        context=new_context(activity),
         object={
             "type": "Follow",
             "id": activity.id,

@@ -24,6 +24,7 @@ from core.activitypub import Box
 from core.activitypub import _actor_hash
 from core.activitypub import _add_answers_to_question
 from core.activitypub import _cache_actor_icon
+from core.activitypub import is_from_outbox
 from core.activitypub import post_to_outbox
 from core.activitypub import save_reply
 from core.activitypub import update_cached_actor
@@ -48,6 +49,7 @@ from core.shared import p
 from core.tasks import Tasks
 from utils import opengraph
 from utils.media import is_video
+from utils.webmentions import discover_webmention_endpoint
 
 blueprint = flask.Blueprint("tasks", __name__)
 
@@ -305,6 +307,41 @@ def task_cache_attachment() -> _Response:
     return ""
 
 
+@blueprint.route("/task/send_webmention", methods=["POST"])
+def task_send_webmention() -> _Response:
+    task = p.parse(flask.request)
+    app.logger.info(f"task={task!r}")
+    note_url = task.payload["note_url"]
+    link = task.payload["link"]
+    remote_id = task.payload["remote_id"]
+    try:
+        app.logger.info(f"trying to send webmention source={note_url} target={link}")
+        webmention_endpoint = discover_webmention_endpoint(link)
+        if not webmention_endpoint:
+            app.logger.info("no webmention endpoint")
+            return ""
+
+        resp = requests.post(
+            webmention_endpoint,
+            data={"source": note_url, "target": link},
+            headers={"User-Agent": config.USER_AGENT},
+        )
+        app.logger.info(f"webmention endpoint resp={resp}/{resp.text}")
+        resp.raise_for_status()
+    except HTTPError as err:
+        app.logger.exception("request failed")
+        if 400 >= err.response.status_code >= 499:
+            app.logger.info("client error, no retry")
+            return ""
+
+        raise TaskError() from err
+    except Exception as err:
+        app.logger.exception(f"failed to cache actor for {link}/{remote_id}/{note_url}")
+        raise TaskError() from err
+
+    return ""
+
+
 @blueprint.route("/task/cache_actor", methods=["POST"])
 def task_cache_actor() -> _Response:
     task = p.parse(flask.request)
@@ -319,9 +356,17 @@ def task_cache_actor() -> _Response:
 
         # Fetch the Open Grah metadata if it's a `Create`
         if activity.has_type(ap.ActivityType.CREATE):
-            links = opengraph.links_from_note(activity.get_object().to_dict())
+            obj = activity.get_object()
+            links = opengraph.links_from_note(obj.to_dict())
             if links:
                 Tasks.fetch_og_meta(iri)
+
+                # Send Webmentions only if it's from the outbox, and public
+                if (
+                    is_from_outbox(obj)
+                    and ap.get_visibility(obj) == ap.Visibility.PUBLIC
+                ):
+                    Tasks.send_webmentions(activity, links)
 
         if activity.has_type(ap.ActivityType.FOLLOW):
             if actor.id == config.ID:

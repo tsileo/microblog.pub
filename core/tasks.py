@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import timezone
 from typing import Any
 from typing import Dict
+from typing import Set
 
 from little_boxes import activitypub as ap
 from poussetaches import PousseTaches
@@ -39,6 +40,18 @@ class Tasks:
             return None
 
         p.push({"url": url, "iri": iri}, "/task/cache_emoji")
+
+    @staticmethod
+    def send_webmentions(activity: ap.Create, links: Set[str]) -> None:
+        for link in links:
+            p.push(
+                {
+                    "link": link,
+                    "note_url": activity.get_object().get_url(),
+                    "remote_id": activity.id,
+                },
+                "/task/send_webmention",
+            )
 
     @staticmethod
     def cache_emojis(activity: ap.BaseActivity) -> None:

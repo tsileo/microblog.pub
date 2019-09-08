@@ -6,11 +6,11 @@ from enum import Enum
 from pathlib import Path
 
 import yaml
+from bleach import linkify
 from itsdangerous import JSONWebSignatureSerializer
 from little_boxes import strtobool
 from little_boxes.activitypub import CTX_AS as AP_DEFAULT_CTX
 from pymongo import MongoClient
-from bleach import linkify
 
 import sass
 from utils.emojis import _load_emojis

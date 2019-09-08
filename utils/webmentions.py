@@ -40,7 +40,7 @@ def _discover_webmention_endoint(url: str) -> Optional[str]:
     return None
 
 
-def discover_webmention_endoint(url: str) -> Optional[str]:
+def discover_webmention_endpoint(url: str) -> Optional[str]:
     """Discover the Webmention endpoint of a given URL, if any.
 
     Passes all the tests at https://webmention.rocks!
