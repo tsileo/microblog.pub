@@ -42,7 +42,13 @@
 </p>
 
 <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;">{{ content }}</textarea>
+
+<p>
 <input type="file" name="file">
+<p>
+<p>
+<input type="text" name="file_description" placeholder="attachment description (optional)">
+</p>
 
 {% if request.args.get("question") == "1" %}
 <div style="margin-top:20px;">

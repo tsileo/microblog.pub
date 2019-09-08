@@ -1,5 +1,5 @@
 {% if not request.path.startswith('/admin') %}
-<div id="header">
+<header>
 
 <div class="h-card p-author">
 <data class="u-photo" value="{{ config.ME.icon.url }}"></data>
@@ -28,5 +28,5 @@
 </ul>
 </div>
 
-</div>
+</header>
 {% endif %}
