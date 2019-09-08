@@ -36,12 +36,13 @@
    - with dark and light version
  - IndieWeb citizen
    - Microformats aware (exports `h-feed`, `h-entry`, `h-cards`, ...)
-   - Exports RSS/Atom/[JSON](https://jsonfeed.org/) feeds
-    - You stream/timeline is also available in an (authenticated) JSON feed
    - Implements [IndieAuth](https://indieauth.spec.indieweb.org/) endpoints (authorization and token endpoint)
      - U2F support
      - You can use your ActivityPub identity to login to other websites/app
- - Comes with a tiny HTTP API to help posting new content and and read your inbox/notifications
+   - Send [Webmentions](https://www.w3.org/TR/webmention/) (only for public notes)
+   - Exports RSS/Atom/[JSON](https://jsonfeed.org/) feeds
+    - You stream/timeline is also available in an (authenticated) JSON feed
+  - Comes with a tiny HTTP API to help posting new content and and read your inbox/notifications
  - Deployable with Docker (Docker compose for everything: dev, test and deployment)
  - Focused on testing
    - Tested against the [official ActivityPub test suite](https://test.activitypub.rocks/), see [the results](https://activitypub.rocks/implementation-report/)

@@ -173,6 +173,8 @@ if conf.get("emoji_tpl"):
 # Hosts blacklist
 BLACKLIST = conf.get("blacklist", [])
 
+DISABLE_WEBMENTIONS = conf.get("disable_webmentions", False)
+
 # By default, we keep 14 of inbox data ; outbox is kept forever (along with bookmarked stuff, outbox replies, liked...)
 DAYS_TO_KEEP = 14
 

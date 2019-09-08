@@ -9,6 +9,7 @@ from little_boxes import activitypub as ap
 from poussetaches import PousseTaches
 
 from config import MEDIA_CACHE
+from config import DISABLE_WEBMENTIONS
 from utils import parse_datetime
 
 p = PousseTaches(
@@ -43,6 +44,9 @@ class Tasks:
 
     @staticmethod
     def send_webmentions(activity: ap.Create, links: Set[str]) -> None:
+        if DISABLE_WEBMENTIONS:
+            return None
+
         for link in links:
             p.push(
                 {
