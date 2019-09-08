@@ -93,9 +93,10 @@ def _actor_hash(actor: ap.ActivityType, local: bool = False) -> str:
         h.update(actor.icon["url"].encode())
     if local:
         # The local hash helps us detect when to send an Update
-        for item in actor.attachment:
-            h.update(item["name"].encode())
-            h.update(item["value"].encode())
+        if actor.attachment:
+            for item in actor.attachment:
+                h.update(item["name"].encode())
+                h.update(item["value"].encode())
         h.update(("1" if actor.manuallyApprovesFollowers else "0").encode())
     return h.hexdigest()
 
