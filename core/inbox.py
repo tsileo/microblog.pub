@@ -140,6 +140,25 @@ def _announce_process_inbox(announce: ap.Announce, new_meta: _NewMeta) -> None:
     # Cache the announced object
     Tasks.cache_object(announce.id)
 
+    # Process the reply of the announced object if any
+    in_reply_to = obj.get_in_reply_to()
+    if in_reply_to:
+        reply = ap.fetch_remote_activity(in_reply_to)
+        if reply.has_type(ap.ActivityType.CREATE):
+            reply = reply.get_object()
+
+        in_reply_to_data = {MetaKey.IN_REPLY_TO: in_reply_to}
+        # Update the activity to save some data about the reply
+        if reply.get_actor().id == obj.get_actor().id:
+            in_reply_to_data.update({MetaKey.IN_REPLY_TO_SELF: True})
+        else:
+            in_reply_to_data.update(
+                {MetaKey.IN_REPLY_TO_ACTOR: reply.get_actor().to_dict(embed=True)}
+            )
+        update_one_activity(by_remote_id(announce.id), upsert(in_reply_to_data))
+        # Spawn a task to process it (and determine if it needs to be saved)
+        Tasks.process_reply(reply.id)
+
     update_one_activity(
         {**by_type(ap.ActivityType.CREATE), **by_object_id(obj.id)},
         inc(MetaKey.COUNT_BOOST, 1),
