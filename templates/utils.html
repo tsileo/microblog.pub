@@ -205,11 +205,11 @@ self reply
 	{% for a in obj.attachment %}
     {% if (a.mediaType and a.mediaType.startswith("image/")) or (a.type and a.type == 'Image') %}
     <a href="{{ a.url | get_attachment_url(None) }}">
-        <img src="{{a.url | get_attachment_url(720) }}" title="{{ a.name }}" class="img-attachment"></a>
+        <img src="{{a.url | get_attachment_url(720) }}" title="{{ a.name }}" alt="{{ a.name }}" class="img-attachment"></a>
     {% elif (a.mediaType and a.mediaType.startswith("video/")) %}
-    <li><video controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" width="480"></video></li>
+    <li><video controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" title="{{ a.name }}" width="480"></video></li>
     {% elif (a.mediaType and a.mediaType.startswith("audio/")) %}
-    <li><audio controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" style="width:480px;"></audio></li>
+    <li><audio controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" title="{{ a.name }}" style="width:480px;"></audio></li>
 	{% else %}
 	<li><a href="{{a.url }}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
 	{% endif  %}
