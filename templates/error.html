@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block title %}{{code}} {{status_text}} - {{ config.NAME }}{% endblock %}
+{% block header %}
+{% endblock %}
+{% block content %}
+<div id="container">
+{% if not request.path.startswith('/admin') %}
+{% include "header.html" %}
+{% endif %}
+<main>
+<h1>{{code}} {{status_text}}</h1>
+<p>Something went wrong :(</p>
+{% if tb %}
+<div style="margin:50px 0;">
+    <p>Please consider <a href="https://github.com/tsileo/microblog.pub/issues/new">opening an issue on GitHub</a>.<br>Here is the traceback:</p>
+<code><pre>
+{{ tb }}
+</pre></code>
+</div>
+{% endif %}
+</main>
+</div>
+{% endblock %}
