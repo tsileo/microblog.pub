@@ -3,7 +3,6 @@
 {% block title %}{% if request.path == url_for('admin.admin_stream') %}Stream{% elif actor_id %}Profile {{ actor.name }}{% else %}Notifications{% endif %} - {{ config.NAME }}{% endblock %}
 {% block content %}
 <div class="h-feed" id="container">
-{% include "header.html" %}
 <div id="admin">
 
 {% if request.path == url_for('admin.admin_notifications') and unread_notifications_count %}

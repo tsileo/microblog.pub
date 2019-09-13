@@ -1,4 +1,5 @@
 import json
+from werkzeug.exceptions import InternalServerError
 import logging
 import os
 import traceback
@@ -212,6 +213,18 @@ def handle_task_error(error):
     response = jsonify({"traceback": error.message, "request_id": g.request_id})
     response.status_code = 500
     return response
+
+
+@app.errorhandler(InternalServerError)
+def handle_500(e):
+    tb = "".join(traceback.format_tb(e.__traceback__))
+    logger.error(f"caught error {e!r}, {tb}")
+    if not session.get("logged_in", False):
+        tb = None
+
+    return render_template(
+        "error.html", code=500, status_text="Internal Server Error", tb=tb
+    )
 
 
 # @app.errorhandler(Exception)

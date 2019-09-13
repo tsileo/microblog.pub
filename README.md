@@ -28,7 +28,7 @@
    - Private "bookmark" support
    - List support
    - Allows you to attach files to your notes
-   - Custom emojus
+   - Custom emojos
  - Cares about your privacy
    - The image upload endpoint strips EXIF meta data before storing the file
    - Every attachment/media is cached (or proxied) by the server
