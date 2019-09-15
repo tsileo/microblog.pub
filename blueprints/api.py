@@ -34,9 +34,12 @@ from core import feed
 from core.activitypub import activity_url
 from core.activitypub import new_context
 from core.activitypub import post_to_outbox
+from core.db import update_one_activity
 from core.meta import Box
 from core.meta import MetaKey
 from core.meta import _meta
+from core.meta import by_object_id
+from core.meta import by_type
 from core.shared import MY_PERSON
 from core.shared import _Response
 from core.shared import csrf
@@ -176,6 +179,31 @@ def api_boost() -> _Response:
     announce_id = post_to_outbox(announce)
 
     return _user_api_response(activity=announce_id)
+
+
+@blueprint.route("/ack_reply", methods=["POST"])
+@api_required
+def api_ack_reply() -> _Response:
+    reply_iri = _user_api_arg("reply_iri")
+    obj = ap.fetch_remote_activity(reply_iri)
+    if obj.has_type(ap.ActivityType.CREATE):
+        obj = obj.get_object()
+    # TODO(tsileo): tweak the adressing?
+    update_one_activity(
+        {**by_type(ap.ActivityType.CREATE), **by_object_id(obj.id)},
+        {"$set": {"meta.reply_acked": True}},
+    )
+    read = ap.Read(
+        actor=MY_PERSON.id,
+        object=obj.id,
+        to=[MY_PERSON.followers],
+        cc=[ap.AS_PUBLIC, obj.get_actor().id],
+        published=now(),
+        context=new_context(obj),
+    )
+
+    read_id = post_to_outbox(read)
+    return _user_api_response(activity=read_id)
 
 
 @blueprint.route("/mark_notifications_as_read", methods=["POST"])

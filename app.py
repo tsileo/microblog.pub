@@ -1,5 +1,4 @@
 import json
-from werkzeug.exceptions import InternalServerError
 import logging
 import os
 import traceback
@@ -30,6 +29,7 @@ from little_boxes.errors import ActivityGoneError
 from little_boxes.errors import Error
 from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_remote_follow_template
+from werkzeug.exceptions import InternalServerError
 
 import blueprints.admin
 import blueprints.indieauth
@@ -827,7 +827,30 @@ def inbox():
 
         # We fetched the remote data successfully
         data = remote_data
-    activity = ap.parse_activity(data)
+    try:
+        activity = ap.parse_activity(data)
+    except ValueError:
+        logger.exception("failed to parse activity for req {g.request_id}: {data!r}")
+
+        # Track/store the payload for analysis
+        ip, geoip = _get_ip()
+
+        DB.trash.insert(
+            {
+                "activity": data,
+                "meta": {
+                    "ts": datetime.now().timestamp(),
+                    "ip_address": ip,
+                    "geoip": geoip,
+                    "tb": traceback.format_exc(),
+                    "headers": dict(request.headers),
+                    "request_id": g.request_id,
+                },
+            }
+        )
+
+        return Response(status=201)
+
     logger.debug(f"inbox activity={g.request_id}/{activity}/{data}")
 
     post_to_inbox(activity)

@@ -67,10 +67,6 @@ class Tasks:
                 pass
 
     @staticmethod
-    def ack_reply(reply_iri: str) -> None:
-        p.push({"reply_iri": reply_iri}, "/task/ack_reply")
-
-    @staticmethod
     def post_to_remote_inbox(payload: str, recp: str) -> None:
         p.push({"payload": payload, "to": recp}, "/task/post_to_remote_inbox")
 
