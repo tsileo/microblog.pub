@@ -126,7 +126,7 @@
 	{% for item in inbox_data %}
 	{% if 'actor' in item.meta %}
 	{% if item | has_type('Create') %}
-    {% if request.path.startswith("/admin") and not item.meta.reply_acked and item.meta.object_visibility | visibility_is_public %}
+    {% if request.path.startswith("/admin/notifications") and not item.meta.reply_acked and item.meta.object_visibility | visibility_is_public %}
     <div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
     <form action="/api/ack_reply" class="action-form"  method="POST">
     <input type="hidden" name="redirect" value="{{ request.path }}"/>
