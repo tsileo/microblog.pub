@@ -148,6 +148,44 @@ def perform() -> None:  # noqa: C901
         except Exception:
             logger.exception(f"failed to process {data!r}")
 
+    for data in DB.replies.find(
+        {_meta(MetaKey.PUBLISHED): {"$lt": d}, "meta.gc_keep": {"$exists": False}}
+    ).limit(500):
+        try:
+            logger.info(f"data={data!r}")
+            create_count += 1
+            remote_id = data["remote_id"]
+            meta = data["meta"]
+
+            # This activity has been bookmarked, keep it
+            if meta.get("bookmarked"):
+                _keep(data)
+                continue
+
+            obj = ap.parse_activity(data["activity"])
+
+            # This activity is part of a thread we want to keep, keep it
+            if obj and in_reply_to and meta.get("thread_root_parent"):
+                thread_root_parent = meta["thread_root_parent"]
+                if thread_root_parent.startswith(ID) or thread_root_parent in toi:
+                    _keep(data)
+                    continue
+
+            # This activity was boosted or liked, keep it
+            if meta.get("boosted") or meta.get("liked"):
+                _keep(data)
+                continue
+
+            # Delete the cached attachment
+            for grid_item in MEDIA_CACHE.fs.find({"remote_id": remote_id}):
+                MEDIA_CACHE.fs.delete(grid_item._id)
+
+            # Delete the activity
+            DB.replies.delete_one({"_id": data["_id"]})
+            create_deleted += 1
+        except Exception:
+            logger.exception(f"failed to process {data!r}")
+
     after_gc_create = perf_counter()
     time_to_gc_create = after_gc_create - start
     logger.info(
