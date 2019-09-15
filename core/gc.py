@@ -163,9 +163,11 @@ def perform() -> None:  # noqa: C901
                 continue
 
             obj = ap.parse_activity(data["activity"])
+            # This activity is a direct reply of one the server actor activity, keep it
+            in_reply_to = obj.get_in_reply_to()
 
             # This activity is part of a thread we want to keep, keep it
-            if obj and in_reply_to and meta.get("thread_root_parent"):
+            if in_reply_to and meta.get("thread_root_parent"):
                 thread_root_parent = meta["thread_root_parent"]
                 if thread_root_parent.startswith(ID) or thread_root_parent in toi:
                     _keep(data)
