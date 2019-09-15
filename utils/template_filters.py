@@ -247,6 +247,9 @@ def get_answer_count(choice, obj, meta):
         if option.get("name") == choice:
             return option.get("replies", {}).get("totalItems", 0)
 
+    _logger.warning(f"invalid poll data {choice} {obj} {meta}")
+    return 0
+
 
 @filters.app_template_filter()
 def get_total_answers_count(obj, meta):
