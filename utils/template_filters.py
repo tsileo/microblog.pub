@@ -36,6 +36,13 @@ filters = flask.Blueprint("filters", __name__)
 
 
 @filters.app_template_filter()
+def get_visibility(meta):
+    if "object_visibility" in meta and meta["object_visibility"]:
+        return meta["object_visibility"]
+    return meta.get("visibility")
+
+
+@filters.app_template_filter()
 def visibility(v: str) -> str:
     try:
         return ap.Visibility[v].value.lower()

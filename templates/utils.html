@@ -250,19 +250,19 @@
 
 {% endif %}
 
-{% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> replies</a>
+{% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> replie{% if meta.count_reply > 1 %}s{% endif %}</a>
 {% elif meta.count_reply and session.logged_in %}
-<a class="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> replies</a>{% endif %}
+<a class="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> replie{% if meta.count_reply > 1 %}s{% endif %}</a>{% endif %}
 
 
-{% if not perma and meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_boost }}</strong> boosts</a>{% endif %}
-{% if not perma and meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> likes</a>{% endif %}
+{% if not perma and meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_boost }}</strong> boost{% if meta.count_boost > 1 %}s{% endif %}</a>{% endif %}
+{% if not perma and meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> like{% if meta.count_like > 1 %}s{% endif %}</a>{% endif %}
 
 {% if session.logged_in %}
 {% if ui%}
 <a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
 
-{% if meta.object_visibility | visibility_is_public %}
+{% if meta | get_visibility | visibility_is_public %}
 {% if meta.boosted %}
 <form action="/api/undo" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ redir }}">
@@ -348,7 +348,7 @@
 <a class="bar-item" href="/admin/thread?oid={{aid}}">thread</a>
 {% endif %}
 
-{% if meta.object_visibility | visibility_is_public %}
+{% if meta | get_visibility | visibility_is_public %}
 {% if obj | url_or_id | get_url | is_from_outbox %}
 {% if not perma %}
 <a class="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a>
@@ -360,7 +360,7 @@
 {% endif %}
 {% endif %}
 {% endif %}
-<a class="bar-item bar-item-no-border">{{ meta.object_visibility | visibility }}</a>
+<a class="bar-item bar-item-no-border">{{ meta | get_visibility | visibility }}</a>
 
 </aside>
 
@@ -368,14 +368,14 @@
 <aside style="padding-top:20px;" class="pure-g">
 {% if likes %}
 <div class="pure-u-1-2">
-<h4 style="font-weight:normal"><strong>{{ likes|length }}</strong> likes</h4>{% for like in likes %}
+    <h4 style="font-weight:normal"><strong>{{ likes|length }}</strong> like{% if (likes | length) > 1 %}s{% endif %}</h4>{% for like in likes %}
 {{ display_actor_inline(like) }}
 {% endfor %}
 </div>
 {% endif %}
 {% if shares %}
 <div class="pure-u-1-2">
-<h4 style="font-weight:normal"><strong>{{ shares|length }}</strong> boosts</h4>{% for boost in shares %}
+<h4 style="font-weight:normal"><strong>{{ shares|length }}</strong> boost{% if (shares|length) > 1 %}s{% endif %}</h4>{% for boost in shares %}
 {{ display_actor_inline(boost) }}
 {% endfor %}
 </div>
