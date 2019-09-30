@@ -160,7 +160,7 @@ def inject_config():
         config=config,
         logged_in=logged_in,
         followers_count=DB.activities.count(followers_q),
-        following_count=DB.activities.count(following_q) if logged_in else 0,
+        following_count=DB.activities.count(following_q) if logged_in or not config.HIDE_FOLLOWING else 0,
         notes_count=notes_count,
         liked_count=DB.activities.count(liked_q) if logged_in else 0,
         with_replies_count=DB.activities.count(all_q) if logged_in else 0,
