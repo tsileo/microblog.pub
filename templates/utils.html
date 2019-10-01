@@ -250,9 +250,9 @@
 
 {% endif %}
 
-{% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> replie{% if meta.count_reply > 1 %}s{% endif %}</a>
+{% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> repl{% if meta.count_reply > 1 %}ies{% else %}y{% endif %}</a>
 {% elif meta.count_reply and session.logged_in %}
-<a class="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> replie{% if meta.count_reply > 1 %}s{% endif %}</a>{% endif %}
+<a class="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> repl{% if meta.count_reply > 1 %}ies{% else %}y{% endif %}</a>{% endif %}
 
 
 {% if not perma and meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_boost }}</strong> boost{% if meta.count_boost > 1 %}s{% endif %}</a>{% endif %}
