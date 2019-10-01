@@ -334,9 +334,10 @@ def admin_new() -> _Response:
             default_visibility=default_visibility,
             visibility=ap.Visibility,
             emojis=config.EMOJIS.split(" "),
-            custom_emojis={
-                name: ap.Emoji(**dat) for name, dat in EMOJIS_BY_NAME.items()
-            },
+            custom_emojis=sorted(
+                [ap.Emoji(**dat) for name, dat in EMOJIS_BY_NAME.items()],
+                key=lambda e: e.name,
+            ),
         )
     )
 
