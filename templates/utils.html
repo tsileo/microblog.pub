@@ -26,7 +26,7 @@
 {% endif %}
 {%- endmacro %}
 
-{% macro display_note(obj, perma=False, ui=False, likes=[], shares=[], meta={}, no_color=False) -%}
+{% macro display_note(obj, perma=False, likes=[], shares=[], meta={}, no_color=False) -%}
 
 {% if meta.object_actor %}
     {% set actor = meta.object_actor %}
@@ -259,7 +259,6 @@
 {% if not perma and meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> like{% if meta.count_like > 1 %}s{% endif %}</a>{% endif %}
 
 {% if session.logged_in %}
-{% if ui%}
 <a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
 
 {% if meta | get_visibility | visibility_is_public %}
@@ -342,8 +341,6 @@
 {% else %}
 {% endif %}
 
-{% endif %}
-
 {% if session.logged_in and obj.inReplyTo and not meta.count_reply and not perma %}
 <a class="bar-item" href="/admin/thread?oid={{aid}}">thread</a>
 {% endif %}
@@ -394,9 +391,9 @@
 {% macro display_thread(thread, likes=[], shares=[]) -%}
 {% for reply in thread %}
 {% if reply._requested %}
-{{ display_note(reply.activity.object, perma=True, ui=False, likes=likes, shares=shares, meta=reply.meta) }}
+{{ display_note(reply.activity.object, perma=True, likes=likes, shares=shares, meta=reply.meta) }}
 {% else %}
-{{ display_note(reply.activity.object, perma=False, ui=True, meta=reply.meta) }}
+{{ display_note(reply.activity.object, perma=False, meta=reply.meta) }}
 {% endif %}
 {% endfor %}
 {% endmacro -%}
