@@ -68,12 +68,10 @@
         <strong>{{ (actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</strong>
         <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}</span>{% else %}{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span></a>
 
-	{% if not perma %}
 	<span style="float:right;width: 25%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
 		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj | url_or_id | get_url }}">
             <time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
 	</span>
-	{% endif %}
     </aside>
 
 {% if meta.in_reply_to_actor %}
@@ -245,11 +243,6 @@
 
 
 <aside class="bottom-bar">
-{% if perma %}
-<time class="perma-item dt-published" style="float:left;padding:5px;" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
-
-{% endif %}
-
 {% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> repl{% if meta.count_reply > 1 %}ies{% else %}y{% endif %}</a>
 {% elif meta.count_reply and session.logged_in %}
 <a class="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> repl{% if meta.count_reply > 1 %}ies{% else %}y{% endif %}</a>{% endif %}
