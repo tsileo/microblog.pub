@@ -137,7 +137,7 @@
     </div>
 	
     {% endif %}
-	{{ utils.display_note(item.activity.object, ui=True, meta=item.meta) }}
+	{{ utils.display_note(item.activity.object, meta=item.meta) }}
 	{% else %}
 	{% if item | has_type('Announce') %}
 	{% set boost_actor = item.meta.actor %}
@@ -152,7 +152,7 @@
     </div>
     {% endif %}
 	{% if item.meta.object %}
-	{{ utils.display_note(item.meta.object, ui=True, meta=item.meta) }}
+	{{ utils.display_note(item.meta.object, meta=item.meta) }}
 	{% endif %}
 	{% endif %}
 
@@ -164,7 +164,7 @@
     <span class="bar-item-no-bg">{{ (item.activity.published or item.meta.published) | format_timeago }}</span>
     </div>
 	{% if item.meta.object %}
-    {{ utils.display_note(item.meta.object, ui=False, meta=item.meta) }}
+    {{ utils.display_note(item.meta.object, meta=item.meta) }}
 	{% endif %}
     {% endif %}
 	

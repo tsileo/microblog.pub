@@ -28,15 +28,15 @@
     {{ utils.display_actor_inline(data, size=80) }}
 
     {% elif data | has_type('Create') %}
-	{{ utils.display_note(data.object, ui=True) }}
+	{{ utils.display_note(data.object) }}
     {% elif data | has_type(['Note', 'Article', 'Video', 'Audio', 'Page', 'Question']) %}
-	{{ utils.display_note(data, ui=True) }}
+	{{ utils.display_note(data) }}
     {% elif data | has_type('Announce') %}
     {% set boost_actor = meta.actor %}
         <p style="margin-left:65px;padding-bottom:5px;">
         <span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name }}</a> boosted</span>
         </p>
-        {{ utils.display_note(meta.object, ui=False, meta={'actor': meta.object_actor}) }}
+        {{ utils.display_note(meta.object) }}
  
     {% endif %}
 </div>
