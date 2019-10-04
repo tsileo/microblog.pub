@@ -226,10 +226,12 @@
 {% for og in meta.og_metadata %}
 {% if og.url %}
 <a href="{{ og.url }}" class="og-link" style="margin:30px 0;clear:both;display: flex;">
-<div>
+{% if og.image | get_og_image_url %}
+<div style="padding:0 20px;">
 <img  style="width:100px;border-radius:3px;" src="{{ og.image | get_og_image_url }}">
 </div>
-<div style="padding:0 20px;">
+{% endif %}
+<div>
 <strong>{{ og.title }}</strong>
 <p>{{ og.description | truncate(80) }}</p>
 <small>{{ og.site_name }}</small>
