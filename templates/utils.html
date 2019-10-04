@@ -306,7 +306,6 @@
 {% endif %}
 
 
-{% endif %}
 
 {% if obj.id | is_from_outbox %}
 <form action="/api/note/delete" class="action-form"  method="POST">
@@ -331,7 +330,7 @@
 </form>
 {% endif %}
 
-{% else %}
+{% endif %}
 {% endif %}
 
 {% if session.logged_in and obj.inReplyTo and not meta.count_reply and not perma %}
