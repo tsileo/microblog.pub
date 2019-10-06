@@ -441,15 +441,20 @@ def note_by_id(note_id):
     if is_api_request():
         return redirect(url_for("outbox_activity", item_id=note_id))
 
+    query = {}
+    # Prevent displaying direct messages on the public frontend
+    if not session.get("logged_in", False):
+        query = is_public()
+
     data = DB.activities.find_one(
-        {**in_outbox(), **by_remote_id(activity_url(note_id))}
+        {**in_outbox(), **by_remote_id(activity_url(note_id)), **query}
     )
     if not data:
         abort(404)
     if data["meta"].get("deleted", False):
         abort(410)
 
-    thread = _build_thread(data)
+    thread = _build_thread(data, query=query)
     app.logger.info(f"thread={thread!r}")
 
     raw_likes = list(

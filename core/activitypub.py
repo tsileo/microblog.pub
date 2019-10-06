@@ -436,7 +436,14 @@ class MicroblogPubBackend(Backend):
             if obj:
                 if obj["meta"]["deleted"]:
                     raise ActivityGoneError(f"{iri} is gone")
-                return obj["meta"].get("object") or obj["activity"]["object"]
+                cached_object = obj["meta"].get("object")
+                if cached_object:
+                    return cached_object
+
+                embedded_object = obj["activity"]["object"]
+                if isinstance(embedded_object, dict):
+                    return embedded_object
+
             # TODO(tsileo): also check the REPLIES box
 
             # Check if it's cached because it's a follower

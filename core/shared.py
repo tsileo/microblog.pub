@@ -140,7 +140,9 @@ def _get_ip():
     return ip, geoip
 
 
-def _build_thread(data, include_children=True):  # noqa: C901
+def _build_thread(data, include_children=True, query=None):  # noqa: C901
+    if query is None:
+        query = {}
     data["_requested"] = True
     app.logger.info(f"_build_thread({data!r})")
     root_id = data["meta"].get(
@@ -150,7 +152,12 @@ def _build_thread(data, include_children=True):  # noqa: C901
 
     replies = [data]
     for dat in find_activities(
-        {**by_object_id(root_id), **not_deleted(), **by_type(ap.ActivityType.CREATE)}
+        {
+            **by_object_id(root_id),
+            **not_deleted(),
+            **by_type(ap.ActivityType.CREATE),
+            **query,
+        }
     ):
         replies.append(dat)
 
@@ -159,12 +166,13 @@ def _build_thread(data, include_children=True):  # noqa: C901
             **flag(MetaKey.THREAD_ROOT_PARENT, root_id),
             **not_deleted(),
             **by_type(ap.ActivityType.CREATE),
+            **query,
         }
     ):
         replies.append(dat)
 
     for dat in DB.replies.find(
-        {**flag(MetaKey.THREAD_ROOT_PARENT, root_id), **not_deleted()}
+        {**flag(MetaKey.THREAD_ROOT_PARENT, root_id), **not_deleted(), **query}
     ):
         # Make a Note/Question/... looks like a Create
         dat["meta"].update(
