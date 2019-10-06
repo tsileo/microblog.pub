@@ -9,6 +9,7 @@ from typing import Dict
 from little_boxes import activitypub as ap
 
 from config import DB
+from config import REPLIES_IN_STREAM
 from core.activitypub import is_from_outbox
 from core.activitypub import is_local_url
 from core.db import find_one_activity
@@ -206,7 +207,7 @@ def _create_set_inbox_flags(activity: ap.Create, new_meta: _NewMeta) -> None:
             # Also set the "keep mark" for the GC (as we want to keep it forever)
             _set_flag(new_meta, MetaKey.GC_KEEP)
 
-    if not in_reply_to:
+    if not in_reply_to or REPLIES_IN_STREAM:
         # A good candidate for displaying in the stream
         _set_flag(new_meta, MetaKey.STREAM)
 

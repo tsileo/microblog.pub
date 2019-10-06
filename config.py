@@ -174,7 +174,11 @@ if conf.get("emoji_tpl"):
 # Hosts blacklist
 BLACKLIST = conf.get("blacklist", [])
 
-DISABLE_WEBMENTIONS = conf.get("disable_webmentions", False)
+# Outbound Webmentions support for public posts
+DISABLE_WEBMENTIONS = bool(conf.get("disable_webmentions", False))
+
+# Whether replies should be displayed in the stream or not
+REPLIES_IN_STREAM = bool(conf.get("replies_in_stream", False))
 
 # By default, we keep 14 of inbox data ; outbox is kept forever (along with bookmarked stuff, outbox replies, liked...)
 DAYS_TO_KEEP = int(conf.get("days_to_keep", 14))
