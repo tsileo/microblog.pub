@@ -207,7 +207,9 @@ def _create_set_inbox_flags(activity: ap.Create, new_meta: _NewMeta) -> None:
             # Also set the "keep mark" for the GC (as we want to keep it forever)
             _set_flag(new_meta, MetaKey.GC_KEEP)
 
-    if not in_reply_to or REPLIES_IN_STREAM:
+    if not in_reply_to or (
+        REPLIES_IN_STREAM and obj.get_actor().id in ap.get_backend().following()
+    ):
         # A good candidate for displaying in the stream
         _set_flag(new_meta, MetaKey.STREAM)
 
