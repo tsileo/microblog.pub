@@ -9,7 +9,6 @@ from typing import Union
 from little_boxes import activitypub as ap
 
 _SubQuery = Dict[str, Any]
-_Meta = Dict["MetaKey", Any]
 
 
 @unique
