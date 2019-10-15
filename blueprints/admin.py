@@ -24,6 +24,7 @@ from config import DB
 from config import ID
 from config import PASS
 from core.activitypub import Box
+from core.activitypub import _meta
 from core.activitypub import post_to_outbox
 from core.db import find_one_activity
 from core.meta import by_object_id
@@ -193,14 +194,8 @@ def admin_lookup() -> _Response:
     if request.args.get("url"):
         data = lookup(request.args.get("url"))  # type: ignore
         if data:
-            if data.has_type(ap.ActivityType.ANNOUNCE):
-                meta = dict(
-                    object=data.get_object().to_dict(),
-                    object_actor=data.get_object().get_actor().to_dict(),
-                    actor=data.get_actor().to_dict(),
-                )
-
-            elif data.has_type(ap.ActivityType.QUESTION):
+            meta = _meta(data)
+            if data.has_type(ap.ActivityType.QUESTION):
                 p.push(data.id, "/task/fetch_remote_question")
 
         print(data)
@@ -302,12 +297,10 @@ def admin_new() -> _Response:
         if data:
             reply = ap.parse_activity(data["activity"])
         else:
-            data = dict(
-                meta={},
-                activity=dict(
-                    object=ap.get_backend().fetch_iri(request.args.get("reply"))
-                ),
-            )
+            obj = ap.get_backend().fetch_iri(request.args.get("reply"))
+            data = dict(meta=_meta(ap.parse_activity(obj)), activity=dict(object=obj))
+            data["_id"] = obj["id"]
+            data["remote_id"] = obj["id"]
             reply = ap.parse_activity(data["activity"]["object"])
         # Fetch the post visibility, in case it's follower only
         default_visibility = ap.get_visibility(reply)

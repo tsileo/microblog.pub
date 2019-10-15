@@ -21,6 +21,7 @@ import config
 from config import DB
 from config import ME
 from core import activitypub
+from core.activitypub import _meta
 from core.db import find_activities
 from core.meta import MetaKey
 from core.meta import by_object_id
@@ -145,10 +146,11 @@ def _build_thread(data, include_children=True, query=None):  # noqa: C901
         query = {}
     data["_requested"] = True
     app.logger.info(f"_build_thread({data!r})")
-    root_id = data["meta"].get(
-        MetaKey.THREAD_ROOT_PARENT.value,
-        data["meta"].get(MetaKey.OBJECT_ID.value, data["meta"].get("remote_id")),
-    )
+    root_id = data["meta"].get(MetaKey.THREAD_ROOT_PARENT.value)
+    if not root_id:
+        root_id = data["meta"].get(MetaKey.OBJECT_ID.value)
+    if not root_id:
+        root_id = data["remote_id"]
 
     replies = [data]
     for dat in find_activities(
