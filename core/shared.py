@@ -21,7 +21,6 @@ import config
 from config import DB
 from config import ME
 from core import activitypub
-from core.activitypub import _meta
 from core.db import find_activities
 from core.meta import MetaKey
 from core.meta import by_object_id
