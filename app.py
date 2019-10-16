@@ -289,7 +289,7 @@ def proxy(scheme: str, url: str) -> Any:
         if k.lower() not in ["host", "cookie", "", "x-forwarded-for", "x-real-ip"]
         and not k.lower().startswith("broxy-")
     }
-    req_headers["Host"] = urlparse(url).netloc
+    # req_headers["Host"] = urlparse(url).netloc
     resp = requests.get(url, stream=True, headers=req_headers)
     app.logger.info(f"proxied req {url} {req_headers}: {resp!r}")
 
