@@ -4,7 +4,6 @@ import os
 import traceback
 from datetime import datetime
 from typing import Any
-from urllib.parse import urlparse
 from uuid import uuid4
 
 import requests
