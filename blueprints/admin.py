@@ -194,7 +194,8 @@ def admin_lookup() -> _Response:
     if request.args.get("url"):
         data = lookup(request.args.get("url"))  # type: ignore
         if data:
-            meta = _meta(data)
+            if not data.has_type(ap.ACTOR_TYPES):
+                meta = _meta(data)
             if data.has_type(ap.ActivityType.QUESTION):
                 p.push(data.id, "/task/fetch_remote_question")
 
