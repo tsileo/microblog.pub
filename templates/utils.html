@@ -59,7 +59,7 @@
 {% if meta.in_reply_to_actor %}
 {{ display_actor_box(meta.in_reply_to_actor, before="in reply to", before_url=obj.inReplyTo) }}
 {% elif meta.in_reply_to_self %}
-<span class="bar-item-no-hover" style="padding:0;">
+<span class="bar-item-no-hover">
 <a href="{{ obj.inReplyTo }}">self reply</a>
 </span>
 {% endif %}
@@ -414,8 +414,14 @@
 {% macro display_thread(thread, likes=[], shares=[]) -%}
 {% for reply in thread %}
 {% if reply._requested %}
+<div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
+{{ display_in_reply_to(reply.meta, reply.activity.object) }}
+</div>
 {{ display_note(reply.activity.object, perma=True, likes=likes, shares=shares, meta=reply.meta) }}
 {% else %}
+<div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
+{{ display_in_reply_to(reply.meta, reply.activity.object) }}
+</div>
 {{ display_note(reply.activity.object, perma=False, meta=reply.meta) }}
 {% endif %}
 {% endfor %}

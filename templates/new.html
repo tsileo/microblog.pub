@@ -19,7 +19,7 @@
 {% endif %}
 </div>
 {% endif %}
-<form action="/api/new_{% if request.args.get("question") == "1" %}question{%else%}note{%endif%}" method="POST" enctype="multipart/form-data">
+<form id="new-activity" action="/api/new_{% if request.args.get("question") == "1" %}question{%else%}note{%endif%}" method="POST" enctype="multipart/form-data">
 <input type="hidden" name="redirect" value="/">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <select name="visibility" style="padding:8px 10px;">

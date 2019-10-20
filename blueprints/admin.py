@@ -336,6 +336,12 @@ def admin_new() -> _Response:
     )
 
 
+@blueprint.route("/admin/direct_messages", methods=["GET"])
+@login_required
+def admin_direct_messages() -> _Response:
+    return htmlify(render_template("direct_messages.html"))
+
+
 @blueprint.route("/admin/lists", methods=["GET"])
 @login_required
 def admin_lists() -> _Response:
