@@ -176,6 +176,15 @@
 	{% if item | has_type('Follow') %}
     <div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
     <span class="bar-item-no-hover">new follower</span>
+    <span class="bar-item-no-hover">{{ item.meta.follow_status }}</span>
+    {% if config.MANUALLY_APPROVES_FOLLOWERS and item.meta.follow_status != "accepted"  %}
+    <form action="/api/accept_follow" class="action-form"  method="POST">
+    <input type="hidden" name="redirect" value="{{ request.path }}"/>
+    <input type="hidden" name="id" value="{{ item.remote_id }}"/>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <button type="submit" class="bar-item">approve follow request</button>
+    </form>
+    {% endif %}
     {% if item.meta.notification_unread %}<span class="bar-item-no-bg"><span class="pcolor">new</span></span>{% endif %}
     <span class="bar-item-no-bg">{{ (item.activity.published or item.meta.published) | format_timeago }}</span>
     <a class="bar-item" href="/admin/profile?actor_id={{item.meta.actor_id}}">profile</a>

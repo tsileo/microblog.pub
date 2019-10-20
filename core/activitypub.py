@@ -825,3 +825,24 @@ def handle_replies(create: ap.Create) -> None:
 
     # Spawn a task to process it (and determine if it needs to be saved)
     Tasks.process_reply(create.get_object_id())
+
+
+def accept_follow(activity: ap.BaseActivity) -> str:
+    actor_id = activity.get_actor().id
+    accept = ap.Accept(
+        actor=ID,
+        context=new_context(activity),
+        object={
+            "type": "Follow",
+            "id": activity.id,
+            "object": activity.get_object_id(),
+            "actor": actor_id,
+        },
+        to=[actor_id],
+        published=now(),
+    )
+    update_one_activity(
+        by_remote_id(activity.id),
+        upsert({MetaKey.FOLLOW_STATUS: FollowStatus.ACCEPTED.value}),
+    )
+    return post_to_outbox(accept)

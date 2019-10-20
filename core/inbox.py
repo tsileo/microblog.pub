@@ -8,9 +8,8 @@ from little_boxes.errors import NotAnActivityError
 
 import config
 from core.activitypub import _answer_key
+from core.activitypub import accept_follow
 from core.activitypub import handle_replies
-from core.activitypub import new_context
-from core.activitypub import post_to_outbox
 from core.activitypub import update_cached_actor
 from core.db import DB
 from core.db import update_one_activity
@@ -23,7 +22,6 @@ from core.meta import in_inbox
 from core.meta import inc
 from core.meta import upsert
 from core.tasks import Tasks
-from utils import now
 
 _logger = logging.getLogger(__name__)
 
@@ -179,21 +177,14 @@ def _like_process_inbox(like: ap.Like, new_meta: _NewMeta) -> None:
 @process_inbox.register
 def _follow_process_inbox(activity: ap.Follow, new_meta: _NewMeta) -> None:
     _logger.info(f"process_inbox activity={activity!r}")
-    # Reply to a Follow with an Accept
-    actor_id = activity.get_actor().id
-    accept = ap.Accept(
-        actor=config.ID,
-        context=new_context(activity),
-        object={
-            "type": "Follow",
-            "id": activity.id,
-            "object": activity.get_object_id(),
-            "actor": actor_id,
-        },
-        to=[actor_id],
-        published=now(),
-    )
-    post_to_outbox(accept)
+    # Reply to a Follow with an Accept if we're not manully approving them
+    if not config.MANUALLY_APPROVES_FOLLOWERS:
+        accept_follow(activity)
+    else:
+        update_one_activity(
+            by_remote_id(activity.id),
+            upsert({MetaKey.FOLLOW_STATUS: FollowStatus.WAITING.value}),
+        )
 
 
 def _update_follow_status(follow_id: str, status: FollowStatus) -> None:

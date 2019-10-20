@@ -349,3 +349,15 @@ class _20190906_InReplyToMigration(Migration):
                     )
             except Exception:
                 logger.exception(f"failed to process activity {data!r}")
+
+
+class _20191020_ManuallyApprovesFollowerSupportMigrationn(Migration):
+    def migrate(self) -> None:
+        DB.activities.update_many(
+            {
+                **by_type(ap.ActivityType.FOLLOW),
+                **in_inbox(),
+                "meta.follow_status": {"$exists": False},
+            },
+            {"$set": {"meta.follow_status": "accepted"}},
+        )

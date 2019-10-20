@@ -137,6 +137,8 @@ if PROFILE_METADATA:
             {"type": "PropertyValue", "name": key, "value": linkify(value)}
         )
 
+MANUALLY_APPROVES_FOLLOWERS = bool(conf.get("manually_approves_followers", False))
+
 ME = {
     "@context": DEFAULT_CTX,
     "type": "Person",
@@ -151,7 +153,7 @@ ME = {
     "summary": SUMMARY,
     "endpoints": {},
     "url": ID,
-    "manuallyApprovesFollowers": False,
+    "manuallyApprovesFollowers": MANUALLY_APPROVES_FOLLOWERS,
     "attachment": attachments,
     "icon": {
         "mediaType": mimetypes.guess_type(ICON_URL)[0],

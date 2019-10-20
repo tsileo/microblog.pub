@@ -31,6 +31,7 @@ from config import JWT
 from config import MEDIA_CACHE
 from config import _drop_db
 from core import feed
+from core.activitypub import accept_follow
 from core.activitypub import activity_url
 from core.activitypub import new_context
 from core.activitypub import post_to_outbox
@@ -351,6 +352,24 @@ def api_undo() -> _Response:
     undo_id = post_to_outbox(undo)
 
     return _user_api_response(activity=undo_id)
+
+
+@blueprint.route("/accept_follow", methods=["POST"])
+@api_required
+def api_accept_follow() -> _Response:
+    oid = _user_api_arg("id")
+    doc = DB.activities.find_one({"box": Box.INBOX.value, "remote_id": oid})
+    print(doc)
+    if not doc:
+        raise ActivityNotFoundError(f"cannot found {oid}")
+
+    obj = ap.parse_activity(doc.get("activity"))
+    if not obj.has_type(ap.ActivityType.FOLLOW):
+        raise ValueError(f"{obj} is not a Follow activity")
+
+    accept_id = accept_follow(obj)
+
+    return _user_api_response(activity=accept_id)
 
 
 @blueprint.route("/new_list", methods=["POST"])
