@@ -134,6 +134,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <button type="submit" class="bar-item">ack reply</button>
     </form>
+    {{ utils.display_in_reply_to(item.meta, item.activity.object) }}
     </div>
 	
     {% endif %}
@@ -143,7 +144,9 @@
 	{% set boost_actor = item.meta.actor %}
     {% if boost_actor %}
     <div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
-    <span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> boosted</span>
+    {{ utils.display_actor_box(boost_actor, after="boosted") }} 
+    {{ utils.display_in_reply_to(item.meta, item.activity.object) }}
+
     {% if request.path == url_for('admin.admin_notifications') %}
     {% if item.meta.notification_unread %}<span class="bar-item-no-bg"><span class="pcolor">new</span></span>{% endif %}
     <span class="bar-item-no-bg">{{ (item.activity.published or item.meta.published) | format_timeago }}</span>
@@ -152,6 +155,7 @@
     </div>
     {% endif %}
 	{% if item.meta.object %}
+
 	{{ utils.display_note(item.meta.object, meta=item.meta) }}
 	{% endif %}
 	{% endif %}
@@ -159,7 +163,8 @@
     {% if item | has_type('Like') %}
     {% set boost_actor = item.meta.actor %}
     <div style="margin-left:70px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
-    <span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name or boost_actor.preferredUsername }}</a> liked</span>
+    {{ utils.display_actor_box(boost_actor, after="liked") }} 
+    {{ utils.display_in_reply_to(item.meta, item.activity.object) }}
     {% if item.meta.notification_unread %}<span class="bar-item-no-bg"><span class="pcolor">new</span></span>{% endif %}
     <span class="bar-item-no-bg">{{ (item.activity.published or item.meta.published) | format_timeago }}</span>
     </div>

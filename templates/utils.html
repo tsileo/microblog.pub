@@ -26,6 +26,46 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro display_actor_box(actor, after=None, before=None, before_url=None) -%}
+
+{% if not actor.icon %}
+{% set icon_url = "/static/nopic.png" %}
+{% else %}
+{% set icon_url = actor.icon.url | get_actor_icon_url(50) %}
+{% endif %}
+
+        <span class="bar-item-no-hover" style="padding:0;">
+            <span style="display:flex;height:30px;line-height:30px;background: url('{{ icon_url }}') no-repeat;background-size:30px;border-top-left-radius: 2px;border-bottom-left-radius: 2px;">
+                {% if before and before_url %}
+                <span style="flex-shrink:1; padding:0 10px 0 40px;"><a href="{{before_url}}">{{before}}</a></span>
+                <span style="flex-shrink:1;padding-right:10px;">
+                <a style="color:#808080;" href="{{ actor.url | get_url }}">{{ ( actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</a>
+                </span>
+                {% endif %}
+                {% if after %}
+                <span style="flex-shrink:1;padding-left:40px;">
+                <a style="color:#808080;" href="{{ actor.url | get_url }}">{{ ( actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</a>
+                </span>
+                <span style="flex-shrink:1;padding:0 10px;">{{ after }}</span>
+                {% endif %}
+            </span>
+        </span>
+
+
+{%- endmacro %}
+
+{% macro display_in_reply_to(meta, obj) -%}
+
+{% if meta.in_reply_to_actor %}
+{{ display_actor_box(meta.in_reply_to_actor, before="in reply to", before_url=obj.inReplyTo) }}
+{% elif meta.in_reply_to_self %}
+<span class="bar-item-no-hover" style="padding:0;">
+<a href="{{ obj.inReplyTo }}">self reply</a>
+</span>
+{% endif %}
+
+{%- endmacro %}
+
 {% macro display_note(obj, perma=False, likes=[], shares=[], meta={}, no_color=False) -%}
 
 {% if meta.object_actor %}
@@ -73,17 +113,6 @@
             <time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
 	</span>
     </aside>
-
-{% if meta.in_reply_to_actor %}
-<div style="margin:10px 0 15px 0;padding:0;">
-<a href="{{ obj.inReplyTo }}">in reply to</a> {{ display_actor_oneline(meta.in_reply_to_actor) }}
-</div>
-{% elif meta.in_reply_to_self %}
-<div style="margin:10px 0 15px 0;padding:0;">
-<a href="{{ obj.inReplyTo }}">self reply</a>
-</div>
-{% endif %}
-
 
 	{% if obj.summary %}<p class="p-summary">{{ obj.summary | clean | replace_custom_emojis(obj) | safe }}</p>{% endif %}
     {% if obj | has_type('Video') %}

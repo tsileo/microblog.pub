@@ -44,11 +44,13 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 <button type="submit" class="bar-item">unboost</button>
 </form>
-        <span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name }}</a> boosted</span>
+        {{ utils.display_actor_box(boost_actor, after="boosted") }} 
+        {{ utils.display_in_reply_to(item.meta, item.activity.object) }}
         </div>
         {% else %}
         <p style="margin-left:65px;padding-bottom:5px;display:inline-block;">
-        <span class="bar-item-no-hover"><a style="color:#808080;" href="{{ boost_actor.url | get_url }}">{{ boost_actor.name }}</a> boosted</span>
+        {{ utils.display_actor_box(boost_actor, after="boosted") }} 
+        {{ utils.display_in_reply_to(item.meta, item.activity.object) }}
         </p>
         {% endif %}
 	{% endif %}
@@ -56,6 +58,11 @@
         {{ utils.display_note(item.meta.object, meta=item.meta) }}
         {% endif %}
 	{% elif item | has_type('Create') %}
+        {% if item.activity.object.inReplyTo %}
+        <p style="margin-left:65px;padding-bottom:5px;display:inline-block;">
+        {{ utils.display_in_reply_to(item.meta, item.activity.object) }}
+        </p>
+        {% endif %}
         {{ utils.display_note(item.activity.object, meta=item.meta, no_color=True) }}
     {% endif %}
 
