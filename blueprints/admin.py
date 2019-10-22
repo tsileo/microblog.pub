@@ -191,11 +191,32 @@ def admin_tasks() -> _Response:
 def admin_lookup() -> _Response:
     data = None
     meta = None
+    follower = None
+    following = None
     if request.args.get("url"):
         data = lookup(request.args.get("url"))  # type: ignore
         if data:
             if not data.has_type(ap.ACTOR_TYPES):
                 meta = _meta(data)
+            else:
+                follower = find_one_activity(
+                    {
+                        "box": "inbox",
+                        "type": ap.ActivityType.FOLLOW.value,
+                        "meta.actor_id": data.id,
+                        "meta.undo": False,
+                    }
+                )
+                following = find_one_activity(
+                    {
+                        **by_type(ap.ActivityType.FOLLOW),
+                        **by_object_id(data.id),
+                        **not_undo(),
+                        **in_outbox(),
+                        **follow_request_accepted(),
+                    }
+                )
+
             if data.has_type(ap.ActivityType.QUESTION):
                 p.push(data.id, "/task/fetch_remote_question")
 
@@ -203,7 +224,12 @@ def admin_lookup() -> _Response:
         app.logger.debug(data.to_dict())
     return htmlify(
         render_template(
-            "lookup.html", data=data, meta=meta, url=request.args.get("url")
+            "lookup.html",
+            data=data,
+            meta=meta,
+            follower=follower,
+            following=following,
+            url=request.args.get("url"),
         )
     )
 

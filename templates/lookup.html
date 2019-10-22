@@ -17,6 +17,20 @@
 <div id="lookup-result" style="margin-top:30px;">
     {% if data | has_actor_type %}
 <div style="margin-left:95px;padding-bottom:5px;margin-bottom:15px;display:inline-block;">
+{% if following %}
+<form action="/api/undo" class="action-form"  method="post">
+<input type="hidden" name="redirect" value="{{ request.path }}?url={{request.args.get('url')}}"/>
+<input type="hidden" name="id" value="{{ following.remote_id }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<button type="submit" class="bar-item">unfollow</button>
+</form>
+<form action="/api/block" class="action-form"  method="POST">
+<input type="hidden" name="redirect" value="{{ request.path }}?url={{request.args.get('url')}}"/>
+<input type="hidden" name="actor" value="{{ data.id }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="bar-item" onclick="return confirm('Confirm the block action?');">block</button>
+</form>
+{% else %}
 <a class="bar-item" href="/admin/profile?actor_id={{data.id}}">profile</a>
 <form action="/api/follow" class="action-form"  method="POST">
 <input type="hidden" name="redirect" value="{{ request.path }}"/>
@@ -24,6 +38,8 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 <button type="submit" class="bar-item">follow</button>
 </form>
+{% endif %}
+{% if follower %}<span class="bar-item-no-hover">follows you!</span>{% endif %}
         </div>
 
 
