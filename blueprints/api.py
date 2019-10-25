@@ -463,6 +463,11 @@ def api_new_note() -> _Response:
                 source = request.json["properties"]["content"][0]
             except (ValueError, KeyError):
                 pass
+
+            # Handle HTML
+            if isinstance(source, dict):
+                source = source.get("html")
+
             try:
                 summary = request.json["properties"]["name"][0]
             except (ValueError, KeyError):
