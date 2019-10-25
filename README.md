@@ -28,7 +28,7 @@
    - Private "bookmark" support
    - List support
    - Allows you to attach files to your notes
-   - Custom emojos
+   - Custom emojis support
  - Cares about your privacy
    - The image upload endpoint strips EXIF meta data before storing the file
    - Every attachment/media is cached (or proxied) by the server
@@ -40,6 +40,7 @@
  - IndieWeb citizen
    - Microformats aware (exports `h-feed`, `h-entry`, `h-cards`, ...)
      - Export a feed in the HTML that is WebSub compatible
+   - Partial [Micropub](https://www.w3.org/TR/micropub/) support ([implementation report](https://micropub.rocks/implementation-reports/servers/416/s0BDEXZiX805btoa47sz))
    - Implements [IndieAuth](https://indieauth.spec.indieweb.org/) endpoints (authorization and token endpoint)
      - You can use your ActivityPub identity to login to other websites/app (with U2F support)
    - Send [Webmentions](https://www.w3.org/TR/webmention/) to linked website (only for public notes)
