@@ -77,6 +77,7 @@ def _api_required() -> None:
 
     # Will raise a BadSignature on bad auth
     payload = JWT.loads(token)
+    flask.g.jwt_payload = payload
     app.logger.info(f"api call by {payload}")
 
 
@@ -438,13 +439,50 @@ def api_remove_from_list() -> _Response:
     return _user_api_response()
 
 
-@blueprint.route("/new_note", methods=["POST"])
+@blueprint.route("/new_note", methods=["POST"])  # noqa: C901 too complex
 @api_required
 def api_new_note() -> _Response:
-    source = _user_api_arg("content")
+    source = None
+    summary = None
+
+    # Basic Micropub (https://www.w3.org/TR/micropub/) "create" support
+    is_micropub = False
+    # First, check if the Micropub specific fields are present
+    if (
+        _user_api_arg("h", default=None) == "entry"
+        or _user_api_arg("type", default=[None])[0] == "h-entry"
+    ):
+        is_micropub = True
+        # Ensure the "create" scope is set
+        if "jwt_payload" not in flask.g or "create" not in flask.g.jwt_payload["scope"]:
+            abort(403)
+
+        # Handle JSON microformats2 data
+        if _user_api_arg("type", default=None):
+            try:
+                source = request.json["properties"]["content"][0]
+            except (ValueError, KeyError):
+                pass
+            try:
+                summary = request.json["properties"]["name"][0]
+            except (ValueError, KeyError):
+                pass
+
+        # Try to parse the name as summary if the payload is POSTed using form-data
+        if summary is None:
+            summary = _user_api_arg("name", default=None)
+
+    # This step will also parse content from Micropub request
+    if source is None:
+        source = _user_api_arg("content", default=None)
+
     if not source:
         raise ValueError("missing content")
 
+    if summary is None:
+        summary = _user_api_arg("summary", default="")
+
+    # All the following fields are specific to the API (i.e. not Micropub related)
     _reply, reply = None, None
     try:
         _reply = _user_api_arg("reply")
@@ -490,7 +528,7 @@ def api_new_note() -> _Response:
         attributedTo=MY_PERSON.id,
         cc=list(set(cc)),
         to=list(set(to)),
-        summary=_user_api_arg("summary", default=""),
+        summary=summary,
         content=content,
         tag=tags,
         source={"mediaType": "text/markdown", "content": source},
@@ -498,26 +536,36 @@ def api_new_note() -> _Response:
         context=context,
     )
 
-    if "file" in request.files and request.files["file"].filename:
-        file = request.files["file"]
-        rfilename = secure_filename(file.filename)
-        with BytesIO() as buf:
-            file.save(buf)
-            oid = MEDIA_CACHE.save_upload(buf, rfilename)
-        mtype = mimetypes.guess_type(rfilename)[0]
+    if request.files:
+        for f in request.files.keys():
+            if not request.files[f].filename:
+                continue
 
-        raw_note["attachment"] = [
-            {
-                "mediaType": mtype,
-                "name": _user_api_arg("file_description", default=rfilename),
-                "type": "Document",
-                "url": f"{BASE_URL}/uploads/{oid}/{rfilename}",
-            }
-        ]
+            file = request.files[f]
+            rfilename = secure_filename(file.filename)
+            with BytesIO() as buf:
+                file.save(buf)
+                oid = MEDIA_CACHE.save_upload(buf, rfilename)
+            mtype = mimetypes.guess_type(rfilename)[0]
+
+            raw_note["attachment"] = [
+                {
+                    "mediaType": mtype,
+                    "name": _user_api_arg("file_description", default=rfilename),
+                    "type": "Document",
+                    "url": f"{BASE_URL}/uploads/{oid}/{rfilename}",
+                }
+            ]
 
     note = ap.Note(**raw_note)
     create = note.build_create()
     create_id = post_to_outbox(create)
+
+    # Return a 201 with the note URL in the Location header if this was a Micropub request
+    if is_micropub:
+        resp = flask.Response("", headers={"Location": create_id})
+        resp.status_code = 201
+        return resp
 
     return _user_api_response(activity=create_id)
 

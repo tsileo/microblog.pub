@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/static/pure.css">
 <link rel="authorization_endpoint" href="{{ config.ID }}/indieauth">
 <link rel="token_endpoint" href="{{ config.ID }}/token">
+<link rel="micropub" href="{{config.ID}}/api/new_note">
 {% if not request.args.get("older_than") and not request.args.get("previous_than") %}<link rel="canonical" href="https://{{ config.DOMAIN }}{{ request.path }}">{% endif %}
 {% block links %}{% endblock %}
 {% if config.THEME_COLOR %}<meta name="theme-color" content="{{ config.THEME_COLOR }}">{% endif %}
