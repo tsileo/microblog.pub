@@ -90,6 +90,7 @@ def admin_login() -> _Response:
         pwd = request.form.get("pass")
         if pwd:
             if verify_pass(pwd):
+                session.permanent = True
                 session["logged_in"] = True
                 return redirect(
                     request.args.get("redirect") or url_for("admin.admin_notifications")
@@ -108,6 +109,7 @@ def admin_login() -> _Response:
             finally:
                 session["challenge"] = None
 
+            session.permanent = True
             session["logged_in"] = True
             return redirect(
                 request.args.get("redirect") or url_for("admin.admin_notifications")
