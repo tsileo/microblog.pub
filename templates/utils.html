@@ -208,6 +208,11 @@
     {% else %}
 	{{ obj.content | clean | replace_custom_emojis(obj) | code_highlight | safe }}
     {% endif %}
+
+    {% if obj | has_place %}
+    <p>Location: {{ obj | get_place | safe }}</p>
+    {% endif %}
+
 	</div>
 
 	{% if obj.attachment and obj | has_type('Note') %}

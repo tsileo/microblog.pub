@@ -49,6 +49,15 @@
 <input type="text" name="file_description" placeholder="attachment description (optional)">
 </p>
 
+<p>
+<input type="text" name="location_lat" id="location_lat" placeholder="latitude (optional)">
+<input type="text" name="location_lng" id="location_lng" placeholder="longitude (optional)">
+<a href="#" class="location_autofill">ask browser for location</a>
+</p>
+<p>
+<input type="text" name="location_name" placeholder="location name (optional)">
+</p>
+
 {% if request.args.get("question") == "1" %}
 <div style="margin-top:20px;">
     <p>Open for: <select name="open_for">
@@ -114,4 +123,16 @@ var items = document.getElementsByClassName("ji")
 for (var i = 0; i < items.length; i++) {
     items[i].addEventListener('click', ji);
 }
+var askForLocation = function(ev) {
+    ev.preventDefault();
+    navigator.geolocation.getCurrentPosition(function(position) {
+        document.getElementById("location_lat").value = position.coords.latitude;
+        document.getElementById("location_lng").value = position.coords.longitude;
+    });
+}
+var items = document.getElementsByClassName("location_autofill")
+for (var i = 0; i < items.length; i++) {
+    items[i].addEventListener('click', askForLocation);
+}
+
 </script>{% endblock %}

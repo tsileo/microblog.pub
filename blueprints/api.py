@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 from datetime import datetime
 from datetime import timedelta
@@ -49,6 +50,8 @@ from core.shared import login_required
 from core.tasks import Tasks
 from utils import emojis
 from utils import now
+
+_logger = logging.getLogger(__name__)
 
 blueprint = flask.Blueprint("api", __name__)
 
@@ -450,6 +453,7 @@ def api_new_note() -> _Response:
 
     source = None
     summary = None
+    place_tags = []
 
     # Basic Micropub (https://www.w3.org/TR/micropub/) "create" support
     is_micropub = False
@@ -463,8 +467,24 @@ def api_new_note() -> _Response:
         if "jwt_payload" not in flask.g or "create" not in flask.g.jwt_payload["scope"]:
             abort(403)
 
+        # Handle location sent via form-data
+        # `geo:28.5,9.0,0.0`
+        location = _user_api_arg("location", default="")
+        if location.startswith("geo:"):
+            slat, slng, *_ = location[4:].split(",")
+            place_tags.append(
+                {
+                    "type": ap.ActivityType.PLACE.value,
+                    "url": "",
+                    "name": "",
+                    "latitude": float(slat),
+                    "longitude": float(slng),
+                }
+            )
+
         # Handle JSON microformats2 data
         if _user_api_arg("type", default=None):
+            _logger.info(f"Micropub request: {request.json}")
             try:
                 source = request.json["properties"]["content"][0]
             except (ValueError, KeyError):
@@ -493,6 +513,21 @@ def api_new_note() -> _Response:
     if summary is None:
         summary = _user_api_arg("summary", default="")
 
+    if not place_tags:
+        if _user_api_arg("location_lat", default=None):
+            lat = float(_user_api_arg("location_lat"))
+            lng = float(_user_api_arg("location_lng"))
+            loc_name = _user_api_arg("location_name", default="")
+            place_tags.append(
+                {
+                    "type": ap.ActivityType.PLACE.value,
+                    "url": "",
+                    "name": loc_name,
+                    "latitude": lat,
+                    "longitude": lng,
+                }
+            )
+
     # All the following fields are specific to the API (i.e. not Micropub related)
     _reply, reply = None, None
     try:
@@ -507,7 +542,7 @@ def api_new_note() -> _Response:
     content, tags = parse_markdown(source)
 
     # Check for custom emojis
-    tags = tags + emojis.tags(content)
+    tags = tags + emojis.tags(content) + place_tags
 
     to: List[str] = []
     cc: List[str] = []

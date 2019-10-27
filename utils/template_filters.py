@@ -241,6 +241,37 @@ def get_actor(url):
 
 
 @filters.app_template_filter()
+def has_place(note):
+    for tag in note.get("tag", []):
+        if tag.get("type") == "Place":
+            return True
+    return False
+
+
+@filters.app_template_filter()
+def get_place(note):
+    for tag in note.get("tag", []):
+        if tag.get("type") == "Place":
+            lat = tag["latitude"]
+            lng = tag["longitude"]
+            out = ""
+            if tag.get("name"):
+                out += f"{tag['name']} "
+
+            out += (
+                '<span class="h-geo">'
+                f'<data class="p-latitude" value="{lat}"></data>'
+                f'<data class="p-longitude" value="{lng}"></data>'
+                f'<a href="https://www.openstreetmap.org/?mlat={lat}&mlon={lng}#map=16/{lat}/{lng}">{lat},{lng}</a>'
+                "</span>"
+            )
+
+            return out
+
+    return ""
+
+
+@filters.app_template_filter()
 def poll_answer_key(choice: str) -> str:
     return _answer_key(choice)
 
