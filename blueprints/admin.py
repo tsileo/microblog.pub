@@ -31,7 +31,7 @@ from core.db import find_one_activity
 from core.meta import by_object_id
 from core.meta import by_remote_id
 from core.meta import by_type
-from core.meta import by_visibility
+from core.meta import by_object_visibility
 from core.meta import follow_request_accepted
 from core.meta import in_outbox
 from core.meta import not_poll_answer
@@ -384,7 +384,7 @@ def admin_direct_messages() -> _Response:
         {
             **not_poll_answer(),
             **by_type(ap.ActivityType.CREATE),
-            **by_visibility(ap.Visibility.DIRECT),
+            **by_object_visibility(ap.Visibility.DIRECT),
         }
     ).sort("meta.published", -1)
 

@@ -142,6 +142,10 @@ def by_visibility(vis: ap.Visibility) -> _SubQuery:
     return flag(MetaKey.VISIBILITY, vis.name)
 
 
+def by_object_visibility(vis: ap.Visibility) -> _SubQuery:
+    return flag(MetaKey.OBJECT_VISIBILITY, vis.name)
+
+
 def by_hashtag(ht: str) -> _SubQuery:
     return flag(MetaKey.HASHTAGS, ht)
 
