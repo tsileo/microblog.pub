@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% import 'utils.html' as utils %}
+{% block title %}DMs - {{ config.NAME }}{% endblock %}
+{% block header %}
+
+{% endblock %}
+{% block content %}
+<div id="container">
+<div id="direct_messages" style="margin-top:50px;">
+
+    {% for thread in threads %}
+    <h4><a href="/admin/thread?oid={{thread.oid}}">With {{ ", ".join(thread.participants) }}</a>
+        <small class="lcolor">{{ thread.len }} message{% if thread.len > 1 %}s{% endif %}</small>
+    </h4>
+	{{ utils.display_note(thread.last_reply.activity.object, meta=thread.last_reply.meta) }}
+    {% endfor %}
+
+</div>
+</div>
+{% endblock %}
