@@ -16,7 +16,9 @@
 {% endblock %}
 {% block content %}
 <div id="container">
+{% if request.path != "/admin/thread" %}
 {% include "header.html" %}
+{% endif %}
 <main>
 {{ utils.display_thread(thread, likes=likes, shares=shares) }}
 </main>

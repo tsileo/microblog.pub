@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -30,8 +31,10 @@ from core.db import find_one_activity
 from core.meta import by_object_id
 from core.meta import by_remote_id
 from core.meta import by_type
+from core.meta import by_visibility
 from core.meta import follow_request_accepted
 from core.meta import in_outbox
+from core.meta import not_poll_answer
 from core.meta import not_undo
 from core.shared import MY_PERSON
 from core.shared import _build_thread
@@ -377,7 +380,59 @@ def admin_new() -> _Response:
 @blueprint.route("/admin/direct_messages", methods=["GET"])
 @login_required
 def admin_direct_messages() -> _Response:
-    return htmlify(render_template("direct_messages.html"))
+    all_dms = DB.activities.find(
+        {
+            **not_poll_answer(),
+            **by_type(ap.ActivityType.CREATE),
+            **by_visibility(ap.Visibility.DIRECT),
+        }
+    ).sort("meta.published", -1)
+
+    # Group by threads
+    _threads = defaultdict(list)  # type: ignore
+    for dm in all_dms:
+        # Skip poll answers
+        if dm["activity"].get("object", {}).get("name"):
+            continue
+
+        _threads[dm["meta"].get("thread_root_parent", dm["meta"]["object_id"])].append(
+            dm
+        )
+
+    # Now build the data needed for the UI
+    threads = []
+    for thread_root, thread in _threads.items():
+        # We need the list of participants
+        participants = set()
+        for raw_activity in thread:
+            activity = ap.parse_activity(raw_activity["activity"])
+            actor = activity.get_actor()
+            domain = urlparse(actor.id).netloc
+            if actor.id != ID:
+                participants.add(f"@{actor.preferredUsername}@{domain}")
+            if activity.has_type(ap.ActivityType.CREATE):
+                activity = activity.get_object()
+            for mention in activity.get_mentions():
+                if mention.href in [actor.id, ID]:
+                    continue
+                m = ap.fetch_remote_activity(mention.href)
+                if m.has_type(ap.ACTOR_TYPES) and m.id != ID:
+                    d = urlparse(m.id).netloc
+                    participants.add(f"@{m.preferredUsername}@{d}")
+
+            if not participants:
+                continue
+        # Build the UI data for this conversation
+        oid = thread[-1]["meta"]["object_id"]
+        threads.append(
+            {
+                "participants": list(participants),
+                "oid": oid,
+                "last_reply": thread[0],
+                "len": len(thread),
+            }
+        )
+    return htmlify(render_template("direct_messages.html", threads=threads))
 
 
 @blueprint.route("/admin/lists", methods=["GET"])
