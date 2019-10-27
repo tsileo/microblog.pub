@@ -29,11 +29,12 @@ from core.activitypub import _meta
 from core.activitypub import post_to_outbox
 from core.db import find_one_activity
 from core.meta import by_object_id
+from core.meta import by_object_visibility
 from core.meta import by_remote_id
 from core.meta import by_type
-from core.meta import by_object_visibility
 from core.meta import follow_request_accepted
 from core.meta import in_outbox
+from core.meta import not_deleted
 from core.meta import not_poll_answer
 from core.meta import not_undo
 from core.shared import MY_PERSON
@@ -250,6 +251,7 @@ def admin_profile() -> _Response:
     q = {
         "meta.actor_id": actor_id,
         "box": "inbox",
+        **not_deleted(),
         "type": {"$in": [ap.ActivityType.CREATE.value, ap.ActivityType.ANNOUNCE.value]},
     }
     inbox_data, older_than, newer_than = paginated_query(
