@@ -531,8 +531,8 @@ def api_new_note() -> _Response:
 
     raw_note = dict(
         attributedTo=MY_PERSON.id,
-        cc=list(set(cc)),
-        to=list(set(to)),
+        cc=list(set(cc) - set([MY_PERSON.id])),
+        to=list(set(to) - set([MY_PERSON.id])),
         summary=summary,
         content=content,
         tag=tags,

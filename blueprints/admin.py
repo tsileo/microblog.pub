@@ -345,6 +345,16 @@ def admin_new() -> _Response:
         domain = urlparse(actor.id).netloc
         # FIXME(tsileo): if reply of reply, fetch all participants
         content = f"@{actor.preferredUsername}@{domain} "
+        if reply.has_type(ap.ActivityType.CREATE):
+            reply = reply.get_object()
+        for mention in reply.get_mentions():
+            if mention.href in [actor.id, ID]:
+                continue
+            m = ap.fetch_remote_activity(mention.href)
+            if m.has_type(ap.ACTOR_TYPES):
+                d = urlparse(m.id).netloc
+                content += f"@{m.preferredUsername}@{d} "
+
         thread = _build_thread(data)
 
     return htmlify(
