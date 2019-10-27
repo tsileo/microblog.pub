@@ -91,7 +91,7 @@ def indieauth_flow():
 def indieauth_endpoint():
     if request.method == "GET":
         if not session.get("logged_in"):
-            return redirect(url_for("admin_login", next=request.url))
+            return redirect(url_for("admin.admin_login", redirect=request.url))
 
         me = request.args.get("me")
         # FIXME(tsileo): ensure me == ID

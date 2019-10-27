@@ -439,9 +439,15 @@ def api_remove_from_list() -> _Response:
     return _user_api_response()
 
 
-@blueprint.route("/new_note", methods=["POST"])  # noqa: C901 too complex
+@blueprint.route("/new_note", methods=["POST", "GET"])  # noqa: C901 too complex
 @api_required
 def api_new_note() -> _Response:
+    # Basic Micropub (https://www.w3.org/TR/micropub/) query configuration support
+    if request.method == "GET" and request.args.get("q") == "config":
+        return jsonify({})
+    elif request.method == "GET":
+        abort(405)
+
     source = None
     summary = None
 
