@@ -15,6 +15,17 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro display_actor_icon(follower, size=50) -%}
+{% if follower and follower.id %}
+<a href="{{follower | url_or_id | get_url }}" style="width:65px;padding-left:15px;padding-bottom:15px;text-decoration:none;padding:0;margin:0;height:65px;">
+{% if not follower.icon %}
+<img class="actor-icon" title="@{{ follower.preferredUsername }}@{{ follower | url_or_id | get_url | domain }}" src="/static/nopic.png" style="width:{{ size }}px;border-radius:2px;margin:0;padding:0">
+{% else %}
+<img class="actor-icon" title="@{{ follower.preferredUsername }}@{{ follower | url_or_id | get_url | domain }}" src="{{ follower.icon.url | get_actor_icon_url(size) }}" style="width:{{ size }}px;border-radius:2px;">{% endif %}
+</a>
+{% endif %}
+{%- endmacro %}
+
 {% macro display_actor_oneline(follower) -%}
 {% if follower and follower.id %}
 <span class="actor-inline">
@@ -385,18 +396,20 @@
 </aside>
 
 {% if likes or shares %}
-<aside style="padding-top:20px;" class="pure-g">
+<aside style="padding-top:20px;">
 {% if likes %}
-<div class="pure-u-1-2">
-    <h4 style="font-weight:normal"><strong>{{ likes|length }}</strong> like{% if (likes | length) > 1 %}s{% endif %}</h4>{% for like in likes %}
-{{ display_actor_inline(like) }}
+    <h4 style="font-weight:normal"><strong>{{ likes|length }}</strong> like{% if (likes | length) > 1 %}s{% endif %}</h4>
+<div style="display:flex;flex-wrap:wrap;">
+{% for like in likes %}
+{{ display_actor_icon(like) }}
 {% endfor %}
 </div>
 {% endif %}
 {% if shares %}
-<div class="pure-u-1-2">
-<h4 style="font-weight:normal"><strong>{{ shares|length }}</strong> boost{% if (shares|length) > 1 %}s{% endif %}</h4>{% for boost in shares %}
-{{ display_actor_inline(boost) }}
+<h4 style="font-weight:normal"><strong>{{ shares|length }}</strong> boost{% if (shares|length) > 1 %}s{% endif %}</h4>
+<div style="display:flex;flex-wrap:wrap;">
+{% for boost in shares %}
+{{ display_actor_icon(boost) }}
 {% endfor %}
 </div>
 {% endif %}
