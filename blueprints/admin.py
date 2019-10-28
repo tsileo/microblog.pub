@@ -581,7 +581,11 @@ def admin_list(name: str) -> _Response:
 
     return htmlify(
         render_template(
-            tpl, inbox_data=inbox_data, older_than=older_than, newer_than=newer_than
+            tpl,
+            inbox_data=inbox_data,
+            older_than=older_than,
+            newer_than=newer_than,
+            list_name=name,
         )
     )
 

@@ -1,9 +1,13 @@
 {% extends "layout.html" %}
 {% import 'utils.html' as utils %}
-{% block title %}{% if request.path == url_for('admin.admin_stream') %}Stream{% elif actor_id %}Profile {{ actor.name }}{% else %}Notifications{% endif %} - {{ config.NAME }}{% endblock %}
+{% block title %}{% if request.path == url_for('admin.admin_stream') %}Stream{% elif actor_id %}Profile {{ actor.name }}{% elif list_name %}List {{ list_name }}{% else %}Notifications{% endif %} - {{ config.NAME }}{% endblock %}
 {% block content %}
 <div class="h-feed" id="container">
 <div id="admin">
+
+{% if list_name %}
+<h3>{{ list_name }}</h3>
+{% endif %}
 
 {% if request.path == url_for('admin.admin_notifications') and unread_notifications_count %}
 <div style="clear:both;padding-bottom:60px;">
