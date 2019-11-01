@@ -92,7 +92,7 @@ def task_update_question() -> _Response:
 
     except HTTPError as err:
         app.logger.exception("request failed")
-        if 400 >= err.response.status_code >= 499:
+        if 400 <= err.response.status_code <= 499:
             app.logger.info("client error, no retry")
             return ""
 
@@ -354,7 +354,7 @@ def task_send_webmention() -> _Response:
         resp.raise_for_status()
     except HTTPError as err:
         app.logger.exception("request failed")
-        if 400 >= err.response.status_code >= 499:
+        if 400 <= err.response.status_code <= 499:
             app.logger.info("client error, no retry")
             return ""
 
@@ -504,7 +504,7 @@ def task_post_to_remote_inbox() -> _Response:
         track_failed_send(to)
 
         app.logger.exception("request failed")
-        if 400 >= err.response.status_code >= 499:
+        if 400 <= err.response.status_code <= 499:
             app.logger.info("client error, no retry")
             return ""
 
@@ -576,7 +576,7 @@ def task_fetch_remote_question() -> _Response:
 
     except HTTPError as err:
         app.logger.exception("request failed")
-        if 400 >= err.response.status_code >= 499:
+        if 400 <= err.response.status_code <= 499:
             app.logger.info("client error, no retry")
             return ""
 
