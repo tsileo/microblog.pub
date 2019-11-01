@@ -366,7 +366,7 @@ def task_send_webmention() -> _Response:
     return ""
 
 
-@blueprint.route("/task/cache_actor", methods=["POST"])
+@blueprint.route("/task/cache_actor", methods=["POST"])  # noqa: C910  # too complex
 def task_cache_actor() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
@@ -381,16 +381,19 @@ def task_cache_actor() -> _Response:
         # Fetch the Open Grah metadata if it's a `Create`
         if activity.has_type(ap.ActivityType.CREATE):
             obj = activity.get_object()
-            links = opengraph.links_from_note(obj.to_dict())
-            if links:
-                Tasks.fetch_og_meta(iri)
+            try:
+                links = opengraph.links_from_note(obj.to_dict())
+                if links:
+                    Tasks.fetch_og_meta(iri)
 
-                # Send Webmentions only if it's from the outbox, and public
-                if (
-                    is_from_outbox(obj)
-                    and ap.get_visibility(obj) == ap.Visibility.PUBLIC
-                ):
-                    Tasks.send_webmentions(activity, links)
+                    # Send Webmentions only if it's from the outbox, and public
+                    if (
+                        is_from_outbox(obj)
+                        and ap.get_visibility(obj) == ap.Visibility.PUBLIC
+                    ):
+                        Tasks.send_webmentions(activity, links)
+            except Exception:
+                app.logger.exception("failed to cache links")
 
         if activity.has_type(ap.ActivityType.FOLLOW):
             if actor.id == config.ID:
