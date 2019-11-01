@@ -78,6 +78,24 @@ def _answer_key(choice: str) -> str:
     return h.hexdigest()
 
 
+def _actor_url(actor: ap.ActivityType) -> str:
+    if isinstance(actor.url, dict):
+        if actor.url.get("type") == ap.ActivityType.LINK.value:
+            return actor.url["href"]
+
+        raise ValueError(f"unkown actor url object type: {actor.url!r}")
+
+    elif isinstance(actor.url, str):
+        return actor.url
+
+    # Return the actor ID if we cannot get the URL
+    elif isinstance(actor.id, str):
+        return actor.id
+
+    else:
+        raise ValueError(f"invalid actor URL: {actor.url!r}")
+
+
 def _actor_hash(actor: ap.ActivityType, local: bool = False) -> str:
     """Used to know when to update the meta actor cache, like an "actor version"."""
     h = hashlib.new("sha1")
@@ -85,7 +103,7 @@ def _actor_hash(actor: ap.ActivityType, local: bool = False) -> str:
     h.update((actor.name or "").encode())
     h.update((actor.preferredUsername or "").encode())
     h.update((actor.summary or "").encode())
-    h.update((actor.url or "").encode())
+    h.update(_actor_url(actor).encode())
     key = actor.get_key()
     h.update(key.pubkey_pem.encode())
     h.update(key.key_id().encode())
