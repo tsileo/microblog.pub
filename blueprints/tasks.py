@@ -538,7 +538,12 @@ def task_fetch_remote_question() -> _Response:
                 "activity.object.id": iri,
             }
         )
-        remote_question = ap.get_backend().fetch_iri(iri, no_cache=True)
+        try:
+            remote_question = ap.get_backend().fetch_iri(iri, no_cache=True)
+        except (ActivityGoneError, ActivityNotFoundError):
+            app.logger.info("f{iri} not found, no retry")
+            return ""
+
         # FIXME(tsileo): compute and set `meta.object_visiblity` (also update utils.py to do it)
         if (
             local_question
