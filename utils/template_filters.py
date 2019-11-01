@@ -346,7 +346,7 @@ def get_attachment_url(url, size):
 
 @filters.app_template_filter()
 def update_inline_imgs(content):
-    soup = BeautifulSoup(content)
+    soup = BeautifulSoup(content, "html5lib")
     imgs = soup.find_all("img")
     if not imgs:
         return content
