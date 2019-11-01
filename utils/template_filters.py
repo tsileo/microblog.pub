@@ -9,6 +9,7 @@ import emoji_unicode
 import flask
 import html2text
 import timeago
+from bs4 import BeautifulSoup
 from cachetools import LRUCache
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import _to_list
@@ -104,7 +105,15 @@ ALLOWED_TAGS = [
     "tfoot",
     "colgroup",
     "caption",
+    "img",
 ]
+
+ALLOWED_ATTRIBUTES = {
+    "a": ["href", "title"],
+    "abbr": ["title"],
+    "acronym": ["title"],
+    "img": ["src", "alt", "title"],
+}
 
 
 @filters.app_template_filter()
@@ -126,7 +135,9 @@ def replace_custom_emojis(content, note):
 
 def clean_html(html):
     try:
-        return bleach.clean(html, tags=ALLOWED_TAGS, strip=True)
+        return bleach.clean(
+            html, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, strip=True
+        )
     except Exception:
         return "failed to clean HTML"
 
@@ -331,6 +342,21 @@ def get_actor_icon_url(url, size):
 @filters.app_template_filter()
 def get_attachment_url(url, size):
     return _get_file_url(url, size, Kind.ATTACHMENT)
+
+
+@filters.app_template_filter()
+def update_inline_imgs(content):
+    soup = BeautifulSoup(content)
+    imgs = soup.find_all("img")
+    if not imgs:
+        return content
+    for img in imgs:
+        if not img.attrs.get("src"):
+            continue
+
+        img.attrs["src"] = _get_file_url(img.attrs["src"], 720, Kind.ATTACHMENT)
+
+    return soup.find("body").decode_contents()
 
 
 @filters.app_template_filter()

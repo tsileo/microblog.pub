@@ -7,6 +7,7 @@ from typing import Dict
 
 import flask
 import requests
+from bs4 import BeautifulSoup
 from flask import current_app as app
 from little_boxes import activitypub as ap
 from little_boxes.activitypub import _to_list
@@ -271,7 +272,9 @@ def select_video_to_cache(links):
     return videos[0]
 
 
-@blueprint.route("/task/cache_attachments", methods=["POST"])
+@blueprint.route(
+    "/task/cache_attachments", methods=["POST"]
+)  # noqa: C910  # too complex
 def task_cache_attachments() -> _Response:
     task = p.parse(flask.request)
     app.logger.info(f"task={task!r}")
@@ -285,6 +288,13 @@ def task_cache_attachments() -> _Response:
             obj = activity.get_object()
         else:
             obj = activity
+
+        if obj.content:
+            content_html = BeautifulSoup(obj.content, "html5lib")
+            for img in content_html.find_all("img"):
+                src = img.attrs.get("src")
+                if src:
+                    Tasks.cache_attachment({"url": src}, iri)
 
         if obj.has_type(ap.ActivityType.VIDEO):
             if isinstance(obj.url, list):
