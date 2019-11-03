@@ -222,9 +222,9 @@
  <div style="clear:both">
  <form action="{{redir}}" class="action-form"  method="GET" style="display:inline-block">
 <input type="hidden" name="show_sensitive" value="{{perma_id}}">
-{% if request.path == url_for("admin.admin_lookup") %}
-<input type="hidden" name="url" value="{{obj.id}}">
-{% endif %}
+{% for k, v in request.args.items() %}
+<input type="hidden" name="{{k}}" value="{{v}}">
+{% endfor %}
 <button type="submit" class="bar-item-reverse">display sensitive content</button>
 </form>
  </div>
@@ -233,9 +233,11 @@
  {% if obj.sensitive %}
  <div style="clear:both;margin-bottom: 20px;">
  <form action="{{redir}}" class="action-form"  method="GET" style="display:inline-block">
-{% if request.path == url_for("admin.admin_lookup") %}
-<input type="hidden" name="url" value="{{obj.id}}">
+{% for k, v in request.args.items() %}
+{% if k != "show_sensitive" %}
+<input type="hidden" name="{{k}}" value="{{v}}">
 {% endif %}
+{% endfor %}
 <button type="submit" class="bar-item">hide sensitive content</button>
 </form>
  </div>
