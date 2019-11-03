@@ -90,15 +90,7 @@
 
 {% if session.logged_in %}
     {% set perma_id = obj.id | permalink_id %}
-
-    {% if request.args.get('older_than') %}
-        {% set redir = request.path + "?older_than=" + request.args.get('older_than') + "#activity-" + perma_id %}
-    {% elif request.args.get('newer_than') %}
-        {% set redir = request.path + "?newer_than=" + request.args.get('newer_than') + "#activity-" + perma_id %}
-    {% else %}
-    {% set redir = request.path + "#activity-" + perma_id %}
-    {% endif %}
-
+    {% set redir = request.path + "?"+ request.query_string.decode() + "#activity-" + perma_id %}
     {% set aid = obj.id | quote_plus %}
 {% endif %}
 
