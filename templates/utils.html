@@ -245,7 +245,7 @@
 	<h3 class="l">Attachments</h3>
 	<ul style="padding:0;list-style-type: none;">
 	{% endif %}
-	{% for a in obj.attachment %}
+	{% for a in (obj | iter_note_attachments) %}
     {% if (a.mediaType and a.mediaType.startswith("image/")) or (a.type and a.type == 'Image') %}
     <a href="{{ a.url | get_attachment_url(None) }}">
         <img src="{{a.url | get_attachment_url(720) }}" title="{{ a.name }}" alt="{{ a.name }}" class="img-attachment"></a>

@@ -2,6 +2,7 @@ import logging
 import urllib
 from datetime import datetime
 from datetime import timezone
+from functools import lru_cache
 from urllib.parse import urlparse
 
 import bleach
@@ -345,6 +346,7 @@ def get_attachment_url(url, size):
 
 
 @filters.app_template_filter()
+@lru_cache(maxsize=256)
 def update_inline_imgs(content):
     soup = BeautifulSoup(content, "html5lib")
     imgs = soup.find_all("img")
@@ -416,6 +418,28 @@ def has_actor_type(doc):
         if has_type(doc, t.value):
             return True
     return False
+
+
+@lru_cache(maxsize=256)
+def _get_inlined_imgs(content):
+    imgs = []
+    if not content:
+        return imgs
+
+    soup = BeautifulSoup(content, "html5lib")
+    for img in soup.find_all("img"):
+        src = img.attrs.get("src")
+        if src:
+            imgs.append(src)
+
+    return imgs
+
+
+@filters.app_template_filter()
+def iter_note_attachments(note):
+    attachments = note.get("attachment", [])
+    imgs = _get_inlined_imgs(note.get("content"))
+    return [a for a in attachments if a.get("url") not in imgs]
 
 
 @filters.app_template_filter()
