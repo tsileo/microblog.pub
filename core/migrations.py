@@ -361,3 +361,18 @@ class _20191020_ManuallyApprovesFollowerSupportMigrationn(Migration):
             },
             {"$set": {"meta.follow_status": "accepted"}},
         )
+
+
+class _20191106_PlaceTagToLocation(Migration):
+    def migrate(self) -> None:
+        for data in find_activities({"activity.object.tag.type": "Place"}):
+            for tag in data["activity"]["object"]["tag"]:
+                if tag["type"] == "Place":
+                    break
+            DB.activities.update_one(
+                {"_id": data["_id"]},
+                {
+                    "$pull": {"activity.object.tag": {"type": "Place"}},
+                    "$set": {"activity.object.location": tag},
+                },
+            )

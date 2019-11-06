@@ -453,7 +453,7 @@ def api_new_note() -> _Response:
 
     source = None
     summary = None
-    place_tags = []
+    location = None
 
     # Basic Micropub (https://www.w3.org/TR/micropub/) "create" support
     is_micropub = False
@@ -472,15 +472,11 @@ def api_new_note() -> _Response:
         location = _user_api_arg("location", default="")
         if location.startswith("geo:"):
             slat, slng, *_ = location[4:].split(",")
-            place_tags.append(
-                {
-                    "type": ap.ActivityType.PLACE.value,
-                    "url": "",
-                    "name": "",
-                    "latitude": float(slat),
-                    "longitude": float(slng),
-                }
-            )
+            location = {
+                "type": ap.ActivityType.PLACE.value,
+                "latitude": float(slat),
+                "longitude": float(slng),
+            }
 
         # Handle JSON microformats2 data
         if _user_api_arg("type", default=None):
@@ -513,20 +509,17 @@ def api_new_note() -> _Response:
     if summary is None:
         summary = _user_api_arg("summary", default="")
 
-    if not place_tags:
+    if not location:
         if _user_api_arg("location_lat", default=None):
             lat = float(_user_api_arg("location_lat"))
             lng = float(_user_api_arg("location_lng"))
             loc_name = _user_api_arg("location_name", default="")
-            place_tags.append(
-                {
-                    "type": ap.ActivityType.PLACE.value,
-                    "url": "",
-                    "name": loc_name,
-                    "latitude": lat,
-                    "longitude": lng,
-                }
-            )
+            location = {
+                "type": ap.ActivityType.PLACE.value,
+                "name": loc_name,
+                "latitude": lat,
+                "longitude": lng,
+            }
 
     # All the following fields are specific to the API (i.e. not Micropub related)
     _reply, reply = None, None
@@ -542,7 +535,7 @@ def api_new_note() -> _Response:
     content, tags = parse_markdown(source)
 
     # Check for custom emojis
-    tags = tags + emojis.tags(content) + place_tags
+    tags = tags + emojis.tags(content)
 
     to: List[str] = []
     cc: List[str] = []
@@ -581,6 +574,9 @@ def api_new_note() -> _Response:
         inReplyTo=reply.id if reply else None,
         context=context,
     )
+
+    if location:
+        raw_note["location"] = location
 
     if request.files:
         for f in request.files.keys():
