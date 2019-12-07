@@ -5,7 +5,7 @@
 <meta http-equiv="x-ua-compatible" content="ie=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>{% block title %}{{ config.NAME }}'s microblog{% endblock %}</title>
-<link rel="stylesheet" href="/static/pure.css">
+<link rel="stylesheet" href="/static/bulma.css">
 <link rel="authorization_endpoint" href="{{ config.ID }}/indieauth">
 <link rel="token_endpoint" href="{{ config.ID }}/token">
 <link rel="micropub" href="{{config.ID}}/api/new_note">
@@ -30,6 +30,58 @@ dt, dd { font-size: 0.9em; }
 </head>
 <body>
 {% if logged_in %}
+
+<nav class="navbar is-dark" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a class="navbar-item {% if not request.path.startswith("/admin") %}selected{% endif %}" href="/">
+      Microblog.pub
+    </a>
+
+    <a role="button" class="navbar-burger burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </a>
+  </div>
+
+  <div id="navbarBasicExample" class="navbar-menu">
+    <div class="navbar-start">
+      <a class="navbar-item" href="/admin/stream">
+        Stream
+      </a>
+
+      <a class="navbar-item {% if request.path == "/admin/new" %} is-active{% endif %}" href="/admin/new">
+        New
+      </a>
+
+      <a class="navbar-item {% if request.path == "/admin/notifications" %} is-active{% endif %}" href="/admin/notifications">
+        Notifications {% if unread_notifications_count %}({{unread_notifications_count}}){% endif %}
+      </a>
+
+      <a class="navbar-item {% if request.path == "/admin/direct_messages" %} is-active{% endif %}" href="/admin/direct_messages">
+        DMs
+      </a>
+
+      <a class="navbar-item {% if request.path == "/admin/lists" %} is-active{% endif %}" href="/admin/lists">
+        Lists
+      </a>
+
+      <a class="navbar-item {% if request.path == "/admin/lookup" %} is-active{% endif %}" href="/admin/lookup">
+        Lookup
+      </a>
+
+      <a class="navbar-item" href="/admin/logout">
+        Logout
+      </a>
+    </div>
+
+    <div class="navbar-end">
+    	<a href="/admin" class="navbar-item {% if request.path.startswith("/admin") %} is-active{% endif %}">Admin</a>
+    </div>
+  </div>
+</nav>
+
+<!--
 <nav id="admin-menu-wrapper">
 <ul id="admin-menu">
 <li class="left"><a href="/admin" class="admin-title{% if request.path.startswith("/admin") %} selected{% endif %}">Admin</a></li>
@@ -47,6 +99,7 @@ dt, dd { font-size: 0.9em; }
 <li class="left"><a href="/admin/logout">Logout</a></li>
 </ul>
 </nav>
+-->
 {% endif %}
 
 
@@ -58,5 +111,32 @@ dt, dd { font-size: 0.9em; }
 	Powered by <a href="https://microblog.pub">microblog.pub</a> <small class="microblogpub-version"><code>{{ microblogpub_version }}</code></small> (<a href="https://github.com/tsileo/microblog.pub">source code</a>) and the <a href="https://activitypub.rocks/">ActivityPub</a> protocol
 </div>
 </footer>
+<script>
+	document.addEventListener('DOMContentLoaded', () => {
+
+	  // Get all "navbar-burger" elements
+	  const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+
+	  // Check if there are any navbar burgers
+	  if ($navbarBurgers.length > 0) {
+
+	    // Add a click event on each of them
+	    $navbarBurgers.forEach( el => {
+	      el.addEventListener('click', () => {
+
+	        // Get the target from the "data-target" attribute
+	        const target = el.dataset.target;
+	        const $target = document.getElementById(target);
+
+	        // Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
+	        el.classList.toggle('is-active');
+	        $target.classList.toggle('is-active');
+
+	      });
+	    });
+	  }
+
+	});
+</script>
 </body>
 </html>

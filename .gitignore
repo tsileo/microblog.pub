@@ -3,6 +3,9 @@ key_*.pem
 data/*
 config/*
 static/media/*
+static/twemoji/*
+static/*.css
+env/*
 
 .mypy_cache/
 __pycache__/

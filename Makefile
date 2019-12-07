@@ -40,6 +40,8 @@ microblogpub:
 css:
 	# Download pure.css if needed
 	if [[ ! -f static/pure.css ]]; then curl https://unpkg.com/purecss@1.0.1/build/pure-min.css > static/pure.css; fi
+	# Download bulma.css if needed
+	if [[ ! -f static/bulma.css ]]; then curl https://unpkg.com/bulma@0.8.0/css/bulma.css > static/bulma.css; fi
 	# Download the emojis from twemoji if needded
 	if [[ ! -d static/twemoji ]]; then wget https://github.com/twitter/twemoji/archive/v12.1.2.tar.gz && tar xvzf v12.1.2.tar.gz  && mv twemoji-12.1.2/assets/svg static/twemoji && rm -rf twemoji-12.1.2 && rm -f v12.1.2.tar.gz; fi
 
