@@ -68,15 +68,16 @@ dt, dd { font-size: 0.9em; }
 
       <a class="navbar-item {% if request.path == "/admin/lookup" %} is-active{% endif %}" href="/admin/lookup">
         Lookup
-      </a>
-
-      <a class="navbar-item" href="/admin/logout">
-        Logout
-      </a>
+      </a>    
     </div>
 
     <div class="navbar-end">
-    	<a href="/admin" class="navbar-item {% if request.path.startswith("/admin") %} is-active{% endif %}">Admin</a>
+      <a class="navbar-item" href="/admin/logout">
+        Logout
+      </a>
+    	<a href="/admin" class="navbar-item {% if request.path.startswith("/admin") %} is-active{% endif %}">
+        Admin
+      </a>
     </div>
   </div>
 </nav>

@@ -5,10 +5,32 @@ main#wrapper {
 
 #header {
   margin-bottom: 3rem;
+
+  .badge {
+    background-color: #777;
+    padding: 0.25rem 0.4rem;;
+    line-height: 0.75rem;
+    border-radius: 3px;
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    color: white;
+  }
+
+  .is-active .badge {
+    background: #dd3344;
+  }
 }
 
 article.note {
   margin-bottom: 3rem;
+
+  .bottom-bar {
+    margin-top: 1rem;
+
+    form .button {
+      margin-right: 0.5rem;
+    }
+  }
 }
 
 

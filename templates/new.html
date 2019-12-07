@@ -63,13 +63,13 @@
         <div class="control">
             <div class="buttons">
                 {% for emoji in emojis %}
-                <span class="button is-dark ji">{{ emoji | emojify | safe }}</span>
+                <span class="button is-light ji">{{ emoji | emojify | safe }}</span>
                 {% endfor %}
             </div>
 
             <div class="buttons">
                 {% for emoji in custom_emojis %}
-                <span class="button is-dark ji"><img src="{{emoji.get_icon_url()}}" alt="{{emoji.name}}" title="{{emoji.name}}" class="custom-emoji"></span>
+                <span class="button is-light ji"><img src="{{emoji.get_icon_url()}}" alt="{{emoji.name}}" title="{{emoji.name}}" class="custom-emoji"></span>
                 {% endfor %}
             </div>
         </div>
@@ -181,7 +181,7 @@
 
     <div class="field">
         <div class="control">
-            <input type="submit" value="post" class="button is-primary">
+            <input type="submit" value="POST" class="button is-primary">
         </div>
     </div>
 </form>

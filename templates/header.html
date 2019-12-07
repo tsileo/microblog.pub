@@ -26,11 +26,11 @@
 
 <div class="tabs">
 	<ul>
-		<li {% if request.path == "/" %}class="is-active"{% endif %}><a href="/">Notes [{{ notes_count }}]</a></li>
-		<li {% if request.path == url_for("all") %}class="is-active"{% endif %}><a href="/all">All [{{ with_replies_count }}]</a></li>
-		<li {% if request.path == "/liked" %}class="is-active"{% endif %}><a href="/liked">Liked [{{ liked_count }}]</a></li>
-		<li {% if request.path == "/followers" %} class="is-active" {% endif %}><a href="/followers">Followers [{{ followers_count }}]</a></li>
-		<li {% if request.path == "/following" %} class="is-active" {% endif %}><a href="/following">Following [{{ following_count }}]</a></li>
+		<li {% if request.path == "/" %}class="is-active"{% endif %}><a href="/">Notes <span class="badge">{{ notes_count }}</span></a></li>
+		<li {% if request.path == url_for("all") %}class="is-active"{% endif %}><a href="/all">All <span class="badge">{{ with_replies_count }}</span></a></li>
+		<li {% if request.path == "/liked" %}class="is-active"{% endif %}><a href="/liked">Liked <span class="badge">{{ liked_count }}</span></a></li>
+		<li {% if request.path == "/followers" %} class="is-active" {% endif %}><a href="/followers">Followers <span class="badge">{{ followers_count }}</span></a></li>
+		<li {% if request.path == "/following" %} class="is-active" {% endif %}><a href="/following">Following <span class="badge">{{ following_count }}</span></a></li>
 	</ul>
 </div>
 

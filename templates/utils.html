@@ -108,12 +108,13 @@
 			<aside>
 				<a href="{{ actor | url_or_id | get_url }}" class="no-hover">
 					<strong>{{ (actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</strong>
-					<span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}</span>{% else %}{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span>
+					<span>@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}</span>{% else %}{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span>
 				</a>
 
 				<span class="is-pulled-right">
 					<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj | url_or_id | get_url }}">
-						<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
+						<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time>
+					</a>
 				</span>
 			</aside>
 
@@ -289,7 +290,7 @@
 		{% if not perma and meta.count_like and obj.id | is_from_outbox %}<a class ="button" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> like{% if meta.count_like > 1 %}s{% endif %}</a>{% endif %}
 
 		{% if session.logged_in %}
-		<a class="button" href="/admin/new?reply={{ aid }}">reply</a>
+		<a class="button is-primary is-light" href="/admin/new?reply={{ aid }}">reply</a>
 
 		{% if meta | get_visibility | visibility_is_public %}
 		{% if meta.boosted %}
@@ -297,14 +298,14 @@
 		<input type="hidden" name="redirect" value="{{ redir }}">
 		<input type="hidden" name="id" value="{{ meta.boosted }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button type="submit" class="button">unboost</button>
+		<button type="submit" class="button is-warning is-light">unboost</button>
 		</form>
 		{% else %}
 		<form action="/api/boost" class="action-form"  method="POST">
 		<input type="hidden" name="redirect" value="{{ redir }}">
 		<input type="hidden" name="id" value="{{ obj.id }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button type="submit" class="button">boost</button>
+		<button type="submit" class="button is-warning is-light">boost</button>
 		</form>
 		{% endif %}
 		{% endif %}
@@ -314,14 +315,14 @@
 		<input type="hidden" name="redirect" value="{{ redir }}">
 		<input type="hidden" name="id" value="{{ meta.liked }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button type="submit" class="button">unlike</button>
+		<button type="submit" class="button is-danger is-light">unlike</button>
 		</form>
 		{% else %}
 		<form action="/api/like" class="action-form"  method="POST">
 		<input type="hidden" name="redirect" value="{{ redir }}">
 		<input type="hidden" name="id" value="{{ obj.id }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button type="submit" class="button">like</button>
+		<button type="submit" class="button is-danger is-light">like</button>
 		</form>
 		{% endif %}
 
@@ -331,14 +332,14 @@
 		<input type="hidden" name="id" value="{{ obj.id }}">
 		<input type="hidden" name="undo" value="yes">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button type="submit" class="button">unbookmark</button>
+		<button type="submit" class="button is-light">unbookmark</button>
 		</form>
 		{% else %}
 		<form action="/api/bookmark" class="action-form"  method="POST">
 		<input type="hidden" name="redirect" value="{{ redir }}">
 		<input type="hidden" name="id" value="{{ obj.id }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button type="submit" class="button">bookmark</button>
+		<button type="submit" class="button is-light">bookmark</button>
 		</form>
 		{% endif %}
 
@@ -347,21 +348,21 @@
 		<input type="hidden" name="redirect" value="{{ redir }}">
 		<input type="hidden" name="id" value="{{ obj.id }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button type="submit" class="button" onclick="return confirm('Confirm the delete action?');">delete</button>
+		<button type="submit" class="button is-light" onclick="return confirm('Confirm the delete action?');">delete</button>
 		</form>
 		{% if meta.pinned %}
 		<form action="/api/note/unpin" class="action-form"  method="POST">
 		<input type="hidden" name="redirect" value="{{ redir }}">
 		<input type="hidden" name="id" value="{{ obj.id }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button type="submit" class="button">unpin</button>
+		<button type="submit" class="button is-light">unpin</button>
 		</form>
 		{% else %}
 		<form action="/api/note/pin" class="action-form"  method="POST">
 		<input type="hidden" name="redirect" value="{{ redir }}">
 		<input type="hidden" name="id" value="{{ obj.id }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button type="submit" class="button">pin</button>
+		<button type="submit" class="button is-light">pin</button>
 		</form>
 		{% endif %}
 
@@ -369,22 +370,22 @@
 		{% endif %}
 
 		{% if session.logged_in and obj.inReplyTo and not meta.count_reply and not perma %}
-		<a class="button" href="/admin/thread?oid={{aid}}">thread</a>
+		<a class="button is-light" href="/admin/thread?oid={{aid}}">thread</a>
 		{% endif %}
 
 		{% if meta | get_visibility | visibility_is_public %}
 		{% if obj | url_or_id | get_url | is_from_outbox %}
 		{% if not perma %}
-		<a class="button" href="{{ obj | url_or_id | get_url }}">permalink</a>
+		<a class="button is-light" href="{{ obj | url_or_id | get_url }}">permalink</a>
 		{% endif %}
 		{% else %}
 		<a class="button" href="{{ obj | url_or_id | get_url }}" rel="external noreferrer">source</a>
 		{% if session.logged_in %}
-		<a class="button" href="/admin/profile?actor_id={{actor.id}}">profile</a>
+		<a class="button is-light" href="/admin/profile?actor_id={{actor.id}}">profile</a>
 		{% endif %}
 		{% endif %}
 		{% endif %}
-		<a class="button bar-item-no-border">{{ meta | get_visibility | visibility }}</a>
+		<a class="button is-light">{{ meta | get_visibility | visibility }}</a>
 
 		</aside>
 
