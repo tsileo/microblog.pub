@@ -1,9 +1,21 @@
-.note-container p:first-child {
+main#wrapper {
+  margin: 1rem 1rem 0 1rem;
+  max-width: 50rem;
+}
+
+#header {
+  margin-bottom: 3rem;
+}
+
+
+
+/*.note-container p:first-child {
         margin-top: 0;
 }
-html, body {
-	  height: 100%;
-}
+
+// html, body {
+// 	  height: 100%;
+// }
 
 @media only screen and (max-width: 480px) {
   #menu-item-following {
@@ -413,3 +425,5 @@ li.answer {
    width:70px;
    display:inline-block;
 }
+
+*/

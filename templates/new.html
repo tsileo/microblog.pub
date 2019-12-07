@@ -11,81 +11,179 @@
 <h3 style="padding-bottom: 30px">Replying to {{ content }}</h3>
 {{ utils.display_thread(thread) }}
 {% else %}
-<div class="tabbar">
+
+<div class="tabs is-toggle is-rounded">
 {% if request.args.get("question") == "1" %}
-<a href="{{ url_for('admin.admin_new') }}" class="tab">Note</a><a href="{{ url_for('admin.admin_new') }}?question=1" class="tab selected">Question</a>
+  <ul>
+    <li><a href="{{ url_for('admin.admin_new') }}">Note</a></li>
+    <li class="is-active"><a href="{{ url_for('admin.admin_new') }}?question=1">Question</a></li>
+  </ul>
 {% else %}
-<a href="{{ url_for('admin.admin_new') }}" class="tab selected">Note</a><a href="{{ url_for('admin.admin_new') }}?question=1" class="tab">Question</a>
+<ul>
+  <li class="is-active"><a href="{{ url_for('admin.admin_new') }}">Note</a></li>
+  <li><a href="{{ url_for('admin.admin_new') }}?question=1">Question</a></li>
+</ul>
 {% endif %}
 </div>
+
 {% endif %}
 <form id="new-activity" action="/api/new_{% if request.args.get("question") == "1" %}question{%else%}note{%endif%}" method="POST" enctype="multipart/form-data">
-<input type="hidden" name="redirect" value="/">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<select name="visibility" style="padding:8px 10px;">
-{% for v in visibility %}
-<option value="{{v.name}}" {% if v == default_visibility %}selected="selected"{% endif %}>{{ v.value }}</option>
-{% endfor %}
-</select>
-{% if reply %}<input type="hidden" name="reply" value="{{reply}}">{% endif %}
+    <input type="hidden" name="redirect" value="/">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-<p><input type="text" name="summary" placeholder="summary/CW (optional)"></p>
 
-<p>
-{% for emoji in emojis %}
-<span class="ji">{{ emoji | emojify | safe }}</span>
-{% endfor %}
-{% for emoji in custom_emojis %}
-<span class="ji"><img src="{{emoji.get_icon_url()}}" alt="{{emoji.name}}" title="{{emoji.name}}" class="custom-emoji"></span>
-{% endfor %}
-</p>
+    <div class="field is-horizontal">
+      <div class="field-body">
+        <!-- Visibility -->
+        <div class="field">
+            <label for="visibility" class="label">Visibility</label>
+            <div class="control">
+                <div class="select">
+                    <select name="visibility" style="padding:8px 10px;">
+                    {% for v in visibility %}
+                        <option value="{{v.name}}" {% if v == default_visibility %}selected="selected"{% endif %}>{{ v.value }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        <!-- Content Warning -->
+        <div class="field">
+            <label for="summary" class="label">Summary</label>
+            <p class="control">
+                <input class="input" name="summary" type="summary" placeholder="summary/CW (optional)">
+            </p>
+        </div>
+      </div>
+    </div>
 
-<textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;">{{ content }}</textarea>
+    {% if reply %}<input type="hidden" name="reply" value="{{reply}}">{% endif %}
 
-<p>
-<input type="file" name="file">
-<p>
-<p>
-<input type="text" name="file_description" placeholder="attachment description (optional)">
-</p>
+    <div class="field">
+        <div class="control">
+            <div class="buttons">
+                {% for emoji in emojis %}
+                <span class="button is-dark ji">{{ emoji | emojify | safe }}</span>
+                {% endfor %}
+            </div>
 
-<p>
-<input type="text" name="location_lat" id="location_lat" placeholder="latitude (optional)">
-<input type="text" name="location_lng" id="location_lng" placeholder="longitude (optional)">
-<a href="#" class="location_autofill">ask browser for location</a>
-</p>
-<p>
-<input type="text" name="location_name" placeholder="location name (optional)">
-</p>
+            <div class="buttons">
+                {% for emoji in custom_emojis %}
+                <span class="button is-dark ji"><img src="{{emoji.get_icon_url()}}" alt="{{emoji.name}}" title="{{emoji.name}}" class="custom-emoji"></span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 
-{% if request.args.get("question") == "1" %}
-<div style="margin-top:20px;">
-    <p>Open for: <select name="open_for">
-    <option value="5">5 minutes</option>
-    <option value="10">10 minutes</option>
-    <option value="15">15 minutes</option>
-    <option value="30">30 minutes</option>
-    <option value="60">1 hour</option>
-    <option value="360">6 hour</option>
-    <option value="1440" selected>1 day</option>
-    <option value="4320">3 days</option>
-    <option value="10080">7 days</option>
-    </select></p>
+    <div class="field">
+        <div class="control">
+            <textarea class="textarea" name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;">{{ content }}</textarea>
+        </div>
+    </div>
 
-    <p><select name="of">
-        <option value="oneOf">Single choice</option>
-        <option value="anyOf">Multiple choices</option>
-    </select></p>
+    <div class="field is-horizontal">
+        <div class="field-body">
+            <div class="field">
+                <div class="file">
+                  <label class="file-label">
+                    <input class="file-input" type="file" name="name">
+                    <span class="file-cta">
+                      <span class="file-label">
+                        Choose a file…
+                      </span>
+                    </span>
+                  </label>
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="control">
+                    <input type="text" class="input" name="file_description" placeholder="attachment description (optional)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="field is-horizontal">
+        <div class="field-body">
+            <div class="field">
+                <div class="control">
+                    <input type="text" class="input" name="location_lat" id="location_lat" placeholder="latitude (optional)">
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="control">
+                    <input type="text" class="input" name="location_lng" id="location_lng" placeholder="longitude (optional)">
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="control">
+                    <input type="text" class="input" name="location_name" placeholder="location name (optional)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="field">
+        <div class="control">
+            <a href="#" class="location_autofill button is-info">ask browser for location</a>
+        </div>
+    </div>
+
+
+    {% if request.args.get("question") == "1" %}
+    <div class="field is-horizontal">
+        <div class="field-body">
+            <div class="field">
+                <label for="open_for" class="label">Open for</label>
+                <div class="control">
+                    <div class="select">
+                        <select name="open_for">
+                            <option value="5">5 minutes</option>
+                            <option value="10">10 minutes</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30">30 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="360">6 hour</option>
+                            <option value="1440" selected>1 day</option>
+                            <option value="4320">3 days</option>
+                            <option value="10080">7 days</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="of" class="label">Choices</label>
+                <div class="control">
+                    <div class="select">
+                        <select name="of">
+                            <option value="oneOf">Single choice</option>
+                            <option value="anyOf">Multiple choices</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {% for i in range(4) %}
-    <p><input type="text" name="answer{{i}}" placeholder="Answer #{{i+1}}"></p>
+    <div class="field">
+        <div class="control">
+            <input type="text" class="input" name="answer{{i}}" placeholder="Answer #{{i+1}}">
+        </div>
+    </div>
     {% endfor %}
 
-</div>
-{% endif %}
+    {% endif %}
 
-<input type="submit" value="post">
-</div>
+    <div class="field">
+        <div class="control">
+            <input type="submit" value="post" class="button is-primary">
+        </div>
+    </div>
 </form>
 
 </div>

@@ -45,22 +45,22 @@
 {% set icon_url = actor.icon.url | get_actor_icon_url(50) %}
 {% endif %}
 
-        <span class="bar-item-no-hover" style="padding:0;">
-            <span style="display:flex;height:30px;line-height:30px;background: url('{{ icon_url }}') no-repeat;background-size:30px;border-top-left-radius: 2px;border-bottom-left-radius: 2px;">
-                {% if before and before_url %}
-                <span style="flex-shrink:1; padding:0 10px 0 40px;"><a href="{{before_url}}">{{before}}</a></span>
-                <span style="flex-shrink:1;padding-right:10px;">
-                <a style="color:#808080;" href="{{ actor.url | get_url }}">{{ ( actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</a>
-                </span>
-                {% endif %}
-                {% if after %}
-                <span style="flex-shrink:1;padding-left:40px;">
-                <a style="color:#808080;" href="{{ actor.url | get_url }}">{{ ( actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</a>
-                </span>
-                <span style="flex-shrink:1;padding:0 10px;">{{ after }}</span>
-                {% endif %}
-            </span>
-        </span>
+<span class="bar-item-no-hover" style="padding:0;">
+	<span style="display:flex;height:30px;line-height:30px;background: url('{{ icon_url }}') no-repeat;background-size:30px;border-top-left-radius: 2px;border-bottom-left-radius: 2px;">
+		{% if before and before_url %}
+		<span style="flex-shrink:1; padding:0 10px 0 40px;"><a href="{{before_url}}">{{before}}</a></span>
+		<span style="flex-shrink:1;padding-right:10px;">
+		<a style="color:#808080;" href="{{ actor.url | get_url }}">{{ ( actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</a>
+		</span>
+		{% endif %}
+		{% if after %}
+		<span style="flex-shrink:1;padding-left:40px;">
+		<a style="color:#808080;" href="{{ actor.url | get_url }}">{{ ( actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</a>
+		</span>
+		<span style="flex-shrink:1;padding:0 10px;">{{ after }}</span>
+		{% endif %}
+	</span>
+</span>
 
 
 {%- endmacro %}
@@ -73,351 +73,345 @@
 <span class="bar-item-no-hover">
 <a href="{{ obj.inReplyTo }}">self reply</a>
 </span>
-{% endif %}
+{% endif %} 
 
 {%- endmacro %}
 
 {% macro display_note(obj, perma=False, likes=[], shares=[], meta={}, no_color=False) -%}
 
 {% if meta.object_actor %}
-    {% set actor = meta.object_actor %}
+	{% set actor = meta.object_actor %}
 {% elif meta.actor %}
-    {% set actor = meta.actor %}
+	{% set actor = meta.actor %}
 {% else %}
-    {% set actor = obj.attributedTo | get_actor  %}
+	{% set actor = obj.attributedTo | get_actor  %}
 {% endif %}
 
 
 {% if session.logged_in %}
-    {% set perma_id = obj.id | permalink_id %}
-    {% set redir = request.path + "?"+ request.query_string.decode() + "#activity-" + perma_id %}
-    {% set aid = obj.id | quote_plus %}
+	{% set perma_id = obj.id | permalink_id %}
+	{% set redir = request.path + "?"+ request.query_string.decode() + "#activity-" + perma_id %}
+	{% set aid = obj.id | quote_plus %}
 {% endif %}
 
 {% set real_end_time = obj.closed or obj.endTime %}
 
-<article class="note-box">
-<div class="note h-entry" id="activity-{{ obj.id | permalink_id }}">
+<article class="note h-entry" id="activity-{{ obj.id | permalink_id }}">
+	<div class="media h-card p-author">
+		<figure class="media-left">
+			<a class="u-url u-uid no-hover image is-64x64" rel="author" href="{{ actor | url_or_id | get_url }}">
+				<img class="u-photo" src="{% if not actor.icon %}/static/nopic.png{% else %}{{ actor.icon.url | get_actor_icon_url(50) }}{% endif %}">
+			</a>
+		</figure>
+		<data class="p-name" value="{{ actor.name or actor.preferredUsername }}"></data>
+		<div class="media-content">
+			<aside>
+				<a href="{{ actor | url_or_id | get_url }}" class="no-hover">
+					<strong>{{ (actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</strong>
+					<span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}</span>{% else %}{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span>
+				</a>
 
-<div class="h-card p-author">
-<a class="u-url u-uid no-hover" rel="author" href="{{ actor | url_or_id | get_url }}"><img class="u-photo" src="{% if not actor.icon %}/static/nopic.png{% else %}{{ actor.icon.url | get_actor_icon_url(50) }}{% endif %}">
-</a>
-<data class="p-name" value="{{ actor.name or actor.preferredUsername }}"></data>
-</div>
+				<span class="is-pulled-right">
+					<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj | url_or_id | get_url }}">
+						<time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
+				</span>
+			</aside>
 
-<div class="note-wrapper">
-    <aside style="clear:both;height:20px;">
-	<a href="{{ actor | url_or_id | get_url }}" style="margin:0;text-decoration:none;margin: 0;text-decoration: none;display: block;width: 75%;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;float: left;" class="no-hover">
-        <strong>{{ (actor.name or actor.preferredUsername) | clean | replace_custom_emojis(actor) | safe }}</strong>
-        <span class="l">@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}</span>{% else %}{{ actor.preferredUsername | clean | replace_custom_emojis(actor) | safe }}{% endif %}@{% if not no_color and obj.id | is_from_outbox %}<span class="pcolor">{{ actor | url_or_id | get_url | domain }}</span>{% else %}{{ actor | url_or_id | get_url | domain }}{% endif %}</span></a>
+			{% if obj.summary %}<p class="p-summary">{{ obj.summary | clean | replace_custom_emojis(obj) | safe }}</p>{% endif %}
+			{% if obj | has_type('Video') %}
+			<div class="note-video">
+			<video controls preload="metadata"  src="{{ obj.url | get_video_url }}" width="480">
+			</video>
+			</div>
+			{% endif %}
 
-	<span style="float:right;width: 25%;text-align: right;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;display: block;">
-		<a rel="noopener" class="u-url u-uid note-permalink l" href="{{ obj | url_or_id | get_url }}">
-            <time class="dt-published" title="{{ obj.published }}" datetime="{{ obj.published }}" {% if obj | url_or_id | get_url | is_from_outbox %}{%else%}rel="external noreferrer"{%endif%}>{{ obj.published | format_timeago }}</time></a>
-	</span>
-    </aside>
+			<div class="note-container{% if perma %} perma{%endif%} p-name e-content">
+			{% if obj | has_type(['Article', 'Page']) %}
+				{{ obj.name }} <a href="{{ obj | url_or_id | get_url }}">{{ obj | url_or_id | get_url }}</a>
+			{% elif obj | has_type('Question') %}
+				{{ obj.content | update_inline_imgs | clean | replace_custom_emojis(obj) | code_highlight | safe }}
 
-	{% if obj.summary %}<p class="p-summary">{{ obj.summary | clean | replace_custom_emojis(obj) | safe }}</p>{% endif %}
-    {% if obj | has_type('Video') %}
-    <div class="note-video">
-    <video controls preload="metadata"  src="{{ obj.url | get_video_url }}" width="480">
-    </video>
-    </div>
-    {% endif %}
+				
+				<ul style="list-style:none;padding:0;">
+				{% set total_votes = obj | get_total_answers_count(meta) %}
+				{% for oneOf in obj.oneOf %}
+					{% set pct = 0 %}
+					{% if total_votes > 0 %}
+						{% set cnt = oneOf.name | get_answer_count(obj, meta) %}
+						{% set pct = cnt * 100.0 / total_votes %}
+					{% endif %}
+					<li class="answer">
+						{% if session.logged_in and not meta.poll_answers_sent and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
+		<span><form action="/api/vote" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ obj.id }}">
+		<input type="hidden" name="choice" value="{{ oneOf.name }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="bar-item">vote</button>
+			</form></span>{% endif %}
 
-    <div class="note-container{% if perma %} perma{%endif%} p-name e-content">
-    {% if obj | has_type(['Article', 'Page']) %}
-        {{ obj.name }} <a href="{{ obj | url_or_id | get_url }}">{{ obj | url_or_id | get_url }}</a>
-    {% elif obj | has_type('Question') %}
-        {{ obj.content | update_inline_imgs | clean | replace_custom_emojis(obj) | code_highlight | safe }}
+						<span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
+						<span class="answer-text">
+							<span>{{ '%0.0f'| format(pct) }}%</span>
+							{{ oneOf.name }} {% if oneOf.name | poll_answer_key in meta.poll_answers_sent %}(your vote){% endif %}
+						</span>
+					</li>
+				{% endfor %}
+				{% if obj.anyOf %}
+				
+				{% for anyOf in obj.anyOf %}
+					{% set pct = 0 %}
+					{% if total_votes > 0 %}
+						{% set cnt = anyOf.name | get_answer_count(obj, meta) %}
+						{% set pct = cnt * 100.0 / total_votes %}
+					{% endif %}
+				<li class="answer">
+					{% set already_voted = anyOf.name | poll_answer_key in meta.poll_answers_sent %}
+				 {% if session.logged_in and not already_voted and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
+		<span><form action="/api/vote" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ obj.id }}">
+		<input type="hidden" name="choice" value="{{ anyOf.name }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="bar-item">vote</button>
+			</form></span>
+			{% elif session.logged_in and already_voted and not (real_end_time | gtnow) %}
+			<span style="position:relative;top:5px;height:10px;width:50px;display:inline-block;"></span>
+			{% endif %}
+				<span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
+						<span class="answer-text">
+							<span>{{ '%0.0f'| format(pct) }}%</span>
+							{{ anyOf.name }} {% if anyOf.name | poll_answer_key in meta.poll_answers_sent %}(your vote){% endif %}
+						</span>
+				</li>
+				{% endfor %}
 
-        
-        <ul style="list-style:none;padding:0;">
-        {% set total_votes = obj | get_total_answers_count(meta) %}
-        {% for oneOf in obj.oneOf %}
-            {% set pct = 0 %}
-            {% if total_votes > 0 %}
-                {% set cnt = oneOf.name | get_answer_count(obj, meta) %}
-                {% set pct = cnt * 100.0 / total_votes %}
-            {% endif %}
-            <li class="answer">
-                {% if session.logged_in and not meta.poll_answers_sent and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
-<span><form action="/api/vote" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="choice" value="{{ oneOf.name }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">vote</button>
-    </form></span>{% endif %}
-
-                <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
-                <span class="answer-text">
-                    <span>{{ '%0.0f'| format(pct) }}%</span>
-                    {{ oneOf.name }} {% if oneOf.name | poll_answer_key in meta.poll_answers_sent %}(your vote){% endif %}
-                </span>
-            </li>
-        {% endfor %}
-        {% if obj.anyOf %}
-        
-        {% for anyOf in obj.anyOf %}
-            {% set pct = 0 %}
-            {% if total_votes > 0 %}
-                {% set cnt = anyOf.name | get_answer_count(obj, meta) %}
-                {% set pct = cnt * 100.0 / total_votes %}
-            {% endif %}
-        <li class="answer">
-            {% set already_voted = anyOf.name | poll_answer_key in meta.poll_answers_sent %}
-         {% if session.logged_in and not already_voted and not (real_end_time | gtnow) and not (obj.id | is_from_outbox) %}
-<span><form action="/api/vote" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="choice" value="{{ anyOf.name }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">vote</button>
-    </form></span>
-    {% elif session.logged_in and already_voted and not (real_end_time | gtnow) %}
-    <span style="position:relative;top:5px;height:10px;width:50px;display:inline-block;"></span>
-    {% endif %}
-        <span class="answer-bar color-menu-background" style="width:{{pct}}%;"></span>
-                <span class="answer-text">
-                    <span>{{ '%0.0f'| format(pct) }}%</span>
-                    {{ anyOf.name }} {% if anyOf.name | poll_answer_key in meta.poll_answers_sent %}(your vote){% endif %}
-                </span>
-        </li>
-        {% endfor %}
-
-        {% endif %}
-    </ul>
-    <p><small>
-    {% if real_end_time | gtnow %}
-        Ended {{ real_end_time | format_timeago }} with <strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %}.
-    {% else %}
-        Ends {{ real_end_time | format_timeago }} (<strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %} as of now).
-    {% endif %}
-    </small></p>
+				{% endif %}
+			</ul>
+			<p><small>
+			{% if real_end_time | gtnow %}
+				Ended {{ real_end_time | format_timeago }} with <strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %}.
+			{% else %}
+				Ends {{ real_end_time | format_timeago }} (<strong>{{ total_votes }}</strong> vote{% if total_votes | gtone %}s{% endif %} as of now).
+			{% endif %}
+			</small></p>
 
 
-    {% else %}
-	{{ obj.content | update_inline_imgs | clean | replace_custom_emojis(obj) | code_highlight | safe }}
-    {% endif %}
+			{% else %}
+			{{ obj.content | update_inline_imgs | clean | replace_custom_emojis(obj) | code_highlight | safe }}
+			{% endif %}
 
-    {% if obj | has_place %}
-    <p>Location: {{ obj | get_place | safe }}</p>
-    {% endif %}
+			{% if obj | has_place %}
+			<p>Location: {{ obj | get_place | safe }}</p>
+			{% endif %}
 
+			</div>
+
+			{% if obj.attachment and obj | has_type('Note') %}
+			<div style="padding:20px 0;">
+
+		 {% if obj.sensitive and not request.args.get("show_sensitive") == perma_id %}
+		 <div style="clear:both">
+		 <form action="{{redir}}" class="action-form"  method="GET" style="display:inline-block">
+		<input type="hidden" name="show_sensitive" value="{{perma_id}}">
+		{% for k, v in request.args.items() %}
+		<input type="hidden" name="{{k}}" value="{{v}}">
+		{% endfor %}
+		<button type="submit" class="bar-item-reverse">display sensitive content</button>
+		</form>
+		 </div>
+		 {% else %}
+
+		 {% if obj.sensitive %}
+		 <div style="clear:both;margin-bottom: 20px;">
+		 <form action="{{redir}}" class="action-form"  method="GET" style="display:inline-block">
+		{% for k, v in request.args.items() %}
+		{% if k != "show_sensitive" %}
+		<input type="hidden" name="{{k}}" value="{{v}}">
+		{% endif %}
+		{% endfor %}
+		<button type="submit" class="bar-item">hide sensitive content</button>
+		</form>
+		 </div>
+		 {% endif %}
+
+			{% if obj.attachment | not_only_imgs %}
+			<h3 class="l">Attachments</h3>
+			<ul style="padding:0;list-style-type: none;">
+			{% endif %}
+			{% for a in (obj | iter_note_attachments) %}
+			{% if (a.mediaType and a.mediaType.startswith("image/")) or (a.type and a.type == 'Image') %}
+			<a href="{{ a.url | get_attachment_url(None) }}">
+				<img src="{{a.url | get_attachment_url(720) }}" title="{{ a.name }}" alt="{{ a.name }}" class="img-attachment"></a>
+			{% elif (a.mediaType and a.mediaType.startswith("video/")) %}
+			<li><video controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" title="{{ a.name }}" width="480"></video></li>
+			{% elif (a.mediaType and a.mediaType.startswith("audio/")) %}
+			<li><audio controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" title="{{ a.name }}" style="width:480px;"></audio></li>
+			{% else %}
+			<li><a href="{{a.url }}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
+			{% endif  %}
+			{% endfor %}
+			{% if obj.attachment | not_only_imgs %}
+			</ul>
+			{% endif %}
+
+		{% endif %}
+		</div>
+			{% endif %}
+
+
+
+		{% if meta and meta.og_metadata and obj | has_type('Note') %}
+		{% for og in meta.og_metadata %}
+		{% if og.url %}
+		<a href="{{ og.url }}" class="og-link" style="margin:30px 0;clear:both;display: flex;">
+		{% if og.image | get_og_image_url %}
+		<div style="padding:0 20px 0 0;">
+		<img  style="width:100px;border-radius:3px;" src="{{ og.image | get_og_image_url }}">
+		</div>
+		{% endif %}
+		<div>
+		<strong>{{ og.title }}</strong>
+		<p>{{ og.description | truncate(80) }}</p>
+		<small>{{ og.site_name }}</small>
+		</div>
+		</a>
+		{% endif %}
+		{% endfor %}
+		{% endif %}
+
+		<aside class="bottom-bar buttons">
+		{% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> repl{% if meta.count_reply > 1 %}ies{% else %}y{% endif %}</a>
+		{% elif meta.count_reply and session.logged_in %}
+		<a class="button" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> repl{% if meta.count_reply > 1 %}ies{% else %}y{% endif %}</a>{% endif %}
+
+		{% if not perma and meta.count_boost and obj.id | is_from_outbox %}<a class ="button" href="{{ obj.url | get_url }}"><strong>{{ meta.count_boost }}</strong> boost{% if meta.count_boost > 1 %}s{% endif %}</a>{% endif %}
+		{% if not perma and meta.count_like and obj.id | is_from_outbox %}<a class ="button" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> like{% if meta.count_like > 1 %}s{% endif %}</a>{% endif %}
+
+		{% if session.logged_in %}
+		<a class="button" href="/admin/new?reply={{ aid }}">reply</a>
+
+		{% if meta | get_visibility | visibility_is_public %}
+		{% if meta.boosted %}
+		<form action="/api/undo" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ meta.boosted }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="button">unboost</button>
+		</form>
+		{% else %}
+		<form action="/api/boost" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ obj.id }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="button">boost</button>
+		</form>
+		{% endif %}
+		{% endif %}
+
+		{% if meta.liked %}
+		<form action="/api/undo" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ meta.liked }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="button">unlike</button>
+		</form>
+		{% else %}
+		<form action="/api/like" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ obj.id }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="button">like</button>
+		</form>
+		{% endif %}
+
+		{% if meta.bookmarked or request.path == url_for("admin.admin_bookmarks") %}
+		<form action="/api/bookmark" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ obj.id }}">
+		<input type="hidden" name="undo" value="yes">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="button">unbookmark</button>
+		</form>
+		{% else %}
+		<form action="/api/bookmark" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ obj.id }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="button">bookmark</button>
+		</form>
+		{% endif %}
+
+		{% if obj.id | is_from_outbox %}
+		<form action="/api/note/delete" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ obj.id }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="button" onclick="return confirm('Confirm the delete action?');">delete</button>
+		</form>
+		{% if meta.pinned %}
+		<form action="/api/note/unpin" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ obj.id }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="button">unpin</button>
+		</form>
+		{% else %}
+		<form action="/api/note/pin" class="action-form"  method="POST">
+		<input type="hidden" name="redirect" value="{{ redir }}">
+		<input type="hidden" name="id" value="{{ obj.id }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button type="submit" class="button">pin</button>
+		</form>
+		{% endif %}
+
+		{% endif %}
+		{% endif %}
+
+		{% if session.logged_in and obj.inReplyTo and not meta.count_reply and not perma %}
+		<a class="button" href="/admin/thread?oid={{aid}}">thread</a>
+		{% endif %}
+
+		{% if meta | get_visibility | visibility_is_public %}
+		{% if obj | url_or_id | get_url | is_from_outbox %}
+		{% if not perma %}
+		<a class="button" href="{{ obj | url_or_id | get_url }}">permalink</a>
+		{% endif %}
+		{% else %}
+		<a class="button" href="{{ obj | url_or_id | get_url }}" rel="external noreferrer">source</a>
+		{% if session.logged_in %}
+		<a class="button" href="/admin/profile?actor_id={{actor.id}}">profile</a>
+		{% endif %}
+		{% endif %}
+		{% endif %}
+		<a class="button bar-item-no-border">{{ meta | get_visibility | visibility }}</a>
+
+		</aside>
+
+		{% if likes or shares %}
+		<aside style="padding-top:20px;">
+		{% if likes %}
+			<h4 style="font-weight:normal"><strong>{{ likes|length }}</strong> like{% if (likes | length) > 1 %}s{% endif %}</h4>
+		<div style="display:flex;flex-wrap:wrap;">
+		{% for like in likes %}
+		{{ display_actor_icon(like) }}
+		{% endfor %}
+		</div>
+		{% endif %}
+		{% if shares %}
+		<h4 style="font-weight:normal"><strong>{{ shares|length }}</strong> boost{% if (shares|length) > 1 %}s{% endif %}</h4>
+		<div style="display:flex;flex-wrap:wrap;">
+		{% for boost in shares %}
+		{{ display_actor_icon(boost) }}
+		{% endfor %}
+		</div>
+		{% endif %}
+		</aside>
+		{% endif %}
+
+
+		</div>
 	</div>
-
-	{% if obj.attachment and obj | has_type('Note') %}
-	<div style="padding:20px 0;">
-
- {% if obj.sensitive and not request.args.get("show_sensitive") == perma_id %}
- <div style="clear:both">
- <form action="{{redir}}" class="action-form"  method="GET" style="display:inline-block">
-<input type="hidden" name="show_sensitive" value="{{perma_id}}">
-{% for k, v in request.args.items() %}
-<input type="hidden" name="{{k}}" value="{{v}}">
-{% endfor %}
-<button type="submit" class="bar-item-reverse">display sensitive content</button>
-</form>
- </div>
- {% else %}
-
- {% if obj.sensitive %}
- <div style="clear:both;margin-bottom: 20px;">
- <form action="{{redir}}" class="action-form"  method="GET" style="display:inline-block">
-{% for k, v in request.args.items() %}
-{% if k != "show_sensitive" %}
-<input type="hidden" name="{{k}}" value="{{v}}">
-{% endif %}
-{% endfor %}
-<button type="submit" class="bar-item">hide sensitive content</button>
-</form>
- </div>
- {% endif %}
-
-	{% if obj.attachment | not_only_imgs %}
-	<h3 class="l">Attachments</h3>
-	<ul style="padding:0;list-style-type: none;">
-	{% endif %}
-	{% for a in (obj | iter_note_attachments) %}
-    {% if (a.mediaType and a.mediaType.startswith("image/")) or (a.type and a.type == 'Image') %}
-    <a href="{{ a.url | get_attachment_url(None) }}">
-        <img src="{{a.url | get_attachment_url(720) }}" title="{{ a.name }}" alt="{{ a.name }}" class="img-attachment"></a>
-    {% elif (a.mediaType and a.mediaType.startswith("video/")) %}
-    <li><video controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" title="{{ a.name }}" width="480"></video></li>
-    {% elif (a.mediaType and a.mediaType.startswith("audio/")) %}
-    <li><audio controls preload="metadata"  src="{{ a.url | get_attachment_url(None) }}" title="{{ a.name }}" style="width:480px;"></audio></li>
-	{% else %}
-	<li><a href="{{a.url }}" class="l">{% if a.filename %}{{ a.filename }}{% else %}{{ a.url }}{% endif %}</a></li>
-	{% endif  %}
-	{% endfor %}
-	{% if obj.attachment | not_only_imgs %}
-	</ul>
-	{% endif %}
-
-{% endif %}
-</div>
-	{% endif %}
-
-
-
-{% if meta and meta.og_metadata and obj | has_type('Note') %}
-{% for og in meta.og_metadata %}
-{% if og.url %}
-<a href="{{ og.url }}" class="og-link" style="margin:30px 0;clear:both;display: flex;">
-{% if og.image | get_og_image_url %}
-<div style="padding:0 20px 0 0;">
-<img  style="width:100px;border-radius:3px;" src="{{ og.image | get_og_image_url }}">
-</div>
-{% endif %}
-<div>
-<strong>{{ og.title }}</strong>
-<p>{{ og.description | truncate(80) }}</p>
-<small>{{ og.site_name }}</small>
-</div>
-</a>
-{% endif %}
-{% endfor %}
-{% endif %}
-
-
-
-
-<aside class="bottom-bar">
-{% if meta.count_reply and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_reply }}</strong> repl{% if meta.count_reply > 1 %}ies{% else %}y{% endif %}</a>
-{% elif meta.count_reply and session.logged_in %}
-<a class="bar-item" href="/admin/thread?oid={{aid}}"><strong>{{ meta.count_reply }}</strong> repl{% if meta.count_reply > 1 %}ies{% else %}y{% endif %}</a>{% endif %}
-
-
-{% if not perma and meta.count_boost and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_boost }}</strong> boost{% if meta.count_boost > 1 %}s{% endif %}</a>{% endif %}
-{% if not perma and meta.count_like and obj.id | is_from_outbox %}<a class ="bar-item" href="{{ obj.url | get_url }}"><strong>{{ meta.count_like }}</strong> like{% if meta.count_like > 1 %}s{% endif %}</a>{% endif %}
-
-{% if session.logged_in %}
-<a class="bar-item" href="/admin/new?reply={{ aid }}">reply</a>
-
-{% if meta | get_visibility | visibility_is_public %}
-{% if meta.boosted %}
-<form action="/api/undo" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ meta.boosted }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">unboost</button>
-</form>
-{% else %}
-<form action="/api/boost" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">boost</button>
-</form>
-{% endif %}
-{% endif %}
-
-{% if meta.liked %}
-<form action="/api/undo" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ meta.liked }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">unlike</button>
-</form>
-{% else %}
-<form action="/api/like" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">like</button>
-</form>
-{% endif %}
-
-{% if meta.bookmarked or request.path == url_for("admin.admin_bookmarks") %}
-<form action="/api/bookmark" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="undo" value="yes">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">unbookmark</button>
-</form>
-{% else %}
-<form action="/api/bookmark" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">bookmark</button>
-</form>
-{% endif %}
-
-
-
-{% if obj.id | is_from_outbox %}
-<form action="/api/note/delete" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item" onclick="return confirm('Confirm the delete action?');">delete</button>
-</form>
-{% if meta.pinned %}
-<form action="/api/note/unpin" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">unpin</button>
-</form>
-{% else %}
-<form action="/api/note/pin" class="action-form"  method="POST">
-<input type="hidden" name="redirect" value="{{ redir }}">
-<input type="hidden" name="id" value="{{ obj.id }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="bar-item">pin</button>
-</form>
-{% endif %}
-
-{% endif %}
-{% endif %}
-
-{% if session.logged_in and obj.inReplyTo and not meta.count_reply and not perma %}
-<a class="bar-item" href="/admin/thread?oid={{aid}}">thread</a>
-{% endif %}
-
-{% if meta | get_visibility | visibility_is_public %}
-{% if obj | url_or_id | get_url | is_from_outbox %}
-{% if not perma %}
-<a class="bar-item" href="{{ obj | url_or_id | get_url }}">permalink</a>
-{% endif %}
-{% else %}
-<a class="bar-item" href="{{ obj | url_or_id | get_url }}" rel="external noreferrer">source</a>
-{% if session.logged_in %}
-<a class="bar-item" href="/admin/profile?actor_id={{actor.id}}">profile</a>
-{% endif %}
-{% endif %}
-{% endif %}
-<a class="bar-item bar-item-no-border">{{ meta | get_visibility | visibility }}</a>
-
-</aside>
-
-{% if likes or shares %}
-<aside style="padding-top:20px;">
-{% if likes %}
-    <h4 style="font-weight:normal"><strong>{{ likes|length }}</strong> like{% if (likes | length) > 1 %}s{% endif %}</h4>
-<div style="display:flex;flex-wrap:wrap;">
-{% for like in likes %}
-{{ display_actor_icon(like) }}
-{% endfor %}
-</div>
-{% endif %}
-{% if shares %}
-<h4 style="font-weight:normal"><strong>{{ shares|length }}</strong> boost{% if (shares|length) > 1 %}s{% endif %}</h4>
-<div style="display:flex;flex-wrap:wrap;">
-{% for boost in shares %}
-{{ display_actor_icon(boost) }}
-{% endfor %}
-</div>
-{% endif %}
-</aside>
-{% endif %}
-
-
-</div>
-</div>                       
 </article>
 
 
@@ -441,12 +435,12 @@
 
 {% macro display_pagination(older_than, newer_than) -%}
 <div class="clear">
-    {% if older_than %}
-    <a href="{{ config.BASE_URL }}{{ request.path }}?older_than={{older_than}}{% if request.args.get('limit') %}&limit={{request.args.get('limit')}}{% endif %}{% if request.args.get('actor_id') %}&actor_id={{request.args.get('actor_id')}}{% endif %}" rel="next" class="older-link lcolor"><span class="pcolor">🡨</span> Older</a>
-    {% endif %}
-    {% if newer_than %}
-    <a href="{{ config.BASE_URL }}{{ request.path }}?newer_than={{newer_than}}{% if request.args.get('limit') %}&limit={{request.args.get('limit')}}{% endif %}{% if request.args.get('actor_id') %}&actor_id={{request.args.get('actor_id')}}{% endif %}" rel="prev" class="newer-link lcolor">Newer <span class="pcolor">🡪</span></a>
-    {% endif %}
+	{% if older_than %}
+	<a href="{{ config.BASE_URL }}{{ request.path }}?older_than={{older_than}}{% if request.args.get('limit') %}&limit={{request.args.get('limit')}}{% endif %}{% if request.args.get('actor_id') %}&actor_id={{request.args.get('actor_id')}}{% endif %}" rel="next" class="older-link lcolor"><span class="pcolor">🡨</span> Older</a>
+	{% endif %}
+	{% if newer_than %}
+	<a href="{{ config.BASE_URL }}{{ request.path }}?newer_than={{newer_than}}{% if request.args.get('limit') %}&limit={{request.args.get('limit')}}{% endif %}{% if request.args.get('actor_id') %}&actor_id={{request.args.get('actor_id')}}{% endif %}" rel="prev" class="newer-link lcolor">Newer <span class="pcolor">🡪</span></a>
+	{% endif %}
 </div>
 {% endmacro -%}
 
