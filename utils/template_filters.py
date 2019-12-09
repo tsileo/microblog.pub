@@ -263,21 +263,25 @@ def has_place(note):
 def get_place(note):
     if note.get("location") and note["location"].get("type") == "Place":
         tag = note["location"]
-        lat = tag["latitude"]
-        lng = tag["longitude"]
-        out = ""
-        if tag.get("name"):
-            out += f"{tag['name']} "
 
-        out += (
-            '<span class="h-geo">'
-            f'<data class="p-latitude" value="{lat}"></data>'
-            f'<data class="p-longitude" value="{lng}"></data>'
-            f'<a href="https://www.openstreetmap.org/?mlat={lat}&mlon={lng}#map=16/{lat}/{lng}">{lat},{lng}</a>'
-            "</span>"
-        )
+        if tag.get("latitude") and tag.get("longitude"):
+            lat = tag["latitude"]
+            lng = tag["longitude"]
+            out = ""
+            if tag.get("name"):
+                out += f"{tag['name']} "
 
-        return out
+            out += (
+                '<span class="h-geo">'
+                f'<data class="p-latitude" value="{lat}"></data>'
+                f'<data class="p-longitude" value="{lng}"></data>'
+                f'<a href="https://www.openstreetmap.org/?mlat={lat}&mlon={lng}#map=16/{lat}/{lng}">{lat},{lng}</a>'
+                "</span>"
+            )
+
+            return out
+
+        return ""
 
     return ""
 
