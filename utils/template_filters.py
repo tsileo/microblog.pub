@@ -403,6 +403,14 @@ def get_video_link(data):
         return data
     return None
 
+@filters.app_template_filter()
+def get_text(data):
+    """return first in 'content', 'name' or ''"""
+    for _t in ("content", "name"):
+        if _t in data:
+            return data[_t]
+    return ""
+
 
 @filters.app_template_filter()
 def has_type(doc, _types):

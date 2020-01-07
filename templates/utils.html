@@ -198,7 +198,7 @@
 
 
     {% else %}
-	{{ obj.content | update_inline_imgs | clean | replace_custom_emojis(obj) | code_highlight | safe }}
+	    {{ obj | get_text | update_inline_imgs | clean | replace_custom_emojis(obj) | code_highlight | safe }}
     {% endif %}
 
     {% if obj | has_place %}
