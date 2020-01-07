@@ -215,7 +215,7 @@ def format_timeago(val):
 @filters.app_template_filter()
 def url_or_id(d):
     if isinstance(d, dict):
-        if "url" in d:
+        if "url" in d and isinstance(d["url"], str):
             return d["url"]
         else:
             return d["id"]
