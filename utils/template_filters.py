@@ -367,7 +367,7 @@ def update_inline_imgs(content):
 def get_video_url(url):
     if isinstance(url, list):
         for link in url:
-            if link.get("mimeType", "").startswith("video/"):
+            if link.get("mediaType", "").startswith("video/"):
                 return _get_file_url(link.get("href"), None, Kind.ATTACHMENT)
     else:
         return _get_file_url(url, None, Kind.ATTACHMENT)
