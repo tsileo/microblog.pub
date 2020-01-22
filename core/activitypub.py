@@ -327,9 +327,10 @@ def post_to_outbox(activity: ap.BaseActivity) -> str:
         activity._data["object"]["id"] = urljoin(
             BASE_URL, url_for("outbox_activity", item_id=obj_id)
         )
-        activity._data["object"]["url"] = urljoin(
-            BASE_URL, url_for("note_by_id", note_id=obj_id)
-        )
+        if "url" not in activity._data["object"]:
+            activity._data["object"]["url"] = urljoin(
+                BASE_URL, url_for("note_by_id", note_id=obj_id)
+            )
         activity.reset_object_cache()
 
     save(Box.OUTBOX, activity)

@@ -1,14 +1,14 @@
 {% extends "layout.html" %}
 {% import 'utils.html' as utils %}
-{% block title %}{{ config.NAME }}: "{{ note.activity.object.content | html2plaintext | trim | truncate(50) }}"{% endblock %}
+{% block title %}{{ config.NAME }}{{ note.activity.object | get_text | html2plaintext | trim | truncate(50) }}"{% endblock %}
 {% block header %}
-<meta name="description" content="{{ note.activity.object.content | html2plaintext | trim | truncate(50) }}">
+<meta name="description" content="{{ note.activity.object | get_text | html2plaintext | trim | truncate(50) }}">
 
 <meta content="article" property="og:type" />
 <meta content="{{ note.activity.object.url }}" property="og:url" />
 <meta content="{{ config.USERNAME }} microblog" property="og:site_name" />                                         
 <meta content="{{ config.USERNAME }}" property="og:title" />                                             
-<meta content="{{ note.activity.object.content | html2plaintext | trim | truncate(50) }}" property="og:description" />                                            
+<meta content="{{ note.activity.object | get_text | html2plaintext | trim | truncate(50) }}" property="og:description" />                                            
 <meta content="{{ me.icon.url }}" property="og:image" />                                                 
 <meta content="200" property="og:image:width" />    
 <meta content="200" property="og:image:height" />   

@@ -57,7 +57,7 @@ HEADERS = [
 
 
 with open(os.path.join(KEY_DIR, "me.yml")) as f:
-    conf = yaml.load(f)
+    conf = yaml.safe_load(f)
 
     USERNAME = conf["username"]
     NAME = conf["name"]

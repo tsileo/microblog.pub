@@ -215,7 +215,7 @@ def format_timeago(val):
 @filters.app_template_filter()
 def url_or_id(d):
     if isinstance(d, dict):
-        if "url" in d:
+        if "url" in d and isinstance(d["url"], str):
             return d["url"]
         else:
             return d["id"]
@@ -367,7 +367,7 @@ def update_inline_imgs(content):
 def get_video_url(url):
     if isinstance(url, list):
         for link in url:
-            if link.get("mimeType", "").startswith("video/"):
+            if link.get("mediaType", "").startswith("video/"):
                 return _get_file_url(link.get("href"), None, Kind.ATTACHMENT)
     else:
         return _get_file_url(url, None, Kind.ATTACHMENT)
@@ -402,6 +402,14 @@ def get_video_link(data):
     elif isinstance(data, str):
         return data
     return None
+
+@filters.app_template_filter()
+def get_text(data):
+    """return first in 'content', 'name' or ''"""
+    for _t in ("content", "name"):
+        if _t in data:
+            return data[_t]
+    return ""
 
 
 @filters.app_template_filter()
