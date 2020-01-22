@@ -403,6 +403,7 @@ def get_video_link(data):
         return data
     return None
 
+
 @filters.app_template_filter()
 def get_text(data):
     """return first in 'content', 'name' or ''"""
