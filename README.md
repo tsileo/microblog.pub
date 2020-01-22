@@ -15,6 +15,8 @@
 
 **Still in early development/I do not recommend to run an instance yet.**
 
+<!-- start -->
+
 ## Features
 
  - Implements a basic [ActivityPub](https://activitypub.rocks/) server (with federation)
@@ -89,12 +91,6 @@ By default, the server will listen on `localhost:5005` (http://localhost:5005 sh
 
 For production, you need to setup a reverse proxy (nginx, caddy) to forward your domain to the local server 
 (and check [certbot](https://certbot.eff.org/) for getting a free TLS certificate).
-
-
-### HTTP API
-
-See [docs/api.md](docs/api.md) for the internal HTTP API documentation.
-
 
 ### Backup
 
