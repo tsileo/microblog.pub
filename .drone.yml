@@ -11,7 +11,7 @@ steps:
       - pip install mypy flake8 black
       - black --check .
       - flake8
-      # - mypy --ignore-missing-imports .
+      - mypy --ignore-missing-imports .
       - mypy --ignore-missing-imports setup_wizard
 
   # Build the container images we need for the test suite
@@ -90,6 +90,6 @@ services:
   privileged: true
 ---
 kind: signature
-hmac: 9fc3e2eb3b237ab868843f94221124cdc397c454de798b9bcc43c8896615826a
+hmac: ae911176117298c18ecfcd95fbdbd62304c5f32462b42f2aefdd5a5b834fed60
 
 ...
