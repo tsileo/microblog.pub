@@ -26,8 +26,8 @@ def find_activities(q: _Q) -> Iterable[_D]:
     return DB[CollectionName.ACTIVITIES.value].find(q)
 
 
-def update_one_activity(q: _Q, update: _Q) -> None:
-    DB[CollectionName.ACTIVITIES.value].update_one(q, update)
+def update_one_activity(q: _Q, update: _Q) -> bool:
+    return DB[CollectionName.ACTIVITIES.value].update_one(q, update).matched_count == 1
 
 
 def update_many_activities(q: _Q, update: _Q) -> None:

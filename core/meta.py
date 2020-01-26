@@ -70,6 +70,8 @@ class MetaKey(Enum):
     COUNT_BOOST = "count_boost"
     COUNT_REPLY = "count_reply"
 
+    EMOJI_REACTIONS = "emoji_reactions"
+
 
 def _meta(mk: MetaKey) -> str:
     return f"meta.{mk.value}"
