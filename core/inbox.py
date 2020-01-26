@@ -175,19 +175,31 @@ def _like_process_inbox(like: ap.Like, new_meta: _NewMeta) -> None:
 
 
 @process_inbox.register
-def _emoji_reaction_process_inbox(emoji_reaction: ap.EmojiReaction, new_meta: _NewMeta) -> None:
+def _emoji_reaction_process_inbox(
+    emoji_reaction: ap.EmojiReaction, new_meta: _NewMeta
+) -> None:
     _logger.info(f"process_inbox activity={emoji_reaction!r}")
     obj = emoji_reaction.get_object()
     # Try to update an existing emoji reaction counter entry for the activity emoji
     if not update_one_activity(
-        {**by_type(ap.ActivityType.CREATE), **by_object_id(obj.id),
-         "meta.emoji_reactions.emoji": emoji_reaction.content},
+        {
+            **by_type(ap.ActivityType.CREATE),
+            **by_object_id(obj.id),
+            "meta.emoji_reactions.emoji": emoji_reaction.content,
+        },
         {"$inc": {"meta.emoji_reactions.$.count": 1}},
     ):
         # Bootstrap the current emoji counter
         update_one_activity(
             {**by_type(ap.ActivityType.CREATE), **by_object_id(obj.id)},
-            {"$push": {"meta.emoji_reactions": {"emoji": emoji_reaction.content, "count": 1}}},
+            {
+                "$push": {
+                    "meta.emoji_reactions": {
+                        "emoji": emoji_reaction.content,
+                        "count": 1,
+                    }
+                }
+            },
         )
 
 
