@@ -17,7 +17,7 @@ def gen_feed():
     fg = FeedGenerator()
     fg.id(f"{ID}")
     fg.title(f"{USERNAME} notes")
-    fg.author({"name": USERNAME, "email": "t@a4.io"})
+    fg.author({"name": USERNAME})
     fg.link(href=ID, rel="alternate")
     fg.description(f"{USERNAME} notes")
     fg.logo(ME.get("icon", {}).get("url"))
