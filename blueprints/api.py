@@ -5,6 +5,7 @@ from datetime import timedelta
 from datetime import timezone
 from functools import wraps
 from io import BytesIO
+from shutil import copyfileobj
 from typing import Any
 from typing import List
 
@@ -586,7 +587,8 @@ def api_new_note() -> _Response:
             file = request.files[f]
             rfilename = secure_filename(file.filename)
             with BytesIO() as buf:
-                file.save(buf)
+                # bypass file.save(), because it can't save to a file-like object
+                copyfileobj(file.stream, buf, 16384)
                 oid = MEDIA_CACHE.save_upload(buf, rfilename)
             mtype = mimetypes.guess_type(rfilename)[0]
 
