@@ -4,6 +4,7 @@ domain: 'your-domain.tld'
 https: true
 summary: 'your summary'
 icon_url: 'https://you-avatar-url'
+#favicon_url: '/static/favicon.png'
 #pass: '<bcrypt password hash>'
 #profile_metadata:
 #    name1: 'value'

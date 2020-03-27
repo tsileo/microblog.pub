@@ -67,6 +67,7 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
     ID = BASE_URL
     SUMMARY = conf["summary"]
     ICON_URL = conf["icon_url"]
+    FAVICON_URL = conf.get("favicon_url", "/static/favicon.png")
     PASS = conf["pass"]
 
     PROFILE_METADATA = conf.get("profile_metadata", {})
