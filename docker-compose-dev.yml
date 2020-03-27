@@ -1,7 +1,7 @@
 version: '3'
 services:
   mongo:
-    image: "mongo:latest"
+    image: "mongo:3"
     volumes:
      - "./data:/data/db"
     ports:
