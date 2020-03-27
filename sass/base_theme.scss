@@ -344,6 +344,22 @@ form.action-form {
   color: $color-summary;
   text-decoration: underline;
 }
+.summary dl {
+    display: grid;
+    grid-template-columns: max-content auto;
+    row-gap: 0.2rem;
+}
+.summary dt {
+    border: 1px solid $color-menu-background;
+    padding: 0.2rem 0.2rem 0.1rem 0.2rem;
+    background-color: $color-menu-background;
+    text-align: center;
+}
+.summary dt::after { content: none; }
+.summary dd {
+    margin: 0;
+    padding: 0.2rem;
+}
 #followers, #following, #new {
   margin-top: 50px;
 }
