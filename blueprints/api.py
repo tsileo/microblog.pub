@@ -621,10 +621,25 @@ def api_new_question() -> _Response:
     if not source:
         raise ValueError("missing content")
 
+    visibility = ap.Visibility[
+        _user_api_arg("visibility", default=ap.Visibility.PUBLIC.name)
+    ]
+
     content, tags = parse_markdown(source)
     tags = tags + emojis.tags(content)
 
-    cc = [ID + "/followers"]
+    to: List[str] = []
+    cc: List[str] = []
+
+    if visibility == ap.Visibility.PUBLIC:
+        to = [ap.AS_PUBLIC]
+        cc = [ID + "/followers"]
+    elif visibility == ap.Visibility.UNLISTED:
+        to = [ID + "/followers"]
+        cc = [ap.AS_PUBLIC]
+    elif visibility == ap.Visibility.FOLLOWERS_ONLY:
+        to = [ID + "/followers"]
+        cc = []
 
     for tag in tags:
         if tag["type"] == "Mention":
@@ -658,7 +673,7 @@ def api_new_question() -> _Response:
     raw_question = dict(
         attributedTo=MY_PERSON.id,
         cc=list(set(cc)),
-        to=[ap.AS_PUBLIC],
+        to=list(set(to)),
         context=new_context(),
         content=content,
         tag=tags,
