@@ -35,6 +35,8 @@ class Tasks:
         if MEDIA_CACHE.is_actor_icon_cached(icon_url):
             return None
 
+        p.push({"icon_url": icon_url, "actor_iri": actor_iri}, "/task/cache_actor_icon")
+
     @staticmethod
     def cache_emoji(url: str, iri: str) -> None:
         if MEDIA_CACHE.is_emoji_cached(iri):
