@@ -639,6 +639,7 @@ def authorize_follow():
             )
         )
 
+    csrf.protect()
     actor = get_actor_url(request.form.get("profile"))
     if not actor:
         abort(500)
