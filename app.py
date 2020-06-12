@@ -93,6 +93,9 @@ app.register_blueprint(blueprints.indieauth.blueprint)
 app.register_blueprint(blueprints.tasks.blueprint)
 app.register_blueprint(blueprints.well_known.blueprint)
 app.config.update(WTF_CSRF_CHECK_DEFAULT=False)
+
+app.config.update(SESSION_COOKIE_SECURE=True if config.SCHEME == "https" else False)
+
 csrf.init_app(app)
 
 logger = logging.getLogger(__name__)
