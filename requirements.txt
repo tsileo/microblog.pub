@@ -25,3 +25,4 @@ pillow
 emoji-unicode
 html5lib
 Pygments
+flask-talisman

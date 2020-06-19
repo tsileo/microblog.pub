@@ -12,7 +12,7 @@
 {% if not request.args.get("older_than") and not request.args.get("previous_than") %}<link rel="canonical" href="https://{{ config.DOMAIN }}{{ request.path }}">{% endif %}
 {% block links %}{% endblock %}
 {% if config.THEME_COLOR %}<meta name="theme-color" content="{{ config.THEME_COLOR }}">{% endif %}
-<style>{{ config.CSS | safe }}
+<style nonce="{{ csp_nonce() }}">{{ config.CSS | safe }}
 .icon { color: #555; }
 .emoji {
     width: 20px;

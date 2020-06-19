@@ -29,6 +29,7 @@ from little_boxes.errors import Error
 from little_boxes.httpsig import verify_request
 from little_boxes.webfinger import get_remote_follow_template
 from werkzeug.exceptions import InternalServerError
+from flask_talisman import Talisman
 
 import blueprints.admin
 import blueprints.indieauth
@@ -93,7 +94,21 @@ app.register_blueprint(blueprints.indieauth.blueprint)
 app.register_blueprint(blueprints.tasks.blueprint)
 app.register_blueprint(blueprints.well_known.blueprint)
 app.config.update(WTF_CSRF_CHECK_DEFAULT=False)
+app.config.update(SESSION_COOKIE_SECURE=True if config.SCHEME == "https" else False)
+
+csp = {
+    "default-src": "'self'",
+    "script-src": "'self'",
+    "style-src-attr": "'unsafe-inline'",
+}
+
 csrf.init_app(app)
+talisman = Talisman(
+    app,
+    content_security_policy=csp,
+    force_https=False,
+    content_security_policy_nonce_in=["script-src", "style-src"],
+)
 
 logger = logging.getLogger(__name__)
 

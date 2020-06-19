@@ -2,7 +2,7 @@
 {% import 'utils.html' as utils %}
 {% block title %}Login - {{ config.NAME }}{% endblock %}
 {% block header %}
-<style>
+<style nonce="{{ csp_nonce() }}">
 #login-container {
 height: 90%;
 display: grid;
@@ -28,7 +28,7 @@ display:inline;
 
 </div>
 {% if u2f_enabled %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 var p = {{ payload | tojson }};
 if (p) {
 u2f.sign(p.appId, p.challenge, p.registeredKeys, function(resp) {

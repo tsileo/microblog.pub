@@ -12,7 +12,7 @@
 </form>
 
 </div>
-<script>
+<script nonce="{{ csp_nonce() }}">
 var p= {{ payload | tojson }};
 //setTimeout(function() {
 u2f.register(p.appId, p.registerRequests, p.registeredKeys, function(resp) {
