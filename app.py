@@ -100,14 +100,15 @@ csrf.init_app(app)
 
 csp = {
     "default-src": "'self'",
-    "script-src": "'self'",
     "style-src-attr": "'unsafe-inline'",
+    "script-src": "'self'", # to use nonce
+    "style-src": "'self'", # to use nonce
 }
 
 talisman = Talisman(
     app,
     content_security_policy=csp,
-    force_https=False,
+    force_https=False, # internal requests like /tasks/* are sent over HTTP
     content_security_policy_nonce_in=["script-src", "style-src"],
 )
 
