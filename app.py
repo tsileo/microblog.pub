@@ -96,13 +96,14 @@ app.register_blueprint(blueprints.well_known.blueprint)
 app.config.update(WTF_CSRF_CHECK_DEFAULT=False)
 app.config.update(SESSION_COOKIE_SECURE=True if config.SCHEME == "https" else False)
 
+csrf.init_app(app)
+
 csp = {
     "default-src": "'self'",
     "script-src": "'self'",
     "style-src-attr": "'unsafe-inline'",
 }
 
-csrf.init_app(app)
 talisman = Talisman(
     app,
     content_security_policy=csp,
