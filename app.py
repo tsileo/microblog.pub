@@ -112,7 +112,7 @@ talisman = Talisman(
     app,
     content_security_policy=csp,
     force_https=False,  # internal requests like /tasks/* are sent over HTTP
-    content_security_policy_nonce_in=["script-src", "style-src"],
+    content_security_policy_nonce_in=["script-src"],
 )
 
 logger = logging.getLogger(__name__)
