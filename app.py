@@ -104,6 +104,8 @@ csp = {
     "script-src": "'self'",  # to use nonce
     "style-src": "'unsafe-inline'",  # for old browsers without support style-src-attr
     "style-src-elem": "'self'",
+    "base-uri": "'none'",
+    "object-src" : "'none'",
 }
 
 talisman = Talisman(
