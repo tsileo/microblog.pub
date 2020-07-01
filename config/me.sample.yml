@@ -1,6 +1,20 @@
 username: 'username'
 name: 'You Name'
-icon_url: 'https://you-avatar-url'
 domain: 'your-domain.tld'
-summary: 'your summary'
 https: true
+summary: 'your summary'
+icon_url: 'https://you-avatar-url'
+pass: '<bcrypt password hash>'
+#favicon_url: '/static/favicon.png'
+#profile_metadata:
+#    name1: 'value'
+#    name2: 'value2'
+#hide_following: true
+#manually_approves_followers: false
+#aliases:
+#    - "http://example.com/users/name"
+#    - ...
+#theme:
+#    style: "light" #or "dark"
+#    color: "#1d781d" # (green, default for light)
+          # "#33ff00"   (purple, default for dark)
