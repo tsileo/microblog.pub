@@ -18,8 +18,8 @@ itsdangerous
 bcrypt
 mf2py
 passlib
-git+https://github.com/erikriver/opengraph.git
-git+https://github.com/tsileo/little-boxes.git@litepub
+git+https://github.com/erikriver/opengraph.git#egg=opengraph
+git+https://github.com/tsileo/little-boxes.git@litepub#egg=little_boxes
 pyyaml
 pillow
 emoji-unicode

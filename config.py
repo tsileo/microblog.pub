@@ -67,10 +67,13 @@ with open(os.path.join(KEY_DIR, "me.yml")) as f:
     ID = BASE_URL
     SUMMARY = conf["summary"]
     ICON_URL = conf["icon_url"]
+    FAVICON_URL = conf.get("favicon_url", "/static/favicon.png")
     PASS = conf["pass"]
 
     PROFILE_METADATA = conf.get("profile_metadata", {})
     HIDE_FOLLOWING = conf.get("hide_following", True)
+
+    ALIASES = conf.get('aliases', [])
 
     # Theme-related config
     theme_conf = conf.get("theme", {})
@@ -161,6 +164,7 @@ ME = {
         "url": ICON_URL,
     },
     "publicKey": KEY.to_dict(),
+    "alsoKnownAs": ALIASES,
 }
 
 # Default emojis, space-separated, update `me.yml` to customize emojis
