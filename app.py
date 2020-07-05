@@ -100,10 +100,8 @@ csrf.init_app(app)
 
 csp = {
     "default-src": "'self'",
-    "style-src-attr": "'unsafe-inline'",
     "script-src": "'self'",  # to use nonce
     "style-src": "'unsafe-inline'",  # for old browsers without support style-src-attr
-    "style-src-elem": "'self'",
     "base-uri": "'none'",
     "object-src" : "'none'",
 }
