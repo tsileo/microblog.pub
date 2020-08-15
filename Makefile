@@ -39,9 +39,9 @@ microblogpub:
 .PHONY: css
 css:
 	# Download pure.css if needed
-	if [[ ! -f static/pure.css ]]; then curl https://unpkg.com/purecss@1.0.1/build/pure-min.css > static/pure.css; fi
+	if [[ ! -f static/pure.css ]]; then curl -Lo static/pure.css https://unpkg.com/purecss@1.0.1/build/pure-min.css; fi
 	# Download the emojis from twemoji if needded
-	if [[ ! -d static/twemoji ]]; then wget https://github.com/twitter/twemoji/archive/v12.1.2.tar.gz && tar xvzf v12.1.2.tar.gz  && mv twemoji-12.1.2/assets/svg static/twemoji && rm -rf twemoji-12.1.2 && rm -f v12.1.2.tar.gz; fi
+	if [[ ! -d static/twemoji ]]; then curl -L https://github.com/twitter/twemoji/archive/v12.1.2.tar.gz | tar xzf - && mv twemoji-12.1.2/assets/svg static/twemoji && rm -rf twemoji-12.1.2; fi
 
 # Run the docker-compose project locally (will perform a update if the project is already running)
 .PHONY: run
