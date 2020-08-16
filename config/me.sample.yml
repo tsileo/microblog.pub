@@ -19,3 +19,12 @@ pass: '<bcrypt password hash>'
 #    # accent color
 #    color: "#1d781d" # (green, default for light)
           # "#33ff00" # (lime green, default for dark)
+#emojis: '' # space-separated emojis
+#emoji_tpl: # emoji template
+#  '<img src="/static/twemoji/{filename}.svg" alt="{raw}" class="emoji">'
+#blacklist:
+#    - "example.com"
+#    - ...
+#disable_webmentions: false
+#replies_in_stream: false
+#days_to_keep: 14
