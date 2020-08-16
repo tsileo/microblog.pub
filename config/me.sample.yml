@@ -16,5 +16,6 @@ pass: '<bcrypt password hash>'
 #    - ...
 #theme:
 #    style: "light" #or "dark"
+#    # accent color
 #    color: "#1d781d" # (green, default for light)
-          # "#33ff00"   (purple, default for dark)
+          # "#33ff00" # (lime green, default for dark)
