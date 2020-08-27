@@ -237,8 +237,21 @@ header#header {
 .color-menu-background {
   background: $color-menu-background;
 }
-.og-link { text-decoration: none; }
-.og-link:hover { text-decoration: none; }
+.og-link {
+  text-decoration: none;
+  padding: 6px;
+  padding-top: 8px;
+  border-radius: 3px;
+  background-color: $og-background;
+  -webkit-transition: background-color 2s linear;
+  -moz-transition: background-color 2s linear;
+  -o-transition: background-color 2s linear;
+  transition: background-color 2s linear;
+}
+.og-link:hover {
+  text-decoration: none;
+  background-color: $primary-color;
+}
 .bar-item-no-hover {
   cursor: default;
   background: $color-menu-background;
