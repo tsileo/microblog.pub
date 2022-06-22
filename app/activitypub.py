@@ -6,6 +6,7 @@ from typing import Any
 import httpx
 
 from app import config
+from app.config import AP_CONTENT_TYPE  # noqa: F401
 from app.httpsig import auth
 from app.key import get_pubkey_as_pem
 

@@ -1,7 +1,9 @@
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import factory  # type: ignore
 from Crypto.PublicKey import RSA
+from dateutil.parser import isoparse
 from sqlalchemy import orm
 
 from app import activitypub as ap
@@ -10,6 +12,7 @@ from app import models
 from app.actor import RemoteActor
 from app.ap_object import RemoteObject
 from app.database import engine
+from app.database import now
 
 _Session = orm.scoped_session(orm.sessionmaker(bind=engine))
 
@@ -44,6 +47,36 @@ def build_accept_activity(
         "id": from_remote_actor.ap_id + "/accept/" + (outbox_public_id or uuid4().hex),
         "actor": from_remote_actor.ap_id,
         "object": for_remote_object.ap_id,
+    }
+
+
+def build_note_object(
+    from_remote_actor: actor.RemoteActor,
+    outbox_public_id: str | None = None,
+    content: str = "Hello",
+    to: list[str] = None,
+    cc: list[str] = None,
+    tags: list[ap.RawObject] = None,
+) -> ap.RawObject:
+    published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    context = from_remote_actor.ap_id + "/ctx/" + uuid4().hex
+    note_id = outbox_public_id or uuid4().hex
+    return {
+        "@context": ap.AS_CTX,
+        "type": "Note",
+        "id": from_remote_actor.ap_id + "/note/" + note_id,
+        "attributedTo": from_remote_actor.ap_id,
+        "content": content,
+        "to": to or [ap.AS_PUBLIC],
+        "cc": cc or [],
+        "published": published,
+        "context": context,
+        "conversation": context,
+        "url": from_remote_actor.ap_id + "/note/" + note_id,
+        "tag": tags or [],
+        "summary": None,
+        "inReplyTo": None,
+        "sensitive": False,
     }
 
 
@@ -138,3 +171,36 @@ class OutgoingActivityFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     # recipient
     # outbox_object_id
+
+
+class InboxObjectFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta(BaseModelMeta):
+        model = models.InboxObject
+
+    @classmethod
+    def from_remote_object(
+        cls,
+        ro: RemoteObject,
+        actor: models.Actor,
+        relates_to_inbox_object_id: int | None = None,
+        relates_to_outbox_object_id: int | None = None,
+    ):
+        ap_published_at = now()
+        if "published" in ro.ap_object:
+            ap_published_at = isoparse(ro.ap_object["published"])
+        return cls(
+            server=urlparse(ro.ap_id).netloc,
+            actor_id=actor.id,
+            ap_actor_id=actor.ap_id,
+            ap_type=ro.ap_type,
+            ap_id=ro.ap_id,
+            ap_context=ro.context,
+            ap_published_at=ap_published_at,
+            ap_object=ro.ap_object,
+            visibility=ro.visibility,
+            relates_to_inbox_object_id=relates_to_inbox_object_id,
+            relates_to_outbox_object_id=relates_to_outbox_object_id,
+            activity_object_ap_id=ro.activity_object_ap_id,
+            # Hide replies from the stream
+            is_hidden_from_stream=True if ro.in_reply_to else False,
+        )
