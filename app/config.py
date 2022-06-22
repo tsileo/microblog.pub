@@ -41,7 +41,9 @@ def load_config() -> Config:
             tomli.loads((ROOT_DIR / "data" / _CONFIG_FILE).read_text())
         )
     except FileNotFoundError:
-        raise ValueError("Please run the configuration wizard")
+        raise ValueError(
+            f"Please run the configuration wizard, {_CONFIG_FILE} is missing"
+        )
 
 
 def is_activitypub_requested(req: Request) -> bool:
