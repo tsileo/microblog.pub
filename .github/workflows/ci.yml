@@ -13,5 +13,7 @@ jobs:
       with:
         python-version: '3.10'
         cache: 'poetry'
-    - run: poetry install
+    - run: |
+      poetry env use "3.10"
+      poetry install --no-interaction
     - run: poetry run inv tests
