@@ -5,6 +5,8 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    env:
+      MICROBLOGPUB_CONFIG_FILE: tests.toml
     steps:
     - uses: actions/checkout@v3
     - name: Install poetry
