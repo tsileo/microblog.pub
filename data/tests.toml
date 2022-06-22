@@ -1,0 +1,15 @@
+domain = "localhost:8000"
+username = "test"
+# toto
+admin_password = "$2b$12$OwCyZM33uXQUVrChgER.h.qgFJ4fBp6tdFwArR3Lm1LV8NgMvIxVa"
+name = "test"
+summary = "<p>Hello</p>"
+https = false
+icon_url = "https://localhost:8000/static/nopic.png"
+secret = "1dd4079e0474d1a519052b8fe3cb5fa6"
+debug = true
+
+# In-mem DB
+sqlalchemy_database_url = "sqlite:///file:pytest?mode=memory&cache=shared&uri=true"
+key_path = "tests/test.key"
+media_db_path = "tests/media.db"
