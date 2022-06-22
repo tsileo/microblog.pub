@@ -1,5 +1,5 @@
 {
-    "SOURCES_PATH": "scss",
+    "SOURCES_PATH": "app/scss",
     "TARGET_PATH": "app/static/css",
     "LIBRARY_PATHS": [],
     "OUTPUT_STYLES": "nested",
