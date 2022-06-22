@@ -1,0 +1,12 @@
+{%- import "utils.html" as utils -%}
+{% extends "layout.html" %}
+{% block content %}
+{% include "header.html" %}
+<div id="followers">
+<ul>
+{% for follower in followers %}
+<li>{{ utils.display_actor(follower.actor, actors_metadata) }}</li>
+{% endfor %}
+</ul>
+</div>
+{% endblock %}

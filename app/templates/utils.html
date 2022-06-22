@@ -1,0 +1,143 @@
+{% macro embed_csrf_token() %}
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+{% endmacro %}
+
+{% macro embed_redirect_url() %}
+<input type="hidden" name="redirect_url" value="{{ request.url }}">
+{% endmacro %}
+
+{% macro admin_follow_button(actor) %}
+<form action="{{ request.url_for("admin_actions_follow") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_actor_id" value="{{ actor.ap_id }}">
+    <input type="submit" value="Follow">
+</form>
+{% endmacro %}
+
+{% macro admin_like_button(ap_object_id) %}
+<form action="{{ request.url_for("admin_actions_like") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
+    <input type="submit" value="Like">
+</form>
+{% endmacro %}
+
+{% macro admin_announce_button(ap_object_id) %}
+<form action="{{ request.url_for("admin_actions_announce") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
+    <input type="submit" value="Announce">
+</form>
+{% endmacro %}
+
+{% macro admin_undo_button(ap_object_id, action="Undo") %}
+<form action="{{ request.url_for("admin_actions_undo") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
+    <input type="submit" value="{{ action }}">
+</form>
+{% endmacro %}
+
+{% macro sensitive_button(permalink_id) %}
+<form action=""  method="GET">
+<input type="hidden" name="show_sensitive" value="{{ permalink_id }}">
+{% for k, v in request.query_params.items() %}
+<input type="hidden" name="{{k}}" value="{{v}}">
+{% endfor %}
+<button type="submit">display sensitive content</button>
+</form> 
+{% endmacro %}
+
+{% macro display_actor(actor, actors_metadata) %}
+{{ actors_metadata }}
+{% set metadata = actors_metadata.get(actor.ap_id) %}
+<div style="display: flex;column-gap: 20px;margin:20px 0 10px 0;" class="actor-box">
+    <div style="flex: 0 0 48px;">
+        <img src="{{ actor.icon_url | media_proxy_url }}" style="max-width:45px;">
+    </div>
+    <a href="{{ actor.url }}" style="">
+        <div><strong>{{ actor.name or actor.preferred_username }}</strong></div>
+        <div>{{ actor.handle }}</div>
+    </a>
+</div>
+{% if metadata %}
+<div>
+    <nav class="flexbox">
+    <ul>
+        <li>
+            {% if metadata.is_following %}already following {{ admin_undo_button(metadata.outbox_follow_ap_id, "Unfollow")}}
+            {% elif metadata.is_follow_request_sent %}follow request sent
+            {% else %}
+            {{ admin_follow_button(actor) }}
+            {% endif %}
+        </li>
+        <li>
+            {% if metadata.is_follower %}follows you{% else %}
+            {% endif %}
+        </li>
+    </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% endmacro %}
+
+{% macro display_object(object) %}
+{% if object.ap_type in ["Note", "Article", "Video"] %}
+<div class="activity-wrap" id="{{ object.permalink_id }}">
+  <div class="activity-content">
+      <img src="{% if object.actor.icon_url %}{{ object.actor.icon_url | media_proxy_url }}{% else %}/static/nopic.png{% endif %}" alt="" class="actor-icon">
+    <div class="activity-header">
+        <strong>{{ object.actor.name or object.actor.preferred_username }}</strong>
+        <span>{{ object.actor.handle }}</span>
+        <span class="activity-date" title="{{ object.ap_published_at.isoformat() }}">
+            <a href="{{ object.url }}">{{ object.ap_published_at | timeago }}</a>
+        </span>
+        <div class="activity-main">
+            {{ object.content | clean_html | safe }}
+        </div>
+    </div>
+  </div>
+  {% if object.attachments and object.sensitive and not request.query_params["show_sensitive"] == object.permalink_id %}
+  <div class="activity-attachment">
+  {{ sensitive_button(object.permalink_id )}}
+  </div>
+  {% endif %}
+  {% if object.attachments and (not object.sensitive or (object.sensitive and request.query_params["show_sensitive"] == object.permalink_id)) %}
+  <div class="activity-attachment">
+    {% for attachment in object.attachments %}
+    {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
+    <img src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} alt="{{ attachment.name }}"{% endif %} class="attachment">
+    {% elif attachment.type == "Video" or (attachment | has_media_type("video")) %}
+    <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachmeent"></video>
+    {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}
+    <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} style="width:480px;" class="attachment"></audio>
+    {% else %}
+    <a href="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment">{{ attachment.url }}</a>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="activity-bar">
+    <div class="bar-item">
+      <div class="comment-count">33</div>
+    </div>
+    
+    <div class="bar-item">
+      <div class="retweet-count">397</div>
+    </div>
+    
+    <div class="bar-item">
+      <div class="likes-count">
+        2.6k
+      </div>
+    </div>
+    
+  </div>
+</div>
+{% endif %}
+{% endmacro %}

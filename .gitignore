@@ -1,0 +1,4 @@
+*.db
+__pycache__/
+.mypy_cache/
+.pytest_cache/

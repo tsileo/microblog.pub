@@ -1,0 +1,45 @@
+{%- import "utils.html" as utils with context -%}
+{% extends "layout.html" %}
+{% block content %}
+    <h2>Notifications</h2>
+    <div id="notifications">
+    {%- for notif in notifications %}
+    <div>
+            {%- if notif.notification_type.value == "new_follower" %}
+                <div title="{{ notif.created_at.isoformat() }}">
+                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.name or notif.actor.preferred_username }}</a> followed you
+                </div>
+                {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {% elif notif.notification_type.value == "unfollow" %}
+                <div title="{{ notif.created_at.isoformat() }}">
+                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.name or notif.actor.preferred_username }}</a> unfollowed you
+                </div>
+                {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {% elif notif.notification_type.value == "like" %}
+                <div title="{{ notif.created_at.isoformat() }}">
+                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.name or notif.actor.preferred_username }}</a> liked a post
+                </div>
+                {{ utils.display_object(notif.outbox_object) }}
+           {% elif notif.notification_type.value == "undo_like" %}
+                <div title="{{ notif.created_at.isoformat() }}">
+                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.name or notif.actor.preferred_username }}</a> un-liked a post
+                </div>
+                {{ utils.display_object(notif.outbox_object) }}
+            {% elif notif.notification_type.value == "announce" %}
+                <div title="{{ notif.created_at.isoformat() }}">
+                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.name or notif.actor.preferred_username }}</a> boosted a post
+                </div>
+                {{ utils.display_object(notif.outbox_object) }}
+           {% elif notif.notification_type.value == "undo_announce" %}
+                <div title="{{ notif.created_at.isoformat() }}">
+                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.name or notif.actor.preferred_username }}</a> un-boosted a post
+                </div>
+                {{ utils.display_object(notif.outbox_object) }}
+
+            {% else %}
+            {{ notif }}
+            {%- endif %}
+    </div>
+    {%- endfor %}
+    </div>
+{% endblock %}

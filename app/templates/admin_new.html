@@ -1,0 +1,13 @@
+{%- import "utils.html" as utils with context -%}
+{% extends "layout.html" %}
+{% block content %}
+
+<form action="{{ request.url_for("admin_actions_new") }}" enctype="multipart/form-data" method="POST">
+    {{ utils.embed_csrf_token() }}
+    {{ utils.embed_redirect_url() }}
+    <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;"></textarea>
+    <input name="files" type="file" multiple>
+    <input type="submit" value="Publish">
+</form>
+
+{% endblock %}

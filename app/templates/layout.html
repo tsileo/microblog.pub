@@ -1,0 +1,46 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="stylesheet" href="/static/css/main.css">
+<style>
+{{ highlight_css }}
+</style>
+</head>
+<body>
+<div id="main">
+<main>
+{% if is_admin %}
+<div id="admin">
+{% macro admin_link(url, text) %}
+{% set url_for = request.url_for(url) %}
+<a href="{{ url_for }}" {% if request.url == url_for %}class="active"{% endif %}>{{ text }}</a>
+{% endmacro %}
+<div style="margin-bottom:30px;">
+<nav class="flexbox">
+    <ul>
+        <li>Admin</li>
+        <li>{{ admin_link("index", "Public") }}</li>
+        <li>{{ admin_link("admin_new", "New") }}</li>
+        <li>{{ admin_link("stream", "Stream") }}</li>
+        <li>{{ admin_link("get_notifications", "Notifications") }} {% if notifications_count %}({{ notifications_count }}){% endif %}</li>
+        <li>{{ admin_link("get_lookup", "Lookup") }}</li>
+        <li><a href="">Bookmarks</a></li>
+        <li><a href="{{ request.url_for("logout")}}">Logout</a></li>
+    </ul>
+</nav>
+</div>
+
+</div>
+{% endif %}
+{% block content %}{% endblock %}
+</main>
+</div>
+
+<footer class="footer">
+	Powered by <a href="https://microblog.pub">microblog.pub</a> <small class="microblogpub-version"><code>{{ microblogpub_version }}</code></small> (<a href="https://github.com/tsileo/microblog.pub">source code</a>) and the <a href="https://activitypub.rocks/">ActivityPub</a> protocol
+</footer>
+</body>
+</html>

@@ -1,0 +1,135 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+}
+#main {
+    flex: 1; 
+}
+main {
+    max-width: 800px;
+    margin: 20px auto;
+}
+footer {
+    max-width: 800px;
+    margin: 20px auto;
+}
+#notifications, #followers, #following {
+    ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+    }
+    li {
+        display: inline-block;
+    }
+}
+.actor-box {
+    a {
+        text-decoration: none;
+    }
+}
+
+#admin {
+.navbar {
+  display: grid;
+  grid-template-rows: auto;
+  grid-template-columns: 1fr;
+  grid-auto-flow: dense;
+  justify-items: stretch;
+  align-items: stretch;
+  column-gap: 20px;
+}
+
+.logo {
+  grid-column:-3;
+  padding: 5px;
+}
+
+.menus {
+  display: flex;
+  flex-direction: row;
+  justify-content: start;
+  grid-column: 1;
+}
+
+.menus * {
+  padding: 5px;
+}
+}
+
+nav.flexbox {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    ul {        
+        display: flex;
+        align-items: center;
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+
+    }
+
+    ul li {
+        margin-right: 20px;
+
+        &:last-child {
+            margin-right: 0px;
+        }
+    }
+}
+#admin {
+    a.active {
+        font-weight: bold;
+        text-decoration: none;
+    }
+}
+
+
+.activity-wrap {
+  margin: 0 auto;
+  padding: 30px 0;
+  .actor-icon {
+    width:48px;
+    margin-right: 15px;
+    img {
+      max-width: 48px;
+    }
+  }
+  .activity-content {
+    display: flex;
+    align-items:flex-start;
+    .activity-header {
+      width: 100%;
+      strong {
+        font-weight:bold;
+      }
+      span {
+        font-weight:normal;
+        margin-left: 5px;
+      }
+      .activity-date { float:right; }
+    }
+  }
+  .activity-attachment {
+    padding-left: 60px;
+    img, audio, video {
+      width: 100%;
+      max-width: 740px;
+      margin: 30px 0;
+    }
+  }
+  .activity-bar {
+    display: flex;
+    margin-left: 60px;
+    margin-top: 10px;
+    .bar-item {
+      display: flex;
+      margin-right: 20px;
+    }
+  }
+}

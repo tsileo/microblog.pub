@@ -1,0 +1,25 @@
+{%- import "utils.html" as utils with context -%}
+{% extends "layout.html" %}
+{% block content %}
+
+{% for inbox_object in stream %}
+{% if inbox_object.ap_type == "Announce" %}
+    {% if inbox_object.relates_to_inbox_object_id %}
+    {{ utils.display_object(inbox_object.relates_to_inbox_object) }}
+    {% else %}
+
+    {% endif %}
+
+{% else %}
+{{ utils.display_object(inbox_object) }}
+{% if inbox_object.liked_via_outbox_object_ap_id %}
+{{ utils.admin_undo_button(inbox_object.liked_via_outbox_object_ap_id, "Unlike") }}
+{% else %}
+{{ utils.admin_like_button(inbox_object.ap_id) }}
+{% endif %}
+
+{{ utils.admin_announce_button(inbox_object.ap_id) }}
+{% endif %}
+{% endfor %}
+
+{% endblock %}

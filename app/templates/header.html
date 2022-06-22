@@ -1,0 +1,31 @@
+<header id="header">
+
+<div class="h-card p-author">
+<data class="u-photo" value="{{ local_actor.icon_url }}"></data>
+<a href="{{ local_actor.url }}" class="u-url u-uid no-hover title">
+	<span style="font-size:1.1em;">{{ local_actor.name }}</span>
+	<span  style="font-size:0.85em;" class="subtitle-username">{{ local_actor.handle }}</span>
+</a>
+
+<div class="p-note summary">
+{{ local_actor.summary | safe }}
+</div>
+
+</div>
+
+{%- macro header_link(url, text) -%}
+{% set url_for = request.url_for(url) %}
+<a href="{{ url_for }}" {% if request.url == url_for %}class="active"{% endif %}>{{ text }}</a>
+{% endmacro %}
+
+<div style="margin:30px 0;">
+<nav class="flexbox">
+    <ul>
+        <li>{{ header_link("index", "Notes") }} <span>{{ objects_count }}</span></li>
+        <li>{{ header_link("followers", "Followers") }} <span>{{ followers_count }}</span></li>
+        <li>{{ header_link("following", "Following") }} <span>{{ following_count }}</span></li>
+    </ul>
+</nav>
+
+
+</header>

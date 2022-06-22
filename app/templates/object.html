@@ -1,0 +1,8 @@
+{%- import "utils.html" as utils with context -%}
+{% extends "layout.html" %}
+{% block content %}
+{% include "header.html" %}
+
+{{ utils.display_object(outbox_object) }}
+
+{% endblock %}

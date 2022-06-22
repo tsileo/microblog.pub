@@ -1,0 +1,68 @@
+[tool.poetry]
+name = "microblogpub"
+version = "2.0.0"
+description = ""
+authors = ["Thomas Sileo <t@a4.io>"]
+license = "AGPL-3.0"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+Jinja2 = "^3.1.2"
+fastapi = "^0.78.0"
+uvicorn = "^0.17.6"
+pycryptodome = "^3.14.1"
+bcrypt = "^3.2.2"
+itsdangerous = "^2.1.2"
+python-multipart = "^0.0.5"
+tomli = "^2.0.1"
+httpx = "^0.23.0"
+timeago = "^1.0.15"
+SQLAlchemy = {extras = ["mypy"], version = "^1.4.37"}
+alembic = "^1.8.0"
+bleach = "^5.0.0"
+requests = "^2.27.1"
+Markdown = "^3.3.7"
+prompt-toolkit = "^3.0.29"
+tomli-w = "^1.0.0"
+python-dateutil = "^2.8.2"
+bs4 = "^0.0.1"
+html5lib = "^1.1"
+mf2py = "^1.1.2"
+Pygments = "^2.12.0"
+types-python-dateutil = "^2.8.17"
+loguru = "^0.6.0"
+mdx-linkify = "^2.1"
+
+[tool.poetry.dev-dependencies]
+black = "^22.3.0"
+flake8 = "^4.0.1"
+mypy = "^0.960"
+isort = "^5.10.1"
+types-requests = "^2.27.29"
+invoke = "^1.7.1"
+libsass = "^0.21.0"
+pytest = "^7.1.2"
+respx = "^0.19.2"
+boussole = "^2.0.0"
+types-bleach = "^5.0.2"
+types-Markdown = "^3.3.28"
+factory-boy = "^3.2.1"
+pytest-asyncio = "^0.18.3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+exclude = ["alembic/versions/"]
+plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+
+[tool.black]
+extend-exclude = '''
+/(
+  | alembic/versions
+)/
+'''
