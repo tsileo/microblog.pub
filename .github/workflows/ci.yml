@@ -18,4 +18,4 @@ jobs:
     - run: |
         poetry env use "3.10"
         poetry install --no-interaction
-    - run: inv tests
+    - run: poetry run inv tests
