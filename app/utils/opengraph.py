@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app import activitypub as ap
 from app import config
-from app.urlutils import is_url_valid
+from app.utils.url import is_url_valid
 
 
 class OpenGraphMeta(BaseModel):

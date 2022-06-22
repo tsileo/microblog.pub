@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from typing import Any
 
 import fastapi
 
@@ -25,5 +26,5 @@ def mock_httpsig_checker(ra: actor.RemoteActor):
         del app.dependency_overrides[httpsig.httpsig_checker]
 
 
-def generate_admin_session_cookies() -> dict[str, str]:
+def generate_admin_session_cookies() -> dict[str, Any]:
     return {"session": session_serializer.dumps({"is_logged_in": True})}

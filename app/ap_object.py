@@ -7,10 +7,10 @@ from dateutil.parser import isoparse
 from markdown import markdown
 
 from app import activitypub as ap
-from app import opengraph
 from app.actor import LOCAL_ACTOR
 from app.actor import Actor
 from app.actor import RemoteActor
+from app.utils import opengraph
 
 
 class Object:

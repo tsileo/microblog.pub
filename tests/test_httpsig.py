@@ -55,7 +55,6 @@ def test_enforce_httpsig__no_signature(
 
 @pytest.mark.asyncio
 async def test_enforce_httpsig__with_valid_signature(
-    client: TestClient,
     respx_mock: respx.MockRouter,
 ) -> None:
     # Given a remote actor
@@ -105,7 +104,6 @@ def test_httpsig_checker__no_signature(
 
 @pytest.mark.asyncio
 async def test_httpsig_checker__with_valid_signature(
-    client: TestClient,
     respx_mock: respx.MockRouter,
 ) -> None:
     # Given a remote actor
@@ -138,7 +136,6 @@ async def test_httpsig_checker__with_valid_signature(
 
 @pytest.mark.asyncio
 async def test_httpsig_checker__with_invvalid_signature(
-    client: TestClient,
     respx_mock: respx.MockRouter,
 ) -> None:
     # Given a remote actor

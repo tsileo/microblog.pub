@@ -1,16 +1,20 @@
+import typing
+
+import starlette
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 
-def test_admin_endpoints_are_authenticated(client: TestClient):
+def test_admin_endpoints_are_authenticated(client: TestClient) -> None:
     routes_tested = []
 
     for route in app.routes:
+        route = typing.cast(starlette.routing.Route, route)
         if not route.path.startswith("/admin") or route.path == "/admin/login":
             continue
 
-        for method in route.methods:
+        for method in route.methods:  # type: ignore
             resp = client.request(method, route.path)
 
             # Admin routes should redirect to the login page

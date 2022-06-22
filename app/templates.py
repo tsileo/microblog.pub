@@ -23,8 +23,8 @@ from app.config import VERSION
 from app.config import generate_csrf_token
 from app.config import session_serializer
 from app.database import now
-from app.highlight import HIGHLIGHT_CSS
-from app.highlight import highlight
+from app.utils.highlight import HIGHLIGHT_CSS
+from app.utils.highlight import highlight
 
 _templates = Jinja2Templates(directory="app/templates")
 

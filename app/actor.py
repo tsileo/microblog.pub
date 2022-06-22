@@ -1,5 +1,6 @@
 import typing
 from dataclasses import dataclass
+from typing import Union
 from urllib.parse import urlparse
 
 from sqlalchemy.orm import Session
@@ -148,7 +149,7 @@ ActorsMetadata = dict[str, ActorMetadata]
 
 def get_actors_metadata(
     db: Session,
-    actors: list["ActorModel"],
+    actors: list[Union["ActorModel", "RemoteActor"]],
 ) -> ActorsMetadata:
     from app import models
 
@@ -179,6 +180,8 @@ def get_actors_metadata(
     }
     idx: ActorsMetadata = {}
     for actor in actors:
+        if not actor.ap_id:
+            raise ValueError("Should never happen")
         idx[actor.ap_id] = ActorMetadata(
             ap_actor_id=actor.ap_id,
             is_following=actor.ap_id in following,

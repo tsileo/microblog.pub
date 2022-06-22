@@ -44,6 +44,9 @@ def test_new_outgoing_activity(
     outbox_object = _setup_outbox_object()
     inbox_url = "https://example.com/inbox"
 
+    if not outbox_object.id:
+        raise ValueError("Should never happen")
+
     # When queuing the activity
     outgoing_activity = new_outgoing_activity(db, inbox_url, outbox_object.id)
 

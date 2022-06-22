@@ -72,9 +72,9 @@ def get_lookup(
     if query:
         ap_object = lookup(db, query)
         if ap_object.ap_type in ap.ACTOR_TYPES:
-            actors_metadata = get_actors_metadata(db, [ap_object])
+            actors_metadata = get_actors_metadata(db, [ap_object])  # type: ignore
         else:
-            actors_metadata = get_actors_metadata(db, [ap_object.actor])
+            actors_metadata = get_actors_metadata(db, [ap_object.actor])  # type: ignore
         print(ap_object)
     return templates.render_template(
         db,
