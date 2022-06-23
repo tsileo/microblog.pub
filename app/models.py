@@ -17,13 +17,15 @@ from sqlalchemy.orm import relationship
 from app import activitypub as ap
 from app.actor import LOCAL_ACTOR
 from app.actor import Actor as BaseActor
+from app.ap_object import Attachment
 from app.ap_object import Object as BaseObject
+from app.config import BASE_URL
 from app.database import Base
 from app.database import now
 
 
 class Actor(Base, BaseActor):
-    __tablename__ = "actors"
+    __tablename__ = "actor"
 
     id = Column(Integer, primary_key=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
@@ -47,7 +49,7 @@ class InboxObject(Base, BaseObject):
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=now)
 
-    actor_id = Column(Integer, ForeignKey("actors.id"), nullable=False)
+    actor_id = Column(Integer, ForeignKey("actor.id"), nullable=False)
     actor: Mapped[Actor] = relationship(Actor, uselist=False)
 
     server = Column(String, nullable=False)
@@ -166,15 +168,48 @@ class OutboxObject(Base, BaseObject):
     def actor(self) -> BaseActor:
         return LOCAL_ACTOR
 
+    outbox_object_attachments: Mapped[list["OutboxObjectAttachment"]] = relationship(
+        "OutboxObjectAttachment", uselist=True, backref="outbox_object"
+    )
+
+    @property
+    def attachments(self) -> list[Attachment]:
+        out = []
+        for attachment in self.outbox_object_attachments:
+            url = (
+                BASE_URL
+                + f"/attachments/{attachment.upload.content_hash}/{attachment.filename}"
+            )
+            out.append(
+                Attachment.parse_obj(
+                    {
+                        "type": "Document",
+                        "mediaType": attachment.upload.content_type,
+                        "name": attachment.filename,
+                        "url": url,
+                        "proxiedUrl": url,
+                        "resizedUrl": BASE_URL
+                        + (
+                            "/attachments/thumbnails/"
+                            f"{attachment.upload.content_hash}"
+                            f"/{attachment.filename}"
+                        )
+                        if attachment.upload.has_thumbnail
+                        else None,
+                    }
+                )
+            )
+        return out
+
 
 class Follower(Base):
-    __tablename__ = "followers"
+    __tablename__ = "follower"
 
     id = Column(Integer, primary_key=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=now)
 
-    actor_id = Column(Integer, ForeignKey("actors.id"), nullable=False, unique=True)
+    actor_id = Column(Integer, ForeignKey("actor.id"), nullable=False, unique=True)
     actor = relationship(Actor, uselist=False)
 
     inbox_object_id = Column(Integer, ForeignKey("inbox.id"), nullable=False)
@@ -190,7 +225,7 @@ class Following(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=now)
 
-    actor_id = Column(Integer, ForeignKey("actors.id"), nullable=False, unique=True)
+    actor_id = Column(Integer, ForeignKey("actor.id"), nullable=False, unique=True)
     actor = relationship(Actor, uselist=False)
 
     outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=False)
@@ -220,7 +255,7 @@ class Notification(Base):
     notification_type = Column(Enum(NotificationType), nullable=True)
     is_new = Column(Boolean, nullable=False, default=True)
 
-    actor_id = Column(Integer, ForeignKey("actors.id"), nullable=True)
+    actor_id = Column(Integer, ForeignKey("actor.id"), nullable=True)
     actor = relationship(Actor, uselist=False)
 
     outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=True)
@@ -231,7 +266,7 @@ class Notification(Base):
 
 
 class OutgoingActivity(Base):
-    __tablename__ = "outgoing_activities"
+    __tablename__ = "outgoing_activity"
 
     id = Column(Integer, primary_key=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
@@ -253,7 +288,7 @@ class OutgoingActivity(Base):
 
 
 class TaggedOutboxObject(Base):
-    __tablename__ = "tagged_outbox_objects"
+    __tablename__ = "tagged_outbox_object"
     __table_args__ = (
         UniqueConstraint("outbox_object_id", "tag", name="uix_tagged_object"),
     )
@@ -266,23 +301,35 @@ class TaggedOutboxObject(Base):
     tag = Column(String, nullable=False, index=True)
 
 
-"""
 class Upload(Base):
     __tablename__ = "upload"
 
-    filename = Column(String, nullable=False)
-    filehash = Column(String, nullable=False)
-    filesize = Column(Integer, nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+
+    content_type: Mapped[str] = Column(String, nullable=False)
+    content_hash = Column(String, nullable=False, unique=True)
+
+    has_thumbnail = Column(Boolean, nullable=False)
+
+    # Only set for images
+    blurhash = Column(String, nullable=True)
+    width = Column(Integer, nullable=True)
+    height = Column(Integer, nullable=True)
+
+    @property
+    def is_image(self) -> bool:
+        return self.content_type.startswith("image")
 
 
 class OutboxObjectAttachment(Base):
     __tablename__ = "outbox_object_attachment"
 
     id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+    filename = Column(String, nullable=False)
 
     outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=False)
-    outbox_object = relationship(OutboxObject, uselist=False)
 
-    upload_id = Column(Integer, ForeignKey("upload.id"))
+    upload_id = Column(Integer, ForeignKey("upload.id"), nullable=False)
     upload = relationship(Upload, uselist=False)
-"""

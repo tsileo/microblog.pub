@@ -57,7 +57,7 @@
 {% set metadata = actors_metadata.get(actor.ap_id) %}
 <div style="display: flex;column-gap: 20px;margin:20px 0 10px 0;" class="actor-box">
     <div style="flex: 0 0 48px;">
-        <img src="{{ actor.icon_url | media_proxy_url }}" style="max-width:45px;">
+        <img src="{{ actor.icon_url | media_proxy_url }}/50" style="max-width:45px;">
     </div>
     <a href="{{ actor.url }}" style="">
         <div><strong>{{ actor.name or actor.preferred_username }}</strong></div>
@@ -90,7 +90,7 @@
 {% if object.ap_type in ["Note", "Article", "Video"] %}
 <div class="activity-wrap" id="{{ object.permalink_id }}">
   <div class="activity-content">
-      <img src="{% if object.actor.icon_url %}{{ object.actor.icon_url | media_proxy_url }}{% else %}/static/nopic.png{% endif %}" alt="" class="actor-icon">
+      <img src="{% if object.actor.icon_url %}{{ object.actor.icon_url | media_proxy_url }}/50{% else %}/static/nopic.png{% endif %}" alt="" class="actor-icon">
     <div class="activity-header">
         <strong>{{ object.actor.name or object.actor.preferred_username }}</strong>
         <span>{{ object.actor.handle }}</span>
@@ -107,11 +107,12 @@
   {{ sensitive_button(object.permalink_id )}}
   </div>
   {% endif %}
+
   {% if object.attachments and (not object.sensitive or (object.sensitive and request.query_params["show_sensitive"] == object.permalink_id)) %}
   <div class="activity-attachment">
     {% for attachment in object.attachments %}
     {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
-    <img src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} alt="{{ attachment.name }}"{% endif %} class="attachment">
+    <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} alt="{{ attachment.name }}"{% endif %} class="attachment">
     {% elif attachment.type == "Video" or (attachment | has_media_type("video")) %}
     <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachmeent"></video>
     {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}

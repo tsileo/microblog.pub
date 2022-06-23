@@ -22,6 +22,7 @@ from app.config import verify_csrf_token
 from app.config import verify_password
 from app.database import get_db
 from app.lookup import lookup
+from app.uploads import save_upload
 
 
 def user_session_or_redirect(
@@ -231,7 +232,7 @@ def admin_actions_bookmark(
 
 
 @router.post("/actions/new")
-async def admin_actions_new(
+def admin_actions_new(
     request: Request,
     files: list[UploadFile],
     content: str = Form(),
@@ -240,9 +241,12 @@ async def admin_actions_new(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     # XXX: for some reason, no files restuls in an empty single file
+    uploads = []
     if len(files) >= 1 and files[0].filename:
-        print("Got files")
-    public_id = boxes.send_create(db, content)
+        for f in files:
+            upload = save_upload(db, f)
+            uploads.append((upload, f.filename))
+    public_id = boxes.send_create(db, source=content, uploads=uploads)
     return RedirectResponse(
         request.url_for("outbox_by_public_id", public_id=public_id),
         status_code=302,

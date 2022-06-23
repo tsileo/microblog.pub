@@ -1,3 +1,4 @@
+import base64
 import hashlib
 from datetime import datetime
 from typing import Any
@@ -60,21 +61,35 @@ class Object:
         return self.ap_object.get("sensitive", False)
 
     @property
-    def attachments(self) -> list["Attachment"]:
-        attachments = [
-            Attachment.parse_obj(obj) for obj in self.ap_object.get("attachment", [])
-        ]
+    def attachments_old(self) -> list["Attachment"]:
+        # TODO: set img_src with the proxy URL (proxy_url?)
+        attachments = []
+        for obj in self.ap_object.get("attachment", []):
+            proxied_url = _proxied_url(obj["url"])
+            attachments.append(
+                Attachment.parse_obj(
+                    {
+                        "proxiedUrl": proxied_url,
+                        "resizedUrl": proxied_url + "/740"
+                        if obj["mediaType"].startswith("image")
+                        else None,
+                        **obj,
+                    }
+                )
+            )
 
         # Also add any video Link (for PeerTube compat)
         if self.ap_type == "Video":
             for link in ap.as_list(self.ap_object.get("url", [])):
                 if (isinstance(link, dict)) and link.get("type") == "Link":
                     if link.get("mediaType", "").startswith("video"):
+                        proxied_url = _proxied_url(link["href"])
                         attachments.append(
                             Attachment(
                                 type="Video",
                                 mediaType=link["mediaType"],
                                 url=link["href"],
+                                proxiedUrl=proxied_url,
                             )
                         )
                         break
@@ -137,11 +152,19 @@ class BaseModel(pydantic.BaseModel):
         alias_generator = _to_camel
 
 
+def _proxied_url(url: str) -> str:
+    return "/proxy/media/" + base64.urlsafe_b64encode(url.encode()).decode()
+
+
 class Attachment(BaseModel):
     type: str
     media_type: str
     name: str | None
     url: str
+
+    # Extra fields for the templates
+    proxied_url: str
+    resized_url: str | None = None
 
 
 class RemoteObject(Object):

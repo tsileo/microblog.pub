@@ -22,6 +22,7 @@ from app.config import ID
 from app.database import now
 from app.process_outgoing_activities import new_outgoing_activity
 from app.source import markdownify
+from app.uploads import upload_to_attachment
 
 
 def allocate_outbox_id() -> str:
@@ -214,11 +215,20 @@ def send_undo(db: Session, ap_object_id: str) -> None:
         raise ValueError("Should never happen")
 
 
-def send_create(db: Session, source: str) -> str:
+def send_create(
+    db: Session,
+    source: str,
+    uploads: list[tuple[models.Upload, str]],
+) -> str:
     note_id = allocate_outbox_id()
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     context = f"{ID}/contexts/" + uuid.uuid4().hex
     content, tags = markdownify(db, source)
+    attachments = []
+
+    for (upload, filename) in uploads:
+        attachments.append(upload_to_attachment(upload, filename))
+
     note = {
         "@context": ap.AS_CTX,
         "type": "Note",
@@ -235,6 +245,7 @@ def send_create(db: Session, source: str) -> str:
         "summary": None,
         "inReplyTo": None,
         "sensitive": False,
+        "attachment": attachments,
     }
     outbox_object = save_outbox_object(db, note_id, note, source=source)
     if not outbox_object.id:
@@ -247,6 +258,13 @@ def send_create(db: Session, source: str) -> str:
                 outbox_object_id=outbox_object.id,
             )
             db.add(tagged_object)
+
+    for (upload, filename) in uploads:
+        outbox_object_attachment = models.OutboxObjectAttachment(
+            filename=filename, outbox_object_id=outbox_object.id, upload_id=upload.id
+        )
+        db.add(outbox_object_attachment)
+
     db.commit()
 
     recipients = _compute_recipients(db, note)

@@ -17,8 +17,8 @@ from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import Attachment
 from app.boxes import public_outbox_objects_count
+from app.config import BASE_URL
 from app.config import DEBUG
-from app.config import DOMAIN
 from app.config import VERSION
 from app.config import generate_csrf_token
 from app.config import session_serializer
@@ -40,7 +40,7 @@ def _media_proxy_url(url: str | None) -> str:
     if not url:
         return "/static/nopic.png"
 
-    if url.startswith(DOMAIN):
+    if url.startswith(BASE_URL):
         return url
 
     encoded_url = base64.urlsafe_b64encode(url.encode()).decode()

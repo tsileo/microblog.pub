@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from io import BytesIO
 from typing import Any
 from typing import Type
 
@@ -13,10 +14,12 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi import Response
 from fastapi.exceptions import HTTPException
+from fastapi.responses import FileResponse
 from fastapi.responses import PlainTextResponse
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from PIL import Image
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 from starlette.background import BackgroundTask
@@ -41,6 +44,7 @@ from app.config import USERNAME
 from app.config import is_activitypub_requested
 from app.database import get_db
 from app.templates import is_current_user_admin
+from app.uploads import UPLOAD_DIR
 
 # TODO(ts):
 #
@@ -113,6 +117,8 @@ async def add_security_headers(request: Request, call_next):
     response.headers["x-xss-protection"] = "1; mode=block"
     response.headers["x-frame-options"] = "SAMEORIGIN"
     # TODO(ts): disallow inline CSS?
+    if DEBUG:
+        return response
     response.headers["content-security-policy"] = (
         "default-src 'self'" + " style-src 'self' 'unsafe-inline';"
     )
@@ -157,6 +163,11 @@ def index(
 
     outbox_objects = (
         db.query(models.OutboxObject)
+        .options(
+            joinedload(models.OutboxObject.outbox_object_attachments).options(
+                joinedload(models.OutboxObjectAttachment.upload)
+            )
+        )
         .filter(
             models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
             models.OutboxObject.is_deleted.is_(False),
@@ -367,6 +378,11 @@ def outbox_by_public_id(
     # TODO: ACL?
     maybe_object = (
         db.query(models.OutboxObject)
+        .options(
+            joinedload(models.OutboxObject.outbox_object_attachments).options(
+                joinedload(models.OutboxObjectAttachment.upload)
+            )
+        )
         .filter(
             models.OutboxObject.public_id == public_id,
             # models.OutboxObject.is_deleted.is_(False),
@@ -547,6 +563,112 @@ async def serve_proxy_media(request: Request, encoded_url: str) -> StreamingResp
         status_code=proxy_resp.status_code,
         headers=dict(proxy_resp_headers),
         background=BackgroundTask(proxy_resp.aclose),
+    )
+
+
+@app.get("/proxy/media/{encoded_url}/{size}")
+def serve_proxy_media_resized(
+    request: Request,
+    encoded_url: str,
+    size: int,
+) -> PlainTextResponse:
+    if size not in {50, 740}:
+        raise ValueError("Unsupported size")
+
+    # Decode the base64-encoded URL
+    url = base64.urlsafe_b64decode(encoded_url).decode()
+    # Request the URL (and filter request headers)
+    proxy_resp = httpx.get(
+        url,
+        headers=[
+            (k, v)
+            for (k, v) in request.headers.raw
+            if k.lower()
+            not in [b"host", b"cookie", b"x-forwarded-for", b"x-real-ip", b"user-agent"]
+        ]
+        + [(b"user-agent", USER_AGENT.encode())],
+    )
+    if proxy_resp.status_code != 200:
+        return PlainTextResponse(
+            proxy_resp.content,
+            status_code=proxy_resp.status_code,
+        )
+
+    # Filter the headers
+    proxy_resp_headers = {
+        k: v
+        for (k, v) in proxy_resp.headers.items()
+        if k.lower()
+        in [
+            "content-type",
+            "etag",
+            "cache-control",
+            "expires",
+            "last-modified",
+        ]
+    }
+
+    try:
+        out = BytesIO(proxy_resp.content)
+        i = Image.open(out)
+        i.thumbnail((size, size))
+        resized_buf = BytesIO()
+        i.save(resized_buf, format=i.format)
+        resized_buf.seek(0)
+        return PlainTextResponse(
+            resized_buf.read(),
+            media_type=i.get_format_mimetype(),  # type: ignore
+            headers=proxy_resp_headers,
+        )
+    except Exception:
+        logger.exception(f"Failed to resize {url} on the fly")
+        return PlainTextResponse(
+            proxy_resp.content,
+            headers=proxy_resp_headers,
+        )
+
+
+@app.get("/attachments/{content_hash}/{filename}")
+def serve_attachment(
+    content_hash: str,
+    filename: str,
+    db: Session = Depends(get_db),
+):
+    upload = (
+        db.query(models.Upload)
+        .filter(
+            models.Upload.content_hash == content_hash,
+        )
+        .one_or_none()
+    )
+    if not upload:
+        raise HTTPException(status_code=404)
+
+    return FileResponse(
+        UPLOAD_DIR / content_hash,
+        media_type=upload.content_type,
+    )
+
+
+@app.get("/attachments/thumbnails/{content_hash}/{filename}")
+def serve_attachment_thumbnail(
+    content_hash: str,
+    filename: str,
+    db: Session = Depends(get_db),
+):
+    upload = (
+        db.query(models.Upload)
+        .filter(
+            models.Upload.content_hash == content_hash,
+        )
+        .one_or_none()
+    )
+    if not upload or not upload.has_thumbnail:
+        raise HTTPException(status_code=404)
+
+    return FileResponse(
+        UPLOAD_DIR / (content_hash + "_resized"),
+        media_type=upload.content_type,
     )
 
 
