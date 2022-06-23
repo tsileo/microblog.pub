@@ -24,8 +24,8 @@ def save_upload(db: Session, f: UploadFile) -> models.Upload:
             break
         h.update(buf)
 
-    f.file.seek(0)
     content_hash = h.hexdigest()
+    f.file.seek(0)
 
     existing_upload = (
         db.query(models.Upload)
@@ -38,12 +38,6 @@ def save_upload(db: Session, f: UploadFile) -> models.Upload:
 
     logger.info(f"Creating new Upload with {content_hash=}")
     dest_filename = UPLOAD_DIR / content_hash
-    with open(dest_filename, "wb") as dest:
-        while True:
-            buf = f.file.read(COPY_BUFSIZE)
-            if not buf:
-                break
-            dest.write(buf)
 
     has_thumbnail = False
     image_blurhash = None
@@ -51,21 +45,41 @@ def save_upload(db: Session, f: UploadFile) -> models.Upload:
     height = None
 
     if f.content_type.startswith("image"):
-        with open(dest_filename, "rb") as df:
-            image_blurhash = blurhash.encode(df, x_components=4, y_components=3)
+        image_blurhash = blurhash.encode(f.file, x_components=4, y_components=3)
+        f.file.seek(0)
 
-        try:
-            with Image.open(dest_filename) as i:
-                width, height = i.size
-                i.thumbnail((740, 740))
-                i.save(UPLOAD_DIR / f"{content_hash}_resized", format=i.format)
-        except Exception:
-            logger.exception(
-                f"Failed to created thumbnail for {f.filename}/{content_hash}"
+        with Image.open(f.file) as original_image:
+            destination_image = Image.new(
+                original_image.mode,
+                original_image.size,
             )
-        else:
-            has_thumbnail = True
-            logger.info("Thumbnail generated")
+            destination_image.putdata(original_image.getdata())
+            destination_image.save(
+                dest_filename,
+                format=original_image.format,
+            )
+
+            try:
+                width, height = original_image.size
+                original_image.thumbnail((740, 740))
+                original_image.save(
+                    UPLOAD_DIR / f"{content_hash}_resized",
+                    format=original_image.format,
+                )
+            except Exception:
+                logger.exception(
+                    f"Failed to created thumbnail for {f.filename}/{content_hash}"
+                )
+            else:
+                has_thumbnail = True
+                logger.info("Thumbnail generated")
+    else:
+        with open(dest_filename, "wb") as dest:
+            while True:
+                buf = f.file.read(COPY_BUFSIZE)
+                if not buf:
+                    break
+                dest.write(buf)
 
     new_upload = models.Upload(
         content_type=f.content_type,
@@ -95,6 +109,6 @@ def upload_to_attachment(upload: models.Upload, filename: str) -> ap.RawObject:
         "type": "Document",
         "mediaType": upload.content_type,
         "name": filename,
-        "url": BASE_URL + f"/attachments/{upload.content_hash}",
+        "url": BASE_URL + f"/attachments/{upload.content_hash}/{filename}",
         **extra_attachment_fields,
     }
