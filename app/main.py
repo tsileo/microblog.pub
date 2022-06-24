@@ -379,6 +379,73 @@ class ReplyTreeNode:
     is_root: bool = False
 
 
+def get_replies_tree(
+    db: Session,
+    requested_object: boxes.AnyboxObject,
+) -> ReplyTreeNode:
+    # TODO: handle visibility
+    tree_nodes: list[boxes.AnyboxObject] = []
+    tree_nodes.extend(
+        db.query(models.InboxObject)
+        .filter(
+            models.InboxObject.ap_context == requested_object.ap_context,
+        )
+        .all()
+    )
+    tree_nodes.extend(
+        db.query(models.OutboxObject)
+        .filter(
+            models.OutboxObject.ap_context == requested_object.ap_context,
+            models.OutboxObject.is_deleted.is_(False),
+        )
+        .all()
+    )
+    nodes_by_in_reply_to = defaultdict(list)
+    for node in tree_nodes:
+        nodes_by_in_reply_to[node.in_reply_to].append(node)
+    logger.info(nodes_by_in_reply_to)
+
+    # TODO: get oldest if we cannot get to root?
+    if len(nodes_by_in_reply_to.get(None, [])) != 1:
+        raise ValueError("Failed to compute replies tree")
+
+    def _get_reply_node_children(
+        node: ReplyTreeNode,
+        index: defaultdict[str | None, list[boxes.AnyboxObject]],
+    ) -> list[ReplyTreeNode]:
+        children = []
+        for child in index.get(node.ap_object.ap_id, []):  # type: ignore
+            child_node = ReplyTreeNode(
+                ap_object=child,
+                is_requested=child.ap_id == requested_object.ap_id,  # type: ignore
+                children=[],
+            )
+            child_node.children = _get_reply_node_children(child_node, index)
+            children.append(child_node)
+
+        return sorted(
+            children,
+            key=lambda node: node.ap_object.ap_published_at,  # type: ignore
+        )
+
+    if None in nodes_by_in_reply_to:
+        root_ap_object = nodes_by_in_reply_to[None][0]
+    else:
+        root_ap_object = sorted(
+            tree_nodes,
+            lambda ap_obj: ap_obj.ap_published_at,  # type: ignore
+        )[0]
+
+    root_node = ReplyTreeNode(
+        ap_object=root_ap_object,
+        is_root=True,
+        is_requested=root_ap_object.ap_id == requested_object.ap_id,
+        children=[],
+    )
+    root_node.children = _get_reply_node_children(root_node, nodes_by_in_reply_to)
+    return root_node
+
+
 @app.get("/o/{public_id}")
 def outbox_by_public_id(
     public_id: str,
@@ -402,75 +469,18 @@ def outbox_by_public_id(
     )
     if not maybe_object:
         raise HTTPException(status_code=404)
-    #
+
     if is_activitypub_requested(request):
         return ActivityPubResponse(maybe_object.ap_object)
 
-    # TODO: handle visibility
-    tree_nodes: list[boxes.AnyboxObject] = [maybe_object]
-    tree_nodes.extend(
-        db.query(models.InboxObject)
-        .filter(
-            models.InboxObject.ap_context == maybe_object.ap_context,
-        )
-        .all()
-    )
-    tree_nodes.extend(
-        db.query(models.OutboxObject)
-        .filter(
-            models.OutboxObject.ap_context == maybe_object.ap_context,
-            models.OutboxObject.is_deleted.is_(False),
-            models.OutboxObject.id != maybe_object.id,
-        )
-        .all()
-    )
-    logger.info(f"root={maybe_object.ap_id}")
-    nodes_by_in_reply_to = defaultdict(list)
-    for node in tree_nodes:
-        nodes_by_in_reply_to[node.in_reply_to].append(node)
-        logger.info(f"in_reply_to={node.in_reply_to}")
-    logger.info(nodes_by_in_reply_to)
-
-    # TODO: get oldest if we cannot get to root?
-    if len(nodes_by_in_reply_to.get(None, [])) != 1:
-        raise ValueError("Failed to compute replies tree")
-
-    def _get_reply_node_children(
-        node: ReplyTreeNode,
-        index: defaultdict[str | None, list[boxes.AnyboxObject]],
-    ) -> list[ReplyTreeNode]:
-        children = []
-        for child in index.get(node.ap_object.ap_id, []):  # type: ignore
-            logger.info(f"{child=}")
-            child_node = ReplyTreeNode(
-                ap_object=child,
-                is_requested=child.ap_id == maybe_object.ap_id,  # type: ignore
-                children=[],
-            )
-            child_node.children = _get_reply_node_children(child_node, index)
-            children.append(child_node)
-
-        return sorted(
-            children,
-            key=lambda node: node.ap_object.ap_published_at,  # type: ignore
-        )
-
-    root_node = ReplyTreeNode(
-        ap_object=nodes_by_in_reply_to[None][0],
-        # ap_object=maybe_object,
-        is_root=True,
-        is_requested=nodes_by_in_reply_to[None][0].ap_id == maybe_object.ap_id,
-        children=[],
-    )
-    root_node.children = _get_reply_node_children(root_node, nodes_by_in_reply_to)
-    logger.info(root_node.ap_object.ap_id)
-    logger.info(root_node)
+    replies_tree = get_replies_tree(db, maybe_object)
 
     return templates.render_template(
         db,
         request,
         "object.html",
         {
+            "replies_tree": replies_tree,
             "outbox_object": maybe_object,
         },
     )

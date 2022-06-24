@@ -3,6 +3,15 @@
 {% block content %}
 {% include "header.html" %}
 
-{{ utils.display_object(outbox_object) }}
+{% macro display_replies_tree(replies_tree_node) %}
+
+{{ utils.display_object(replies_tree_node.ap_object) }}
+{% for child in replies_tree_node.children %}
+    {{ display_replies_tree(child) }}
+{% endfor %}
+
+{% endmacro %}
+
+{{ display_replies_tree(replies_tree) }}
 
 {% endblock %}
