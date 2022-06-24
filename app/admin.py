@@ -244,7 +244,7 @@ def admin_actions_new(
     files: list[UploadFile],
     content: str = Form(),
     redirect_url: str = Form(),
-    in_reply_to: str | None = Form(),
+    in_reply_to: str | None = Form(None),
     csrf_check: None = Depends(verify_csrf_token),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

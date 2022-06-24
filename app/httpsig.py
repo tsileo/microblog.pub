@@ -19,6 +19,7 @@ from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
 from loguru import logger
 
+from app import activitypub as ap
 from app import config
 from app.key import Key
 from app.key import get_key
@@ -63,6 +64,7 @@ def _body_digest(body: bytes) -> str:
 
 @lru_cache(32)
 def _get_public_key(key_id: str) -> Key:
+    # TODO: use DB to use cache actor
     from app import activitypub as ap
 
     actor = ap.fetch(key_id)
@@ -110,6 +112,9 @@ async def httpsig_checker(
 
     try:
         k = _get_public_key(hsig["keyId"])
+    except ap.ObjectIsGoneError:
+        logger.info("Actor is gone")
+        return HTTPSigInfo(has_valid_signature=False)
     except Exception:
         logger.exception(f'Failed to fetch HTTP sig key {hsig["keyId"]}')
         return HTTPSigInfo(has_valid_signature=False)

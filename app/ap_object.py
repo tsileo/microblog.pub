@@ -53,7 +53,7 @@ class Object:
         return ap.object_visibility(self.ap_object)
 
     @property
-    def context(self) -> str | None:
+    def ap_context(self) -> str | None:
         return self.ap_object.get("context") or self.ap_object.get("conversation")
 
     @property

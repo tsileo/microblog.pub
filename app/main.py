@@ -2,6 +2,8 @@ import base64
 import os
 import sys
 import time
+from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
 from typing import Any
@@ -27,6 +29,7 @@ from starlette.responses import JSONResponse
 
 from app import activitypub as ap
 from app import admin
+from app import boxes
 from app import config
 from app import httpsig
 from app import models
@@ -368,6 +371,14 @@ def outbox(
     )
 
 
+@dataclass
+class ReplyTreeNode:
+    ap_object: boxes.AnyboxObject
+    children: list["ReplyTreeNode"]
+    is_requested: bool = False
+    is_root: bool = False
+
+
 @app.get("/o/{public_id}")
 def outbox_by_public_id(
     public_id: str,
@@ -385,7 +396,7 @@ def outbox_by_public_id(
         )
         .filter(
             models.OutboxObject.public_id == public_id,
-            # models.OutboxObject.is_deleted.is_(False),
+            models.OutboxObject.is_deleted.is_(False),
         )
         .one_or_none()
     )
@@ -394,6 +405,66 @@ def outbox_by_public_id(
     #
     if is_activitypub_requested(request):
         return ActivityPubResponse(maybe_object.ap_object)
+
+    # TODO: handle visibility
+    tree_nodes: list[boxes.AnyboxObject] = [maybe_object]
+    tree_nodes.extend(
+        db.query(models.InboxObject)
+        .filter(
+            models.InboxObject.ap_context == maybe_object.ap_context,
+        )
+        .all()
+    )
+    tree_nodes.extend(
+        db.query(models.OutboxObject)
+        .filter(
+            models.OutboxObject.ap_context == maybe_object.ap_context,
+            models.OutboxObject.is_deleted.is_(False),
+            models.OutboxObject.id != maybe_object.id,
+        )
+        .all()
+    )
+    logger.info(f"root={maybe_object.ap_id}")
+    nodes_by_in_reply_to = defaultdict(list)
+    for node in tree_nodes:
+        nodes_by_in_reply_to[node.in_reply_to].append(node)
+        logger.info(f"in_reply_to={node.in_reply_to}")
+    logger.info(nodes_by_in_reply_to)
+
+    # TODO: get oldest if we cannot get to root?
+    if len(nodes_by_in_reply_to.get(None, [])) != 1:
+        raise ValueError("Failed to compute replies tree")
+
+    def _get_reply_node_children(
+        node: ReplyTreeNode,
+        index: defaultdict[str | None, list[boxes.AnyboxObject]],
+    ) -> list[ReplyTreeNode]:
+        children = []
+        for child in index.get(node.ap_object.ap_id, []):  # type: ignore
+            logger.info(f"{child=}")
+            child_node = ReplyTreeNode(
+                ap_object=child,
+                is_requested=child.ap_id == maybe_object.ap_id,  # type: ignore
+                children=[],
+            )
+            child_node.children = _get_reply_node_children(child_node, index)
+            children.append(child_node)
+
+        return sorted(
+            children,
+            key=lambda node: node.ap_object.ap_published_at,  # type: ignore
+        )
+
+    root_node = ReplyTreeNode(
+        ap_object=nodes_by_in_reply_to[None][0],
+        # ap_object=maybe_object,
+        is_root=True,
+        is_requested=nodes_by_in_reply_to[None][0].ap_id == maybe_object.ap_id,
+        children=[],
+    )
+    root_node.children = _get_reply_node_children(root_node, nodes_by_in_reply_to)
+    logger.info(root_node.ap_object.ap_id)
+    logger.info(root_node)
 
     return templates.render_template(
         db,
@@ -414,7 +485,10 @@ def outbox_activity_by_public_id(
     # TODO: ACL?
     maybe_object = (
         db.query(models.OutboxObject)
-        .filter(models.OutboxObject.public_id == public_id)
+        .filter(
+            models.OutboxObject.public_id == public_id,
+            models.OutboxObject.is_deleted.is_(False),
+        )
         .one_or_none()
     )
     if not maybe_object:

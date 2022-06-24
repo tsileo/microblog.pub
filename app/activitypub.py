@@ -17,6 +17,10 @@ AS_PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 ACTOR_TYPES = ["Application", "Group", "Organization", "Person", "Service"]
 
 
+class ObjectIsGoneError(Exception):
+    pass
+
+
 class VisibilityEnum(str, enum.Enum):
     PUBLIC = "public"
     UNLISTED = "unlisted"
@@ -108,6 +112,11 @@ def fetch(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         params=params,
         follow_redirects=True,
     )
+
+    # Special handling for deleted object
+    if resp.status_code == 410:
+        raise ObjectIsGoneError(f"{url} is gone")
+
     resp.raise_for_status()
     try:
         return resp.json()

@@ -49,7 +49,7 @@ def save_outbox_object(
         public_id=public_id,
         ap_type=ra.ap_type,
         ap_id=ra.ap_id,
-        ap_context=ra.context,
+        ap_context=ra.ap_context,
         ap_object=ra.ap_object,
         visibility=ra.visibility,
         og_meta=ra.og_meta,
@@ -233,9 +233,9 @@ def send_create(
         in_reply_to_object = get_anybox_object_by_ap_id(db, in_reply_to)
         if not in_reply_to_object:
             raise ValueError(f"Invalid in reply to {in_reply_to=}")
-        if not in_reply_to_object.context:
+        if not in_reply_to_object.ap_context:
             raise ValueError("Object has no context")
-        context = in_reply_to_object.context
+        context = in_reply_to_object.ap_context
 
     for (upload, filename) in uploads:
         attachments.append(upload_to_attachment(upload, filename))
@@ -544,7 +544,7 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
         ap_actor_id=actor.ap_id,
         ap_type=ra.ap_type,
         ap_id=ra.ap_id,
-        ap_context=ra.context,
+        ap_context=ra.ap_context,
         ap_published_at=ap_published_at,
         ap_object=ra.ap_object,
         visibility=ra.visibility,
@@ -651,7 +651,7 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                     ap_actor_id=announced_actor.ap_id,
                     ap_type=announced_object.ap_type,
                     ap_id=announced_object.ap_id,
-                    ap_context=announced_object.context,
+                    ap_context=announced_object.ap_context,
                     ap_published_at=announced_object.ap_published_at,
                     ap_object=announced_object.ap_object,
                     visibility=announced_object.visibility,
