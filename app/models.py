@@ -63,6 +63,7 @@ class InboxObject(Base, BaseObject):
     ap_published_at = Column(DateTime(timezone=True), nullable=False)
     ap_object: Mapped[ap.RawObject] = Column(JSON, nullable=False)
 
+    # Only set for activities
     activity_object_ap_id = Column(String, nullable=True)
 
     visibility = Column(Enum(ap.VisibilityEnum), nullable=False)
@@ -242,8 +243,6 @@ class NotificationType(str, enum.Enum):
     UNDO_LIKE = "undo_like"
     ANNOUNCE = "announce"
     UNDO_ANNOUNCE = "undo_announce"
-
-    # TODO:
     MENTION = "mention"
 
 

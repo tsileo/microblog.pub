@@ -54,15 +54,14 @@ class Object:
 
     @property
     def context(self) -> str | None:
-        return self.ap_object.get("context")
+        return self.ap_object.get("context") or self.ap_object.get("conversation")
 
     @property
     def sensitive(self) -> bool:
         return self.ap_object.get("sensitive", False)
 
     @property
-    def attachments_old(self) -> list["Attachment"]:
-        # TODO: set img_src with the proxy URL (proxy_url?)
+    def attachments(self) -> list["Attachment"]:
         attachments = []
         for obj in self.ap_object.get("attachment", []):
             proxied_url = _proxied_url(obj["url"])

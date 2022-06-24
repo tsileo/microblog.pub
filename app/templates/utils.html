@@ -52,6 +52,13 @@
 </form> 
 {% endmacro %}
 
+{% macro admin_reply_button(ap_object_id) %}
+<form action="/admin/new"  method="GET">
+<input type="hidden" name="in_reply_to" value="{{ ap_object_id }}">
+<button type="submit">Reply</button>
+</form> 
+{% endmacro %}
+
 {% macro display_actor(actor, actors_metadata) %}
 {{ actors_metadata }}
 {% set metadata = actors_metadata.get(actor.ap_id) %}
@@ -95,6 +102,7 @@
         <strong>{{ object.actor.name or object.actor.preferred_username }}</strong>
         <span>{{ object.actor.handle }}</span>
         <span class="activity-date" title="{{ object.ap_published_at.isoformat() }}">
+            {{ object.visibility }}
             <a href="{{ object.url }}">{{ object.ap_published_at | timeago }}</a>
         </span>
         <div class="activity-main">

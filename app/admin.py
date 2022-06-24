@@ -93,13 +93,20 @@ def get_lookup(
 def admin_new(
     request: Request,
     query: str | None = None,
+    in_reply_to: str | None = None,
     db: Session = Depends(get_db),
 ) -> templates.TemplateResponse:
+    in_reply_to_object = None
+    if in_reply_to:
+        in_reply_to_object = boxes.get_anybox_object_by_ap_id(db, in_reply_to)
+        if not in_reply_to_object:
+            raise ValueError(f"Unknown object {in_reply_to=}")
+
     return templates.render_template(
         db,
         request,
         "admin_new.html",
-        {},
+        {"in_reply_to_object": in_reply_to_object},
     )
 
 
@@ -237,6 +244,7 @@ def admin_actions_new(
     files: list[UploadFile],
     content: str = Form(),
     redirect_url: str = Form(),
+    in_reply_to: str | None = Form(),
     csrf_check: None = Depends(verify_csrf_token),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -246,7 +254,12 @@ def admin_actions_new(
         for f in files:
             upload = save_upload(db, f)
             uploads.append((upload, f.filename))
-    public_id = boxes.send_create(db, source=content, uploads=uploads)
+    public_id = boxes.send_create(
+        db,
+        source=content,
+        uploads=uploads,
+        in_reply_to=in_reply_to or None,
+    )
     return RedirectResponse(
         request.url_for("outbox_by_public_id", public_id=public_id),
         status_code=302,

@@ -51,7 +51,9 @@ def uvicorn(ctx):
 @task
 def process_outgoing_activities(ctx):
     # type: (Context) -> None
-    run("poetry run python app/process_outgoing_activities.py", pty=True, echo=True)
+    from app.outgoing_activities import loop
+
+    loop()
 
 
 @task

@@ -8,9 +8,9 @@ from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import RemoteObject
 from app.database import Session
-from app.process_outgoing_activities import _MAX_RETRIES
-from app.process_outgoing_activities import new_outgoing_activity
-from app.process_outgoing_activities import process_next_outgoing_activity
+from app.outgoing_activities import _MAX_RETRIES
+from app.outgoing_activities import new_outgoing_activity
+from app.outgoing_activities import process_next_outgoing_activity
 from tests import factories
 
 

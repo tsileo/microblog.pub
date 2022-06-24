@@ -20,9 +20,11 @@ from app.ap_object import RemoteObject
 from app.config import BASE_URL
 from app.config import ID
 from app.database import now
-from app.process_outgoing_activities import new_outgoing_activity
+from app.outgoing_activities import new_outgoing_activity
 from app.source import markdownify
 from app.uploads import upload_to_attachment
+
+AnyboxObject = models.InboxObject | models.OutboxObject
 
 
 def allocate_outbox_id() -> str:
@@ -219,12 +221,21 @@ def send_create(
     db: Session,
     source: str,
     uploads: list[tuple[models.Upload, str]],
+    in_reply_to: str | None,
 ) -> str:
     note_id = allocate_outbox_id()
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     context = f"{ID}/contexts/" + uuid.uuid4().hex
     content, tags = markdownify(db, source)
     attachments = []
+
+    if in_reply_to:
+        in_reply_to_object = get_anybox_object_by_ap_id(db, in_reply_to)
+        if not in_reply_to_object:
+            raise ValueError(f"Invalid in reply to {in_reply_to=}")
+        if not in_reply_to_object.context:
+            raise ValueError("Object has no context")
+        context = in_reply_to_object.context
 
     for (upload, filename) in uploads:
         attachments.append(upload_to_attachment(upload, filename))
@@ -243,7 +254,7 @@ def send_create(
         "url": outbox_object_id(note_id),
         "tag": tags,
         "summary": None,
-        "inReplyTo": None,
+        "inReplyTo": in_reply_to,
         "sensitive": False,
         "attachment": attachments,
     }
@@ -329,6 +340,13 @@ def get_outbox_object_by_ap_id(db: Session, ap_id: str) -> models.OutboxObject |
         .filter(models.OutboxObject.ap_id == ap_id)
         .one_or_none()
     )
+
+
+def get_anybox_object_by_ap_id(db: Session, ap_id: str) -> AnyboxObject | None:
+    if ap_id.startswith(BASE_URL):
+        return get_outbox_object_by_ap_id(db, ap_id)
+    else:
+        return get_inbox_object_by_ap_id(db, ap_id)
 
 
 def _handle_delete_activity(
@@ -538,14 +556,18 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
         else None,
         activity_object_ap_id=ra.activity_object_ap_id,
         # Hide replies from the stream
-        is_hidden_from_stream=True if ra.in_reply_to else False,
+        is_hidden_from_stream=(
+            True
+            if (ra.in_reply_to and not ra.in_reply_to.startswith(BASE_URL))
+            else False
+        ),  # TODO: handle mentions
     )
 
     db.add(inbox_object)
     db.flush()
     db.refresh(inbox_object)
 
-    if ra.ap_type == "Create":
+    if ra.ap_type == "Note":  # TODO: handle create better
         _handle_create_activity(db, actor, inbox_object)
     elif ra.ap_type == "Update":
         pass
