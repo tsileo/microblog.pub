@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 
 from app import activitypub as ap
+from app import media
 
 if typing.TYPE_CHECKING:
     from app.models import Actor as ActorModel
@@ -77,6 +78,20 @@ class Actor:
     @property
     def public_key_id(self) -> str:
         return self.ap_actor["publicKey"]["id"]
+
+    @property
+    def proxied_icon_url(self) -> str:
+        if self.icon_url:
+            return media.proxied_media_url(self.icon_url)
+        else:
+            return "/static/nopic.png"
+
+    @property
+    def resized_icon_url(self) -> str:
+        if self.icon_url:
+            return media.resized_media_url(self.icon_url, 50)
+        else:
+            return "/static/nopic.png"
 
 
 class RemoteActor(Actor):

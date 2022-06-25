@@ -64,7 +64,7 @@
 {% set metadata = actors_metadata.get(actor.ap_id) %}
 <div style="display: flex;column-gap: 20px;margin:20px 0 10px 0;" class="actor-box">
     <div style="flex: 0 0 48px;">
-        <img src="{{ actor.icon_url | media_proxy_url }}/50" style="max-width:45px;">
+        <img src="{{ actor.resized_icon_url }}" style="max-width:45px;">
     </div>
     <a href="{{ actor.url }}" style="">
         <div><strong>{{ actor.name or actor.preferred_username }}</strong></div>
@@ -97,12 +97,12 @@
 {% if object.ap_type in ["Note", "Article", "Video"] %}
 <div class="activity-wrap" id="{{ object.permalink_id }}">
   <div class="activity-content">
-      <img src="{% if object.actor.icon_url %}{{ object.actor.icon_url | media_proxy_url }}/50{% else %}/static/nopic.png{% endif %}" alt="" class="actor-icon">
+      <img src="{{ object.actor.resized_icon_url }}" alt="" class="actor-icon">
     <div class="activity-header">
         <strong>{{ object.actor.name or object.actor.preferred_username }}</strong>
         <span>{{ object.actor.handle }}</span>
         <span class="activity-date" title="{{ object.ap_published_at.isoformat() }}">
-            {{ object.visibility }}
+            {{ object.visibility.value }}
             <a href="{{ object.url }}">{{ object.ap_published_at | timeago }}</a>
         </span>
         <div class="activity-main">

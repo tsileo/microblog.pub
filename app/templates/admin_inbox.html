@@ -2,7 +2,7 @@
 {% extends "layout.html" %}
 {% block content %}
 
-{% for inbox_object in stream %}
+{% for inbox_object in inbox %}
 {% if inbox_object.ap_type == "Announce" %}
     {{ utils.display_object(inbox_object.relates_to_anybox_object) }}
 {% elif inbox_object.ap_type in ["Article", "Note", "Video"] %}
@@ -14,6 +14,8 @@
     {% endif %}
     {{ utils.admin_announce_button(inbox_object.ap_id) }}
     {{ utils.admin_reply_button(inbox_object.ap_id) }}
+{% else %}
+    Implement {{ inbox_object.ap_type }}
 {% endif %}
 {% endfor %}
 

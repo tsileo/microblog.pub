@@ -1,6 +1,7 @@
 import enum
 from typing import Any
 from typing import Optional
+from typing import Union
 
 from sqlalchemy import JSON
 from sqlalchemy import Boolean
@@ -104,6 +105,15 @@ class InboxObject(Base, BaseObject):
 
     og_meta: Mapped[list[dict[str, Any]] | None] = Column(JSON, nullable=True)
 
+    @property
+    def relates_to_anybox_object(self) -> Union["InboxObject", "OutboxObject"] | None:
+        if self.relates_to_inbox_object_id:
+            return self.relates_to_inbox_object
+        elif self.relates_to_outbox_object_id:
+            return self.relates_to_outbox_object
+        else:
+            return None
+
 
 class OutboxObject(Base, BaseObject):
     __tablename__ = "outbox"
@@ -201,6 +211,15 @@ class OutboxObject(Base, BaseObject):
                 )
             )
         return out
+
+    @property
+    def relates_to_anybox_object(self) -> Union["InboxObject", "OutboxObject"] | None:
+        if self.relates_to_inbox_object_id:
+            return self.relates_to_inbox_object
+        elif self.relates_to_outbox_object_id:
+            return self.relates_to_outbox_object
+        else:
+            return None
 
 
 class Follower(Base):

@@ -1,4 +1,3 @@
-import base64
 import hashlib
 from datetime import datetime
 from typing import Any
@@ -11,6 +10,7 @@ from app import activitypub as ap
 from app.actor import LOCAL_ACTOR
 from app.actor import Actor
 from app.actor import RemoteActor
+from app.media import proxied_media_url
 from app.utils import opengraph
 
 
@@ -64,7 +64,7 @@ class Object:
     def attachments(self) -> list["Attachment"]:
         attachments = []
         for obj in self.ap_object.get("attachment", []):
-            proxied_url = _proxied_url(obj["url"])
+            proxied_url = proxied_media_url(obj["url"])
             attachments.append(
                 Attachment.parse_obj(
                     {
@@ -82,7 +82,7 @@ class Object:
             for link in ap.as_list(self.ap_object.get("url", [])):
                 if (isinstance(link, dict)) and link.get("type") == "Link":
                     if link.get("mediaType", "").startswith("video"):
-                        proxied_url = _proxied_url(link["href"])
+                        proxied_url = proxied_media_url(link["href"])
                         attachments.append(
                             Attachment(
                                 type="Video",
@@ -149,10 +149,6 @@ def _to_camel(string: str) -> str:
 class BaseModel(pydantic.BaseModel):
     class Config:
         alias_generator = _to_camel
-
-
-def _proxied_url(url: str) -> str:
-    return "/proxy/media/" + base64.urlsafe_b64encode(url.encode()).decode()
 
 
 class Attachment(BaseModel):

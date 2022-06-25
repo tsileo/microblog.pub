@@ -52,6 +52,11 @@ from app.uploads import UPLOAD_DIR
 # TODO(ts):
 #
 # Next:
+# - inbox/outbox admin
+# - no counters anymore?
+# - allow to show tags in the menu
+# - support update post with history
+# - inbox/outbox in the admin (as in show every objects)
 # - show likes/announces counter for outbox activities
 # - update actor support
 # - replies support

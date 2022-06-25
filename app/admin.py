@@ -140,6 +140,56 @@ def stream(
     )
 
 
+@router.get("/inbox")
+def admin_inbox(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> templates.TemplateResponse:
+    inbox = (
+        db.query(models.InboxObject)
+        .options(
+            joinedload(models.InboxObject.relates_to_inbox_object),
+            joinedload(models.InboxObject.relates_to_outbox_object),
+        )
+        .order_by(models.InboxObject.ap_published_at.desc())
+        .limit(20)
+        .all()
+    )
+    return templates.render_template(
+        db,
+        request,
+        "admin_inbox.html",
+        {
+            "inbox": inbox,
+        },
+    )
+
+
+@router.get("/outbox")
+def admin_outbox(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> templates.TemplateResponse:
+    outbox = (
+        db.query(models.OutboxObject)
+        .options(
+            joinedload(models.OutboxObject.relates_to_inbox_object),
+            joinedload(models.OutboxObject.relates_to_outbox_object),
+        )
+        .order_by(models.OutboxObject.ap_published_at.desc())
+        .limit(20)
+        .all()
+    )
+    return templates.render_template(
+        db,
+        request,
+        "admin_outbox.html",
+        {
+            "outbox": outbox,
+        },
+    )
+
+
 @router.get("/notifications")
 def get_notifications(
     request: Request, db: Session = Depends(get_db)
