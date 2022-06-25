@@ -223,6 +223,53 @@ def get_notifications(
     )
 
 
+@router.get("/object")
+def admin_object(
+    request: Request,
+    ap_id: str,
+    db: Session = Depends(get_db),
+) -> templates.TemplateResponse:
+    return templates.render_template(
+        db,
+        request,
+        "admin_object.html",
+        {},
+    )
+
+
+@router.get("/profile")
+def admin_profile(
+    request: Request,
+    actor_id: str,
+    db: Session = Depends(get_db),
+) -> templates.TemplateResponse:
+    actor = db.query(models.Actor).filter(models.Actor.ap_id == actor_id).one_or_none()
+    if not actor:
+        raise HTTPException(status_code=404)
+
+    actors_metadata = get_actors_metadata(db, [actor])
+
+    inbox_objects = (
+        db.query(models.InboxObject)
+        .filter(
+            models.InboxObject.actor_id == actor.id,
+            models.InboxObject.ap_type.in_(["Note", "Article", "Video"]),
+        )
+        .all()
+    )
+
+    return templates.render_template(
+        db,
+        request,
+        "admin_profile.html",
+        {
+            "actors_metadata": actors_metadata,
+            "actor": actor,
+            "inbox_objects": inbox_objects,
+        },
+    )
+
+
 @router.post("/actions/follow")
 def admin_actions_follow(
     request: Request,
