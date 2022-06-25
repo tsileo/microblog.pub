@@ -183,8 +183,21 @@ def _has_media_type(attachment: Attachment, media_type_prefix: str) -> bool:
     return attachment.media_type.startswith(media_type_prefix)
 
 
+def _format_date(dt: datetime) -> str:
+    return dt.strftime("%b %d, %Y, %H:%M")
+
+
+def _pluralize(count: int, singular: str = "", plural: str = "s") -> str:
+    if count > 1:
+        return plural
+    else:
+        return singular
+
+
 _templates.env.filters["domain"] = _filter_domain
 _templates.env.filters["media_proxy_url"] = _media_proxy_url
 _templates.env.filters["clean_html"] = _clean_html
 _templates.env.filters["timeago"] = _timeago
+_templates.env.filters["format_date"] = _format_date
 _templates.env.filters["has_media_type"] = _has_media_type
+_templates.env.filters["pluralize"] = _pluralize

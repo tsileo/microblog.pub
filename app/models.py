@@ -114,6 +114,14 @@ class InboxObject(Base, BaseObject):
         else:
             return None
 
+    @property
+    def is_from_db(self) -> bool:
+        return True
+
+    @property
+    def is_from_inbox(self) -> bool:
+        return True
+
 
 class OutboxObject(Base, BaseObject):
     __tablename__ = "outbox"
@@ -220,6 +228,14 @@ class OutboxObject(Base, BaseObject):
             return self.relates_to_outbox_object
         else:
             return None
+
+    @property
+    def is_from_db(self) -> bool:
+        return True
+
+    @property
+    def is_from_outbox(self) -> bool:
+        return True
 
 
 class Follower(Base):

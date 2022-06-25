@@ -48,6 +48,10 @@ class Actor:
         return self.ap_actor["preferredUsername"]
 
     @property
+    def display_name(self) -> str:
+        return self.name or self.preferred_username
+
+    @property
     def handle(self) -> str:
         return _handle(self.ap_actor)
 

@@ -8,13 +8,6 @@
         {{ utils.display_object(outbox_object.relates_to_anybox_object) }}
     {% elif outbox_object.ap_type in ["Article", "Note", "Video"] %}
         {{ utils.display_object(outbox_object) }}
-    {% if outbox_object.liked_via_outbox_object_ap_id %}
-    {{ utils.admin_undo_button(outbox_object.liked_via_outbox_object_ap_id, "Unlike") }}
-    {% else %}
-    {{ utils.admin_like_button(outbox_object.ap_id) }}
-    {% endif %}
-    {{ utils.admin_announce_button(outbox_object.ap_id) }}
-    {{ utils.admin_reply_button(outbox_object.ap_id) }}
 {% else %}
     Implement {{ outbox_object.ap_type }}
 {% endif %}

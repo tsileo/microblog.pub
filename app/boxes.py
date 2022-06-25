@@ -237,6 +237,11 @@ def send_create(
             raise ValueError("Object has no context")
         context = in_reply_to_object.ap_context
 
+        if in_reply_to_object.is_from_outbox:
+            db.query(models.OutboxObject).filter(
+                models.OutboxObject.ap_id == in_reply_to,
+            ).update({"replies_count": models.OutboxObject.replies_count + 1})
+
     for (upload, filename) in uploads:
         attachments.append(upload_to_attachment(upload, filename))
 
@@ -500,6 +505,11 @@ def _handle_create_activity(
     if not isinstance(tags, list):
         logger.info(f"Invalid tags: {tags}")
         return None
+
+    if created_object.in_reply_to and created_object.in_reply_to.startswith(BASE_URL):
+        db.query(models.OutboxObject).filter(
+            models.OutboxObject.ap_id == created_object.in_reply_to,
+        ).update({"replies_count": models.OutboxObject.replies_count + 1})
 
     for tag in tags:
         if tag.get("name") == LOCAL_ACTOR.handle or tag.get("href") == LOCAL_ACTOR.url:

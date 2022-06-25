@@ -5,7 +5,12 @@
 
 {% macro display_replies_tree(replies_tree_node) %}
 
-{{ utils.display_object(replies_tree_node.ap_object) }}
+{% if replies_tree_node.is_requested %}
+    {{ utils.display_object_expanded(replies_tree_node.ap_object) }}
+{% else %}
+    {{ utils.display_object(replies_tree_node.ap_object) }}
+{% endif %}
+
 {% for child in replies_tree_node.children %}
     {{ display_replies_tree(child) }}
 {% endfor %}

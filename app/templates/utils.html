@@ -60,7 +60,6 @@
 {% endmacro %}
 
 {% macro display_actor(actor, actors_metadata) %}
-{{ actors_metadata }}
 {% set metadata = actors_metadata.get(actor.ap_id) %}
 <div style="display: flex;column-gap: 20px;margin:20px 0 10px 0;" class="actor-box">
     <div style="flex: 0 0 48px;">
@@ -71,25 +70,51 @@
         <div>{{ actor.handle }}</div>
     </a>
 </div>
-{% if metadata %}
+{% if is_admin and metadata %}
 <div>
     <nav class="flexbox">
     <ul>
-        <li>
-            {% if metadata.is_following %}already following {{ admin_undo_button(metadata.outbox_follow_ap_id, "Unfollow")}}
-            {% elif metadata.is_follow_request_sent %}follow request sent
+            {% if metadata.is_following %}
+                <li>already following</li>
+                <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "Unfollow")}}</li>
+            {% elif metadata.is_follow_request_sent %}
+                <li>follow request sent</li>
             {% else %}
-            {{ admin_follow_button(actor) }}
+                <li>{{ admin_follow_button(actor) }}</li>
             {% endif %}
-        </li>
-        <li>
-            {% if metadata.is_follower %}follows you{% else %}
+            {% if metadata.is_follower %}
+                <li>follows you</li>
             {% endif %}
         </li>
     </ul>
     </nav>
 </div>
 {% endif %}
+
+{% endmacro %}
+
+{% macro display_object_expanded(object) %}
+
+<div class="activity-expanded">
+
+{{ display_actor(object.actor, {}) }}
+
+<div>
+{{ object.content | clean_html | safe }}
+</div>
+
+<a href="{{ object.url }}">{{ object.ap_published_at | format_date }}</a>
+{{ object.visibility.value }}
+{% if object.is_from_outbox %}
+{{ object.likes_count }} likes
+{% endif %}
+
+{% if object.is_from_outbox %}
+{{ object.announces_count }} shares
+{% endif %}
+
+
+</div>
 
 {% endmacro %}
 
@@ -132,21 +157,57 @@
   </div>
   {% endif %}
   <div class="activity-bar">
+    {% if object.is_from_outbox %}
     <div class="bar-item">
-      <div class="comment-count">33</div>
+        <div class="comment-count">{{ object.likes_count }} like{{ object.likes_count | pluralize }}</div>
     </div>
     
     <div class="bar-item">
-      <div class="retweet-count">397</div>
+        <div class="retweet-count">{{ object.announces_count }} share{{ object.announces_count | pluralize }}</div>
     </div>
-    
+
     <div class="bar-item">
-      <div class="likes-count">
-        2.6k
-      </div>
+        <div class="retweet-count">{{ object.replies_count }} repl{{ object.replies_count | pluralize("y", "ies") }}</div>
     </div>
+
+    {% if is_admin %}
+    <div class="bar-item">
+        {{ admin_reply_button(object.ap_id) }}
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+    {% if object.is_from_inbox %}
+        {% if object.liked_via_outbox_object_ap_id %}
+            <div class="bar-item">
+                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "Unlike") }}
+            </div>
+        {% else %}
+            <div class="bar-item">
+                {{ admin_like_button(object.ap_id) }}
+            </div>
+        {% endif %}
+            <div class="bar-item">
+        {{ admin_announce_button(object.ap_id) }}
+            </div>
+            <div class="bar-item">
+                {{ admin_reply_button(object.ap_id) }}
+            </div>
+
+    {% endif %}
     
   </div>
 </div>
+{% elif object.ap_type == "Follow" %}
+
+    {% if object.is_from_inbox %}
+    <div class="actor-action">
+        {{ object.actor.display_name }} followed you
+        <span>{{ object.ap_published_at | timeago }}</span>
+    </div>
+    {{ display_actor(object.actor, {}) }}
+    {% endif %}
+
 {% endif %}
 {% endmacro %}

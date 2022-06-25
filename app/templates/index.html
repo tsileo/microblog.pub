@@ -4,8 +4,6 @@
 {% include "header.html" %}
 
 {% for outbox_object in objects %}
-{{ outbox_object.likes_count }}
-{{ outbox_object.announces_count }}
 {{ utils.display_object(outbox_object) }}
 {% endfor %}
 

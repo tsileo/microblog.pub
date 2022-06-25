@@ -20,6 +20,14 @@ class Object:
         return False
 
     @property
+    def is_from_outbox(self) -> bool:
+        return False
+
+    @property
+    def is_from_inbox(self) -> bool:
+        return False
+
+    @property
     def ap_type(self) -> str:
         return self.ap_object["type"]
 

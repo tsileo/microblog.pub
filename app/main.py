@@ -59,9 +59,6 @@ from app.uploads import UPLOAD_DIR
 # - inbox/outbox in the admin (as in show every objects)
 # - show likes/announces counter for outbox activities
 # - update actor support
-# - replies support
-# - file upload + place/exif extraction (or not) support
-# - custom emoji support
 # - hash config/profile to detect when to send Update actor
 #
 # - [ ] block support
@@ -72,13 +69,6 @@ from app.uploads import UPLOAD_DIR
 # - [ ] custom emoji
 # - [ ] poll/questions support
 # - [ ] cleanup tasks
-# - notifs:
-#   - MENTIONED
-#   - LIKED
-#   - ANNOUNCED
-#   - FOLLOWED
-#   - UNFOLLOWED
-#   - POLL_ENDED
 
 app = FastAPI(docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

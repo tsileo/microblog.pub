@@ -14,8 +14,8 @@
 </div>
 
 {%- macro header_link(url, text) -%}
-{% set url_for = request.url_for(url) %}
-<a href="{{ url_for }}" {% if request.url == url_for %}class="active"{% endif %}>{{ text }}</a>
+{% set url_for = request.app.router.url_path_for(url) %}
+<a href="{{ url_for }}" {% if request.url.path == url_for %}class="active"{% endif %}>{{ text }}</a>
 {% endmacro %}
 
 <div style="margin:30px 0;">
