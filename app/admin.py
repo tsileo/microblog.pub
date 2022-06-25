@@ -229,11 +229,17 @@ def admin_object(
     ap_id: str,
     db: Session = Depends(get_db),
 ) -> templates.TemplateResponse:
+    requested_object = boxes.get_anybox_object_by_ap_id(db, ap_id)
+    if not requested_object:
+        raise HTTPException(status_code=404)
+
+    replies_tree = boxes.get_replies_tree(db, requested_object)
+
     return templates.render_template(
         db,
         request,
-        "admin_object.html",
-        {},
+        "object.html",
+        {"replies_tree": replies_tree},
     )
 
 

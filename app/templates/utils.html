@@ -66,6 +66,13 @@
 </form> 
 {% endmacro %}
 
+{% macro admin_expand_button(ap_object_id) %}
+<form action="{{ url_for("admin_object") }}"  method="GET">
+<input type="hidden" name="ap_id" value="{{ ap_object_id }}">
+<button type="submit">Expand</button>
+</form> 
+{% endmacro %}
+
 {% macro display_actor(actor, actors_metadata) %}
 {% set metadata = actors_metadata.get(actor.ap_id) %}
 <div style="display: flex;column-gap: 20px;margin:20px 0 10px 0;" class="actor-box">
@@ -204,6 +211,10 @@
             <div class="bar-item">
                 {{ admin_profile_button(object.actor.ap_id) }}
             </div>
+            <div class="bar-item">
+                {{ admin_expand_button(object.ap_id) }}
+            </div>
+
 
     {% endif %}
     
