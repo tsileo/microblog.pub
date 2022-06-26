@@ -234,7 +234,7 @@ def send_create(
     note_id = allocate_outbox_id()
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     context = f"{ID}/contexts/" + uuid.uuid4().hex
-    content, tags = markdownify(db, source)
+    content, tags, mentioned_actors = markdownify(db, source)
     attachments = []
 
     if in_reply_to:
@@ -253,23 +253,20 @@ def send_create(
     for (upload, filename) in uploads:
         attachments.append(upload_to_attachment(upload, filename))
 
-    mentioned_actors = [
-        mention["href"] for mention in tags if mention["type"] == "Mention"
-    ]
-
     to = []
     cc = []
+    mentioned_actor_ap_ids = [actor.ap_id for actor in mentioned_actors]
     if visibility == ap.VisibilityEnum.PUBLIC:
         to = [ap.AS_PUBLIC]
-        cc = [f"{BASE_URL}/followers"] + mentioned_actors
+        cc = [f"{BASE_URL}/followers"] + mentioned_actor_ap_ids
     elif visibility == ap.VisibilityEnum.UNLISTED:
         to = [f"{BASE_URL}/followers"]
-        cc = [ap.AS_PUBLIC] + mentioned_actors
+        cc = [ap.AS_PUBLIC] + mentioned_actor_ap_ids
     elif visibility == ap.VisibilityEnum.FOLLOWERS_ONLY:
         to = [f"{BASE_URL}/followers"]
-        cc = mentioned_actors
+        cc = mentioned_actor_ap_ids
     elif visibility == ap.VisibilityEnum.DIRECT:
-        to = mentioned_actors
+        to = mentioned_actor_ap_ids
         cc = []
     else:
         raise ValueError(f"Unhandled visibility {visibility}")
@@ -326,6 +323,7 @@ def _compute_recipients(db: Session, ap_object: ap.RawObject) -> set[str]:
             _recipients.extend(ap.as_list(ap_object[field]))
 
     recipients = set()
+    logger.info(f"{_recipients}")
     for r in _recipients:
         if r in [ap.AS_PUBLIC, ID]:
             continue
@@ -740,7 +738,7 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                 )
                 db.add(notif)
             else:
-                raise ValueError("Should never happpen")
+                raise ValueError("Should never happen")
 
     else:
         logger.warning(f"Received an unknown {inbox_object.ap_type} object")

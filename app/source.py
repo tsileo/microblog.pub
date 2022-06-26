@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app import webfinger
+from app.actor import Actor
 from app.actor import fetch_actor
 from app.config import BASE_URL
 
@@ -34,9 +35,11 @@ def _hashtagify(db: Session, content: str) -> tuple[str, list[dict[str, str]]]:
 
 
 def _mentionify(
-    db: Session, content: str, hide_domain: bool = False
-) -> tuple[str, list[dict[str, str]]]:
+    db: Session,
+    content: str,
+) -> tuple[str, list[dict[str, str]], list[Actor]]:
     tags = []
+    mentioned_actors = []
     for mention in re.findall(_MENTION_REGEX, content):
         _, username, domain = mention.split("@")
         actor = (
@@ -49,15 +52,12 @@ def _mentionify(
                 continue
             actor = fetch_actor(db, actor_url)
 
+        mentioned_actors.append(actor)
         tags.append(dict(type="Mention", href=actor.url, name=mention))
 
-        d = f"@{domain}"
-        if hide_domain:
-            d = ""
-
-        link = f'<span class="h-card"><a href="{actor.url}" class="u-url mention">@<span>{username}</span>{d}</a></span>'  # noqa: E501
+        link = f'<span class="h-card"><a href="{actor.url}" class="u-url mention">@{username}</a></span>'  # noqa: E501
         content = content.replace(mention, link)
-    return content, tags
+    return content, tags, mentioned_actors
 
 
 def markdownify(
@@ -65,17 +65,18 @@ def markdownify(
     content: str,
     mentionify: bool = True,
     hashtagify: bool = True,
-) -> tuple[str, list[dict[str, str]]]:
+) -> tuple[str, list[dict[str, str]], list[Actor]]:
     """
     >>> content, tags = markdownify("Hello")
 
     """
     tags = []
+    mentioned_actors: list[Actor] = []
     if hashtagify:
         content, hashtag_tags = _hashtagify(db, content)
         tags.extend(hashtag_tags)
     if mentionify:
-        content, mention_tags = _mentionify(db, content)
+        content, mention_tags, mentioned_actors = _mentionify(db, content)
         tags.extend(mention_tags)
     content = markdown(content, extensions=["mdx_linkify"])
-    return content, tags
+    return content, tags, mentioned_actors

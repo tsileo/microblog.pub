@@ -409,8 +409,14 @@ def featured(
 
 
 def _check_outbox_object_acl(
-    db: Session, ap_object: models.OutboxObject, httpsig_info: httpsig.HTTPSigInfo
+    request: Request,
+    db: Session,
+    ap_object: models.OutboxObject,
+    httpsig_info: httpsig.HTTPSigInfo,
 ) -> None:
+    if templates.is_current_user_admin(request):
+        return None
+
     if ap_object.visibility in [
         ap.VisibilityEnum.PUBLIC,
         ap.VisibilityEnum.UNLISTED,
@@ -451,7 +457,7 @@ def outbox_by_public_id(
     if not maybe_object:
         raise HTTPException(status_code=404)
 
-    _check_outbox_object_acl(db, maybe_object, httpsig_info)
+    _check_outbox_object_acl(request, db, maybe_object, httpsig_info)
 
     if is_activitypub_requested(request):
         return ActivityPubResponse(maybe_object.ap_object)
@@ -472,6 +478,7 @@ def outbox_by_public_id(
 @app.get("/o/{public_id}/activity")
 def outbox_activity_by_public_id(
     public_id: str,
+    request: Request,
     db: Session = Depends(get_db),
     httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
@@ -486,7 +493,7 @@ def outbox_activity_by_public_id(
     if not maybe_object:
         raise HTTPException(status_code=404)
 
-    _check_outbox_object_acl(db, maybe_object, httpsig_info)
+    _check_outbox_object_acl(request, db, maybe_object, httpsig_info)
 
     return ActivityPubResponse(ap.wrap_object(maybe_object.ap_object))
 
