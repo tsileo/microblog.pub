@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import bleach
+import html2text
 import timeago  # type: ignore
 from bs4 import BeautifulSoup  # type: ignore
 from fastapi import Request
@@ -30,6 +31,11 @@ from app.utils.highlight import HIGHLIGHT_CSS
 from app.utils.highlight import highlight
 
 _templates = Jinja2Templates(directory="app/templates")
+
+
+H2T = html2text.HTML2Text()
+H2T.ignore_links = True
+H2T.ignore_images = True
 
 
 def _filter_domain(text: str) -> str:
@@ -219,6 +225,10 @@ def _replace_custom_emojis(content: str, note: Object) -> str:
     return content
 
 
+def _html2text(content: str) -> str:
+    return H2T.handle(content)
+
+
 _templates.env.filters["domain"] = _filter_domain
 _templates.env.filters["media_proxy_url"] = _media_proxy_url
 _templates.env.filters["clean_html"] = _clean_html
@@ -226,3 +236,4 @@ _templates.env.filters["timeago"] = _timeago
 _templates.env.filters["format_date"] = _format_date
 _templates.env.filters["has_media_type"] = _has_media_type
 _templates.env.filters["pluralize"] = _pluralize
+_templates.env.filters["html2text"] = _html2text

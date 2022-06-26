@@ -1,5 +1,18 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
+
+{% block head %}
+<link rel="alternate" href="{{ request.url }}" type="application/activity+json">
+<meta name="description" content="{{ outbox_object.content | html2text | trim | truncate(50) }}">
+<meta content="article" property="og:type" />
+<meta content="{{ outbox_object.url }}" property="og:url" />
+<meta content="{{ local_actor.display_name }}'s microblog" property="og:site_name" />
+<meta content="Note" property="og:title" />
+<meta content="{{ outbox_object.content | html2text | trim | truncate(50) }}" property="og:description" />
+<meta content="{{ local_actor.icon_url }}" property="og:image" />
+<meta content="summary" property="twitter:card" />
+{% endblock %}
+
 {% block content %}
 {% include "header.html" %}
 

@@ -1,11 +1,27 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
+
+{% block head %}
+<link rel="alternate" href="{{ local_actor.url }}" title="ActivityPub profile"  type="application/activity+json">
+<meta content="profile" property="og:type" />
+<meta content="{{ local_actor.url }}" property="og:url" />
+<meta content="{{ local_actor.display_name }}'s microblog" property="og:site_name" />
+<meta content="Homepage" property="og:title" />
+<meta content="{{ local_actor.summary | html2text }}" property="og:description" />
+<meta content="{{ local_actor.url }}" property="og:image" />
+<meta content="summary" property="twitter:card" />
+<meta content="{{ local_actor.handle }}" property="profile:username" />
+{% endblock %}
+
 {% block content %}
 {% include "header.html" %}
 
+<div class="h-feed">
+<data class="p-name" value="{{ local_actor.display_name}}'s notes"></data>
 {% for outbox_object in objects %}
 {{ utils.display_object(outbox_object) }}
 {% endfor %}
+</div>
 
 {% if has_previous_page %}
 <a href="{{ url_for("index") }}?page={{ current_page - 1 }}">Previous</a>
