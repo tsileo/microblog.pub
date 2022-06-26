@@ -18,7 +18,6 @@ from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import Attachment
 from app.ap_object import Object
-from app.boxes import public_outbox_objects_count
 from app.config import BASE_URL
 from app.config import DEBUG
 from app.config import VERSION
@@ -93,7 +92,6 @@ def render_template(
             "local_actor": LOCAL_ACTOR,
             "followers_count": db.query(models.Follower).count(),
             "following_count": db.query(models.Following).count(),
-            "objects_count": public_outbox_objects_count(db),
             **template_args,
         },
     )

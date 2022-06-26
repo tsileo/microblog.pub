@@ -1,0 +1,13 @@
+{%- import "utils.html" as utils with context -%}
+{% extends "layout.html" %}
+{% block content %}
+{% include "header.html" %}
+
+<h2>Remotely follow {{ local_actor.display_name }}</h2>
+<form action="{{ url_for("post_remote_follow") }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{remote_follow_csrf_token}}">
+    <input type="text" name="profile" placeholder="you@instance.tld">
+    <input type="submit" value="Follow">
+</form>
+
+{% endblock %}

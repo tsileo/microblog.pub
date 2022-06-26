@@ -11,11 +11,13 @@ import httpx
 from dateutil.parser import isoparse
 from fastapi import Depends
 from fastapi import FastAPI
+from fastapi import Form
 from fastapi import Request
 from fastapi import Response
 from fastapi.exceptions import HTTPException
 from fastapi.responses import FileResponse
 from fastapi.responses import PlainTextResponse
+from fastapi.responses import RedirectResponse
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
@@ -42,10 +44,13 @@ from app.config import DOMAIN
 from app.config import ID
 from app.config import USER_AGENT
 from app.config import USERNAME
+from app.config import generate_csrf_token
 from app.config import is_activitypub_requested
+from app.config import verify_csrf_token
 from app.database import get_db
 from app.templates import is_current_user_admin
 from app.uploads import UPLOAD_DIR
+from app.webfinger import get_remote_follow_template
 
 # TODO(ts):
 #
@@ -458,6 +463,39 @@ async def inbox(
     return Response(status_code=204)
 
 
+@app.get("/remote_follow")
+def get_remote_follow(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> templates.TemplateResponse:
+    return templates.render_template(
+        db,
+        request,
+        "remote_follow.html",
+        {"remote_follow_csrf_token": generate_csrf_token()},
+    )
+
+
+@app.post("/remote_follow")
+def post_remote_follow(
+    request: Request,
+    db: Session = Depends(get_db),
+    csrf_check: None = Depends(verify_csrf_token),
+    profile: str = Form(),
+) -> RedirectResponse:
+    if not profile.startswith("@"):
+        profile = f"@{profile}"
+
+    remote_follow_template = get_remote_follow_template(profile)
+    if not remote_follow_template:
+        raise HTTPException(status_code=404)
+
+    return RedirectResponse(
+        remote_follow_template.format(uri=ID),
+        status_code=302,
+    )
+
+
 @app.get("/.well-known/webfinger")
 def wellknown_webfinger(resource: str) -> JSONResponse:
     """Exposes/servers WebFinger data."""
@@ -476,7 +514,7 @@ def wellknown_webfinger(resource: str) -> JSONResponse:
             {"rel": "self", "type": "application/activity+json", "href": ID},
             {
                 "rel": "http://ostatus.org/schema/1.0/subscribe",
-                "template": DOMAIN + "/authorize_interaction?uri={uri}",
+                "template": BASE_URL + "/admin/lookup?query={uri}",
             },
         ],
     }
