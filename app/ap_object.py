@@ -58,7 +58,7 @@ class Object:
 
     @property
     def visibility(self) -> ap.VisibilityEnum:
-        return ap.object_visibility(self.ap_object)
+        return ap.object_visibility(self.ap_object, self.actor)
 
     @property
     def ap_context(self) -> str | None:
@@ -67,6 +67,10 @@ class Object:
     @property
     def sensitive(self) -> bool:
         return self.ap_object.get("sensitive", False)
+
+    @property
+    def tags(self) -> list[ap.RawObject]:
+        return self.ap_object.get("tag", [])
 
     @property
     def attachments(self) -> list["Attachment"]:

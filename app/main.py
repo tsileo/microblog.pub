@@ -158,24 +158,30 @@ def index(
     request: Request,
     db: Session = Depends(get_db),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
+    page: int | None = None,
 ) -> templates.TemplateResponse | ActivityPubResponse:
     if is_activitypub_requested(request):
         return ActivityPubResponse(LOCAL_ACTOR.ap_actor)
 
+    page = page or 1
+    q = db.query(models.OutboxObject).filter(
+        models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+        models.OutboxObject.is_deleted.is_(False),
+        models.OutboxObject.is_hidden_from_homepage.is_(False),
+    )
+    total_count = q.count()
+    page_size = 2
+    page_offset = (page - 1) * page_size
+
     outbox_objects = (
-        db.query(models.OutboxObject)
-        .options(
+        q.options(
             joinedload(models.OutboxObject.outbox_object_attachments).options(
                 joinedload(models.OutboxObjectAttachment.upload)
             )
         )
-        .filter(
-            models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
-            models.OutboxObject.is_deleted.is_(False),
-            models.OutboxObject.is_hidden_from_homepage.is_(False),
-        )
         .order_by(models.OutboxObject.ap_published_at.desc())
-        .limit(20)
+        .offset(page_offset)
+        .limit(page_size)
         .all()
     )
 
@@ -183,7 +189,13 @@ def index(
         db,
         request,
         "index.html",
-        {"request": request, "objects": outbox_objects},
+        {
+            "request": request,
+            "objects": outbox_objects,
+            "current_page": page,
+            "has_next_page": page_offset + len(outbox_objects) < total_count,
+            "has_previous_page": page > 1,
+        },
     )
 
 
@@ -369,6 +381,33 @@ def outbox(
     )
 
 
+@app.get("/featured")
+def featured(
+    db: Session = Depends(get_db),
+    _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
+) -> ActivityPubResponse:
+    outbox_objects = (
+        db.query(models.OutboxObject)
+        .filter(
+            models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+            models.OutboxObject.is_deleted.is_(False),
+            models.OutboxObject.is_pinned.is_(True),
+        )
+        .order_by(models.OutboxObject.ap_published_at.desc())
+        .limit(5)
+        .all()
+    )
+    return ActivityPubResponse(
+        {
+            "@context": DEFAULT_CTX,
+            "id": f"{ID}/featured",
+            "type": "OrderedCollection",
+            "totalItems": len(outbox_objects),
+            "orderedItems": [ap.remove_context(a.ap_object) for a in outbox_objects],
+        }
+    )
+
+
 @app.get("/o/{public_id}")
 def outbox_by_public_id(
     public_id: str,
@@ -499,7 +538,10 @@ def post_remote_follow(
 @app.get("/.well-known/webfinger")
 def wellknown_webfinger(resource: str) -> JSONResponse:
     """Exposes/servers WebFinger data."""
+    omg = f"acct:{USERNAME}@{DOMAIN}"
+    logger.info(f"{resource == omg}/{resource}/{omg}/{len(resource)}/{len(omg)}")
     if resource not in [f"acct:{USERNAME}@{DOMAIN}", ID]:
+        logger.info(f"Got invalid req for {resource}")
         raise HTTPException(status_code=404)
 
     out = {
@@ -651,6 +693,8 @@ def serve_proxy_media_resized(
     try:
         out = BytesIO(proxy_resp.content)
         i = Image.open(out)
+        if i.is_animated:
+            raise ValueError
         i.thumbnail((size, size))
         resized_buf = BytesIO()
         i.save(resized_buf, format=i.format)
@@ -658,6 +702,11 @@ def serve_proxy_media_resized(
         return PlainTextResponse(
             resized_buf.read(),
             media_type=i.get_format_mimetype(),  # type: ignore
+            headers=proxy_resp_headers,
+        )
+    except ValueError:
+        return PlainTextResponse(
+            proxy_resp.content,
             headers=proxy_resp_headers,
         )
     except Exception:

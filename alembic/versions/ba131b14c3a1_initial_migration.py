@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: 714b4a5307c7
+Revision ID: ba131b14c3a1
 Revises: 
-Create Date: 2022-06-23 18:42:56.009810
+Create Date: 2022-06-26 14:36:44.107422
 
 """
 import sqlalchemy as sa
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '714b4a5307c7'
+revision = 'ba131b14c3a1'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -81,10 +81,13 @@ def upgrade() -> None:
     sa.Column('replies_count', sa.Integer(), nullable=False),
     sa.Column('webmentions', sa.JSON(), nullable=True),
     sa.Column('og_meta', sa.JSON(), nullable=True),
+    sa.Column('is_pinned', sa.Boolean(), nullable=False),
     sa.Column('is_deleted', sa.Boolean(), nullable=False),
     sa.Column('relates_to_inbox_object_id', sa.Integer(), nullable=True),
     sa.Column('relates_to_outbox_object_id', sa.Integer(), nullable=True),
+    sa.Column('relates_to_actor_id', sa.Integer(), nullable=True),
     sa.Column('undone_by_outbox_object_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['relates_to_actor_id'], ['actor.id'], ),
     sa.ForeignKeyConstraint(['relates_to_inbox_object_id'], ['inbox.id'], ),
     sa.ForeignKeyConstraint(['relates_to_outbox_object_id'], ['outbox.id'], ),
     sa.ForeignKeyConstraint(['undone_by_outbox_object_id'], ['outbox.id'], ),

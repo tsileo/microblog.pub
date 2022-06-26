@@ -10,7 +10,14 @@
 <form action="{{ request.url_for("admin_actions_new") }}" enctype="multipart/form-data" method="POST">
     {{ utils.embed_csrf_token() }}
     {{ utils.embed_redirect_url() }}
-    <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;"></textarea>
+    <p>
+    <select name="visibility">
+        {% for (k, v) in visibility_enum %}
+        <option value="{{ k }}">{{ v }}</option>
+        {% endfor %}
+    </select>
+    </p>
+    <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;">{{ content }}</textarea>
     <input type="hidden" name="in_reply_to" value="{{ request.query_params.in_reply_to }}">
     <p>
         <input name="files" type="file" multiple>

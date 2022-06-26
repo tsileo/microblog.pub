@@ -156,6 +156,9 @@ class OutboxObject(Base, BaseObject):
 
     og_meta: Mapped[list[dict[str, Any]] | None] = Column(JSON, nullable=True)
 
+    # For the featured collection
+    is_pinned = Column(Boolean, nullable=False, default=False)
+
     # Never actually delete from the outbox
     is_deleted = Column(Boolean, nullable=False, default=False)
 
@@ -179,6 +182,17 @@ class OutboxObject(Base, BaseObject):
         "OutboxObject",
         foreign_keys=[relates_to_outbox_object_id],
         remote_side=id,
+        uselist=False,
+    )
+    # For Follow activies
+    relates_to_actor_id = Column(
+        Integer,
+        ForeignKey("actor.id"),
+        nullable=True,
+    )
+    relates_to_actor: Mapped[Optional["Actor"]] = relationship(
+        "Actor",
+        foreign_keys=[relates_to_actor_id],
         uselist=False,
     )
 

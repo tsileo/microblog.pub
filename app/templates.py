@@ -163,11 +163,14 @@ def _update_inline_imgs(content):
 
 def _clean_html(html: str, note: Object) -> str:
     try:
-        return bleach.clean(
-            _replace_custom_emojis(_update_inline_imgs(highlight(html)), note),
-            tags=ALLOWED_TAGS,
-            attributes=ALLOWED_ATTRIBUTES,
-            strip=True,
+        return _replace_custom_emojis(
+            bleach.clean(
+                _update_inline_imgs(highlight(html)),
+                tags=ALLOWED_TAGS,
+                attributes=ALLOWED_ATTRIBUTES,
+                strip=True,
+            ),
+            note,
         )
     except Exception:
         raise
@@ -197,7 +200,7 @@ def _pluralize(count: int, singular: str = "", plural: str = "s") -> str:
 
 def _replace_custom_emojis(content: str, note: Object) -> str:
     idx = {}
-    for tag in note.ap_object.get("tag", []):
+    for tag in note.tags:
         if tag.get("type") == "Emoji":
             try:
                 idx[tag["name"]] = proxied_media_url(tag["icon"]["url"])

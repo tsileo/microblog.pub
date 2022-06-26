@@ -43,6 +43,7 @@ def save_outbox_object(
     raw_object: ap.RawObject,
     relates_to_inbox_object_id: int | None = None,
     relates_to_outbox_object_id: int | None = None,
+    relates_to_actor_id: int | None = None,
     source: str | None = None,
 ) -> models.OutboxObject:
     ra = RemoteObject(raw_object)
@@ -57,6 +58,7 @@ def save_outbox_object(
         og_meta=ra.og_meta,
         relates_to_inbox_object_id=relates_to_inbox_object_id,
         relates_to_outbox_object_id=relates_to_outbox_object_id,
+        relates_to_actor_id=relates_to_actor_id,
         activity_object_ap_id=ra.activity_object_ap_id,
         is_hidden_from_homepage=True if ra.in_reply_to else False,
     )
@@ -136,7 +138,9 @@ def send_follow(db: Session, ap_actor_id: str) -> None:
         "object": ap_actor_id,
     }
 
-    outbox_object = save_outbox_object(db, follow_id, follow)
+    outbox_object = save_outbox_object(
+        db, follow_id, follow, relates_to_actor_id=actor.id
+    )
     if not outbox_object.id:
         raise ValueError("Should never happen")
 
@@ -224,6 +228,7 @@ def send_create(
     source: str,
     uploads: list[tuple[models.Upload, str]],
     in_reply_to: str | None,
+    visibility: ap.VisibilityEnum,
 ) -> str:
     note_id = allocate_outbox_id()
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -247,14 +252,33 @@ def send_create(
     for (upload, filename) in uploads:
         attachments.append(upload_to_attachment(upload, filename))
 
+    mentioned_actors = [
+        mention["href"] for mention in tags if mention["type"] == "Mention"
+    ]
+
+    to = []
+    cc = []
+    if visibility == ap.VisibilityEnum.PUBLIC:
+        to = [ap.AS_PUBLIC]
+        cc = [f"{BASE_URL}/followers"] + mentioned_actors
+    elif visibility == ap.VisibilityEnum.UNLISTED:
+        to = [f"{BASE_URL}/followers"]
+        cc = [ap.AS_PUBLIC] + mentioned_actors
+    elif visibility == ap.VisibilityEnum.FOLLOWERS_ONLY:
+        to = [f"{BASE_URL}/followers"]
+        cc = mentioned_actors
+    elif visibility == ap.VisibilityEnum.DIRECT:
+        to = mentioned_actors
+        cc = []
+
     note = {
         "@context": ap.AS_CTX,
         "type": "Note",
         "id": outbox_object_id(note_id),
         "attributedTo": ID,
         "content": content,
-        "to": [ap.AS_PUBLIC],
-        "cc": [f"{BASE_URL}/followers"],
+        "to": to,
+        "cc": cc,
         "published": published,
         "context": context,
         "conversation": context,

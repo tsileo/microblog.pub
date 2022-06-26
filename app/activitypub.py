@@ -1,6 +1,7 @@
 import enum
 import json
 import mimetypes
+from typing import TYPE_CHECKING
 from typing import Any
 
 import httpx
@@ -9,6 +10,9 @@ from app import config
 from app.config import AP_CONTENT_TYPE  # noqa: F401
 from app.httpsig import auth
 from app.key import get_pubkey_as_pem
+
+if TYPE_CHECKING:
+    from app.actor import Actor
 
 RawObject = dict[str, Any]
 AS_CTX = "https://www.w3.org/ns/activitystreams"
@@ -24,7 +28,17 @@ class ObjectIsGoneError(Exception):
 class VisibilityEnum(str, enum.Enum):
     PUBLIC = "public"
     UNLISTED = "unlisted"
+    FOLLOWERS_ONLY = "followers-only"
     DIRECT = "direct"
+
+    @staticmethod
+    def get_display_name(key: "VisibilityEnum") -> str:
+        return {
+            VisibilityEnum.PUBLIC: "Public - sent to followers and visible on the homepage",  # noqa: E501
+            VisibilityEnum.UNLISTED: "Unlisted - like public, but hidden from the homepage",  # noqa: E501,
+            VisibilityEnum.FOLLOWERS_ONLY: "Followers only",
+            VisibilityEnum.DIRECT: "Direct - only visible for mentioned actors",
+        }[key]
 
 
 MICROBLOGPUB = {
@@ -70,7 +84,7 @@ ME = {
     "id": config.ID,
     "following": config.BASE_URL + "/following",
     "followers": config.BASE_URL + "/followers",
-    # "featured": ID + "/featured",
+    "featured": config.BASE_URL + "/featured",
     "inbox": config.BASE_URL + "/inbox",
     "outbox": config.BASE_URL + "/outbox",
     "preferredUsername": config.USERNAME,
@@ -198,13 +212,15 @@ def get_id(val: str | dict[str, Any]) -> str:
     return val
 
 
-def object_visibility(ap_activity: RawObject) -> VisibilityEnum:
+def object_visibility(ap_activity: RawObject, actor: "Actor") -> VisibilityEnum:
     to = as_list(ap_activity.get("to", []))
     cc = as_list(ap_activity.get("cc", []))
     if AS_PUBLIC in to:
         return VisibilityEnum.PUBLIC
     elif AS_PUBLIC in cc:
         return VisibilityEnum.UNLISTED
+    elif actor.followers_collection_id in to + cc:
+        return VisibilityEnum.FOLLOWERS_ONLY
     else:
         return VisibilityEnum.DIRECT
 

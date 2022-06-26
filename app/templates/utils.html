@@ -42,6 +42,24 @@
 </form>
 {% endmacro %}
 
+{% macro admin_pin_button(ap_object_id) %}
+<form action="{{ request.url_for("admin_actions_pin") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
+    <input type="submit" value="Pin">
+</form>
+{% endmacro %}
+
+{% macro admin_unpin_button(ap_object_id) %}
+<form action="{{ request.url_for("admin_actions_unpin") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
+    <input type="submit" value="Unpin">
+</form>
+{% endmacro %}
+
 {% macro admin_announce_button(ap_object_id) %}
 <form action="{{ request.url_for("admin_actions_announce") }}" method="POST">
     {{ embed_csrf_token() }}
@@ -98,7 +116,7 @@
         <img src="{{ actor.resized_icon_url }}" style="max-width:45px;">
     </div>
     <a href="{{ actor.url }}" style="">
-        <div><strong>{{ actor.name or actor.preferred_username }}</strong></div>
+        <div><strong>{{ actor.display_name | clean_html(actor) | safe  }}</strong></div>
         <div>{{ actor.handle }}</div>
     </a>
 </div>
@@ -156,7 +174,7 @@
   <div class="activity-content">
       <img src="{{ object.actor.resized_icon_url }}" alt="" class="actor-icon">
     <div class="activity-header">
-        <strong>{{ object.actor.name or object.actor.preferred_username }}</strong>
+        <strong>{{ object.actor.display_name }}</strong>
         <span>{{ object.actor.handle }}</span>
         <span class="activity-date" title="{{ object.ap_published_at.isoformat() }}">
             {{ object.visibility.value }}
@@ -206,8 +224,14 @@
     <div class="bar-item">
         {{ admin_reply_button(object.ap_id) }}
     </div>
+    <div class="bar-item">
+        {% if object.is_pinned %}
+            {{ admin_unpin_button(object.ap_id) }}
+        {% else %}
+            {{ admin_pin_button(object.ap_id) }}
+        {% endif %}
+    </div>
     {% endif %}
-
     {% endif %}
 
     {% if object.is_from_inbox %}

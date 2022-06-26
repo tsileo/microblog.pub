@@ -7,6 +7,12 @@
 {{ utils.display_object(outbox_object) }}
 {% endfor %}
 
+{% if has_previous_page %}
+<a href="{{ url_for("index") }}?page={{ current_page - 1 }}">Previous</a>
+{% endif %}
 
+{% if has_next_page %}
+<a href="{{ url_for("index") }}?page={{ current_page + 1 }}">Next</a>
+{% endif %}
 
 {% endblock %}

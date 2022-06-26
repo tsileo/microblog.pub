@@ -13,8 +13,10 @@ from app import activitypub as ap
 from app import boxes
 from app import models
 from app import templates
+from app.actor import LOCAL_ACTOR
 from app.actor import get_actors_metadata
 from app.boxes import get_inbox_object_by_ap_id
+from app.boxes import get_outbox_object_by_ap_id
 from app.boxes import send_follow
 from app.config import generate_csrf_token
 from app.config import session_serializer
@@ -96,17 +98,32 @@ def admin_new(
     in_reply_to: str | None = None,
     db: Session = Depends(get_db),
 ) -> templates.TemplateResponse:
+    content = ""
     in_reply_to_object = None
     if in_reply_to:
         in_reply_to_object = boxes.get_anybox_object_by_ap_id(db, in_reply_to)
+
+        # Add mentions to the initial note content
         if not in_reply_to_object:
             raise ValueError(f"Unknown object {in_reply_to=}")
+        if in_reply_to_object.actor.ap_id != LOCAL_ACTOR.ap_id:
+            content += f"{in_reply_to_object.actor.handle} "
+        for tag in in_reply_to_object.tags:
+            if tag.get("type") == "Mention" and tag["name"] != LOCAL_ACTOR.handle:
+                content += f'{tag["name"]} '
 
     return templates.render_template(
         db,
         request,
         "admin_new.html",
-        {"in_reply_to_object": in_reply_to_object},
+        {
+            "in_reply_to_object": in_reply_to_object,
+            "content": content,
+            "visibility_enum": [
+                (v.name, ap.VisibilityEnum.get_display_name(v))
+                for v in ap.VisibilityEnum
+            ],
+        },
     )
 
 
@@ -194,24 +211,39 @@ def admin_inbox(
 
 @router.get("/outbox")
 def admin_outbox(
-    request: Request,
-    db: Session = Depends(get_db),
+    request: Request, db: Session = Depends(get_db), filter_by: str | None = None
 ) -> templates.TemplateResponse:
+    q = db.query(models.OutboxObject).filter(
+        models.OutboxObject.ap_type.not_in(["Accept"])
+    )
+    if filter_by:
+        q = q.filter(models.OutboxObject.ap_type == filter_by)
+
     outbox = (
-        db.query(models.OutboxObject)
-        .options(
+        q.options(
             joinedload(models.OutboxObject.relates_to_inbox_object),
             joinedload(models.OutboxObject.relates_to_outbox_object),
+            joinedload(models.OutboxObject.relates_to_actor),
         )
         .order_by(models.OutboxObject.ap_published_at.desc())
         .limit(20)
         .all()
     )
+    actors_metadata = get_actors_metadata(
+        db,
+        [
+            outbox_object.relates_to_actor
+            for outbox_object in outbox
+            if outbox_object.relates_to_actor
+        ],
+    )
+
     return templates.render_template(
         db,
         request,
         "admin_outbox.html",
         {
+            "actors_metadata": actors_metadata,
             "outbox": outbox,
         },
     )
@@ -288,6 +320,7 @@ def admin_profile(
             models.InboxObject.actor_id == actor.id,
             models.InboxObject.ap_type.in_(["Note", "Article", "Video"]),
         )
+        .order_by(models.InboxObject.ap_published_at.desc())
         .all()
     )
 
@@ -384,6 +417,38 @@ def admin_actions_unbookmark(
     return RedirectResponse(redirect_url, status_code=302)
 
 
+@router.post("/actions/pin")
+def admin_actions_pin(
+    request: Request,
+    ap_object_id: str = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    outbox_object = get_outbox_object_by_ap_id(db, ap_object_id)
+    if not outbox_object:
+        raise ValueError("Should never happen")
+    outbox_object.is_pinned = True
+    db.commit()
+    return RedirectResponse(redirect_url, status_code=302)
+
+
+@router.post("/actions/unpin")
+def admin_actions_unpin(
+    request: Request,
+    ap_object_id: str = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    outbox_object = get_outbox_object_by_ap_id(db, ap_object_id)
+    if not outbox_object:
+        raise ValueError("Should never happen")
+    outbox_object.is_pinned = False
+    db.commit()
+    return RedirectResponse(redirect_url, status_code=302)
+
+
 @router.post("/actions/new")
 def admin_actions_new(
     request: Request,
@@ -391,6 +456,7 @@ def admin_actions_new(
     content: str = Form(),
     redirect_url: str = Form(),
     in_reply_to: str | None = Form(None),
+    visibility: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -405,6 +471,7 @@ def admin_actions_new(
         source=content,
         uploads=uploads,
         in_reply_to=in_reply_to or None,
+        visibility=ap.VisibilityEnum[visibility],
     )
     return RedirectResponse(
         request.url_for("outbox_by_public_id", public_id=public_id),

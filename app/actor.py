@@ -97,6 +97,14 @@ class Actor:
         else:
             return "/static/nopic.png"
 
+    @property
+    def tags(self) -> list[ap.RawObject]:
+        return self.ap_actor.get("tag", [])
+
+    @property
+    def followers_collection_id(self) -> str:
+        return self.ap_actor["followers"]
+
 
 class RemoteActor(Actor):
     def __init__(self, ap_actor: ap.RawObject) -> None:
