@@ -10,12 +10,14 @@ import timeago  # type: ignore
 from bs4 import BeautifulSoup  # type: ignore
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
+from loguru import logger
 from sqlalchemy.orm import Session
 from starlette.templating import _TemplateResponse as TemplateResponse
 
 from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import Attachment
+from app.ap_object import Object
 from app.boxes import public_outbox_objects_count
 from app.config import BASE_URL
 from app.config import DEBUG
@@ -23,6 +25,7 @@ from app.config import VERSION
 from app.config import generate_csrf_token
 from app.config import session_serializer
 from app.database import now
+from app.media import proxied_media_url
 from app.utils.highlight import HIGHLIGHT_CSS
 from app.utils.highlight import highlight
 
@@ -160,10 +163,10 @@ def _update_inline_imgs(content):
     return soup.find("body").decode_contents()
 
 
-def _clean_html(html: str) -> str:
+def _clean_html(html: str, note: Object) -> str:
     try:
         return bleach.clean(
-            _update_inline_imgs(highlight(html)),
+            _replace_custom_emojis(_update_inline_imgs(highlight(html)), note),
             tags=ALLOWED_TAGS,
             attributes=ALLOWED_ATTRIBUTES,
             strip=True,
@@ -192,6 +195,25 @@ def _pluralize(count: int, singular: str = "", plural: str = "s") -> str:
         return plural
     else:
         return singular
+
+
+def _replace_custom_emojis(content: str, note: Object) -> str:
+    idx = {}
+    for tag in note.ap_object.get("tag", []):
+        if tag.get("type") == "Emoji":
+            try:
+                idx[tag["name"]] = proxied_media_url(tag["icon"]["url"])
+            except KeyError:
+                logger.warning(f"Failed to parse custom emoji {tag=}")
+                continue
+
+    for emoji_name, emoji_url in idx.items():
+        content = content.replace(
+            emoji_name,
+            f'<img class="custom-emoji" src="{emoji_url}" title="{emoji_name}" alt="{emoji_name}">',  # noqa: E501
+        )
+
+    return content
 
 
 _templates.env.filters["domain"] = _filter_domain

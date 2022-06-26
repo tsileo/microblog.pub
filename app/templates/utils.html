@@ -114,7 +114,7 @@
 {{ display_actor(object.actor, {}) }}
 
 <div>
-{{ object.content | clean_html | safe }}
+{{ object.content | clean_html(object) | safe }}
 </div>
 
 <a href="{{ object.url }}">{{ object.ap_published_at | format_date }}</a>
@@ -145,7 +145,7 @@
             <a href="{{ object.url }}">{{ object.ap_published_at | timeago }}</a>
         </span>
         <div class="activity-main">
-            {{ object.content | clean_html | safe }}
+            {{ object.content | clean_html(object) | safe }}
         </div>
     </div>
   </div>

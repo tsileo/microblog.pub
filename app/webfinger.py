@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 import httpx
 from loguru import logger
 
-from app import activitypub as ap
+from app import config
 
 
 def webfinger(
@@ -31,7 +31,13 @@ def webfinger(
     for i, proto in enumerate(protos):
         try:
             url = f"{proto}://{host}/.well-known/webfinger"
-            resp = ap.get(url, params={"resource": resource})
+            resp = httpx.get(
+                url,
+                params={"resource": resource},
+                headers={
+                    "User-Agent": config.USER_AGENT,
+                },
+            )
             break
         except httpx.HTTPStatusError as http_error:
             logger.exception("HTTP error")
@@ -48,7 +54,7 @@ def webfinger(
     if is_404:
         return None
 
-    return resp
+    return resp.json()
 
 
 def get_remote_follow_template(resource: str) -> str | None:
