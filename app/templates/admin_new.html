@@ -12,8 +12,8 @@
     {{ utils.embed_redirect_url() }}
     <p>
     <select name="visibility">
-        {% for (k, v) in visibility_enum %}
-        <option value="{{ k }}">{{ v }}</option>
+        {% for (k, v) in visibility_choices %}
+        <option value="{{ k }}" {% if in_reply_to_object and in_reply_to_object.visibility.name == k %}selected{% endif %}>{{ v }}</option>
         {% endfor %}
     </select>
     </p>

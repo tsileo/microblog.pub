@@ -60,12 +60,12 @@
 </form>
 {% endmacro %}
 
-{% macro admin_announce_button(ap_object_id) %}
+{% macro admin_announce_button(ap_object_id, disabled=False) %}
 <form action="{{ request.url_for("admin_actions_announce") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
-    <input type="submit" value="Share">
+    <input type="submit" value="Share" {% if disabled %}title="Cannot share non-public content" disabled{% endif %}>
 </form>
 {% endmacro %}
 
@@ -253,7 +253,7 @@
             {% if object.announced_via_outbox_object_ap_id %}
                 {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "Unshare") }}
             {% else %}
-                {{ admin_announce_button(object.ap_id) }}
+                {{ admin_announce_button(object.ap_id, disabled=object.visibility not in [visibility_enum.PUBLIC, visibility_enum.UNLISTED]) }}
             {% endif %}
             </div>
             <div class="bar-item">

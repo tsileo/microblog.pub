@@ -408,14 +408,33 @@ def featured(
     )
 
 
+def _check_outbox_object_acl(
+    db: Session, ap_object: models.OutboxObject, httpsig_info: httpsig.HTTPSigInfo
+) -> None:
+    if ap_object.visibility in [
+        ap.VisibilityEnum.PUBLIC,
+        ap.VisibilityEnum.UNLISTED,
+    ]:
+        return None
+    elif ap_object.visibility == ap.VisibilityEnum.FOLLOWERS_ONLY:
+        followers = boxes.fetch_actor_collection(db, BASE_URL + "/followers")
+        if httpsig_info.signed_by_ap_actor_id in [actor.ap_id for actor in followers]:
+            return None
+    elif ap_object.visibility == ap.VisibilityEnum.DIRECT:
+        audience = ap_object.ap_object.get("to", []) + ap_object.ap_object.get("cc", [])
+        if httpsig_info.signed_by_ap_actor_id in audience:
+            return None
+
+    raise HTTPException(status_code=404)
+
+
 @app.get("/o/{public_id}")
 def outbox_by_public_id(
     public_id: str,
     request: Request,
     db: Session = Depends(get_db),
-    _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
+    httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
-    # TODO: ACL?
     maybe_object = (
         db.query(models.OutboxObject)
         .options(
@@ -431,6 +450,8 @@ def outbox_by_public_id(
     )
     if not maybe_object:
         raise HTTPException(status_code=404)
+
+    _check_outbox_object_acl(db, maybe_object, httpsig_info)
 
     if is_activitypub_requested(request):
         return ActivityPubResponse(maybe_object.ap_object)
@@ -452,9 +473,8 @@ def outbox_by_public_id(
 def outbox_activity_by_public_id(
     public_id: str,
     db: Session = Depends(get_db),
-    _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
+    httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
-    # TODO: ACL?
     maybe_object = (
         db.query(models.OutboxObject)
         .filter(
@@ -465,6 +485,8 @@ def outbox_activity_by_public_id(
     )
     if not maybe_object:
         raise HTTPException(status_code=404)
+
+    _check_outbox_object_acl(db, maybe_object, httpsig_info)
 
     return ActivityPubResponse(ap.wrap_object(maybe_object.ap_object))
 

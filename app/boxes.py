@@ -15,6 +15,7 @@ from app import activitypub as ap
 from app import config
 from app import models
 from app.actor import LOCAL_ACTOR
+from app.actor import Actor
 from app.actor import RemoteActor
 from app.actor import fetch_actor
 from app.actor import save_actor
@@ -270,6 +271,8 @@ def send_create(
     elif visibility == ap.VisibilityEnum.DIRECT:
         to = mentioned_actors
         cc = []
+    else:
+        raise ValueError(f"Unhandled visibility {visibility}")
 
     note = {
         "@context": ap.AS_CTX,
@@ -329,8 +332,7 @@ def _compute_recipients(db: Session, ap_object: ap.RawObject) -> set[str]:
 
         # If we got a local collection, assume it's a collection of actors
         if r.startswith(BASE_URL):
-            for raw_actor in fetch_collection(db, r):
-                actor = RemoteActor(raw_actor)
+            for actor in fetch_actor_collection(db, r):
                 recipients.add(actor.shared_inbox_url or actor.inbox_url)
 
             continue
@@ -757,15 +759,15 @@ def public_outbox_objects_count(db: Session) -> int:
     )
 
 
-def fetch_collection(db: Session, url: str) -> list[ap.RawObject]:
+def fetch_actor_collection(db: Session, url: str) -> list[Actor]:
     if url.startswith(config.BASE_URL):
         if url == config.BASE_URL + "/followers":
             q = db.query(models.Follower).options(joinedload(models.Follower.actor))
-            return [follower.actor.ap_actor for follower in q.all()]
+            return [follower.actor for follower in q.all()]
         else:
             raise ValueError(f"internal collection for {url}) not supported")
 
-    return ap.parse_collection(url)
+    return [RemoteActor(actor) for actor in ap.parse_collection(url)]
 
 
 @dataclass

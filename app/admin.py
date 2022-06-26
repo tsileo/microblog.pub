@@ -119,7 +119,7 @@ def admin_new(
         {
             "in_reply_to_object": in_reply_to_object,
             "content": content,
-            "visibility_enum": [
+            "visibility_choices": [
                 (v.name, ap.VisibilityEnum.get_display_name(v))
                 for v in ap.VisibilityEnum
             ],

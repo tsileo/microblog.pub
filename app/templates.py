@@ -14,6 +14,7 @@ from loguru import logger
 from sqlalchemy.orm import Session
 from starlette.templating import _TemplateResponse as TemplateResponse
 
+from app import activitypub as ap
 from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import Attachment
@@ -84,6 +85,7 @@ def render_template(
             "is_admin": is_admin,
             "csrf_token": generate_csrf_token() if is_admin else None,
             "highlight_css": HIGHLIGHT_CSS,
+            "visibility_enum": ap.VisibilityEnum,
             "notifications_count": db.query(models.Notification)
             .filter(models.Notification.is_new.is_(True))
             .count()
