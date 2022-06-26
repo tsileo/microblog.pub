@@ -2,8 +2,8 @@
 {% extends "layout.html" %}
 {% block content %}
 
-In reply to:
 {% if in_reply_to_object %}
+<p>In reply to:</p>
 {{ utils.display_object(in_reply_to_object) }}
 {% endif %}
 
@@ -12,8 +12,12 @@ In reply to:
     {{ utils.embed_redirect_url() }}
     <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;"></textarea>
     <input type="hidden" name="in_reply_to" value="{{ request.query_params.in_reply_to }}">
-    <input name="files" type="file" multiple>
-    <input type="submit" value="Publish">
+    <p>
+        <input name="files" type="file" multiple>
+    </p>
+    <p>
+        <input type="submit" value="Publish">
+    </p>
 </form>
 
 {% endblock %}

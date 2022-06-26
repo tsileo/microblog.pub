@@ -1,11 +1,13 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
 {% block content %}
+
+    <p>Interact with an ActivityPub object via its URL or look for a user using <i>@user@domain.tld</i></p>
+
     <form action="{{ url_for("get_lookup") }}" method="GET">
         <input type="text" name="query" value="{{ query if query else "" }}">
         <input type="submit" value="Lookup">
     </form>
-    {{ actors_metadata }}
     {% if ap_object and ap_object.ap_type == "Person" %}
     {{ utils.display_actor(ap_object, actors_metadata) }}
     {% elif ap_object %}

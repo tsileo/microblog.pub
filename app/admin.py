@@ -140,6 +140,33 @@ def stream(
     )
 
 
+@router.get("/bookmarks")
+def admin_bookmarks(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> templates.TemplateResponse:
+    stream = (
+        db.query(models.InboxObject)
+        .filter(
+            models.InboxObject.ap_type.in_(["Note", "Article", "Video", "Announce"]),
+            models.InboxObject.is_hidden_from_stream.is_(False),
+            models.InboxObject.undone_by_inbox_object_id.is_(None),
+            models.InboxObject.is_bookmarked.is_(True),
+        )
+        .order_by(models.InboxObject.ap_published_at.desc())
+        .limit(20)
+        .all()
+    )
+    return templates.render_template(
+        db,
+        request,
+        "admin_stream.html",
+        {
+            "stream": stream,
+        },
+    )
+
+
 @router.get("/inbox")
 def admin_inbox(
     request: Request,
@@ -337,6 +364,22 @@ def admin_actions_bookmark(
     if not inbox_object:
         raise ValueError("Should never happen")
     inbox_object.is_bookmarked = True
+    db.commit()
+    return RedirectResponse(redirect_url, status_code=302)
+
+
+@router.post("/actions/unbookmark")
+def admin_actions_unbookmark(
+    request: Request,
+    ap_object_id: str = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    inbox_object = get_inbox_object_by_ap_id(db, ap_object_id)
+    if not inbox_object:
+        raise ValueError("Should never happen")
+    inbox_object.is_bookmarked = False
     db.commit()
     return RedirectResponse(redirect_url, status_code=302)
 
