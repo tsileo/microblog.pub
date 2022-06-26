@@ -617,6 +617,14 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                     "Received an Accept for an unsupported activity: "
                     f"{relates_to_outbox_object.ap_type}"
                 )
+    elif ra.ap_type == "EmojiReact":
+        if not relates_to_outbox_object:
+            logger.info(
+                f"Received a like for an unknown activity: {ra.activity_object_ap_id}"
+            )
+        else:
+            # TODO(ts): support reactions
+            pass
     elif ra.ap_type == "Like":
         if not relates_to_outbox_object:
             logger.info(

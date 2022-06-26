@@ -150,6 +150,7 @@ class OutboxObject(Base, BaseObject):
     likes_count = Column(Integer, nullable=False, default=0)
     announces_count = Column(Integer, nullable=False, default=0)
     replies_count = Column(Integer, nullable=False, default=0)
+    # reactions: Mapped[list[dict[str, Any]] | None] = Column(JSON, nullable=True)
 
     webmentions = Column(JSON, nullable=True)
 
