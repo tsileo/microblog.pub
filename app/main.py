@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from datetime import timezone
 from io import BytesIO
 from typing import Any
 from typing import Type
@@ -20,6 +21,7 @@ from fastapi.responses import PlainTextResponse
 from fastapi.responses import RedirectResponse
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from feedgen.feed import FeedGenerator  # type: ignore
 from loguru import logger
 from PIL import Image
 from sqlalchemy.orm import Session
@@ -796,3 +798,100 @@ async def robots_file():
 Disallow: /followers
 Disallow: /following
 Disallow: /admin"""
+
+
+def _get_outbox_for_feed(db: Session) -> list[models.OutboxObject]:
+    return (
+        db.query(models.OutboxObject)
+        .filter(
+            models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+            models.OutboxObject.is_deleted.is_(False),
+            models.OutboxObject.ap_type.in_(["Note", "Article", "Video"]),
+        )
+        .order_by(models.OutboxObject.ap_published_at.desc())
+        .limit(20)
+        .all()
+    )
+
+
+@app.get("/feed.json")
+def json_feed(
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    outbox_objects = _get_outbox_for_feed(db)
+    data = []
+    for outbox_object in outbox_objects:
+        if not outbox_object.ap_published_at:
+            raise ValueError(f"{outbox_object} has no published date")
+        data.append(
+            {
+                "id": outbox_object.public_id,
+                "url": outbox_object.url,
+                "content_html": outbox_object.content,
+                "content_text": outbox_object.source,
+                "date_published": outbox_object.ap_published_at.isoformat(),
+                "attachments": [
+                    {"url": a.url, "mime_type": a.media_type}
+                    for a in outbox_object.attachments
+                ],
+            }
+        )
+    return {
+        "version": "https://jsonfeed.org/version/1",
+        "title": f"{LOCAL_ACTOR.display_name}'s microblog'",
+        "home_page_url": LOCAL_ACTOR.url,
+        "feed_url": BASE_URL + "/feed.json",
+        "author": {
+            "name": LOCAL_ACTOR.display_name,
+            "url": LOCAL_ACTOR.url,
+            "avatar": LOCAL_ACTOR.icon_url,
+        },
+        "items": data,
+    }
+
+
+def _gen_rss_feed(
+    db: Session,
+):
+    fg = FeedGenerator()
+    fg.id(BASE_URL + "/feed.rss")
+    fg.title(f"{LOCAL_ACTOR.display_name}'s microblog")
+    fg.description(f"{LOCAL_ACTOR.display_name}'s microblog")
+    fg.author({"name": LOCAL_ACTOR.display_name})
+    fg.link(href=LOCAL_ACTOR.url, rel="alternate")
+    fg.logo(LOCAL_ACTOR.icon_url)
+    fg.language("en")
+
+    outbox_objects = _get_outbox_for_feed(db)
+    for outbox_object in outbox_objects:
+        if not outbox_object.ap_published_at:
+            raise ValueError(f"{outbox_object} has no published date")
+        fe = fg.add_entry()
+        fe.id(outbox_object.url)
+        fe.link(href=outbox_object.url)
+        fe.title(outbox_object.url)
+        fe.description(outbox_object.content)
+        fe.content(outbox_object.content)
+        fe.published(outbox_object.ap_published_at.replace(tzinfo=timezone.utc))
+
+    return fg
+
+
+@app.get("/feed.rss")
+def rss_feed(
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    return PlainTextResponse(
+        _gen_rss_feed(db).rss_str(),
+        headers={"Content-Type": "application/rss+xml"},
+    )
+
+
+@app.get("/feed.atom")
+def atom_feed(
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    return PlainTextResponse(
+        _gen_rss_feed(db).atom_str(),
+        headers={"Content-Type": "application/atom+xml"},
+    )

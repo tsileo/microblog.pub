@@ -62,6 +62,7 @@ def save_outbox_object(
         relates_to_actor_id=relates_to_actor_id,
         activity_object_ap_id=ra.activity_object_ap_id,
         is_hidden_from_homepage=True if ra.in_reply_to else False,
+        source=source,
     )
     db.add(outbox_object)
     db.commit()
