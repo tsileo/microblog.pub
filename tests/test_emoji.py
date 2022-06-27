@@ -13,7 +13,7 @@ def test_emoji_are_loaded() -> None:
 
 
 def test_emoji_ap_endpoint(db: Session, client: TestClient) -> None:
-    response = client.get("/e/goose_hacker", headers={"Accept": ap.AP_CONTENT_TYPE})
+    response = client.get("/e/goose_honk", headers={"Accept": ap.AP_CONTENT_TYPE})
     assert response.status_code == 200
     assert response.headers["content-type"] == ap.AP_CONTENT_TYPE
     emoji_resp = response.json()
@@ -21,13 +21,13 @@ def test_emoji_ap_endpoint(db: Session, client: TestClient) -> None:
 
 
 def test_emoji_ap_endpoint__not_found(db: Session, client: TestClient) -> None:
-    response = client.get("/e/goose_hacker2", headers={"Accept": ap.AP_CONTENT_TYPE})
+    response = client.get("/e/goose_honk2", headers={"Accept": ap.AP_CONTENT_TYPE})
     assert response.status_code == 404
 
 
 def test_emoji_note_with_emoji(db: Session, client: TestClient) -> None:
     # Call admin endpoint to create a note with
-    note_content = "😺 :goose_hacker:"
+    note_content = "😺 :goose_honk:"
 
     response = client.post(
         "/admin/actions/new",
@@ -49,7 +49,7 @@ def test_emoji_note_with_emoji(db: Session, client: TestClient) -> None:
     assert len(outbox_object.tags) == 1
     emoji_tag = outbox_object.tags[0]
     assert emoji_tag["type"] == "Emoji"
-    assert emoji_tag["name"] == ":goose_hacker:"
+    assert emoji_tag["name"] == ":goose_honk:"
     url = emoji_tag["icon"]["url"]
 
     # And the custom emoji is rendered in the HTML version
