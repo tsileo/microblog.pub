@@ -8,6 +8,7 @@ from app import webfinger
 from app.actor import Actor
 from app.actor import fetch_actor
 from app.config import BASE_URL
+from app.utils import emoji
 
 
 def _set_a_attrs(attrs, new=False):
@@ -78,5 +79,10 @@ def markdownify(
     if mentionify:
         content, mention_tags, mentioned_actors = _mentionify(db, content)
         tags.extend(mention_tags)
+
+    # Handle custom emoji
+    tags.extend(emoji.tags(content))
+
     content = markdown(content, extensions=["mdx_linkify"])
+
     return content, tags, mentioned_actors

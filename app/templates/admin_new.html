@@ -17,6 +17,13 @@
         {% endfor %}
     </select>
     </p>
+    {% for emoji in emojis %}
+    <span class="ji">{{ emoji | emojify | safe }}</span>
+    {% endfor %}
+    {% for emoji in custom_emojis %}
+    <span class="ji"><img src="{{ emoji.icon.url }}" alt="{{ emoji.name }}" title="{{ emoji.name }}" class="custom-emoji"></span>
+    {% endfor %}
+
     <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;">{{ content }}</textarea>
     <input type="hidden" name="in_reply_to" value="{{ request.query_params.in_reply_to }}">
     <p>
@@ -26,5 +33,38 @@
         <input type="submit" value="Publish">
     </p>
 </form>
+<script>
+// The new post textarea
+var ta = document.getElementsByTagName("textarea")[0];
+// Helper for inserting text (emojis) in the textarea
+function insertAtCursor (textToInsert) {
+    ta.focus();
+    const isSuccess = document.execCommand("insertText", false, textToInsert);
 
+    // Firefox (non-standard method)
+    if (!isSuccess) {
+        // Credits to https://www.everythingfrontend.com/posts/insert-text-into-textarea-at-cursor-position.html
+        // get current text of the input
+        const value = ta.value;
+        // save selection start and end position
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        // update the value with our text inserted
+        ta.value = value.slice(0, start) + textToInsert + value.slice(end);
+        // update cursor to be at the end of insertion
+        ta.selectionStart = ta.selectionEnd = start + textToInsert.length;
+    }
+}
+// Emoji click callback func
+var ji = function (ev) {
+    insertAtCursor(ev.target.attributes.alt.value + " ");
+    ta.focus()
+    //console.log(document.execCommand('insertText', false /*no UI*/, ev.target.attributes.alt.value));
+}
+// Enable the click for each emojis
+var items = document.getElementsByClassName("ji")
+for (var i = 0; i < items.length; i++) {
+    items[i].addEventListener('click', ji);
+}
+</script>
 {% endblock %}

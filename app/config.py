@@ -10,6 +10,8 @@ from fastapi import Request
 from itsdangerous import TimedSerializer
 from itsdangerous import TimestampSigner
 
+from app.utils.emoji import _load_emojis
+
 ROOT_DIR = Path().parent.resolve()
 
 _CONFIG_FILE = os.getenv("MICROBLOGPUB_CONFIG_FILE", "me.toml")
@@ -76,6 +78,11 @@ SQLALCHEMY_DATABASE_URL = CONFIG.sqlalchemy_database_url or f"sqlite:///{DB_PATH
 KEY_PATH = (
     (ROOT_DIR / CONFIG.key_path) if CONFIG.key_path else ROOT_DIR / "data" / "key.pem"
 )
+EMOJIS = "😺 😸 😹 😻 😼 😽 🙀 😿 😾"
+# Emoji template for the FE
+EMOJI_TPL = '<img src="/static/twemoji/{filename}.svg" alt="{raw}" class="emoji">'
+
+_load_emojis(ROOT_DIR, BASE_URL)
 
 
 session_serializer = TimedSerializer(CONFIG.secret, salt="microblogpub.login")

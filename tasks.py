@@ -1,5 +1,9 @@
+import io
+import tarfile
+from pathlib import Path
 from typing import Optional
 
+import httpx
 from invoke import Context  # type: ignore
 from invoke import run  # type: ignore
 from invoke import task  # type: ignore
@@ -67,3 +71,23 @@ def tests(ctx, k=None):
         pty=True,
         echo=True,
     )
+
+
+@task
+def download_twemoji(ctx):
+    # type: (Context) -> None
+    resp = httpx.get(
+        "https://github.com/twitter/twemoji/archive/refs/tags/v14.0.2.tar.gz",
+        follow_redirects=True,
+    )
+    resp.raise_for_status()
+    tf = tarfile.open(fileobj=io.BytesIO(resp.content))
+    members = [
+        member
+        for member in tf.getmembers()
+        if member.name.startswith("twemoji-14.0.2/assets/svg/")
+    ]
+    for member in members:
+        emoji_name = Path(member.name).name
+        with open(f"app/static/twemoji/{emoji_name}", "wb") as f:
+            f.write(tf.extractfile(member).read())  # type: ignore

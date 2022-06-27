@@ -204,3 +204,8 @@ class InboxObjectFactory(factory.alchemy.SQLAlchemyModelFactory):
             # Hide replies from the stream
             is_hidden_from_stream=True if ro.in_reply_to else False,
         )
+
+
+class FollowerFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta(BaseModelMeta):
+        model = models.Follower

@@ -18,6 +18,7 @@ from app.actor import get_actors_metadata
 from app.boxes import get_inbox_object_by_ap_id
 from app.boxes import get_outbox_object_by_ap_id
 from app.boxes import send_follow
+from app.config import EMOJIS
 from app.config import generate_csrf_token
 from app.config import session_serializer
 from app.config import verify_csrf_token
@@ -25,6 +26,7 @@ from app.config import verify_password
 from app.database import get_db
 from app.lookup import lookup
 from app.uploads import save_upload
+from app.utils.emoji import EMOJIS_BY_NAME
 
 
 def user_session_or_redirect(
@@ -123,36 +125,11 @@ def admin_new(
                 (v.name, ap.VisibilityEnum.get_display_name(v))
                 for v in ap.VisibilityEnum
             ],
-        },
-    )
-
-
-@router.get("/stream")
-def stream(
-    request: Request,
-    db: Session = Depends(get_db),
-) -> templates.TemplateResponse:
-    stream = (
-        db.query(models.InboxObject)
-        .filter(
-            models.InboxObject.ap_type.in_(["Note", "Article", "Video", "Announce"]),
-            models.InboxObject.is_hidden_from_stream.is_(False),
-            models.InboxObject.undone_by_inbox_object_id.is_(None),
-        )
-        .options(
-            # joinedload(models.InboxObject.relates_to_inbox_object),
-            joinedload(models.InboxObject.relates_to_outbox_object),
-        )
-        .order_by(models.InboxObject.ap_published_at.desc())
-        .limit(20)
-        .all()
-    )
-    return templates.render_template(
-        db,
-        request,
-        "admin_stream.html",
-        {
-            "stream": stream,
+            "emojis": EMOJIS.split(" "),
+            "custom_emojis": sorted(
+                [dat for name, dat in EMOJIS_BY_NAME.items()],
+                key=lambda obj: obj["name"],
+            ),
         },
     )
 
@@ -452,7 +429,7 @@ def admin_actions_unpin(
 @router.post("/actions/new")
 def admin_actions_new(
     request: Request,
-    files: list[UploadFile],
+    files: list[UploadFile] = [],
     content: str = Form(),
     redirect_url: str = Form(),
     in_reply_to: str | None = Form(None),
@@ -501,7 +478,7 @@ def login_validation(
     if not verify_password(password):
         raise HTTPException(status_code=401)
 
-    resp = RedirectResponse("/admin", status_code=302)
+    resp = RedirectResponse("/admin/inbox", status_code=302)
     resp.set_cookie("session", session_serializer.dumps({"is_logged_in": True}))  # type: ignore  # noqa: E501
 
     return resp

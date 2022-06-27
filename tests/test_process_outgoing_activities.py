@@ -120,32 +120,6 @@ def test_process_next_outgoing_activity__error_500(
     assert outgoing_activity.tries == 1
 
 
-def test_process_next_outgoing_activity__connect_error(
-    db: Session,
-    respx_mock: respx.MockRouter,
-) -> None:
-    outbox_object = _setup_outbox_object()
-    recipient_inbox_url = "https://example.com/inbox"
-    respx_mock.post(recipient_inbox_url).mock(side_effect=httpx.ConnectError)
-
-    # And an outgoing activity
-    outgoing_activity = factories.OutgoingActivityFactory(
-        recipient=recipient_inbox_url,
-        outbox_object_id=outbox_object.id,
-    )
-
-    # When processing the next outgoing activity
-    # Then it is processed
-    assert process_next_outgoing_activity(db) is True
-
-    assert respx_mock.calls.call_count == 1
-
-    outgoing_activity = db.query(models.OutgoingActivity).one()
-    assert outgoing_activity.is_sent is False
-    assert outgoing_activity.error is not None
-    assert outgoing_activity.tries == 1
-
-
 def test_process_next_outgoing_activity__errored(
     db: Session,
     respx_mock: respx.MockRouter,
@@ -177,6 +151,32 @@ def test_process_next_outgoing_activity__errored(
 
     # And it is skipped from processing
     assert process_next_outgoing_activity(db) is False
+
+
+def test_process_next_outgoing_activity__connect_error(
+    db: Session,
+    respx_mock: respx.MockRouter,
+) -> None:
+    outbox_object = _setup_outbox_object()
+    recipient_inbox_url = "https://example.com/inbox"
+    respx_mock.post(recipient_inbox_url).mock(side_effect=httpx.ConnectError)
+
+    # And an outgoing activity
+    outgoing_activity = factories.OutgoingActivityFactory(
+        recipient=recipient_inbox_url,
+        outbox_object_id=outbox_object.id,
+    )
+
+    # When processing the next outgoing activity
+    # Then it is processed
+    assert process_next_outgoing_activity(db) is True
+
+    assert respx_mock.calls.call_count == 1
+
+    outgoing_activity = db.query(models.OutgoingActivity).one()
+    assert outgoing_activity.is_sent is False
+    assert outgoing_activity.error is not None
+    assert outgoing_activity.tries == 1
 
 
 # TODO(ts):

@@ -52,6 +52,7 @@ from app.config import verify_csrf_token
 from app.database import get_db
 from app.templates import is_current_user_admin
 from app.uploads import UPLOAD_DIR
+from app.utils.emoji import EMOJIS_BY_NAME
 from app.webfinger import get_remote_follow_template
 
 # TODO(ts):
@@ -518,6 +519,16 @@ def tag_by_name(
             "orderedItems": [],
         }
     )
+
+
+@app.get("/e/{name}")
+def emoji_by_name(name: str) -> ActivityPubResponse:
+    try:
+        emoji = EMOJIS_BY_NAME[f":{name}:"]
+    except KeyError:
+        raise HTTPException(status_code=404)
+
+    return ActivityPubResponse({"@context": ap.AS_CTX, **emoji})
 
 
 @app.post("/inbox")

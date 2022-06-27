@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import bleach
+import emoji
 import html2text
 import timeago  # type: ignore
 from bs4 import BeautifulSoup  # type: ignore
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session
 from starlette.templating import _TemplateResponse as TemplateResponse
 
 from app import activitypub as ap
+from app import config
 from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import Attachment
@@ -171,14 +173,16 @@ def _update_inline_imgs(content):
 
 def _clean_html(html: str, note: Object) -> str:
     try:
-        return _replace_custom_emojis(
-            bleach.clean(
-                _update_inline_imgs(highlight(html)),
-                tags=ALLOWED_TAGS,
-                attributes=ALLOWED_ATTRIBUTES,
-                strip=True,
-            ),
-            note,
+        return _emojify(
+            _replace_custom_emojis(
+                bleach.clean(
+                    _update_inline_imgs(highlight(html)),
+                    tags=ALLOWED_TAGS,
+                    attributes=ALLOWED_ATTRIBUTES,
+                    strip=True,
+                ),
+                note,
+            )
         )
     except Exception:
         raise
@@ -229,11 +233,24 @@ def _html2text(content: str) -> str:
     return H2T.handle(content)
 
 
+def _replace_emoji(u, data):
+    filename = hex(ord(u))[2:]
+    return config.EMOJI_TPL.format(filename=filename, raw=u)
+
+
+def _emojify(text: str):
+    return emoji.replace_emoji(
+        text,
+        replace=_replace_emoji,
+    )
+
+
 _templates.env.filters["domain"] = _filter_domain
 _templates.env.filters["media_proxy_url"] = _media_proxy_url
 _templates.env.filters["clean_html"] = _clean_html
 _templates.env.filters["timeago"] = _timeago
 _templates.env.filters["format_date"] = _format_date
 _templates.env.filters["has_media_type"] = _has_media_type
-_templates.env.filters["pluralize"] = _pluralize
 _templates.env.filters["html2text"] = _html2text
+_templates.env.filters["emojify"] = _emojify
+_templates.env.filters["pluralize"] = _pluralize

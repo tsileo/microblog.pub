@@ -341,7 +341,7 @@ def _compute_recipients(db: Session, ap_object: ap.RawObject) -> set[str]:
             db.query(models.Actor).filter(models.Actor.ap_id == r).one_or_none()
         )
         if known_actor:
-            recipients.add(known_actor.shared_inbox_url or actor.inbox_url)
+            recipients.add(known_actor.shared_inbox_url or known_actor.inbox_url)
             continue
 
         # Fetch the object
