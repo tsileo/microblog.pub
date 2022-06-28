@@ -8,22 +8,24 @@ from app.database import Base
 from app.database import engine
 from app.database import get_db
 from app.main import app
+from tests.factories import _Session
 
-_Session = orm.sessionmaker(bind=engine, autocommit=False, autoflush=False)
+# _Session = orm.sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
 def _get_db_for_testing() -> Generator[orm.Session, None, None]:
-    session = _Session()
-    try:
-        yield session
-    finally:
-        session.close()
+    # try:
+    yield _Session  # type: ignore
+    # finally:
+    #    session.close()
 
 
 @pytest.fixture
 def db() -> Generator:
     Base.metadata.create_all(bind=engine)
-    yield orm.scoped_session(orm.sessionmaker(bind=engine))
+    # sess = orm.sessionmaker(bind=engine)()
+    yield _Session
+    # yield orm.scoped_session(orm.sessionmaker(bind=engine))
     try:
         Base.metadata.drop_all(bind=engine)
     except Exception:

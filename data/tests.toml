@@ -11,5 +11,6 @@ debug = true
 
 # In-mem DB
 sqlalchemy_database_url = "sqlite:///file:pytest?mode=memory&cache=shared&uri=true"
+# sqlalchemy_database_url = "sqlite:///data/pytest.db"
 key_path = "tests/test.key"
 media_db_path = "tests/media.db"

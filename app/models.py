@@ -58,14 +58,14 @@ class InboxObject(Base, BaseObject):
     is_hidden_from_stream = Column(Boolean, nullable=False, default=False)
 
     ap_actor_id = Column(String, nullable=False)
-    ap_type = Column(String, nullable=False)
+    ap_type = Column(String, nullable=False, index=True)
     ap_id = Column(String, nullable=False, unique=True, index=True)
     ap_context = Column(String, nullable=True)
     ap_published_at = Column(DateTime(timezone=True), nullable=False)
     ap_object: Mapped[ap.RawObject] = Column(JSON, nullable=False)
 
     # Only set for activities
-    activity_object_ap_id = Column(String, nullable=True)
+    activity_object_ap_id = Column(String, nullable=True, index=True)
 
     visibility = Column(Enum(ap.VisibilityEnum), nullable=False)
 
@@ -134,12 +134,12 @@ class OutboxObject(Base, BaseObject):
 
     public_id = Column(String, nullable=False, index=True)
 
-    ap_type = Column(String, nullable=False)
+    ap_type = Column(String, nullable=False, index=True)
     ap_id = Column(String, nullable=False, unique=True, index=True)
     ap_context = Column(String, nullable=True)
     ap_object: Mapped[ap.RawObject] = Column(JSON, nullable=False)
 
-    activity_object_ap_id = Column(String, nullable=True)
+    activity_object_ap_id = Column(String, nullable=True, index=True)
 
     # Source content for activities (like Notes)
     source = Column(String, nullable=True)

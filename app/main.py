@@ -443,6 +443,28 @@ def outbox_by_public_id(
 
     replies_tree = boxes.get_replies_tree(db, maybe_object)
 
+    likes = (
+        db.query(models.InboxObject)
+        .filter(
+            models.InboxObject.ap_type == "Like",
+            models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+        )
+        .options(joinedload(models.InboxObject.actor))
+        .order_by(models.InboxObject.ap_published_at.desc())
+        .limit(10)
+    )
+
+    shares = (
+        db.query(models.InboxObject)
+        .filter(
+            models.InboxObject.ap_type == "Announce",
+            models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+        )
+        .options(joinedload(models.InboxObject.actor))
+        .order_by(models.InboxObject.ap_published_at.desc())
+        .limit(10)
+    )
+
     return templates.render_template(
         db,
         request,
@@ -450,6 +472,8 @@ def outbox_by_public_id(
         {
             "replies_tree": replies_tree,
             "outbox_object": maybe_object,
+            "likes": likes,
+            "shares": shares,
         },
     )
 
