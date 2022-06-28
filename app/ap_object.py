@@ -132,6 +132,10 @@ class Object:
         return content
 
     @property
+    def summary(self) -> str | None:
+        return self.ap_object.get("summary")
+
+    @property
     def permalink_id(self) -> str:
         return (
             "permalink-"

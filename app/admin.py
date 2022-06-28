@@ -199,12 +199,22 @@ def admin_inbox(
         else None
     )
 
+    actors_metadata = get_actors_metadata(
+        db,
+        [
+            inbox_object.actor
+            for inbox_object in inbox
+            if inbox_object.ap_type == "Follow"
+        ],
+    )
+
     return templates.render_template(
         db,
         request,
         "admin_inbox.html",
         {
             "inbox": inbox,
+            "actors_metadata": actors_metadata,
             "next_cursor": next_cursor,
         },
     )
@@ -475,6 +485,8 @@ def admin_actions_new(
     content: str = Form(),
     redirect_url: str = Form(),
     in_reply_to: str | None = Form(None),
+    content_warning: str | None = Form(None),
+    is_sensitive: bool = Form(False),
     visibility: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
     db: Session = Depends(get_db),
@@ -491,6 +503,8 @@ def admin_actions_new(
         uploads=uploads,
         in_reply_to=in_reply_to or None,
         visibility=ap.VisibilityEnum[visibility],
+        content_warning=content_warning or None,
+        is_sensitive=True if content_warning else is_sensitive,
     )
     return RedirectResponse(
         request.url_for("outbox_by_public_id", public_id=public_id),

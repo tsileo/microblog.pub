@@ -10,7 +10,11 @@
 {% elif inbox_object.ap_type in ["Article", "Note", "Video"] %}
 {{ utils.display_object(inbox_object) }}
 {% elif inbox_object.ap_type == "Follow" %}
-    {{ utils.display_object(inbox_object) }}
+    <div class="actor-action">
+        {{ inbox_object.actor.display_name }} followed you
+        <span>{{ inbox_object.ap_published_at | timeago }}</span>
+    </div>
+    {{ utils.display_actor(inbox_object.actor, actors_metadata) }}
 {% else %}
     Implement {{ inbox_object.ap_type }}
 {% endif %}

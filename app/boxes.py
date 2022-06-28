@@ -231,6 +231,8 @@ def send_create(
     uploads: list[tuple[models.Upload, str]],
     in_reply_to: str | None,
     visibility: ap.VisibilityEnum,
+    content_warning: str | None = None,
+    is_sensitive: bool = False,
 ) -> str:
     note_id = allocate_outbox_id()
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -285,9 +287,9 @@ def send_create(
         "conversation": context,
         "url": outbox_object_id(note_id),
         "tag": tags,
-        "summary": None,
+        "summary": content_warning,
         "inReplyTo": in_reply_to,
-        "sensitive": False,
+        "sensitive": is_sensitive,
         "attachment": attachments,
     }
     outbox_object = save_outbox_object(db, note_id, note, source=source)
@@ -550,10 +552,9 @@ def _handle_create_activity(
 
 def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
     try:
-        actor = fetch_actor(db, raw_object["actor"])
+        actor = fetch_actor(db, ap.get_id(raw_object["actor"]))
     except httpx.HTTPStatusError:
         logger.exception("Failed to fetch actor")
-        # XXX: Delete 410 when we never seen the actor
         return
 
     ap_published_at = now()
@@ -561,6 +562,16 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
         ap_published_at = isoparse(raw_object["published"])
 
     ra = RemoteObject(ap.unwrap_activity(raw_object), actor=actor)
+
+    if (
+        db.query(models.InboxObject)
+        .filter(models.InboxObject.ap_id == ra.ap_id)
+        .count()
+        > 0
+    ):
+        logger.info(f"Received duplicate {ra.ap_type} activity: {ra.ap_id}")
+        return
+
     relates_to_inbox_object: models.InboxObject | None = None
     relates_to_outbox_object: models.OutboxObject | None = None
     if ra.activity_object_ap_id:

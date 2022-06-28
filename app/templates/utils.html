@@ -88,6 +88,17 @@
 </form> 
 {% endmacro %}
 
+{% macro show_more_button(permalink_id) %}
+<form action=""  method="GET">
+<input type="hidden" name="show_more" value="{{ permalink_id }}">
+{% for k, v in request.query_params.items() %}
+<input type="hidden" name="{{k}}" value="{{v}}">
+{% endfor %}
+<button type="submit">show more</button>
+</form> 
+{% endmacro %}
+
+
 {% macro admin_reply_button(ap_object_id) %}
 <form action="/admin/new"  method="GET">
 <input type="hidden" name="in_reply_to" value="{{ ap_object_id }}">
@@ -157,15 +168,43 @@
 
 {% endmacro %}
 
+{% macro display_attachments(object) %}
+  {% if object.attachments and object.sensitive and not request.query_params.show_sensitive == object.permalink_id %}
+  {{ sensitive_button(object.permalink_id )}}
+  {% endif %}
+
+  {% if object.attachments and (not object.sensitive or (object.sensitive and request.query_params["show_sensitive"] == object.permalink_id)) %}
+    {% for attachment in object.attachments %}
+    {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
+    <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} alt="{{ attachment.name }}"{% endif %} class="attachment">
+    {% elif attachment.type == "Video" or (attachment | has_media_type("video")) %}
+    <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachmeent"></video>
+    {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}
+    <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} style="width:480px;" class="attachment"></audio>
+    {% else %}
+    <a href="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment">{{ attachment.url }}</a>
+    {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endmacro %}
+
 {% macro display_object_expanded(object) %}
 
 <div class="activity-expanded h-entry">
 
 {{ display_actor(object.actor, {}) }}
 
-<div class="e-content">
-{{ object.content | clean_html(object) | safe }}
-</div>
+{% if object.summary %}
+<p class="p-summary">{{ object.summary | clean_html(object) | safe }}</p>
+{% endif %}
+{% if object.sensitive and object.summary and not request.query_params.show_more == object.permalink_id %}
+{{ show_more_button(object.permalink_id) }} 
+{% endif %}
+{% if not object.sensitive or (object.sensitive and object.summary and request.query_params.show_more == object.permalink_id) %}
+    <div class="e-content">
+    {{ object.content | clean_html(object) | safe }}
+    </div>
+{% endif %}
 
 <a href="{{ object.url }}" class="u-url u-uid"><time class="dt-published" datetime="{{ object.ap_published_at }}">{{ object.ap_published_at | format_date }}</time></a>
 {{ object.visibility.value }}
@@ -177,6 +216,7 @@
 {{ object.announces_count }} shares
 {% endif %}
 
+{{ display_attachments(object) }}
 
 </div>
 
@@ -194,32 +234,24 @@
             {{ object.visibility.value }}
             <a href="{{ object.url }}" class="u-url u-uid"><time class="dt-published" datetime="{{ object.ap_published_at }}">{{ object.ap_published_at | timeago }}</time></a>
         </span>
+        {% if object.summary %}
+        <p class="p-summary">{{ object.summary | clean_html(object) | safe }}</p>
+        {% endif %}
+        {% if object.sensitive and object.summary and not request.query_params.show_more == object.permalink_id %}
+        {{ show_more_button(object.permalink_id) }} 
+        {% endif %}
+        {% if not object.sensitive or (object.sensitive and object.summary and request.query_params.show_more == object.permalink_id) %}
         <div class="activity-main e-content">
             {{ object.content | clean_html(object) | safe }}
         </div>
+        {% endif %}
     </div>
   </div>
-  {% if object.attachments and object.sensitive and not request.query_params["show_sensitive"] == object.permalink_id %}
-  <div class="activity-attachment">
-  {{ sensitive_button(object.permalink_id )}}
-  </div>
-  {% endif %}
 
-  {% if object.attachments and (not object.sensitive or (object.sensitive and request.query_params["show_sensitive"] == object.permalink_id)) %}
   <div class="activity-attachment">
-    {% for attachment in object.attachments %}
-    {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
-    <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} alt="{{ attachment.name }}"{% endif %} class="attachment">
-    {% elif attachment.type == "Video" or (attachment | has_media_type("video")) %}
-    <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachmeent"></video>
-    {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}
-    <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} style="width:480px;" class="attachment"></audio>
-    {% else %}
-    <a href="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment">{{ attachment.url }}</a>
-    {% endif %}
-    {% endfor %}
+      {{ display_attachments(object) }}
   </div>
-  {% endif %}
+
   <div class="activity-bar">
     {% if object.is_from_outbox %}
     <div class="bar-item">
@@ -285,15 +317,5 @@
     
   </div>
 </div>
-{% elif object.ap_type == "Follow" %}
-
-    {% if object.is_from_inbox %}
-    <div class="actor-action">
-        {{ object.actor.display_name }} followed you
-        <span>{{ object.ap_published_at | timeago }}</span>
-    </div>
-    {{ display_actor(object.actor, {}) }}
-    {% endif %}
-
 {% endif %}
 {% endmacro %}
