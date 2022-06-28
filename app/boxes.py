@@ -273,7 +273,7 @@ def send_create(
         raise ValueError(f"Unhandled visibility {visibility}")
 
     note = {
-        "@context": ap.AS_CTX,
+        "@context": ap.AS_EXTENDED_CTX,
         "type": "Note",
         "id": outbox_object_id(note_id),
         "attributedTo": ID,

@@ -2,29 +2,31 @@ import base64
 import hashlib
 import typing
 from datetime import datetime
-from functools import lru_cache
-from typing import Any
 
+import pyld  # type: ignore
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
 from pyld import jsonld  # type: ignore
+
+from app import activitypub as ap
 
 if typing.TYPE_CHECKING:
     from app.key import Key
 
 
-_LOADER = jsonld.requests_document_loader()
+requests_loader = pyld.documentloader.requests.requests_document_loader()
 
 
-@lru_cache(256)
-def _caching_document_loader(url: str) -> Any:
-    return _LOADER(url)
+def _loader(url, options={}):
+    # See https://github.com/digitalbazaar/pyld/issues/133
+    options["headers"]["Accept"] = "application/ld+json"
+    return requests_loader(url, options)
 
 
-jsonld.set_document_loader(_caching_document_loader)
+pyld.jsonld.set_document_loader(_loader)
 
 
-def _options_hash(doc):
+def _options_hash(doc: ap.RawObject) -> str:
     doc = dict(doc["signature"])
     for k in ["type", "id", "signatureValue"]:
         if k in doc:
@@ -38,7 +40,7 @@ def _options_hash(doc):
     return h.hexdigest()
 
 
-def _doc_hash(doc):
+def _doc_hash(doc: ap.RawObject) -> str:
     doc = dict(doc)
     if "signature" in doc:
         del doc["signature"]
@@ -50,7 +52,7 @@ def _doc_hash(doc):
     return h.hexdigest()
 
 
-def verify_signature(doc, key: "Key"):
+def verify_signature(doc: ap.RawObject, key: "Key") -> bool:
     to_be_signed = _options_hash(doc) + _doc_hash(doc)
     signature = doc["signature"]["signatureValue"]
     signer = PKCS1_v1_5.new(key.pubkey or key.privkey)  # type: ignore
@@ -59,7 +61,7 @@ def verify_signature(doc, key: "Key"):
     return signer.verify(digest, base64.b64decode(signature))  # type: ignore
 
 
-def generate_signature(doc, key: "Key"):
+def generate_signature(doc: ap.RawObject, key: "Key") -> None:
     options = {
         "type": "RsaSignature2017",
         "creator": doc["actor"] + "#main-key",

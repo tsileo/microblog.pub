@@ -20,6 +20,30 @@ AS_PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
 ACTOR_TYPES = ["Application", "Group", "Organization", "Person", "Service"]
 
+AS_EXTENDED_CTX = [
+    "https://www.w3.org/ns/activitystreams",
+    "https://w3id.org/security/v1",
+    {
+        # AS ext
+        "Hashtag": "as:Hashtag",
+        "sensitive": "as:sensitive",
+        "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+        "alsoKnownAs": {"@id": "as:alsoKnownAs", "@type": "@id"},
+        # toot
+        "toot": "http://joinmastodon.org/ns#",
+        "featured": {"@id": "toot:featured", "@type": "@id"},
+        "Emoji": "toot:Emoji",
+        "blurhash": "toot:blurhash",
+        # schema
+        "schema": "http://schema.org#",
+        "PropertyValue": "schema:PropertyValue",
+        "value": "schema:value",
+        # ostatus
+        "ostatus": "http://ostatus.org#",
+        "conversation": "ostatus:conversation",
+    },
+]
+
 
 class ObjectIsGoneError(Exception):
     pass
@@ -41,45 +65,8 @@ class VisibilityEnum(str, enum.Enum):
         }[key]
 
 
-MICROBLOGPUB = {
-    "@context": [
-        "https://www.w3.org/ns/activitystreams",
-        "https://w3id.org/security/v1",
-        {
-            "Hashtag": "as:Hashtag",
-            "PropertyValue": "schema:PropertyValue",
-            "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
-            "ostatus": "http://ostatus.org#",
-            "schema": "http://schema.org",
-            "sensitive": "as:sensitive",
-            "toot": "http://joinmastodon.org/ns#",
-            "totalItems": "as:totalItems",
-            "value": "schema:value",
-            "Emoji": "toot:Emoji",
-        },
-    ]
-}
-
-DEFAULT_CTX = COLLECTION_CTX = [
-    "https://www.w3.org/ns/activitystreams",
-    "https://w3id.org/security/v1",
-    {
-        # AS ext
-        "Hashtag": "as:Hashtag",
-        "sensitive": "as:sensitive",
-        "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
-        # toot
-        "toot": "http://joinmastodon.org/ns#",
-        # "featured": "toot:featured",
-        # schema
-        "schema": "http://schema.org#",
-        "PropertyValue": "schema:PropertyValue",
-        "value": "schema:value",
-    },
-]
-
 ME = {
-    "@context": DEFAULT_CTX,
+    "@context": AS_EXTENDED_CTX,
     "type": "Person",
     "id": config.ID,
     "following": config.BASE_URL + "/following",
@@ -235,7 +222,7 @@ def get_actor_id(activity: RawObject) -> str:
 
 def wrap_object(activity: RawObject) -> RawObject:
     return {
-        "@context": AS_CTX,
+        "@context": AS_EXTENDED_CTX,
         "actor": config.ID,
         "to": activity.get("to", []),
         "cc": activity.get("cc", []),

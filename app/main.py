@@ -133,25 +133,6 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
-DEFAULT_CTX = COLLECTION_CTX = [
-    "https://www.w3.org/ns/activitystreams",
-    "https://w3id.org/security/v1",
-    {
-        # AS ext
-        "Hashtag": "as:Hashtag",
-        "sensitive": "as:sensitive",
-        "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
-        # toot
-        "toot": "http://joinmastodon.org/ns#",
-        # "featured": "toot:featured",
-        # schema
-        "schema": "http://schema.org#",
-        "PropertyValue": "schema:PropertyValue",
-        "value": "schema:value",
-    },
-]
-
-
 class ActivityPubResponse(JSONResponse):
     media_type = "application/activity+json"
 
@@ -372,7 +353,7 @@ def outbox(
     )
     return ActivityPubResponse(
         {
-            "@context": DEFAULT_CTX,
+            "@context": ap.AS_EXTENDED_CTX,
             "id": f"{ID}/outbox",
             "type": "OrderedCollection",
             "totalItems": len(outbox_objects),
@@ -402,7 +383,7 @@ def featured(
     )
     return ActivityPubResponse(
         {
-            "@context": DEFAULT_CTX,
+            "@context": ap.AS_EXTENDED_CTX,
             "id": f"{ID}/featured",
             "type": "OrderedCollection",
             "totalItems": len(outbox_objects),
@@ -512,7 +493,7 @@ def tag_by_name(
     # if is_activitypub_requested(request):
     return ActivityPubResponse(
         {
-            "@context": ap.AS_CTX,
+            "@context": ap.AS_CTX,  # XXX: extended ctx?
             "id": BASE_URL + f"/t/{tag}",
             "type": "OrderedCollection",
             "totalItems": 0,
@@ -528,7 +509,7 @@ def emoji_by_name(name: str) -> ActivityPubResponse:
     except KeyError:
         raise HTTPException(status_code=404)
 
-    return ActivityPubResponse({"@context": ap.AS_CTX, **emoji})
+    return ActivityPubResponse({"@context": ap.AS_EXTENDED_CTX, **emoji})
 
 
 @app.post("/inbox")
