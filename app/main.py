@@ -2,14 +2,12 @@ import base64
 import os
 import sys
 import time
-from datetime import datetime
 from datetime import timezone
 from io import BytesIO
 from typing import Any
 from typing import Type
 
 import httpx
-from dateutil.parser import isoparse
 from fastapi import Depends
 from fastapi import FastAPI
 from fastapi import Form
@@ -52,6 +50,7 @@ from app.config import verify_csrf_token
 from app.database import get_db
 from app.templates import is_current_user_admin
 from app.uploads import UPLOAD_DIR
+from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
 from app.webfinger import get_remote_follow_template
 
@@ -154,7 +153,7 @@ def index(
         models.OutboxObject.is_hidden_from_homepage.is_(False),
     )
     total_count = q.count()
-    page_size = 2
+    page_size = 20
     page_offset = (page - 1) * page_size
 
     outbox_objects = (
@@ -203,7 +202,9 @@ def _build_followx_collection(
 
     q = db.query(model_cls).order_by(model_cls.created_at.desc())  # type: ignore
     if next_cursor:
-        q = q.filter(model_cls.created_at < _decode_cursor(next_cursor))  # type: ignore
+        q = q.filter(
+            model_cls.created_at < pagination.decode_cursor(next_cursor)  # type: ignore
+        )
     q = q.limit(20)
 
     items = [followx for followx in q.all()]
@@ -215,7 +216,7 @@ def _build_followx_collection(
         .count()
         > 0
     ):
-        next_cursor = _encode_cursor(items[-1].created_at)
+        next_cursor = pagination.encode_cursor(items[-1].created_at)
 
     collection_page = {
         "@context": ap.AS_CTX,
@@ -232,14 +233,6 @@ def _build_followx_collection(
         collection_page["next"] = ID + path + f"?next_cursor={next_cursor}"
 
     return collection_page
-
-
-def _encode_cursor(val: datetime) -> str:
-    return base64.urlsafe_b64encode(val.isoformat().encode()).decode()
-
-
-def _decode_cursor(cursor: str) -> datetime:
-    return isoparse(base64.urlsafe_b64decode(cursor).decode())
 
 
 @app.get("/followers")
@@ -262,6 +255,7 @@ def followers(
             )
         )
 
+    # We only show the most recent 20 followers on the public website
     followers = (
         db.query(models.Follower)
         .options(joinedload(models.Follower.actor))
@@ -270,7 +264,6 @@ def followers(
         .all()
     )
 
-    # TODO: support next_cursor/prev_cursor
     actors_metadata = {}
     if is_current_user_admin(request):
         actors_metadata = get_actors_metadata(
@@ -309,6 +302,7 @@ def following(
             )
         )
 
+    # We only show the most recent 20 follows on the public website
     q = (
         db.query(models.Following)
         .options(joinedload(models.Following.actor))
@@ -341,6 +335,7 @@ def outbox(
     db: Session = Depends(get_db),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
+    # By design, we only show the last 20 public activities in the oubox
     outbox_objects = (
         db.query(models.OutboxObject)
         .filter(

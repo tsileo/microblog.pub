@@ -8,5 +8,15 @@
 <li>{{ utils.display_actor(follower.actor, actors_metadata) }}</li>
 {% endfor %}
 </ul>
+
+{% set x_more = followers_count - followers | length %}
+{% if x_more > 0 %}
+    <p>And {{ x_more }} more.</p>
+{% endif %}
+
+{% if is_admin %}
+<p><a href="{{ url_for("admin_inbox") }}?filter_by=Follow">Manage followers</a></p>
+{% endif %}
+
 </div>
 {% endblock %}

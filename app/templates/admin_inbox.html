@@ -2,6 +2,8 @@
 {% extends "layout.html" %}
 {% block content %}
 
+{{ utils.display_box_filters("admin_inbox") }}
+
 {% for inbox_object in inbox %}
 {% if inbox_object.ap_type == "Announce" %}
     {{ utils.display_object(inbox_object.relates_to_anybox_object) }}
@@ -13,5 +15,9 @@
     Implement {{ inbox_object.ap_type }}
 {% endif %}
 {% endfor %}
+
+{% if next_cursor %}
+<p><a href="{{ url_for("admin_inbox") }}?cursor={{ next_cursor }}{% if request.query_params.filter_by %}&filter_by={{ request.query_params.filter_by }}{% endif %}">See more</a></p>
+{% endif %}
 
 {% endblock %}

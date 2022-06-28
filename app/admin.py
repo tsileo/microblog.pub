@@ -26,6 +26,7 @@ from app.config import verify_password
 from app.database import get_db
 from app.lookup import lookup
 from app.uploads import save_upload
+from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
 
 
@@ -165,10 +166,25 @@ def admin_bookmarks(
 def admin_inbox(
     request: Request,
     db: Session = Depends(get_db),
+    filter_by: str | None = None,
+    cursor: str | None = None,
 ) -> templates.TemplateResponse:
+    q = db.query(models.InboxObject).filter(
+        models.InboxObject.ap_type.not_in(["Accept"])
+    )
+
+    if filter_by:
+        q = q.filter(models.InboxObject.ap_type == filter_by)
+    if cursor:
+        q = q.filter(
+            models.InboxObject.ap_published_at < pagination.decode_cursor(cursor)
+        )
+
+    page_size = 20
+    remaining_count = q.count()
+
     inbox = (
-        db.query(models.InboxObject)
-        .options(
+        q.options(
             joinedload(models.InboxObject.relates_to_inbox_object),
             joinedload(models.InboxObject.relates_to_outbox_object),
         )
@@ -176,25 +192,43 @@ def admin_inbox(
         .limit(20)
         .all()
     )
+
+    next_cursor = (
+        pagination.encode_cursor(inbox[-1].ap_published_at)
+        if inbox and remaining_count > page_size
+        else None
+    )
+
     return templates.render_template(
         db,
         request,
         "admin_inbox.html",
         {
             "inbox": inbox,
+            "next_cursor": next_cursor,
         },
     )
 
 
 @router.get("/outbox")
 def admin_outbox(
-    request: Request, db: Session = Depends(get_db), filter_by: str | None = None
+    request: Request,
+    db: Session = Depends(get_db),
+    filter_by: str | None = None,
+    cursor: str | None = None,
 ) -> templates.TemplateResponse:
     q = db.query(models.OutboxObject).filter(
         models.OutboxObject.ap_type.not_in(["Accept"])
     )
     if filter_by:
         q = q.filter(models.OutboxObject.ap_type == filter_by)
+    if cursor:
+        q = q.filter(
+            models.OutboxObject.ap_published_at < pagination.decode_cursor(cursor)
+        )
+
+    page_size = 20
+    remaining_count = q.count()
 
     outbox = (
         q.options(
@@ -203,9 +237,16 @@ def admin_outbox(
             joinedload(models.OutboxObject.relates_to_actor),
         )
         .order_by(models.OutboxObject.ap_published_at.desc())
-        .limit(20)
+        .limit(page_size)
         .all()
     )
+
+    next_cursor = (
+        pagination.encode_cursor(outbox[-1].ap_published_at)
+        if outbox and remaining_count > page_size
+        else None
+    )
+
     actors_metadata = get_actors_metadata(
         db,
         [
@@ -222,6 +263,7 @@ def admin_outbox(
         {
             "actors_metadata": actors_metadata,
             "outbox": outbox,
+            "next_cursor": next_cursor,
         },
     )
 

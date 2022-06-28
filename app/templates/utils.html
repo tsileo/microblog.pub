@@ -109,6 +109,20 @@
 </form> 
 {% endmacro %}
 
+{% macro display_box_filters(route) %}
+<p>Filter by
+{% for ap_type in ["Note", "Like", "Announce", "Follow"] %}
+<a style="margin-right:12px;" href="{{ url_for(route) }}?filter_by={{ ap_type }}">
+    {% if request.query_params.filter_by == ap_type %}
+    <strong>{{ ap_type }}</strong>
+    {% else %}
+    {{ ap_type }}
+    {% endif %}</a>
+{% endfor %}.
+{% if request.query_params.filter_by %}<a href="{{ url_for(route) }}">Reset filter</a>{% endif %}</p>
+</p>
+{% endmacro %}
+
 {% macro display_actor(actor, actors_metadata) %}
 {% set metadata = actors_metadata.get(actor.ap_id) %}
 <div style="display: flex;column-gap: 20px;margin:20px 0 10px 0;" class="actor-box h-card p-author">
