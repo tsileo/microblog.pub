@@ -1,13 +1,16 @@
 from uuid import uuid4
 
 import httpx
+import pytest
 import respx
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import RemoteObject
-from app.database import Session
+from app.database import AsyncSession
 from app.outgoing_activities import _MAX_RETRIES
 from app.outgoing_activities import new_outgoing_activity
 from app.outgoing_activities import process_next_outgoing_activity
@@ -36,8 +39,9 @@ def _setup_outbox_object() -> models.OutboxObject:
     return outbox_object
 
 
-def test_new_outgoing_activity(
-    db: Session,
+@pytest.mark.asyncio
+async def test_new_outgoing_activity(
+    async_db_session: AsyncSession,
     client: TestClient,
     respx_mock: respx.MockRouter,
 ) -> None:
@@ -48,9 +52,13 @@ def test_new_outgoing_activity(
         raise ValueError("Should never happen")
 
     # When queuing the activity
-    outgoing_activity = new_outgoing_activity(db, inbox_url, outbox_object.id)
+    outgoing_activity = await new_outgoing_activity(
+        async_db_session, inbox_url, outbox_object.id
+    )
 
-    assert db.query(models.OutgoingActivity).one() == outgoing_activity
+    assert (
+        await async_db_session.execute(select(models.OutgoingActivity))
+    ).scalar_one() == outgoing_activity
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == inbox_url
 

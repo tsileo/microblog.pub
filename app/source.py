@@ -2,13 +2,13 @@ import re
 
 from markdown import markdown
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from app import models
 from app import webfinger
 from app.actor import Actor
 from app.actor import fetch_actor
 from app.config import BASE_URL
+from app.database import AsyncSession
 from app.utils import emoji
 
 
@@ -24,7 +24,9 @@ _HASHTAG_REGEX = re.compile(r"(#[\d\w]+)")
 _MENTION_REGEX = re.compile(r"@[\d\w_.+-]+@[\d\w-]+\.[\d\w\-.]+")
 
 
-def _hashtagify(db: Session, content: str) -> tuple[str, list[dict[str, str]]]:
+async def _hashtagify(
+    db_session: AsyncSession, content: str
+) -> tuple[str, list[dict[str, str]]]:
     tags = []
     hashtags = re.findall(_HASHTAG_REGEX, content)
     hashtags = sorted(set(hashtags), reverse=True)  # unique tags, longest first
@@ -36,23 +38,25 @@ def _hashtagify(db: Session, content: str) -> tuple[str, list[dict[str, str]]]:
     return content, tags
 
 
-def _mentionify(
-    db: Session,
+async def _mentionify(
+    db_session: AsyncSession,
     content: str,
 ) -> tuple[str, list[dict[str, str]], list[Actor]]:
     tags = []
     mentioned_actors = []
     for mention in re.findall(_MENTION_REGEX, content):
         _, username, domain = mention.split("@")
-        actor = db.execute(
-            select(models.Actor).where(models.Actor.handle == mention)
+        actor = (
+            await db_session.execute(
+                select(models.Actor).where(models.Actor.handle == mention)
+            )
         ).scalar_one_or_none()
         if not actor:
             actor_url = webfinger.get_actor_url(mention)
             if not actor_url:
                 # FIXME(ts): raise an error?
                 continue
-            actor = fetch_actor(db, actor_url)
+            actor = await fetch_actor(db_session, actor_url)
 
         mentioned_actors.append(actor)
         tags.append(dict(type="Mention", href=actor.url, name=mention))
@@ -62,8 +66,8 @@ def _mentionify(
     return content, tags, mentioned_actors
 
 
-def markdownify(
-    db: Session,
+async def markdownify(
+    db_session: AsyncSession,
     content: str,
     mentionify: bool = True,
     hashtagify: bool = True,
@@ -75,10 +79,10 @@ def markdownify(
     tags = []
     mentioned_actors: list[Actor] = []
     if hashtagify:
-        content, hashtag_tags = _hashtagify(db, content)
+        content, hashtag_tags = await _hashtagify(db_session, content)
         tags.extend(hashtag_tags)
     if mentionify:
-        content, mention_tags, mentioned_actors = _mentionify(db, content)
+        content, mention_tags, mentioned_actors = await _mentionify(db_session, content)
         tags.extend(mention_tags)
 
     # Handle custom emoji

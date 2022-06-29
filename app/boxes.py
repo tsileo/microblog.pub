@@ -12,7 +12,6 @@ from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 
 from app import activitypub as ap
@@ -26,6 +25,7 @@ from app.actor import save_actor
 from app.ap_object import RemoteObject
 from app.config import BASE_URL
 from app.config import ID
+from app.database import AsyncSession
 from app.database import now
 from app.outgoing_activities import new_outgoing_activity
 from app.source import markdownify
@@ -42,8 +42,8 @@ def outbox_object_id(outbox_id) -> str:
     return f"{BASE_URL}/o/{outbox_id}"
 
 
-def save_outbox_object(
-    db: Session,
+async def save_outbox_object(
+    db_session: AsyncSession,
     public_id: str,
     raw_object: ap.RawObject,
     relates_to_inbox_object_id: int | None = None,
@@ -68,15 +68,15 @@ def save_outbox_object(
         is_hidden_from_homepage=True if ra.in_reply_to else False,
         source=source,
     )
-    db.add(outbox_object)
-    db.commit()
-    db.refresh(outbox_object)
+    db_session.add(outbox_object)
+    await db_session.commit()
+    await db_session.refresh(outbox_object)
 
     return outbox_object
 
 
-def send_like(db: Session, ap_object_id: str) -> None:
-    inbox_object = get_inbox_object_by_ap_id(db, ap_object_id)
+async def send_like(db_session: AsyncSession, ap_object_id: str) -> None:
+    inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
     if not inbox_object:
         raise ValueError(f"{ap_object_id} not found in the inbox")
 
@@ -88,20 +88,22 @@ def send_like(db: Session, ap_object_id: str) -> None:
         "actor": ID,
         "object": ap_object_id,
     }
-    outbox_object = save_outbox_object(
-        db, like_id, like, relates_to_inbox_object_id=inbox_object.id
+    outbox_object = await save_outbox_object(
+        db_session, like_id, like, relates_to_inbox_object_id=inbox_object.id
     )
     if not outbox_object.id:
         raise ValueError("Should never happen")
 
     inbox_object.liked_via_outbox_object_ap_id = outbox_object.ap_id
-    db.commit()
+    await db_session.commit()
 
-    new_outgoing_activity(db, inbox_object.actor.inbox_url, outbox_object.id)
+    await new_outgoing_activity(
+        db_session, inbox_object.actor.inbox_url, outbox_object.id
+    )
 
 
-def send_announce(db: Session, ap_object_id: str) -> None:
-    inbox_object = get_inbox_object_by_ap_id(db, ap_object_id)
+async def send_announce(db_session: AsyncSession, ap_object_id: str) -> None:
+    inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
     if not inbox_object:
         raise ValueError(f"{ap_object_id} not found in the inbox")
 
@@ -118,22 +120,22 @@ def send_announce(db: Session, ap_object_id: str) -> None:
             inbox_object.ap_actor_id,
         ],
     }
-    outbox_object = save_outbox_object(
-        db, announce_id, announce, relates_to_inbox_object_id=inbox_object.id
+    outbox_object = await save_outbox_object(
+        db_session, announce_id, announce, relates_to_inbox_object_id=inbox_object.id
     )
     if not outbox_object.id:
         raise ValueError("Should never happen")
 
     inbox_object.announced_via_outbox_object_ap_id = outbox_object.ap_id
-    db.commit()
+    await db_session.commit()
 
-    recipients = _compute_recipients(db, announce)
+    recipients = await _compute_recipients(db_session, announce)
     for rcp in recipients:
-        new_outgoing_activity(db, rcp, outbox_object.id)
+        await new_outgoing_activity(db_session, rcp, outbox_object.id)
 
 
-def send_follow(db: Session, ap_actor_id: str) -> None:
-    actor = fetch_actor(db, ap_actor_id)
+async def send_follow(db_session: AsyncSession, ap_actor_id: str) -> None:
+    actor = await fetch_actor(db_session, ap_actor_id)
 
     follow_id = allocate_outbox_id()
     follow = {
@@ -144,17 +146,17 @@ def send_follow(db: Session, ap_actor_id: str) -> None:
         "object": ap_actor_id,
     }
 
-    outbox_object = save_outbox_object(
-        db, follow_id, follow, relates_to_actor_id=actor.id
+    outbox_object = await save_outbox_object(
+        db_session, follow_id, follow, relates_to_actor_id=actor.id
     )
     if not outbox_object.id:
         raise ValueError("Should never happen")
 
-    new_outgoing_activity(db, actor.inbox_url, outbox_object.id)
+    await new_outgoing_activity(db_session, actor.inbox_url, outbox_object.id)
 
 
-def send_undo(db: Session, ap_object_id: str) -> None:
-    outbox_object_to_undo = get_outbox_object_by_ap_id(db, ap_object_id)
+async def send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
+    outbox_object_to_undo = await get_outbox_object_by_ap_id(db_session, ap_object_id)
     if not outbox_object_to_undo:
         raise ValueError(f"{ap_object_id} not found in the outbox")
 
@@ -172,8 +174,8 @@ def send_undo(db: Session, ap_object_id: str) -> None:
         "object": ap.remove_context(outbox_object_to_undo.ap_object),
     }
 
-    outbox_object = save_outbox_object(
-        db,
+    outbox_object = await save_outbox_object(
+        db_session,
         undo_id,
         undo,
         relates_to_outbox_object_id=outbox_object_to_undo.id,
@@ -186,31 +188,33 @@ def send_undo(db: Session, ap_object_id: str) -> None:
     if outbox_object_to_undo.ap_type == "Follow":
         if not outbox_object_to_undo.activity_object_ap_id:
             raise ValueError("Should never happen")
-        followed_actor = fetch_actor(db, outbox_object_to_undo.activity_object_ap_id)
-        new_outgoing_activity(
-            db,
+        followed_actor = await fetch_actor(
+            db_session, outbox_object_to_undo.activity_object_ap_id
+        )
+        await new_outgoing_activity(
+            db_session,
             followed_actor.inbox_url,
             outbox_object.id,
         )
         # Also remove the follow from the following collection
-        db.execute(
+        await db_session.execute(
             delete(models.Following).where(
                 models.Following.ap_actor_id == followed_actor.ap_id
             )
         )
-        db.commit()
+        await db_session.commit()
     elif outbox_object_to_undo.ap_type == "Like":
         liked_object_ap_id = outbox_object_to_undo.activity_object_ap_id
         if not liked_object_ap_id:
             raise ValueError("Should never happen")
-        liked_object = get_inbox_object_by_ap_id(db, liked_object_ap_id)
+        liked_object = await get_inbox_object_by_ap_id(db_session, liked_object_ap_id)
         if not liked_object:
             raise ValueError(f"Cannot find liked object {liked_object_ap_id}")
         liked_object.liked_via_outbox_object_ap_id = None
 
         # Send the Undo to the liked object's actor
-        new_outgoing_activity(
-            db,
+        await new_outgoing_activity(
+            db_session,
             liked_object.actor.inbox_url,  # type: ignore
             outbox_object.id,
         )
@@ -218,21 +222,23 @@ def send_undo(db: Session, ap_object_id: str) -> None:
         announced_object_ap_id = outbox_object_to_undo.activity_object_ap_id
         if not announced_object_ap_id:
             raise ValueError("Should never happen")
-        announced_object = get_inbox_object_by_ap_id(db, announced_object_ap_id)
+        announced_object = await get_inbox_object_by_ap_id(
+            db_session, announced_object_ap_id
+        )
         if not announced_object:
             raise ValueError(f"Cannot find announced object {announced_object_ap_id}")
         announced_object.announced_via_outbox_object_ap_id = None
 
         # Send the Undo to the original recipients
-        recipients = _compute_recipients(db, outbox_object.ap_object)
+        recipients = await _compute_recipients(db_session, outbox_object.ap_object)
         for rcp in recipients:
-            new_outgoing_activity(db, rcp, outbox_object.id)
+            await new_outgoing_activity(db_session, rcp, outbox_object.id)
     else:
         raise ValueError("Should never happen")
 
 
-def send_create(
-    db: Session,
+async def send_create(
+    db_session: AsyncSession,
     source: str,
     uploads: list[tuple[models.Upload, str]],
     in_reply_to: str | None,
@@ -243,11 +249,11 @@ def send_create(
     note_id = allocate_outbox_id()
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     context = f"{ID}/contexts/" + uuid.uuid4().hex
-    content, tags, mentioned_actors = markdownify(db, source)
+    content, tags, mentioned_actors = await markdownify(db_session, source)
     attachments = []
 
     if in_reply_to:
-        in_reply_to_object = get_anybox_object_by_ap_id(db, in_reply_to)
+        in_reply_to_object = await get_anybox_object_by_ap_id(db_session, in_reply_to)
         if not in_reply_to_object:
             raise ValueError(f"Invalid in reply to {in_reply_to=}")
         if not in_reply_to_object.ap_context:
@@ -255,7 +261,7 @@ def send_create(
         context = in_reply_to_object.ap_context
 
         if in_reply_to_object.is_from_outbox:
-            db.execute(
+            await db_session.execute(
                 update(models.OutboxObject)
                 .where(
                     models.OutboxObject.ap_id == in_reply_to,
@@ -302,7 +308,7 @@ def send_create(
         "sensitive": is_sensitive,
         "attachment": attachments,
     }
-    outbox_object = save_outbox_object(db, note_id, note, source=source)
+    outbox_object = await save_outbox_object(db_session, note_id, note, source=source)
     if not outbox_object.id:
         raise ValueError("Should never happen")
 
@@ -312,24 +318,26 @@ def send_create(
                 tag=tag["name"][1:],
                 outbox_object_id=outbox_object.id,
             )
-            db.add(tagged_object)
+            db_session.add(tagged_object)
 
     for (upload, filename) in uploads:
         outbox_object_attachment = models.OutboxObjectAttachment(
             filename=filename, outbox_object_id=outbox_object.id, upload_id=upload.id
         )
-        db.add(outbox_object_attachment)
+        db_session.add(outbox_object_attachment)
 
-    db.commit()
+    await db_session.commit()
 
-    recipients = _compute_recipients(db, note)
+    recipients = await _compute_recipients(db_session, note)
     for rcp in recipients:
-        new_outgoing_activity(db, rcp, outbox_object.id)
+        await new_outgoing_activity(db_session, rcp, outbox_object.id)
 
     return note_id
 
 
-def _compute_recipients(db: Session, ap_object: ap.RawObject) -> set[str]:
+async def _compute_recipients(
+    db_session: AsyncSession, ap_object: ap.RawObject
+) -> set[str]:
     _recipients = []
     for field in ["to", "cc", "bto", "bcc"]:
         if field in ap_object:
@@ -343,15 +351,17 @@ def _compute_recipients(db: Session, ap_object: ap.RawObject) -> set[str]:
 
         # If we got a local collection, assume it's a collection of actors
         if r.startswith(BASE_URL):
-            for actor in fetch_actor_collection(db, r):
+            for actor in await fetch_actor_collection(db_session, r):
                 recipients.add(actor.shared_inbox_url or actor.inbox_url)
 
             continue
 
         # Is it a known actor?
-        known_actor = db.execute(
-            select(models.Actor).where(models.Actor.ap_id == r)
-        ).scalar_one_or_none()
+        known_actor = (
+            await db_session.execute(
+                select(models.Actor).where(models.Actor.ap_id == r)
+            )
+        ).scalar_one_or_none()  # type: ignore
         if known_actor:
             recipients.add(known_actor.shared_inbox_url or known_actor.inbox_url)
             continue
@@ -359,7 +369,7 @@ def _compute_recipients(db: Session, ap_object: ap.RawObject) -> set[str]:
         # Fetch the object
         raw_object = ap.fetch(r)
         if raw_object.get("type") in ap.ACTOR_TYPES:
-            saved_actor = save_actor(db, raw_object)
+            saved_actor = await save_actor(db_session, raw_object)
             recipients.add(saved_actor.shared_inbox_url or saved_actor.inbox_url)
         else:
             # Assume it's a collection of actors
@@ -370,27 +380,43 @@ def _compute_recipients(db: Session, ap_object: ap.RawObject) -> set[str]:
     return recipients
 
 
-def get_inbox_object_by_ap_id(db: Session, ap_id: str) -> models.InboxObject | None:
-    return db.execute(
-        select(models.InboxObject).where(models.InboxObject.ap_id == ap_id)
-    ).scalar_one_or_none()
+async def get_inbox_object_by_ap_id(
+    db_session: AsyncSession, ap_id: str
+) -> models.InboxObject | None:
+    return (
+        await db_session.execute(
+            select(models.InboxObject)
+            .where(models.InboxObject.ap_id == ap_id)
+            .options(
+                joinedload(models.InboxObject.actor),
+                joinedload(models.InboxObject.relates_to_inbox_object),
+                joinedload(models.InboxObject.relates_to_outbox_object),
+            )
+        )
+    ).scalar_one_or_none()  # type: ignore
 
 
-def get_outbox_object_by_ap_id(db: Session, ap_id: str) -> models.OutboxObject | None:
-    return db.execute(
-        select(models.OutboxObject).where(models.OutboxObject.ap_id == ap_id)
-    ).scalar_one_or_none()
+async def get_outbox_object_by_ap_id(
+    db_session: AsyncSession, ap_id: str
+) -> models.OutboxObject | None:
+    return (
+        await db_session.execute(
+            select(models.OutboxObject).where(models.OutboxObject.ap_id == ap_id)
+        )
+    ).scalar_one_or_none()  # type: ignore
 
 
-def get_anybox_object_by_ap_id(db: Session, ap_id: str) -> AnyboxObject | None:
+async def get_anybox_object_by_ap_id(
+    db_session: AsyncSession, ap_id: str
+) -> AnyboxObject | None:
     if ap_id.startswith(BASE_URL):
-        return get_outbox_object_by_ap_id(db, ap_id)
+        return await get_outbox_object_by_ap_id(db_session, ap_id)
     else:
-        return get_inbox_object_by_ap_id(db, ap_id)
+        return await get_inbox_object_by_ap_id(db_session, ap_id)
 
 
-def _handle_delete_activity(
-    db: Session,
+async def _handle_delete_activity(
+    db_session: AsyncSession,
     from_actor: models.Actor,
     ap_object_to_delete: models.InboxObject,
 ) -> None:
@@ -404,12 +430,12 @@ def _handle_delete_activity(
     # TODO(ts): do we need to delete related activities? should we keep
     # bookmarked objects with a deleted flag?
     logger.info(f"Deleting {ap_object_to_delete.ap_type}/{ap_object_to_delete.ap_id}")
-    db.delete(ap_object_to_delete)
-    db.flush()
+    await db_session.delete(ap_object_to_delete)
+    await db_session.flush()
 
 
-def _handle_follow_follow_activity(
-    db: Session,
+async def _handle_follow_follow_activity(
+    db_session: AsyncSession,
     from_actor: models.Actor,
     inbox_object: models.InboxObject,
 ) -> None:
@@ -419,8 +445,8 @@ def _handle_follow_follow_activity(
         ap_actor_id=from_actor.ap_id,
     )
     try:
-        db.add(follower)
-        db.flush()
+        db_session.add(follower)
+        await db_session.flush()
     except IntegrityError:
         pass  # TODO update the existing followe
 
@@ -433,20 +459,20 @@ def _handle_follow_follow_activity(
         "actor": ID,
         "object": inbox_object.ap_id,
     }
-    outbox_activity = save_outbox_object(db, reply_id, reply)
+    outbox_activity = await save_outbox_object(db_session, reply_id, reply)
     if not outbox_activity.id:
         raise ValueError("Should never happen")
-    new_outgoing_activity(db, from_actor.inbox_url, outbox_activity.id)
+    await new_outgoing_activity(db_session, from_actor.inbox_url, outbox_activity.id)
 
     notif = models.Notification(
         notification_type=models.NotificationType.NEW_FOLLOWER,
         actor_id=from_actor.id,
     )
-    db.add(notif)
+    db_session.add(notif)
 
 
-def _handle_undo_activity(
-    db: Session,
+async def _handle_undo_activity(
+    db_session: AsyncSession,
     from_actor: models.Actor,
     undo_activity: models.InboxObject,
     ap_activity_to_undo: models.InboxObject,
@@ -462,7 +488,7 @@ def _handle_undo_activity(
 
     if ap_activity_to_undo.ap_type == "Follow":
         logger.info(f"Undo follow from {from_actor.ap_id}")
-        db.execute(
+        await db_session.execute(
             delete(models.Follower).where(
                 models.Follower.inbox_object_id == ap_activity_to_undo.id
             )
@@ -471,13 +497,13 @@ def _handle_undo_activity(
             notification_type=models.NotificationType.UNFOLLOW,
             actor_id=from_actor.id,
         )
-        db.add(notif)
+        db_session.add(notif)
 
     elif ap_activity_to_undo.ap_type == "Like":
         if not ap_activity_to_undo.activity_object_ap_id:
             raise ValueError("Like without object")
-        liked_obj = get_outbox_object_by_ap_id(
-            db,
+        liked_obj = await get_outbox_object_by_ap_id(
+            db_session,
             ap_activity_to_undo.activity_object_ap_id,
         )
         if not liked_obj:
@@ -494,7 +520,7 @@ def _handle_undo_activity(
             outbox_object_id=liked_obj.id,
             inbox_object_id=ap_activity_to_undo.id,
         )
-        db.add(notif)
+        db_session.add(notif)
 
     elif ap_activity_to_undo.ap_type == "Announce":
         if not ap_activity_to_undo.activity_object_ap_id:
@@ -504,8 +530,8 @@ def _handle_undo_activity(
             f"Undo for announce {ap_activity_to_undo.ap_id}/{announced_obj_ap_id}"
         )
         if announced_obj_ap_id.startswith(BASE_URL):
-            announced_obj_from_outbox = get_outbox_object_by_ap_id(
-                db, announced_obj_ap_id
+            announced_obj_from_outbox = await get_outbox_object_by_ap_id(
+                db_session, announced_obj_ap_id
             )
             if announced_obj_from_outbox:
                 logger.info("Found in the oubox")
@@ -518,7 +544,7 @@ def _handle_undo_activity(
                     outbox_object_id=announced_obj_from_outbox.id,
                     inbox_object_id=ap_activity_to_undo.id,
                 )
-                db.add(notif)
+                db_session.add(notif)
 
         # FIXME(ts): what to do with ap_activity_to_undo? flag? delete?
     else:
@@ -527,8 +553,8 @@ def _handle_undo_activity(
     # commit will be perfomed in save_to_inbox
 
 
-def _handle_create_activity(
-    db: Session,
+async def _handle_create_activity(
+    db_session: AsyncSession,
     from_actor: models.Actor,
     created_object: models.InboxObject,
 ) -> None:
@@ -544,7 +570,7 @@ def _handle_create_activity(
         return None
 
     if created_object.in_reply_to and created_object.in_reply_to.startswith(BASE_URL):
-        db.execute(
+        await db_session.execute(
             update(models.OutboxObject)
             .where(
                 models.OutboxObject.ap_id == created_object.in_reply_to,
@@ -559,12 +585,12 @@ def _handle_create_activity(
                 actor_id=from_actor.id,
                 inbox_object_id=created_object.id,
             )
-            db.add(notif)
+            db_session.add(notif)
 
 
-def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
+async def save_to_inbox(db_session: AsyncSession, raw_object: ap.RawObject) -> None:
     try:
-        actor = fetch_actor(db, ap.get_id(raw_object["actor"]))
+        actor = await fetch_actor(db_session, ap.get_id(raw_object["actor"]))
     except httpx.HTTPStatusError:
         logger.exception("Failed to fetch actor")
         return
@@ -576,7 +602,7 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
     ra = RemoteObject(ap.unwrap_activity(raw_object), actor=actor)
 
     if (
-        db.scalar(
+        await db_session.scalar(
             select(func.count(models.InboxObject.id)).where(
                 models.InboxObject.ap_id == ra.ap_id
             )
@@ -590,13 +616,13 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
     relates_to_outbox_object: models.OutboxObject | None = None
     if ra.activity_object_ap_id:
         if ra.activity_object_ap_id.startswith(BASE_URL):
-            relates_to_outbox_object = get_outbox_object_by_ap_id(
-                db,
+            relates_to_outbox_object = await get_outbox_object_by_ap_id(
+                db_session,
                 ra.activity_object_ap_id,
             )
         else:
-            relates_to_inbox_object = get_inbox_object_by_ap_id(
-                db,
+            relates_to_inbox_object = await get_inbox_object_by_ap_id(
+                db_session,
                 ra.activity_object_ap_id,
             )
 
@@ -625,27 +651,29 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
         ),  # TODO: handle mentions
     )
 
-    db.add(inbox_object)
-    db.flush()
-    db.refresh(inbox_object)
+    db_session.add(inbox_object)
+    await db_session.flush()
+    await db_session.refresh(inbox_object)
 
     if ra.ap_type == "Note":  # TODO: handle create better
-        _handle_create_activity(db, actor, inbox_object)
+        await _handle_create_activity(db_session, actor, inbox_object)
     elif ra.ap_type == "Update":
         pass
     elif ra.ap_type == "Delete":
         if relates_to_inbox_object:
-            _handle_delete_activity(db, actor, relates_to_inbox_object)
+            await _handle_delete_activity(db_session, actor, relates_to_inbox_object)
         else:
             # TODO(ts): handle delete actor
             logger.info(
                 f"Received a Delete for an unknown object: {ra.activity_object_ap_id}"
             )
     elif ra.ap_type == "Follow":
-        _handle_follow_follow_activity(db, actor, inbox_object)
+        await _handle_follow_follow_activity(db_session, actor, inbox_object)
     elif ra.ap_type == "Undo":
         if relates_to_inbox_object:
-            _handle_undo_activity(db, actor, inbox_object, relates_to_inbox_object)
+            await _handle_undo_activity(
+                db_session, actor, inbox_object, relates_to_inbox_object
+            )
         else:
             logger.info("Received Undo for an unknown activity")
     elif ra.ap_type in ["Accept", "Reject"]:
@@ -661,7 +689,7 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                     outbox_object_id=relates_to_outbox_object.id,
                     ap_actor_id=actor.ap_id,
                 )
-                db.add(following)
+                db_session.add(following)
             else:
                 logger.info(
                     "Received an Accept for an unsupported activity: "
@@ -689,7 +717,7 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                 outbox_object_id=relates_to_outbox_object.id,
                 inbox_object_id=inbox_object.id,
             )
-            db.add(notif)
+            db_session.add(notif)
     elif raw_object["type"] == "Announce":
         if relates_to_outbox_object:
             # This is an announce for a local object
@@ -703,7 +731,7 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                 outbox_object_id=relates_to_outbox_object.id,
                 inbox_object_id=inbox_object.id,
             )
-            db.add(notif)
+            db_session.add(notif)
         else:
             # This is announce for a maybe unknown object
             if relates_to_inbox_object:
@@ -713,7 +741,9 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                 if not ra.activity_object_ap_id:
                     raise ValueError("Should never happen")
                 announced_raw_object = ap.fetch(ra.activity_object_ap_id)
-                announced_actor = fetch_actor(db, ap.get_actor_id(announced_raw_object))
+                announced_actor = await fetch_actor(
+                    db_session, ap.get_actor_id(announced_raw_object)
+                )
                 announced_object = RemoteObject(announced_raw_object, announced_actor)
                 announced_inbox_object = models.InboxObject(
                     server=urlparse(announced_object.ap_id).netloc,
@@ -727,8 +757,8 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                     visibility=announced_object.visibility,
                     is_hidden_from_stream=True,
                 )
-                db.add(announced_inbox_object)
-                db.flush()
+                db_session.add(announced_inbox_object)
+                await db_session.flush()
                 inbox_object.relates_to_inbox_object_id = announced_inbox_object.id
     elif ra.ap_type in ["Like", "Announce"]:
         if not relates_to_outbox_object:
@@ -749,7 +779,7 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                     outbox_object_id=relates_to_outbox_object.id,
                     inbox_object_id=inbox_object.id,
                 )
-                db.add(notif)
+                db_session.add(notif)
             elif raw_object["type"] == "Announce":
                 # TODO(ts): notification
                 relates_to_outbox_object.announces_count = (
@@ -762,18 +792,18 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
                     outbox_object_id=relates_to_outbox_object.id,
                     inbox_object_id=inbox_object.id,
                 )
-                db.add(notif)
+                db_session.add(notif)
             else:
                 raise ValueError("Should never happen")
 
     else:
         logger.warning(f"Received an unknown {inbox_object.ap_type} object")
 
-    db.commit()
+    await db_session.commit()
 
 
-def public_outbox_objects_count(db: Session) -> int:
-    return db.scalar(
+async def public_outbox_objects_count(db_session: AsyncSession) -> int:
+    return await db_session.scalar(
         select(func.count(models.OutboxObject.id)).where(
             models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
             models.OutboxObject.is_deleted.is_(False),
@@ -781,12 +811,16 @@ def public_outbox_objects_count(db: Session) -> int:
     )
 
 
-def fetch_actor_collection(db: Session, url: str) -> list[Actor]:
+async def fetch_actor_collection(db_session: AsyncSession, url: str) -> list[Actor]:
     if url.startswith(config.BASE_URL):
         if url == config.BASE_URL + "/followers":
             followers = (
-                db.scalars(
-                    select(models.Follower).options(joinedload(models.Follower.actor))
+                (
+                    await db_session.scalars(
+                        select(models.Follower).options(
+                            joinedload(models.Follower.actor)
+                        )
+                    )
                 )
                 .unique()
                 .all()
@@ -806,24 +840,28 @@ class ReplyTreeNode:
     is_root: bool = False
 
 
-def get_replies_tree(
-    db: Session,
+async def get_replies_tree(
+    db_session: AsyncSession,
     requested_object: AnyboxObject,
 ) -> ReplyTreeNode:
     # TODO: handle visibility
     tree_nodes: list[AnyboxObject] = []
     tree_nodes.extend(
-        db.scalars(
-            select(models.InboxObject).where(
-                models.InboxObject.ap_context == requested_object.ap_context,
+        (
+            await db_session.scalars(
+                select(models.InboxObject).where(
+                    models.InboxObject.ap_context == requested_object.ap_context,
+                )
             )
         ).all()
     )
     tree_nodes.extend(
-        db.scalars(
-            select(models.OutboxObject).where(
-                models.OutboxObject.ap_context == requested_object.ap_context,
-                models.OutboxObject.is_deleted.is_(False),
+        (
+            await db_session.scalars(
+                select(models.OutboxObject).where(
+                    models.OutboxObject.ap_context == requested_object.ap_context,
+                    models.OutboxObject.is_deleted.is_(False),
+                )
             )
         ).all()
     )

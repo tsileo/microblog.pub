@@ -11,15 +11,23 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import activitypub as ap
+from app import config
+from app import ldsig
 from app import models
+from app.database import AsyncSession
 from app.database import SessionLocal
 from app.database import now
+from app.key import Key
+from app.key import get_key
 
 _MAX_RETRIES = 16
 
+k = Key(config.ID, f"{config.ID}#main-key")
+k.load(get_key())
 
-def new_outgoing_activity(
-    db: Session,
+
+async def new_outgoing_activity(
+    db_session: AsyncSession,
     recipient: str,
     outbox_object_id: int,
 ) -> models.OutgoingActivity:
@@ -28,9 +36,9 @@ def new_outgoing_activity(
         outbox_object_id=outbox_object_id,
     )
 
-    db.add(outgoing_activity)
-    db.commit()
-    db.refresh(outgoing_activity)
+    db_session.add(outgoing_activity)
+    await db_session.commit()
+    await db_session.refresh(outgoing_activity)
     return outgoing_activity
 
 
@@ -91,6 +99,8 @@ def process_next_outgoing_activity(db: Session) -> bool:
     next_activity.last_try = now()
 
     payload = ap.wrap_object_if_needed(next_activity.outbox_object.ap_object)
+    if payload["type"] == "Create":
+        ldsig.generate_signature(payload, k)
     logger.info(f"{payload=}")
     try:
         resp = ap.post(next_activity.recipient, payload)

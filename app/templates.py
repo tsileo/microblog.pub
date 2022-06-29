@@ -15,7 +15,6 @@ from fastapi.templating import Jinja2Templates
 from loguru import logger
 from sqlalchemy import func
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 from starlette.templating import _TemplateResponse as TemplateResponse
 
 from app import activitypub as ap
@@ -29,6 +28,7 @@ from app.config import DEBUG
 from app.config import VERSION
 from app.config import generate_csrf_token
 from app.config import session_serializer
+from app.database import AsyncSession
 from app.database import now
 from app.media import proxied_media_url
 from app.utils.highlight import HIGHLIGHT_CSS
@@ -77,8 +77,8 @@ def is_current_user_admin(request: Request) -> bool:
     return is_admin
 
 
-def render_template(
-    db: Session,
+async def render_template(
+    db_session: AsyncSession,
     request: Request,
     template: str,
     template_args: dict[str, Any] = {},
@@ -96,7 +96,7 @@ def render_template(
             "csrf_token": generate_csrf_token() if is_admin else None,
             "highlight_css": HIGHLIGHT_CSS,
             "visibility_enum": ap.VisibilityEnum,
-            "notifications_count": db.scalar(
+            "notifications_count": await db_session.scalar(
                 select(func.count(models.Notification.id)).where(
                     models.Notification.is_new.is_(True)
                 )
@@ -104,8 +104,12 @@ def render_template(
             if is_admin
             else 0,
             "local_actor": LOCAL_ACTOR,
-            "followers_count": db.scalar(select(func.count(models.Follower.id))),
-            "following_count": db.scalar(select(func.count(models.Following.id))),
+            "followers_count": await db_session.scalar(
+                select(func.count(models.Follower.id))
+            ),
+            "following_count": await db_session.scalar(
+                select(func.count(models.Following.id))
+            ),
             **template_args,
         },
     )

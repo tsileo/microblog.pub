@@ -11,12 +11,12 @@ from app import activitypub as ap
 from app import models
 from app.config import BASE_URL
 from app.config import ROOT_DIR
-from app.database import Session
+from app.database import AsyncSession
 
 UPLOAD_DIR = ROOT_DIR / "data" / "uploads"
 
 
-def save_upload(db: Session, f: UploadFile) -> models.Upload:
+async def save_upload(db_session: AsyncSession, f: UploadFile) -> models.Upload:
     # Compute the hash
     h = hashlib.blake2b(digest_size=32)
     while True:
@@ -28,8 +28,10 @@ def save_upload(db: Session, f: UploadFile) -> models.Upload:
     content_hash = h.hexdigest()
     f.file.seek(0)
 
-    existing_upload = db.execute(
-        select(models.Upload).where(models.Upload.content_hash == content_hash)
+    existing_upload = (
+        await db_session.execute(
+            select(models.Upload).where(models.Upload.content_hash == content_hash)
+        )
     ).scalar_one_or_none()
     if existing_upload:
         logger.info(f"Upload with {content_hash=} already exists")
@@ -88,8 +90,8 @@ def save_upload(db: Session, f: UploadFile) -> models.Upload:
         width=width,
         height=height,
     )
-    db.add(new_upload)
-    db.commit()
+    db_session.add(new_upload)
+    await db_session.commit()
 
     return new_upload
 

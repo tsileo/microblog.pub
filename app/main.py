@@ -24,7 +24,6 @@ from loguru import logger
 from PIL import Image
 from sqlalchemy import func
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 from starlette.background import BackgroundTask
 from starlette.responses import JSONResponse
@@ -49,7 +48,8 @@ from app.config import USERNAME
 from app.config import generate_csrf_token
 from app.config import is_activitypub_requested
 from app.config import verify_csrf_token
-from app.database import get_db
+from app.database import AsyncSession
+from app.database import get_db_session
 from app.templates import is_current_user_admin
 from app.uploads import UPLOAD_DIR
 from app.utils import pagination
@@ -139,9 +139,9 @@ class ActivityPubResponse(JSONResponse):
 
 
 @app.get("/")
-def index(
+async def index(
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
     page: int | None = None,
 ) -> templates.TemplateResponse | ActivityPubResponse:
@@ -155,27 +155,26 @@ def index(
         models.OutboxObject.is_hidden_from_homepage.is_(False),
     )
     q = select(models.OutboxObject).where(*where)
-    total_count = db.scalar(select(func.count(models.OutboxObject.id)).where(*where))
+    total_count = await db_session.scalar(
+        select(func.count(models.OutboxObject.id)).where(*where)
+    )
     page_size = 20
     page_offset = (page - 1) * page_size
 
-    outbox_objects = (
-        db.scalars(
-            q.options(
-                joinedload(models.OutboxObject.outbox_object_attachments).options(
-                    joinedload(models.OutboxObjectAttachment.upload)
-                )
+    outbox_objects_result = await db_session.scalars(
+        q.options(
+            joinedload(models.OutboxObject.outbox_object_attachments).options(
+                joinedload(models.OutboxObjectAttachment.upload)
             )
-            .order_by(models.OutboxObject.ap_published_at.desc())
-            .offset(page_offset)
-            .limit(page_size)
         )
-        .unique()
-        .all()
+        .order_by(models.OutboxObject.ap_published_at.desc())
+        .offset(page_offset)
+        .limit(page_size)
     )
+    outbox_objects = outbox_objects_result.unique().all()
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "index.html",
         {
@@ -188,14 +187,14 @@ def index(
     )
 
 
-def _build_followx_collection(
-    db: Session,
+async def _build_followx_collection(
+    db_session: AsyncSession,
     model_cls: Type[models.Following | models.Follower],
     path: str,
     page: bool | None,
     next_cursor: str | None,
 ) -> ap.RawObject:
-    total_items = db.query(model_cls).count()
+    total_items = await db_session.scalar(select(func.count(model_cls.id)))
 
     if not page and not next_cursor:
         return {
@@ -213,11 +212,11 @@ def _build_followx_collection(
         )
     q = q.limit(20)
 
-    items = [followx for followx in db.scalars(q).all()]
+    items = [followx for followx in (await db_session.scalars(q)).all()]
     next_cursor = None
     if (
         items
-        and db.scalar(
+        and await db_session.scalar(
             select(func.count(model_cls.id)).where(
                 model_cls.created_at < items[-1].created_at
             )
@@ -244,18 +243,18 @@ def _build_followx_collection(
 
 
 @app.get("/followers")
-def followers(
+async def followers(
     request: Request,
     page: bool | None = None,
     next_cursor: str | None = None,
     prev_cursor: str | None = None,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     if is_activitypub_requested(request):
         return ActivityPubResponse(
-            _build_followx_collection(
-                db=db,
+            await _build_followx_collection(
+                db_session=db_session,
                 model_cls=models.Follower,
                 path="/followers",
                 page=page,
@@ -264,26 +263,23 @@ def followers(
         )
 
     # We only show the most recent 20 followers on the public website
-    followers = (
-        db.scalars(
-            select(models.Follower)
-            .options(joinedload(models.Follower.actor))
-            .order_by(models.Follower.created_at.desc())
-            .limit(20)
-        )
-        .unique()
-        .all()
+    followers_result = await db_session.scalars(
+        select(models.Follower)
+        .options(joinedload(models.Follower.actor))
+        .order_by(models.Follower.created_at.desc())
+        .limit(20)
     )
+    followers = followers_result.unique().all()
 
     actors_metadata = {}
     if is_current_user_admin(request):
-        actors_metadata = get_actors_metadata(
-            db,
+        actors_metadata = await get_actors_metadata(
+            db_session,
             [f.actor for f in followers],
         )
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "followers.html",
         {
@@ -294,18 +290,18 @@ def followers(
 
 
 @app.get("/following")
-def following(
+async def following(
     request: Request,
     page: bool | None = None,
     next_cursor: str | None = None,
     prev_cursor: str | None = None,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     if is_activitypub_requested(request):
         return ActivityPubResponse(
-            _build_followx_collection(
-                db=db,
+            await _build_followx_collection(
+                db_session=db_session,
                 model_cls=models.Following,
                 path="/following",
                 page=page,
@@ -315,10 +311,12 @@ def following(
 
     # We only show the most recent 20 follows on the public website
     following = (
-        db.scalars(
-            select(models.Following)
-            .options(joinedload(models.Following.actor))
-            .order_by(models.Following.created_at.desc())
+        (
+            await db_session.scalars(
+                select(models.Following)
+                .options(joinedload(models.Following.actor))
+                .order_by(models.Following.created_at.desc())
+            )
         )
         .unique()
         .all()
@@ -327,13 +325,13 @@ def following(
     # TODO: support next_cursor/prev_cursor
     actors_metadata = {}
     if is_current_user_admin(request):
-        actors_metadata = get_actors_metadata(
-            db,
+        actors_metadata = await get_actors_metadata(
+            db_session,
             [f.actor for f in following],
         )
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "following.html",
         {
@@ -344,19 +342,21 @@ def following(
 
 
 @app.get("/outbox")
-def outbox(
-    db: Session = Depends(get_db),
+async def outbox(
+    db_session: AsyncSession = Depends(get_db_session),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
     # By design, we only show the last 20 public activities in the oubox
-    outbox_objects = db.scalars(
-        select(models.OutboxObject)
-        .where(
-            models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
-            models.OutboxObject.is_deleted.is_(False),
+    outbox_objects = (
+        await db_session.scalars(
+            select(models.OutboxObject)
+            .where(
+                models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+                models.OutboxObject.is_deleted.is_(False),
+            )
+            .order_by(models.OutboxObject.ap_published_at.desc())
+            .limit(20)
         )
-        .order_by(models.OutboxObject.ap_published_at.desc())
-        .limit(20)
     ).all()
     return ActivityPubResponse(
         {
@@ -373,19 +373,21 @@ def outbox(
 
 
 @app.get("/featured")
-def featured(
-    db: Session = Depends(get_db),
+async def featured(
+    db_session: AsyncSession = Depends(get_db_session),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
-    outbox_objects = db.scalars(
-        select(models.OutboxObject)
-        .filter(
-            models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
-            models.OutboxObject.is_deleted.is_(False),
-            models.OutboxObject.is_pinned.is_(True),
+    outbox_objects = (
+        await db_session.scalars(
+            select(models.OutboxObject)
+            .filter(
+                models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+                models.OutboxObject.is_deleted.is_(False),
+                models.OutboxObject.is_pinned.is_(True),
+            )
+            .order_by(models.OutboxObject.ap_published_at.desc())
+            .limit(5)
         )
-        .order_by(models.OutboxObject.ap_published_at.desc())
-        .limit(5)
     ).all()
     return ActivityPubResponse(
         {
@@ -398,9 +400,9 @@ def featured(
     )
 
 
-def _check_outbox_object_acl(
+async def _check_outbox_object_acl(
     request: Request,
-    db: Session,
+    db_session: AsyncSession,
     ap_object: models.OutboxObject,
     httpsig_info: httpsig.HTTPSigInfo,
 ) -> None:
@@ -413,7 +415,9 @@ def _check_outbox_object_acl(
     ]:
         return None
     elif ap_object.visibility == ap.VisibilityEnum.FOLLOWERS_ONLY:
-        followers = boxes.fetch_actor_collection(db, BASE_URL + "/followers")
+        followers = await boxes.fetch_actor_collection(
+            db_session, BASE_URL + "/followers"
+        )
         if httpsig_info.signed_by_ap_actor_id in [actor.ap_id for actor in followers]:
             return None
     elif ap_object.visibility == ap.VisibilityEnum.DIRECT:
@@ -425,23 +429,25 @@ def _check_outbox_object_acl(
 
 
 @app.get("/o/{public_id}")
-def outbox_by_public_id(
+async def outbox_by_public_id(
     public_id: str,
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
     httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     maybe_object = (
-        db.execute(
-            select(models.OutboxObject)
-            .options(
-                joinedload(models.OutboxObject.outbox_object_attachments).options(
-                    joinedload(models.OutboxObjectAttachment.upload)
+        (
+            await db_session.execute(
+                select(models.OutboxObject)
+                .options(
+                    joinedload(models.OutboxObject.outbox_object_attachments).options(
+                        joinedload(models.OutboxObjectAttachment.upload)
+                    )
                 )
-            )
-            .where(
-                models.OutboxObject.public_id == public_id,
-                models.OutboxObject.is_deleted.is_(False),
+                .where(
+                    models.OutboxObject.public_id == public_id,
+                    models.OutboxObject.is_deleted.is_(False),
+                )
             )
         )
         .unique()
@@ -450,45 +456,49 @@ def outbox_by_public_id(
     if not maybe_object:
         raise HTTPException(status_code=404)
 
-    _check_outbox_object_acl(request, db, maybe_object, httpsig_info)
+    await _check_outbox_object_acl(request, db_session, maybe_object, httpsig_info)
 
     if is_activitypub_requested(request):
         return ActivityPubResponse(maybe_object.ap_object)
 
-    replies_tree = boxes.get_replies_tree(db, maybe_object)
+    replies_tree = await boxes.get_replies_tree(db_session, maybe_object)
 
     likes = (
-        db.scalars(
-            select(models.InboxObject)
-            .where(
-                models.InboxObject.ap_type == "Like",
-                models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+        (
+            await db_session.scalars(
+                select(models.InboxObject)
+                .where(
+                    models.InboxObject.ap_type == "Like",
+                    models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+                )
+                .options(joinedload(models.InboxObject.actor))
+                .order_by(models.InboxObject.ap_published_at.desc())
+                .limit(10)
             )
-            .options(joinedload(models.InboxObject.actor))
-            .order_by(models.InboxObject.ap_published_at.desc())
-            .limit(10)
         )
         .unique()
         .all()
     )
 
     shares = (
-        db.scalars(
-            select(models.InboxObject)
-            .filter(
-                models.InboxObject.ap_type == "Announce",
-                models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+        (
+            await db_session.scalars(
+                select(models.InboxObject)
+                .filter(
+                    models.InboxObject.ap_type == "Announce",
+                    models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+                )
+                .options(joinedload(models.InboxObject.actor))
+                .order_by(models.InboxObject.ap_published_at.desc())
+                .limit(10)
             )
-            .options(joinedload(models.InboxObject.actor))
-            .order_by(models.InboxObject.ap_published_at.desc())
-            .limit(10)
         )
         .unique()
         .all()
     )
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "object.html",
         {
@@ -501,31 +511,33 @@ def outbox_by_public_id(
 
 
 @app.get("/o/{public_id}/activity")
-def outbox_activity_by_public_id(
+async def outbox_activity_by_public_id(
     public_id: str,
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
     httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
-    maybe_object = db.execute(
-        select(models.OutboxObject).where(
-            models.OutboxObject.public_id == public_id,
-            models.OutboxObject.is_deleted.is_(False),
+    maybe_object = (
+        await db_session.execute(
+            select(models.OutboxObject).where(
+                models.OutboxObject.public_id == public_id,
+                models.OutboxObject.is_deleted.is_(False),
+            )
         )
     ).scalar_one_or_none()
     if not maybe_object:
         raise HTTPException(status_code=404)
 
-    _check_outbox_object_acl(request, db, maybe_object, httpsig_info)
+    await _check_outbox_object_acl(request, db_session, maybe_object, httpsig_info)
 
     return ActivityPubResponse(ap.wrap_object(maybe_object.ap_object))
 
 
 @app.get("/t/{tag}")
-def tag_by_name(
+async def tag_by_name(
     tag: str,
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     # TODO(ts): implement HTML version
@@ -554,23 +566,23 @@ def emoji_by_name(name: str) -> ActivityPubResponse:
 @app.post("/inbox")
 async def inbox(
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
     httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.enforce_httpsig),
 ) -> Response:
     logger.info(f"headers={request.headers}")
     payload = await request.json()
     logger.info(f"{payload=}")
-    save_to_inbox(db, payload)
+    await save_to_inbox(db_session, payload)
     return Response(status_code=204)
 
 
 @app.get("/remote_follow")
-def get_remote_follow(
+async def get_remote_follow(
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "remote_follow.html",
         {"remote_follow_csrf_token": generate_csrf_token()},
@@ -578,9 +590,8 @@ def get_remote_follow(
 
 
 @app.post("/remote_follow")
-def post_remote_follow(
+async def post_remote_follow(
     request: Request,
-    db: Session = Depends(get_db),
     csrf_check: None = Depends(verify_csrf_token),
     profile: str = Form(),
 ) -> RedirectResponse:
@@ -598,7 +609,7 @@ def post_remote_follow(
 
 
 @app.get("/.well-known/webfinger")
-def wellknown_webfinger(resource: str) -> JSONResponse:
+async def wellknown_webfinger(resource: str) -> JSONResponse:
     """Exposes/servers WebFinger data."""
     omg = f"acct:{USERNAME}@{DOMAIN}"
     logger.info(f"{resource == omg}/{resource}/{omg}/{len(resource)}/{len(omg)}")
@@ -639,10 +650,10 @@ async def well_known_nodeinfo() -> dict[str, Any]:
 
 
 @app.get("/nodeinfo")
-def nodeinfo(
-    db: Session = Depends(get_db),
+async def nodeinfo(
+    db_session: AsyncSession = Depends(get_db_session),
 ):
-    local_posts = public_outbox_objects_count(db)
+    local_posts = await public_outbox_objects_count(db_session)
     return JSONResponse(
         {
             "version": "2.1",
@@ -780,14 +791,16 @@ def serve_proxy_media_resized(
 
 
 @app.get("/attachments/{content_hash}/{filename}")
-def serve_attachment(
+async def serve_attachment(
     content_hash: str,
     filename: str,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ):
-    upload = db.execute(
-        select(models.Upload).where(
-            models.Upload.content_hash == content_hash,
+    upload = (
+        await db_session.execute(
+            select(models.Upload).where(
+                models.Upload.content_hash == content_hash,
+            )
         )
     ).scalar_one_or_none()
     if not upload:
@@ -800,14 +813,16 @@ def serve_attachment(
 
 
 @app.get("/attachments/thumbnails/{content_hash}/{filename}")
-def serve_attachment_thumbnail(
+async def serve_attachment_thumbnail(
     content_hash: str,
     filename: str,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ):
-    upload = db.execute(
-        select(models.Upload).where(
-            models.Upload.content_hash == content_hash,
+    upload = (
+        await db_session.execute(
+            select(models.Upload).where(
+                models.Upload.content_hash == content_hash,
+            )
         )
     ).scalar_one_or_none()
     if not upload or not upload.has_thumbnail:
@@ -827,24 +842,35 @@ Disallow: /following
 Disallow: /admin"""
 
 
-def _get_outbox_for_feed(db: Session) -> list[models.OutboxObject]:
-    return db.scalars(
-        select(models.OutboxObject)
-        .where(
-            models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
-            models.OutboxObject.is_deleted.is_(False),
-            models.OutboxObject.ap_type.in_(["Note", "Article", "Video"]),
+async def _get_outbox_for_feed(db_session: AsyncSession) -> list[models.OutboxObject]:
+    return (
+        (
+            await db_session.scalars(
+                select(models.OutboxObject)
+                .where(
+                    models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+                    models.OutboxObject.is_deleted.is_(False),
+                    models.OutboxObject.ap_type.in_(["Note", "Article", "Video"]),
+                )
+                .options(
+                    joinedload(models.OutboxObject.outbox_object_attachments).options(
+                        joinedload(models.OutboxObjectAttachment.upload)
+                    )
+                )
+                .order_by(models.OutboxObject.ap_published_at.desc())
+                .limit(20)
+            )
         )
-        .order_by(models.OutboxObject.ap_published_at.desc())
-        .limit(20)
-    ).all()
+        .unique()
+        .all()
+    )
 
 
 @app.get("/feed.json")
-def json_feed(
-    db: Session = Depends(get_db),
+async def json_feed(
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> dict[str, Any]:
-    outbox_objects = _get_outbox_for_feed(db)
+    outbox_objects = await _get_outbox_for_feed(db_session)
     data = []
     for outbox_object in outbox_objects:
         if not outbox_object.ap_published_at:
@@ -876,8 +902,8 @@ def json_feed(
     }
 
 
-def _gen_rss_feed(
-    db: Session,
+async def _gen_rss_feed(
+    db_session: AsyncSession,
 ):
     fg = FeedGenerator()
     fg.id(BASE_URL + "/feed.rss")
@@ -888,7 +914,7 @@ def _gen_rss_feed(
     fg.logo(LOCAL_ACTOR.icon_url)
     fg.language("en")
 
-    outbox_objects = _get_outbox_for_feed(db)
+    outbox_objects = await _get_outbox_for_feed(db_session)
     for outbox_object in outbox_objects:
         if not outbox_object.ap_published_at:
             raise ValueError(f"{outbox_object} has no published date")
@@ -904,20 +930,20 @@ def _gen_rss_feed(
 
 
 @app.get("/feed.rss")
-def rss_feed(
-    db: Session = Depends(get_db),
+async def rss_feed(
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> PlainTextResponse:
     return PlainTextResponse(
-        _gen_rss_feed(db).rss_str(),
+        (await _gen_rss_feed(db_session)).rss_str(),
         headers={"Content-Type": "application/rss+xml"},
     )
 
 
 @app.get("/feed.atom")
-def atom_feed(
-    db: Session = Depends(get_db),
+async def atom_feed(
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> PlainTextResponse:
     return PlainTextResponse(
-        _gen_rss_feed(db).atom_str(),
+        (await _gen_rss_feed(db_session)).atom_str(),
         headers={"Content-Type": "application/atom+xml"},
     )

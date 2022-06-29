@@ -33,7 +33,7 @@ class Config(pydantic.BaseModel):
     debug: bool = False
 
     # Config items to make tests easier
-    sqlalchemy_database_url: str | None = None
+    sqlalchemy_database: str | None = None
     key_path: str | None = None
 
 
@@ -73,8 +73,8 @@ ID = f"{_SCHEME}://{DOMAIN}"
 USERNAME = CONFIG.username
 BASE_URL = ID
 DEBUG = CONFIG.debug
-DB_PATH = ROOT_DIR / "data" / "microblogpub.db"
-SQLALCHEMY_DATABASE_URL = CONFIG.sqlalchemy_database_url or f"sqlite:///{DB_PATH}"
+DB_PATH = CONFIG.sqlalchemy_database or ROOT_DIR / "data" / "microblogpub.db"
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 KEY_PATH = (
     (ROOT_DIR / CONFIG.key_path) if CONFIG.key_path else ROOT_DIR / "data" / "key.pem"
 )

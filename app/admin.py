@@ -8,7 +8,6 @@ from fastapi.exceptions import HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy import func
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 
 from app import activitypub as ap
@@ -25,7 +24,8 @@ from app.config import generate_csrf_token
 from app.config import session_serializer
 from app.config import verify_csrf_token
 from app.config import verify_password
-from app.database import get_db
+from app.database import AsyncSession
+from app.database import get_db_session
 from app.lookup import lookup
 from app.uploads import save_upload
 from app.utils import pagination
@@ -62,30 +62,36 @@ unauthenticated_router = APIRouter()
 
 
 @router.get("/")
-def admin_index(
+async def admin_index(
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
-    return templates.render_template(db, request, "index.html", {"request": request})
+    return await templates.render_template(
+        db_session, request, "index.html", {"request": request}
+    )
 
 
 @router.get("/lookup")
-def get_lookup(
+async def get_lookup(
     request: Request,
     query: str | None = None,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
     ap_object = None
     actors_metadata = {}
     if query:
-        ap_object = lookup(db, query)
+        ap_object = await lookup(db_session, query)
         if ap_object.ap_type in ap.ACTOR_TYPES:
-            actors_metadata = get_actors_metadata(db, [ap_object])  # type: ignore
+            actors_metadata = await get_actors_metadata(
+                db_session, [ap_object]  # type: ignore
+            )
         else:
-            actors_metadata = get_actors_metadata(db, [ap_object.actor])  # type: ignore
+            actors_metadata = await get_actors_metadata(
+                db_session, [ap_object.actor]  # type: ignore
+            )
         print(ap_object)
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "lookup.html",
         {
@@ -97,16 +103,18 @@ def get_lookup(
 
 
 @router.get("/new")
-def admin_new(
+async def admin_new(
     request: Request,
     query: str | None = None,
     in_reply_to: str | None = None,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
     content = ""
     in_reply_to_object = None
     if in_reply_to:
-        in_reply_to_object = boxes.get_anybox_object_by_ap_id(db, in_reply_to)
+        in_reply_to_object = await boxes.get_anybox_object_by_ap_id(
+            db_session, in_reply_to
+        )
 
         # Add mentions to the initial note content
         if not in_reply_to_object:
@@ -117,8 +125,8 @@ def admin_new(
             if tag.get("type") == "Mention" and tag["name"] != LOCAL_ACTOR.handle:
                 content += f'{tag["name"]} '
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "admin_new.html",
         {
@@ -138,28 +146,30 @@ def admin_new(
 
 
 @router.get("/bookmarks")
-def admin_bookmarks(
+async def admin_bookmarks(
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
     stream = (
-        db.scalars(
-            select(models.InboxObject)
-            .where(
-                models.InboxObject.ap_type.in_(
-                    ["Note", "Article", "Video", "Announce"]
-                ),
-                models.InboxObject.is_hidden_from_stream.is_(False),
-                models.InboxObject.undone_by_inbox_object_id.is_(None),
-                models.InboxObject.is_bookmarked.is_(True),
+        (
+            await db_session.scalars(
+                select(models.InboxObject)
+                .where(
+                    models.InboxObject.ap_type.in_(
+                        ["Note", "Article", "Video", "Announce"]
+                    ),
+                    models.InboxObject.is_hidden_from_stream.is_(False),
+                    models.InboxObject.undone_by_inbox_object_id.is_(None),
+                    models.InboxObject.is_bookmarked.is_(True),
+                )
+                .order_by(models.InboxObject.ap_published_at.desc())
+                .limit(20)
             )
-            .order_by(models.InboxObject.ap_published_at.desc())
-            .limit(20)
         ).all()
         # TODO: joinedload + unique
     )
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "admin_stream.html",
         {
@@ -169,9 +179,9 @@ def admin_bookmarks(
 
 
 @router.get("/inbox")
-def admin_inbox(
+async def admin_inbox(
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
     filter_by: str | None = None,
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
@@ -184,17 +194,22 @@ def admin_inbox(
         )
 
     page_size = 20
-    remaining_count = db.scalar(select(func.count(models.InboxObject.id)).where(*where))
+    remaining_count = await db_session.scalar(
+        select(func.count(models.InboxObject.id)).where(*where)
+    )
     q = select(models.InboxObject).where(*where)
 
     inbox = (
-        db.scalars(
-            q.options(
-                joinedload(models.InboxObject.relates_to_inbox_object),
-                joinedload(models.InboxObject.relates_to_outbox_object),
+        (
+            await db_session.scalars(
+                q.options(
+                    joinedload(models.InboxObject.relates_to_inbox_object),
+                    joinedload(models.InboxObject.relates_to_outbox_object),
+                    joinedload(models.InboxObject.actor),
+                )
+                .order_by(models.InboxObject.ap_published_at.desc())
+                .limit(20)
             )
-            .order_by(models.InboxObject.ap_published_at.desc())
-            .limit(20)
         )
         .unique()
         .all()
@@ -206,8 +221,8 @@ def admin_inbox(
         else None
     )
 
-    actors_metadata = get_actors_metadata(
-        db,
+    actors_metadata = await get_actors_metadata(
+        db_session,
         [
             inbox_object.actor
             for inbox_object in inbox
@@ -215,8 +230,8 @@ def admin_inbox(
         ],
     )
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "admin_inbox.html",
         {
@@ -228,9 +243,9 @@ def admin_inbox(
 
 
 @router.get("/outbox")
-def admin_outbox(
+async def admin_outbox(
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
     filter_by: str | None = None,
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
@@ -243,20 +258,22 @@ def admin_outbox(
         )
 
     page_size = 20
-    remaining_count = db.scalar(
+    remaining_count = await db_session.scalar(
         select(func.count(models.OutboxObject.id)).where(*where)
     )
     q = select(models.OutboxObject).where(*where)
 
     outbox = (
-        db.scalars(
-            q.options(
-                joinedload(models.OutboxObject.relates_to_inbox_object),
-                joinedload(models.OutboxObject.relates_to_outbox_object),
-                joinedload(models.OutboxObject.relates_to_actor),
+        (
+            await db_session.scalars(
+                q.options(
+                    joinedload(models.OutboxObject.relates_to_inbox_object),
+                    joinedload(models.OutboxObject.relates_to_outbox_object),
+                    joinedload(models.OutboxObject.relates_to_actor),
+                )
+                .order_by(models.OutboxObject.ap_published_at.desc())
+                .limit(page_size)
             )
-            .order_by(models.OutboxObject.ap_published_at.desc())
-            .limit(page_size)
         )
         .unique()
         .all()
@@ -268,8 +285,8 @@ def admin_outbox(
         else None
     )
 
-    actors_metadata = get_actors_metadata(
-        db,
+    actors_metadata = await get_actors_metadata(
+        db_session,
         [
             outbox_object.relates_to_actor
             for outbox_object in outbox
@@ -277,8 +294,8 @@ def admin_outbox(
         ],
     )
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "admin_outbox.html",
         {
@@ -290,32 +307,34 @@ def admin_outbox(
 
 
 @router.get("/notifications")
-def get_notifications(
-    request: Request, db: Session = Depends(get_db)
+async def get_notifications(
+    request: Request, db_session: AsyncSession = Depends(get_db_session)
 ) -> templates.TemplateResponse:
     notifications = (
-        db.scalars(
-            select(models.Notification)
-            .options(
-                joinedload(models.Notification.actor),
-                joinedload(models.Notification.inbox_object),
-                joinedload(models.Notification.outbox_object),
+        (
+            await db_session.scalars(
+                select(models.Notification)
+                .options(
+                    joinedload(models.Notification.actor),
+                    joinedload(models.Notification.inbox_object),
+                    joinedload(models.Notification.outbox_object),
+                )
+                .order_by(models.Notification.created_at.desc())
             )
-            .order_by(models.Notification.created_at.desc())
         )
         .unique()
         .all()
     )
-    actors_metadata = get_actors_metadata(
-        db, [notif.actor for notif in notifications if notif.actor]
+    actors_metadata = await get_actors_metadata(
+        db_session, [notif.actor for notif in notifications if notif.actor]
     )
 
     for notif in notifications:
         notif.is_new = False
-    db.commit()
+    await db_session.commit()
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "notifications.html",
         {
@@ -326,19 +345,19 @@ def get_notifications(
 
 
 @router.get("/object")
-def admin_object(
+async def admin_object(
     request: Request,
     ap_id: str,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
-    requested_object = boxes.get_anybox_object_by_ap_id(db, ap_id)
+    requested_object = await boxes.get_anybox_object_by_ap_id(db_session, ap_id)
     if not requested_object:
         raise HTTPException(status_code=404)
 
-    replies_tree = boxes.get_replies_tree(db, requested_object)
+    replies_tree = await boxes.get_replies_tree(db_session, requested_object)
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "object.html",
         {"replies_tree": replies_tree},
@@ -346,30 +365,34 @@ def admin_object(
 
 
 @router.get("/profile")
-def admin_profile(
+async def admin_profile(
     request: Request,
     actor_id: str,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
-    actor = db.execute(
-        select(models.Actor).where(models.Actor.ap_id == actor_id)
+    actor = (
+        await db_session.execute(
+            select(models.Actor).where(models.Actor.ap_id == actor_id)
+        )
     ).scalar_one_or_none()
     if not actor:
         raise HTTPException(status_code=404)
 
-    actors_metadata = get_actors_metadata(db, [actor])
+    actors_metadata = await get_actors_metadata(db_session, [actor])
 
-    inbox_objects = db.scalars(
-        select(models.InboxObject)
-        .where(
-            models.InboxObject.actor_id == actor.id,
-            models.InboxObject.ap_type.in_(["Note", "Article", "Video"]),
+    inbox_objects = (
+        await db_session.scalars(
+            select(models.InboxObject)
+            .where(
+                models.InboxObject.actor_id == actor.id,
+                models.InboxObject.ap_type.in_(["Note", "Article", "Video"]),
+            )
+            .order_by(models.InboxObject.ap_published_at.desc())
         )
-        .order_by(models.InboxObject.ap_published_at.desc())
     ).all()
 
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "admin_profile.html",
         {
@@ -381,120 +404,120 @@ def admin_profile(
 
 
 @router.post("/actions/follow")
-def admin_actions_follow(
+async def admin_actions_follow(
     request: Request,
     ap_actor_id: str = Form(),
     redirect_url: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
     print(f"Following {ap_actor_id}")
-    send_follow(db, ap_actor_id)
+    await send_follow(db_session, ap_actor_id)
     return RedirectResponse(redirect_url, status_code=302)
 
 
 @router.post("/actions/like")
-def admin_actions_like(
+async def admin_actions_like(
     request: Request,
     ap_object_id: str = Form(),
     redirect_url: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
-    boxes.send_like(db, ap_object_id)
+    await boxes.send_like(db_session, ap_object_id)
     return RedirectResponse(redirect_url, status_code=302)
 
 
 @router.post("/actions/undo")
-def admin_actions_undo(
+async def admin_actions_undo(
     request: Request,
     ap_object_id: str = Form(),
     redirect_url: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
-    boxes.send_undo(db, ap_object_id)
+    await boxes.send_undo(db_session, ap_object_id)
     return RedirectResponse(redirect_url, status_code=302)
 
 
 @router.post("/actions/announce")
-def admin_actions_announce(
+async def admin_actions_announce(
     request: Request,
     ap_object_id: str = Form(),
     redirect_url: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
-    boxes.send_announce(db, ap_object_id)
+    await boxes.send_announce(db_session, ap_object_id)
     return RedirectResponse(redirect_url, status_code=302)
 
 
 @router.post("/actions/bookmark")
-def admin_actions_bookmark(
+async def admin_actions_bookmark(
     request: Request,
     ap_object_id: str = Form(),
     redirect_url: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
-    inbox_object = get_inbox_object_by_ap_id(db, ap_object_id)
+    inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
     if not inbox_object:
         raise ValueError("Should never happen")
     inbox_object.is_bookmarked = True
-    db.commit()
+    await db_session.commit()
     return RedirectResponse(redirect_url, status_code=302)
 
 
 @router.post("/actions/unbookmark")
-def admin_actions_unbookmark(
+async def admin_actions_unbookmark(
     request: Request,
     ap_object_id: str = Form(),
     redirect_url: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
-    inbox_object = get_inbox_object_by_ap_id(db, ap_object_id)
+    inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
     if not inbox_object:
         raise ValueError("Should never happen")
     inbox_object.is_bookmarked = False
-    db.commit()
+    await db_session.commit()
     return RedirectResponse(redirect_url, status_code=302)
 
 
 @router.post("/actions/pin")
-def admin_actions_pin(
+async def admin_actions_pin(
     request: Request,
     ap_object_id: str = Form(),
     redirect_url: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
-    outbox_object = get_outbox_object_by_ap_id(db, ap_object_id)
+    outbox_object = await get_outbox_object_by_ap_id(db_session, ap_object_id)
     if not outbox_object:
         raise ValueError("Should never happen")
     outbox_object.is_pinned = True
-    db.commit()
+    await db_session.commit()
     return RedirectResponse(redirect_url, status_code=302)
 
 
 @router.post("/actions/unpin")
-def admin_actions_unpin(
+async def admin_actions_unpin(
     request: Request,
     ap_object_id: str = Form(),
     redirect_url: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
-    outbox_object = get_outbox_object_by_ap_id(db, ap_object_id)
+    outbox_object = await get_outbox_object_by_ap_id(db_session, ap_object_id)
     if not outbox_object:
         raise ValueError("Should never happen")
     outbox_object.is_pinned = False
-    db.commit()
+    await db_session.commit()
     return RedirectResponse(redirect_url, status_code=302)
 
 
 @router.post("/actions/new")
-def admin_actions_new(
+async def admin_actions_new(
     request: Request,
     files: list[UploadFile] = [],
     content: str = Form(),
@@ -504,16 +527,16 @@ def admin_actions_new(
     is_sensitive: bool = Form(False),
     visibility: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
     # XXX: for some reason, no files restuls in an empty single file
     uploads = []
     if len(files) >= 1 and files[0].filename:
         for f in files:
-            upload = save_upload(db, f)
+            upload = await save_upload(db_session, f)
             uploads.append((upload, f.filename))
-    public_id = boxes.send_create(
-        db,
+    public_id = await boxes.send_create(
+        db_session,
         source=content,
         uploads=uploads,
         in_reply_to=in_reply_to or None,
@@ -528,12 +551,12 @@ def admin_actions_new(
 
 
 @unauthenticated_router.get("/login")
-def login(
+async def login(
     request: Request,
-    db: Session = Depends(get_db),
+    db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
-    return templates.render_template(
-        db,
+    return await templates.render_template(
+        db_session,
         request,
         "login.html",
         {"csrf_token": generate_csrf_token()},
@@ -541,7 +564,7 @@ def login(
 
 
 @unauthenticated_router.post("/login")
-def login_validation(
+async def login_validation(
     request: Request,
     password: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
@@ -556,7 +579,7 @@ def login_validation(
 
 
 @router.get("/logout")
-def logout(
+async def logout(
     request: Request,
 ) -> RedirectResponse:
     resp = RedirectResponse(request.url_for("index"), status_code=302)

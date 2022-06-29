@@ -1,14 +1,14 @@
 import mf2py  # type: ignore
-from sqlalchemy.orm import Session
 
 from app import activitypub as ap
 from app import webfinger
 from app.actor import Actor
 from app.actor import fetch_actor
 from app.ap_object import RemoteObject
+from app.database import AsyncSession
 
 
-def lookup(db: Session, query: str) -> Actor | RemoteObject:
+async def lookup(db_session: AsyncSession, query: str) -> Actor | RemoteObject:
     if query.startswith("@"):
         query = webfinger.get_actor_url(query)  # type: ignore  # None check below
 
@@ -34,7 +34,7 @@ def lookup(db: Session, query: str) -> Actor | RemoteObject:
             raise
 
     if ap_obj["type"] in ap.ACTOR_TYPES:
-        actor = fetch_actor(db, ap_obj["id"])
+        actor = await fetch_actor(db_session, ap_obj["id"])
         return actor
     else:
         return RemoteObject(ap_obj)

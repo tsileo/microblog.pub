@@ -10,7 +10,7 @@ secret = "1dd4079e0474d1a519052b8fe3cb5fa6"
 debug = true
 
 # In-mem DB
-sqlalchemy_database_url = "sqlite:///file:pytest?mode=memory&cache=shared&uri=true"
-# sqlalchemy_database_url = "sqlite:///data/pytest.db"
+sqlalchemy_database = "file:pytest?mode=memory&cache=shared&uri=true"
+# sqlalchemy_database_url = "data/pytest.db"
 key_path = "tests/test.key"
 media_db_path = "tests/media.db"

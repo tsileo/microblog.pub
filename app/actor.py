@@ -4,11 +4,11 @@ from typing import Union
 from urllib.parse import urlparse
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 
 from app import activitypub as ap
 from app import media
+from app.database import AsyncSession
 
 if typing.TYPE_CHECKING:
     from app.models import Actor as ActorModel
@@ -131,7 +131,7 @@ class RemoteActor(Actor):
 LOCAL_ACTOR = RemoteActor(ap_actor=ap.ME)
 
 
-def save_actor(db: Session, ap_actor: ap.RawObject) -> "ActorModel":
+async def save_actor(db_session: AsyncSession, ap_actor: ap.RawObject) -> "ActorModel":
     from app import models
 
     if ap_type := ap_actor.get("type") not in ap.ACTOR_TYPES:
@@ -143,23 +143,25 @@ def save_actor(db: Session, ap_actor: ap.RawObject) -> "ActorModel":
         ap_type=ap_actor["type"],
         handle=_handle(ap_actor),
     )
-    db.add(actor)
-    db.commit()
-    db.refresh(actor)
+    db_session.add(actor)
+    await db_session.commit()
+    await db_session.refresh(actor)
     return actor
 
 
-def fetch_actor(db: Session, actor_id: str) -> "ActorModel":
+async def fetch_actor(db_session: AsyncSession, actor_id: str) -> "ActorModel":
     from app import models
 
-    existing_actor = db.execute(
-        select(models.Actor).where(models.Actor.ap_id == actor_id)
-    ).scalar_one_or_none()
+    existing_actor = (
+        await db_session.scalars(
+            select(models.Actor).where(models.Actor.ap_id == actor_id)
+        )
+    ).one_or_none()
     if existing_actor:
         return existing_actor
 
     ap_actor = ap.get(actor_id)
-    return save_actor(db, ap_actor)
+    return await save_actor(db_session, ap_actor)
 
 
 @dataclass
@@ -175,8 +177,8 @@ class ActorMetadata:
 ActorsMetadata = dict[str, ActorMetadata]
 
 
-def get_actors_metadata(
-    db: Session,
+async def get_actors_metadata(
+    db_session: AsyncSession,
     actors: list[Union["ActorModel", "RemoteActor"]],
 ) -> ActorsMetadata:
     from app import models
@@ -184,17 +186,19 @@ def get_actors_metadata(
     ap_actor_ids = [actor.ap_id for actor in actors]
     followers = {
         follower.ap_actor_id: follower.inbox_object.ap_id
-        for follower in db.scalars(
-            select(models.Follower)
-            .where(models.Follower.ap_actor_id.in_(ap_actor_ids))
-            .options(joinedload(models.Follower.inbox_object))
+        for follower in (
+            await db_session.scalars(
+                select(models.Follower)
+                .where(models.Follower.ap_actor_id.in_(ap_actor_ids))
+                .options(joinedload(models.Follower.inbox_object))
+            )
         )
         .unique()
         .all()
     }
     following = {
         following.ap_actor_id
-        for following in db.execute(
+        for following in await db_session.execute(
             select(models.Following.ap_actor_id).where(
                 models.Following.ap_actor_id.in_(ap_actor_ids)
             )
@@ -202,7 +206,7 @@ def get_actors_metadata(
     }
     sent_follow_requests = {
         follow_req.ap_object["object"]: follow_req.ap_id
-        for follow_req in db.execute(
+        for follow_req in await db_session.execute(
             select(models.OutboxObject.ap_object, models.OutboxObject.ap_id).where(
                 models.OutboxObject.ap_type == "Follow",
                 models.OutboxObject.undone_by_outbox_object_id.is_(None),

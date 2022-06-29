@@ -4,6 +4,7 @@ from uuid import uuid4
 import httpx
 import respx
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from app import activitypub as ap
 from app import models
@@ -11,7 +12,6 @@ from app import webfinger
 from app.actor import LOCAL_ACTOR
 from app.ap_object import RemoteObject
 from app.config import generate_csrf_token
-from app.database import Session
 from tests import factories
 from tests.utils import generate_admin_session_cookies
 
