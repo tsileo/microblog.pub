@@ -11,7 +11,6 @@ from app.actor import LOCAL_ACTOR
 from app.actor import Actor
 from app.actor import RemoteActor
 from app.media import proxied_media_url
-from app.utils import opengraph
 
 
 class Object:
@@ -199,13 +198,9 @@ class RemoteObject(Object):
             )
 
         self._og_meta = None
-        if self.ap_type == "Note":
-            self._og_meta = opengraph.og_meta_from_note(self._raw_object)
 
     @property
     def og_meta(self) -> list[dict[str, Any]] | None:
-        if self._og_meta:
-            return [og_meta.dict() for og_meta in self._og_meta]
         return None
 
     @property

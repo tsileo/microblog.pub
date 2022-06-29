@@ -30,6 +30,7 @@ from app.database import now
 from app.outgoing_activities import new_outgoing_activity
 from app.source import markdownify
 from app.uploads import upload_to_attachment
+from app.utils import opengraph
 
 AnyboxObject = models.InboxObject | models.OutboxObject
 
@@ -60,7 +61,7 @@ async def save_outbox_object(
         ap_context=ra.ap_context,
         ap_object=ra.ap_object,
         visibility=ra.visibility,
-        og_meta=ra.og_meta,
+        og_meta=await opengraph.og_meta_from_note(ra.ap_object),
         relates_to_inbox_object_id=relates_to_inbox_object_id,
         relates_to_outbox_object_id=relates_to_outbox_object_id,
         relates_to_actor_id=relates_to_actor_id,

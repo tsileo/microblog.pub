@@ -1,5 +1,6 @@
 import mimetypes
 import re
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -60,14 +61,16 @@ def _urls_from_note(note: ap.RawObject) -> set[str]:
     return urls
 
 
-def _og_meta_from_url(url: str) -> OpenGraphMeta | None:
-    resp = httpx.get(
-        url,
-        headers={
-            "User-Agent": config.USER_AGENT,
-        },
-        follow_redirects=True,
-    )
+async def _og_meta_from_url(url: str) -> OpenGraphMeta | None:
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            url,
+            headers={
+                "User-Agent": config.USER_AGENT,
+            },
+            follow_redirects=True,
+        )
+
     resp.raise_for_status()
 
     if not (ct := resp.headers.get("content-type")) or not ct.startswith("text/html"):
@@ -76,14 +79,14 @@ def _og_meta_from_url(url: str) -> OpenGraphMeta | None:
     return _scrap_og_meta(resp.text)
 
 
-def og_meta_from_note(note: ap.RawObject) -> list[OpenGraphMeta]:
+async def og_meta_from_note(note: ap.RawObject) -> list[dict[str, Any]]:
     og_meta = []
     urls = _urls_from_note(note)
     for url in urls:
         try:
-            maybe_og_meta = _og_meta_from_url(url)
+            maybe_og_meta = await _og_meta_from_url(url)
             if maybe_og_meta:
-                og_meta.append(maybe_og_meta)
+                og_meta.append(maybe_og_meta.dict())
         except httpx.HTTPError:
             pass
 

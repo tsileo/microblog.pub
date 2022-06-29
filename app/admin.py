@@ -270,6 +270,9 @@ async def admin_outbox(
                     joinedload(models.OutboxObject.relates_to_inbox_object),
                     joinedload(models.OutboxObject.relates_to_outbox_object),
                     joinedload(models.OutboxObject.relates_to_actor),
+                    joinedload(models.OutboxObject.outbox_object_attachments).options(
+                        joinedload(models.OutboxObjectAttachment.upload)
+                    ),
                 )
                 .order_by(models.OutboxObject.ap_published_at.desc())
                 .limit(page_size)
@@ -317,7 +320,11 @@ async def get_notifications(
                 .options(
                     joinedload(models.Notification.actor),
                     joinedload(models.Notification.inbox_object),
-                    joinedload(models.Notification.outbox_object),
+                    joinedload(models.Notification.outbox_object).options(
+                        joinedload(
+                            models.OutboxObject.outbox_object_attachments
+                        ).options(joinedload(models.OutboxObjectAttachment.upload)),
+                    ),
                 )
                 .order_by(models.Notification.created_at.desc())
             )
