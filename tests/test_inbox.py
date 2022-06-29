@@ -43,7 +43,8 @@ def test_inbox_follow_request(
         factories.build_follow_activity(
             from_remote_actor=ra,
             for_remote_actor=LOCAL_ACTOR,
-        )
+        ),
+        ra,
     )
     with mock_httpsig_checker(ra):
         response = client.post(
@@ -100,7 +101,8 @@ def test_inbox_accept_follow_request(
             from_remote_actor=LOCAL_ACTOR,
             for_remote_actor=ra,
             outbox_public_id=follow_id,
-        )
+        ),
+        LOCAL_ACTOR,
     )
     outbox_object = factories.OutboxObjectFactory.from_remote_object(
         follow_id, follow_from_outbox
@@ -111,7 +113,8 @@ def test_inbox_accept_follow_request(
         factories.build_accept_activity(
             from_remote_actor=ra,
             for_remote_object=follow_from_outbox,
-        )
+        ),
+        ra,
     )
     with mock_httpsig_checker(ra):
         response = client.post(

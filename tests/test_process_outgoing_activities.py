@@ -31,7 +31,8 @@ def _setup_outbox_object() -> models.OutboxObject:
             from_remote_actor=LOCAL_ACTOR,
             for_remote_actor=ra,
             outbox_public_id=follow_id,
-        )
+        ),
+        LOCAL_ACTOR,
     )
     outbox_object = factories.OutboxObjectFactory.from_remote_object(
         follow_id, follow_from_outbox

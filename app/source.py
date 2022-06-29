@@ -52,7 +52,7 @@ async def _mentionify(
             )
         ).scalar_one_or_none()
         if not actor:
-            actor_url = webfinger.get_actor_url(mention)
+            actor_url = await webfinger.get_actor_url(mention)
             if not actor_url:
                 # FIXME(ts): raise an error?
                 continue

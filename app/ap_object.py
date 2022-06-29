@@ -178,26 +178,35 @@ class Attachment(BaseModel):
 
 
 class RemoteObject(Object):
-    def __init__(self, raw_object: ap.RawObject, actor: Actor | None = None):
+    def __init__(self, raw_object: ap.RawObject, actor: Actor):
         self._raw_object = raw_object
-        self._actor: Actor
+        self._actor = actor
 
+        if self._actor.ap_id != ap.get_actor_id(self._raw_object):
+            raise ValueError(f"Invalid actor {self._actor.ap_id}")
+
+    @classmethod
+    async def from_raw_object(
+        cls,
+        raw_object: ap.RawObject,
+        actor: Actor | None = None,
+    ):
         # Pre-fetch the actor
         actor_id = ap.get_actor_id(raw_object)
         if actor_id == LOCAL_ACTOR.ap_id:
-            self._actor = LOCAL_ACTOR
+            _actor = LOCAL_ACTOR
         elif actor:
             if actor.ap_id != actor_id:
                 raise ValueError(
                     f"Invalid actor, got {actor.ap_id}, " f"expected {actor_id}"
                 )
-            self._actor = actor
+            _actor = actor  # type: ignore
         else:
-            self._actor = RemoteActor(
-                ap_actor=ap.fetch(ap.get_actor_id(raw_object)),
+            _actor = RemoteActor(
+                ap_actor=await ap.fetch(ap.get_actor_id(raw_object)),
             )
 
-        self._og_meta = None
+        return cls(raw_object, _actor)
 
     @property
     def og_meta(self) -> list[dict[str, Any]] | None:

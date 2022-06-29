@@ -604,7 +604,7 @@ async def post_remote_follow(
     if not profile.startswith("@"):
         profile = f"@{profile}"
 
-    remote_follow_template = get_remote_follow_template(profile)
+    remote_follow_template = await get_remote_follow_template(profile)
     if not remote_follow_template:
         raise HTTPException(status_code=404)
 

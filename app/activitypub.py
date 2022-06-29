@@ -103,16 +103,17 @@ class NotAnObjectError(Exception):
         self.resp = resp
 
 
-def fetch(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-    resp = httpx.get(
-        url,
-        headers={
-            "User-Agent": config.USER_AGENT,
-            "Accept": config.AP_CONTENT_TYPE,
-        },
-        params=params,
-        follow_redirects=True,
-    )
+async def fetch(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            url,
+            headers={
+                "User-Agent": config.USER_AGENT,
+                "Accept": config.AP_CONTENT_TYPE,
+            },
+            params=params,
+            follow_redirects=True,
+        )
 
     # Special handling for deleted object
     if resp.status_code == 410:
@@ -125,7 +126,7 @@ def fetch(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         raise NotAnObjectError(url, resp)
 
 
-def parse_collection(  # noqa: C901
+async def parse_collection(  # noqa: C901
     url: str | None = None,
     payload: RawObject | None = None,
     level: int = 0,
@@ -137,7 +138,7 @@ def parse_collection(  # noqa: C901
     # Go through all the pages
     out: list[RawObject] = []
     if url:
-        payload = fetch(url)
+        payload = await fetch(url)
     if not payload:
         raise ValueError("must at least prove a payload or an URL")
 
@@ -155,7 +156,9 @@ def parse_collection(  # noqa: C901
             return payload["items"]
         if "first" in payload:
             if isinstance(payload["first"], str):
-                out.extend(parse_collection(url=payload["first"], level=level + 1))
+                out.extend(
+                    await parse_collection(url=payload["first"], level=level + 1)
+                )
             else:
                 if "orderedItems" in payload["first"]:
                     out.extend(payload["first"]["orderedItems"])
@@ -163,7 +166,7 @@ def parse_collection(  # noqa: C901
                     out.extend(payload["first"]["items"])
                 n = payload["first"].get("next")
                 if n:
-                    out.extend(parse_collection(url=n, level=level + 1))
+                    out.extend(await parse_collection(url=n, level=level + 1))
         return out
 
     while payload:
@@ -175,7 +178,7 @@ def parse_collection(  # noqa: C901
             n = payload.get("next")
             if n is None:
                 break
-            payload = fetch(n)
+            payload = await fetch(n)
         else:
             raise ValueError("unexpected activity type {}".format(payload["type"]))
 
@@ -261,18 +264,6 @@ def remove_context(raw_object: RawObject) -> RawObject:
     a = dict(raw_object)
     del a["@context"]
     return a
-
-
-def get(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-    resp = httpx.get(
-        url,
-        headers={"User-Agent": config.USER_AGENT, "Accept": config.AP_CONTENT_TYPE},
-        params=params,
-        follow_redirects=True,
-        auth=auth,
-    )
-    resp.raise_for_status()
-    return resp.json()
 
 
 def post(url: str, payload: dict[str, Any]) -> httpx.Response:

@@ -63,11 +63,11 @@ def _body_digest(body: bytes) -> str:
 
 
 @lru_cache(32)
-def _get_public_key(key_id: str) -> Key:
+async def _get_public_key(key_id: str) -> Key:
     # TODO: use DB to use cache actor
     from app import activitypub as ap
 
-    actor = ap.fetch(key_id)
+    actor = await ap.fetch(key_id)
     if actor["type"] == "Key":
         # The Key is not embedded in the Person
         k = Key(actor["owner"], actor["id"])
@@ -111,7 +111,7 @@ async def httpsig_checker(
     )
 
     try:
-        k = _get_public_key(hsig["keyId"])
+        k = await _get_public_key(hsig["keyId"])
     except ap.ObjectIsGoneError:
         logger.info("Actor is gone")
         return HTTPSigInfo(has_valid_signature=False)

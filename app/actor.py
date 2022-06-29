@@ -160,7 +160,7 @@ async def fetch_actor(db_session: AsyncSession, actor_id: str) -> "ActorModel":
     if existing_actor:
         return existing_actor
 
-    ap_actor = ap.get(actor_id)
+    ap_actor = await ap.fetch(actor_id)
     return await save_actor(db_session, ap_actor)
 
 

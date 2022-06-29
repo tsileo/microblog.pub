@@ -112,7 +112,8 @@ def test_send_create_activity__with_followers(
             from_remote_actor=ra,
             for_remote_actor=LOCAL_ACTOR,
             outbox_public_id=follow_id,
-        )
+        ),
+        ra,
     )
     inbox_object = factories.InboxObjectFactory.from_remote_object(
         follow_from_inbox, actor

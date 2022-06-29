@@ -52,7 +52,7 @@ async def save_outbox_object(
     relates_to_actor_id: int | None = None,
     source: str | None = None,
 ) -> models.OutboxObject:
-    ra = RemoteObject(raw_object)
+    ra = await RemoteObject.from_raw_object(raw_object)
 
     outbox_object = models.OutboxObject(
         public_id=public_id,
@@ -368,13 +368,13 @@ async def _compute_recipients(
             continue
 
         # Fetch the object
-        raw_object = ap.fetch(r)
+        raw_object = await ap.fetch(r)
         if raw_object.get("type") in ap.ACTOR_TYPES:
             saved_actor = await save_actor(db_session, raw_object)
             recipients.add(saved_actor.shared_inbox_url or saved_actor.inbox_url)
         else:
             # Assume it's a collection of actors
-            for raw_actor in ap.parse_collection(payload=raw_object):
+            for raw_actor in await ap.parse_collection(payload=raw_object):
                 actor = RemoteActor(raw_actor)
                 recipients.add(actor.shared_inbox_url or actor.inbox_url)
 
@@ -741,7 +741,7 @@ async def save_to_inbox(db_session: AsyncSession, raw_object: ap.RawObject) -> N
                 # Save it as an inbox object
                 if not ra.activity_object_ap_id:
                     raise ValueError("Should never happen")
-                announced_raw_object = ap.fetch(ra.activity_object_ap_id)
+                announced_raw_object = await ap.fetch(ra.activity_object_ap_id)
                 announced_actor = await fetch_actor(
                     db_session, ap.get_actor_id(announced_raw_object)
                 )
@@ -830,7 +830,7 @@ async def fetch_actor_collection(db_session: AsyncSession, url: str) -> list[Act
         else:
             raise ValueError(f"internal collection for {url}) not supported")
 
-    return [RemoteActor(actor) for actor in ap.parse_collection(url)]
+    return [RemoteActor(actor) for actor in await ap.parse_collection(url)]
 
 
 @dataclass
