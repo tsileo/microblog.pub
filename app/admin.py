@@ -204,7 +204,11 @@ async def admin_inbox(
             await db_session.scalars(
                 q.options(
                     joinedload(models.InboxObject.relates_to_inbox_object),
-                    joinedload(models.InboxObject.relates_to_outbox_object),
+                    joinedload(models.InboxObject.relates_to_outbox_object).options(
+                        joinedload(
+                            models.OutboxObject.outbox_object_attachments
+                        ).options(joinedload(models.OutboxObjectAttachment.upload)),
+                    ),
                     joinedload(models.InboxObject.actor),
                 )
                 .order_by(models.InboxObject.ap_published_at.desc())

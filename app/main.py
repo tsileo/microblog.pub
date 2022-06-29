@@ -116,7 +116,13 @@ async def request_middleware(request, call_next):
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except RuntimeError as exc:
+        # https://github.com/encode/starlette/discussions/1527#discussioncomment-2234702
+        if await request.is_disconnected() and str(exc) == "No response returned.":
+            return Response(status_code=204)
+
     response.headers["referrer-policy"] = "no-referrer, strict-origin-when-cross-origin"
     response.headers["x-content-type-options"] = "nosniff"
     response.headers["x-xss-protection"] = "1; mode=block"
