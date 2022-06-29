@@ -5,6 +5,7 @@ import blurhash  # type: ignore
 from fastapi import UploadFile
 from loguru import logger
 from PIL import Image
+from sqlalchemy import select
 
 from app import activitypub as ap
 from app import models
@@ -27,11 +28,9 @@ def save_upload(db: Session, f: UploadFile) -> models.Upload:
     content_hash = h.hexdigest()
     f.file.seek(0)
 
-    existing_upload = (
-        db.query(models.Upload)
-        .filter(models.Upload.content_hash == content_hash)
-        .one_or_none()
-    )
+    existing_upload = db.execute(
+        select(models.Upload).where(models.Upload.content_hash == content_hash)
+    ).scalar_one_or_none()
     if existing_upload:
         logger.info(f"Upload with {content_hash=} already exists")
         return existing_upload

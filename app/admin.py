@@ -6,6 +6,8 @@ from fastapi import Request
 from fastapi import UploadFile
 from fastapi.exceptions import HTTPException
 from fastapi.responses import RedirectResponse
+from sqlalchemy import func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 
@@ -141,16 +143,20 @@ def admin_bookmarks(
     db: Session = Depends(get_db),
 ) -> templates.TemplateResponse:
     stream = (
-        db.query(models.InboxObject)
-        .filter(
-            models.InboxObject.ap_type.in_(["Note", "Article", "Video", "Announce"]),
-            models.InboxObject.is_hidden_from_stream.is_(False),
-            models.InboxObject.undone_by_inbox_object_id.is_(None),
-            models.InboxObject.is_bookmarked.is_(True),
-        )
-        .order_by(models.InboxObject.ap_published_at.desc())
-        .limit(20)
-        .all()
+        db.scalars(
+            select(models.InboxObject)
+            .where(
+                models.InboxObject.ap_type.in_(
+                    ["Note", "Article", "Video", "Announce"]
+                ),
+                models.InboxObject.is_hidden_from_stream.is_(False),
+                models.InboxObject.undone_by_inbox_object_id.is_(None),
+                models.InboxObject.is_bookmarked.is_(True),
+            )
+            .order_by(models.InboxObject.ap_published_at.desc())
+            .limit(20)
+        ).all()
+        # TODO: joinedload + unique
     )
     return templates.render_template(
         db,
@@ -169,27 +175,28 @@ def admin_inbox(
     filter_by: str | None = None,
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
-    q = db.query(models.InboxObject).filter(
-        models.InboxObject.ap_type.not_in(["Accept"])
-    )
-
+    where = [models.InboxObject.ap_type.not_in(["Accept"])]
     if filter_by:
-        q = q.filter(models.InboxObject.ap_type == filter_by)
+        where.append(models.InboxObject.ap_type == filter_by)
     if cursor:
-        q = q.filter(
+        where.append(
             models.InboxObject.ap_published_at < pagination.decode_cursor(cursor)
         )
 
     page_size = 20
-    remaining_count = q.count()
+    remaining_count = db.scalar(select(func.count(models.InboxObject.id)).where(*where))
+    q = select(models.InboxObject).where(*where)
 
     inbox = (
-        q.options(
-            joinedload(models.InboxObject.relates_to_inbox_object),
-            joinedload(models.InboxObject.relates_to_outbox_object),
+        db.scalars(
+            q.options(
+                joinedload(models.InboxObject.relates_to_inbox_object),
+                joinedload(models.InboxObject.relates_to_outbox_object),
+            )
+            .order_by(models.InboxObject.ap_published_at.desc())
+            .limit(20)
         )
-        .order_by(models.InboxObject.ap_published_at.desc())
-        .limit(20)
+        .unique()
         .all()
     )
 
@@ -227,27 +234,31 @@ def admin_outbox(
     filter_by: str | None = None,
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
-    q = db.query(models.OutboxObject).filter(
-        models.OutboxObject.ap_type.not_in(["Accept"])
-    )
+    where = [models.OutboxObject.ap_type.not_in(["Accept"])]
     if filter_by:
-        q = q.filter(models.OutboxObject.ap_type == filter_by)
+        where.append(models.OutboxObject.ap_type == filter_by)
     if cursor:
-        q = q.filter(
+        where.append(
             models.OutboxObject.ap_published_at < pagination.decode_cursor(cursor)
         )
 
     page_size = 20
-    remaining_count = q.count()
+    remaining_count = db.scalar(
+        select(func.count(models.OutboxObject.id)).where(*where)
+    )
+    q = select(models.OutboxObject).where(*where)
 
     outbox = (
-        q.options(
-            joinedload(models.OutboxObject.relates_to_inbox_object),
-            joinedload(models.OutboxObject.relates_to_outbox_object),
-            joinedload(models.OutboxObject.relates_to_actor),
+        db.scalars(
+            q.options(
+                joinedload(models.OutboxObject.relates_to_inbox_object),
+                joinedload(models.OutboxObject.relates_to_outbox_object),
+                joinedload(models.OutboxObject.relates_to_actor),
+            )
+            .order_by(models.OutboxObject.ap_published_at.desc())
+            .limit(page_size)
         )
-        .order_by(models.OutboxObject.ap_published_at.desc())
-        .limit(page_size)
+        .unique()
         .all()
     )
 
@@ -283,13 +294,16 @@ def get_notifications(
     request: Request, db: Session = Depends(get_db)
 ) -> templates.TemplateResponse:
     notifications = (
-        db.query(models.Notification)
-        .options(
-            joinedload(models.Notification.actor),
-            joinedload(models.Notification.inbox_object),
-            joinedload(models.Notification.outbox_object),
+        db.scalars(
+            select(models.Notification)
+            .options(
+                joinedload(models.Notification.actor),
+                joinedload(models.Notification.inbox_object),
+                joinedload(models.Notification.outbox_object),
+            )
+            .order_by(models.Notification.created_at.desc())
         )
-        .order_by(models.Notification.created_at.desc())
+        .unique()
         .all()
     )
     actors_metadata = get_actors_metadata(
@@ -337,21 +351,22 @@ def admin_profile(
     actor_id: str,
     db: Session = Depends(get_db),
 ) -> templates.TemplateResponse:
-    actor = db.query(models.Actor).filter(models.Actor.ap_id == actor_id).one_or_none()
+    actor = db.execute(
+        select(models.Actor).where(models.Actor.ap_id == actor_id)
+    ).scalar_one_or_none()
     if not actor:
         raise HTTPException(status_code=404)
 
     actors_metadata = get_actors_metadata(db, [actor])
 
-    inbox_objects = (
-        db.query(models.InboxObject)
-        .filter(
+    inbox_objects = db.scalars(
+        select(models.InboxObject)
+        .where(
             models.InboxObject.actor_id == actor.id,
             models.InboxObject.ap_type.in_(["Note", "Article", "Video"]),
         )
         .order_by(models.InboxObject.ap_published_at.desc())
-        .all()
-    )
+    ).all()
 
     return templates.render_template(
         db,

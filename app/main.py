@@ -22,6 +22,8 @@ from fastapi.staticfiles import StaticFiles
 from feedgen.feed import FeedGenerator  # type: ignore
 from loguru import logger
 from PIL import Image
+from sqlalchemy import func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 from starlette.background import BackgroundTask
@@ -147,24 +149,28 @@ def index(
         return ActivityPubResponse(LOCAL_ACTOR.ap_actor)
 
     page = page or 1
-    q = db.query(models.OutboxObject).filter(
+    where = (
         models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
         models.OutboxObject.is_deleted.is_(False),
         models.OutboxObject.is_hidden_from_homepage.is_(False),
     )
-    total_count = q.count()
+    q = select(models.OutboxObject).where(*where)
+    total_count = db.scalar(select(func.count(models.OutboxObject.id)).where(*where))
     page_size = 20
     page_offset = (page - 1) * page_size
 
     outbox_objects = (
-        q.options(
-            joinedload(models.OutboxObject.outbox_object_attachments).options(
-                joinedload(models.OutboxObjectAttachment.upload)
+        db.scalars(
+            q.options(
+                joinedload(models.OutboxObject.outbox_object_attachments).options(
+                    joinedload(models.OutboxObjectAttachment.upload)
+                )
             )
+            .order_by(models.OutboxObject.ap_published_at.desc())
+            .offset(page_offset)
+            .limit(page_size)
         )
-        .order_by(models.OutboxObject.ap_published_at.desc())
-        .offset(page_offset)
-        .limit(page_size)
+        .unique()
         .all()
     )
 
@@ -200,20 +206,22 @@ def _build_followx_collection(
             "totalItems": total_items,
         }
 
-    q = db.query(model_cls).order_by(model_cls.created_at.desc())  # type: ignore
+    q = select(model_cls).order_by(model_cls.created_at.desc())  # type: ignore
     if next_cursor:
-        q = q.filter(
+        q = q.where(
             model_cls.created_at < pagination.decode_cursor(next_cursor)  # type: ignore
         )
     q = q.limit(20)
 
-    items = [followx for followx in q.all()]
+    items = [followx for followx in db.scalars(q).all()]
     next_cursor = None
     if (
         items
-        and db.query(model_cls)
-        .filter(model_cls.created_at < items[-1].created_at)
-        .count()
+        and db.scalar(
+            select(func.count(model_cls.id)).where(
+                model_cls.created_at < items[-1].created_at
+            )
+        )
         > 0
     ):
         next_cursor = pagination.encode_cursor(items[-1].created_at)
@@ -257,10 +265,13 @@ def followers(
 
     # We only show the most recent 20 followers on the public website
     followers = (
-        db.query(models.Follower)
-        .options(joinedload(models.Follower.actor))
-        .order_by(models.Follower.created_at.desc())
-        .limit(20)
+        db.scalars(
+            select(models.Follower)
+            .options(joinedload(models.Follower.actor))
+            .order_by(models.Follower.created_at.desc())
+            .limit(20)
+        )
+        .unique()
         .all()
     )
 
@@ -303,13 +314,15 @@ def following(
         )
 
     # We only show the most recent 20 follows on the public website
-    q = (
-        db.query(models.Following)
-        .options(joinedload(models.Following.actor))
-        .order_by(models.Following.created_at.desc())
-        .limit(20)
+    following = (
+        db.scalars(
+            select(models.Following)
+            .options(joinedload(models.Following.actor))
+            .order_by(models.Following.created_at.desc())
+        )
+        .unique()
+        .all()
     )
-    following = q.all()
 
     # TODO: support next_cursor/prev_cursor
     actors_metadata = {}
@@ -336,16 +349,15 @@ def outbox(
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
     # By design, we only show the last 20 public activities in the oubox
-    outbox_objects = (
-        db.query(models.OutboxObject)
-        .filter(
+    outbox_objects = db.scalars(
+        select(models.OutboxObject)
+        .where(
             models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
             models.OutboxObject.is_deleted.is_(False),
         )
         .order_by(models.OutboxObject.ap_published_at.desc())
         .limit(20)
-        .all()
-    )
+    ).all()
     return ActivityPubResponse(
         {
             "@context": ap.AS_EXTENDED_CTX,
@@ -365,8 +377,8 @@ def featured(
     db: Session = Depends(get_db),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
-    outbox_objects = (
-        db.query(models.OutboxObject)
+    outbox_objects = db.scalars(
+        select(models.OutboxObject)
         .filter(
             models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
             models.OutboxObject.is_deleted.is_(False),
@@ -374,8 +386,7 @@ def featured(
         )
         .order_by(models.OutboxObject.ap_published_at.desc())
         .limit(5)
-        .all()
-    )
+    ).all()
     return ActivityPubResponse(
         {
             "@context": ap.AS_EXTENDED_CTX,
@@ -421,17 +432,20 @@ def outbox_by_public_id(
     httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     maybe_object = (
-        db.query(models.OutboxObject)
-        .options(
-            joinedload(models.OutboxObject.outbox_object_attachments).options(
-                joinedload(models.OutboxObjectAttachment.upload)
+        db.execute(
+            select(models.OutboxObject)
+            .options(
+                joinedload(models.OutboxObject.outbox_object_attachments).options(
+                    joinedload(models.OutboxObjectAttachment.upload)
+                )
+            )
+            .where(
+                models.OutboxObject.public_id == public_id,
+                models.OutboxObject.is_deleted.is_(False),
             )
         )
-        .filter(
-            models.OutboxObject.public_id == public_id,
-            models.OutboxObject.is_deleted.is_(False),
-        )
-        .one_or_none()
+        .unique()
+        .scalar_one_or_none()
     )
     if not maybe_object:
         raise HTTPException(status_code=404)
@@ -444,25 +458,33 @@ def outbox_by_public_id(
     replies_tree = boxes.get_replies_tree(db, maybe_object)
 
     likes = (
-        db.query(models.InboxObject)
-        .filter(
-            models.InboxObject.ap_type == "Like",
-            models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+        db.scalars(
+            select(models.InboxObject)
+            .where(
+                models.InboxObject.ap_type == "Like",
+                models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+            )
+            .options(joinedload(models.InboxObject.actor))
+            .order_by(models.InboxObject.ap_published_at.desc())
+            .limit(10)
         )
-        .options(joinedload(models.InboxObject.actor))
-        .order_by(models.InboxObject.ap_published_at.desc())
-        .limit(10)
+        .unique()
+        .all()
     )
 
     shares = (
-        db.query(models.InboxObject)
-        .filter(
-            models.InboxObject.ap_type == "Announce",
-            models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+        db.scalars(
+            select(models.InboxObject)
+            .filter(
+                models.InboxObject.ap_type == "Announce",
+                models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+            )
+            .options(joinedload(models.InboxObject.actor))
+            .order_by(models.InboxObject.ap_published_at.desc())
+            .limit(10)
         )
-        .options(joinedload(models.InboxObject.actor))
-        .order_by(models.InboxObject.ap_published_at.desc())
-        .limit(10)
+        .unique()
+        .all()
     )
 
     return templates.render_template(
@@ -485,14 +507,12 @@ def outbox_activity_by_public_id(
     db: Session = Depends(get_db),
     httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
-    maybe_object = (
-        db.query(models.OutboxObject)
-        .filter(
+    maybe_object = db.execute(
+        select(models.OutboxObject).where(
             models.OutboxObject.public_id == public_id,
             models.OutboxObject.is_deleted.is_(False),
         )
-        .one_or_none()
-    )
+    ).scalar_one_or_none()
     if not maybe_object:
         raise HTTPException(status_code=404)
 
@@ -765,13 +785,11 @@ def serve_attachment(
     filename: str,
     db: Session = Depends(get_db),
 ):
-    upload = (
-        db.query(models.Upload)
-        .filter(
+    upload = db.execute(
+        select(models.Upload).where(
             models.Upload.content_hash == content_hash,
         )
-        .one_or_none()
-    )
+    ).scalar_one_or_none()
     if not upload:
         raise HTTPException(status_code=404)
 
@@ -787,13 +805,11 @@ def serve_attachment_thumbnail(
     filename: str,
     db: Session = Depends(get_db),
 ):
-    upload = (
-        db.query(models.Upload)
-        .filter(
+    upload = db.execute(
+        select(models.Upload).where(
             models.Upload.content_hash == content_hash,
         )
-        .one_or_none()
-    )
+    ).scalar_one_or_none()
     if not upload or not upload.has_thumbnail:
         raise HTTPException(status_code=404)
 
@@ -812,17 +828,16 @@ Disallow: /admin"""
 
 
 def _get_outbox_for_feed(db: Session) -> list[models.OutboxObject]:
-    return (
-        db.query(models.OutboxObject)
-        .filter(
+    return db.scalars(
+        select(models.OutboxObject)
+        .where(
             models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
             models.OutboxObject.is_deleted.is_(False),
             models.OutboxObject.ap_type.in_(["Note", "Article", "Video"]),
         )
         .order_by(models.OutboxObject.ap_published_at.desc())
         .limit(20)
-        .all()
-    )
+    ).all()
 
 
 @app.get("/feed.json")

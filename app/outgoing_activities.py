@@ -6,6 +6,8 @@ from datetime import timedelta
 
 import httpx
 from loguru import logger
+from sqlalchemy import func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import activitypub as ap
@@ -67,22 +69,23 @@ def _set_next_try(
 
 
 def process_next_outgoing_activity(db: Session) -> bool:
-    q = (
-        db.query(models.OutgoingActivity)
-        .filter(
-            models.OutgoingActivity.next_try <= now(),
-            models.OutgoingActivity.is_errored.is_(False),
-            models.OutgoingActivity.is_sent.is_(False),
-        )
-        .order_by(models.OutgoingActivity.next_try)
-    )
-    q_count = q.count()
+    where = [
+        models.OutgoingActivity.next_try <= now(),
+        models.OutgoingActivity.is_errored.is_(False),
+        models.OutgoingActivity.is_sent.is_(False),
+    ]
+    q_count = db.scalar(select(func.count(models.OutgoingActivity.id)).where(*where))
     logger.info(f"{q_count} outgoing activities ready to process")
     if not q_count:
         logger.info("No activities to process")
         return False
 
-    next_activity = q.limit(1).one()
+    next_activity = db.execute(
+        select(models.OutgoingActivity)
+        .where(*where)
+        .limit(1)
+        .order_by(models.OutgoingActivity.next_try)
+    ).scalar_one()
 
     next_activity.tries = next_activity.tries + 1
     next_activity.last_try = now()

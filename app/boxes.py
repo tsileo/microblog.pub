@@ -7,6 +7,10 @@ from urllib.parse import urlparse
 import httpx
 from dateutil.parser import isoparse
 from loguru import logger
+from sqlalchemy import delete
+from sqlalchemy import func
+from sqlalchemy import select
+from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
@@ -189,9 +193,11 @@ def send_undo(db: Session, ap_object_id: str) -> None:
             outbox_object.id,
         )
         # Also remove the follow from the following collection
-        db.query(models.Following).filter(
-            models.Following.ap_actor_id == followed_actor.ap_id
-        ).delete()
+        db.execute(
+            delete(models.Following).where(
+                models.Following.ap_actor_id == followed_actor.ap_id
+            )
+        )
         db.commit()
     elif outbox_object_to_undo.ap_type == "Like":
         liked_object_ap_id = outbox_object_to_undo.activity_object_ap_id
@@ -249,9 +255,13 @@ def send_create(
         context = in_reply_to_object.ap_context
 
         if in_reply_to_object.is_from_outbox:
-            db.query(models.OutboxObject).filter(
-                models.OutboxObject.ap_id == in_reply_to,
-            ).update({"replies_count": models.OutboxObject.replies_count + 1})
+            db.execute(
+                update(models.OutboxObject)
+                .where(
+                    models.OutboxObject.ap_id == in_reply_to,
+                )
+                .values(replies_count=models.OutboxObject.replies_count + 1)
+            )
 
     for (upload, filename) in uploads:
         attachments.append(upload_to_attachment(upload, filename))
@@ -339,9 +349,9 @@ def _compute_recipients(db: Session, ap_object: ap.RawObject) -> set[str]:
             continue
 
         # Is it a known actor?
-        known_actor = (
-            db.query(models.Actor).filter(models.Actor.ap_id == r).one_or_none()
-        )
+        known_actor = db.execute(
+            select(models.Actor).where(models.Actor.ap_id == r)
+        ).scalar_one_or_none()
         if known_actor:
             recipients.add(known_actor.shared_inbox_url or known_actor.inbox_url)
             continue
@@ -361,19 +371,15 @@ def _compute_recipients(db: Session, ap_object: ap.RawObject) -> set[str]:
 
 
 def get_inbox_object_by_ap_id(db: Session, ap_id: str) -> models.InboxObject | None:
-    return (
-        db.query(models.InboxObject)
-        .filter(models.InboxObject.ap_id == ap_id)
-        .one_or_none()
-    )
+    return db.execute(
+        select(models.InboxObject).where(models.InboxObject.ap_id == ap_id)
+    ).scalar_one_or_none()
 
 
 def get_outbox_object_by_ap_id(db: Session, ap_id: str) -> models.OutboxObject | None:
-    return (
-        db.query(models.OutboxObject)
-        .filter(models.OutboxObject.ap_id == ap_id)
-        .one_or_none()
-    )
+    return db.execute(
+        select(models.OutboxObject).where(models.OutboxObject.ap_id == ap_id)
+    ).scalar_one_or_none()
 
 
 def get_anybox_object_by_ap_id(db: Session, ap_id: str) -> AnyboxObject | None:
@@ -456,9 +462,11 @@ def _handle_undo_activity(
 
     if ap_activity_to_undo.ap_type == "Follow":
         logger.info(f"Undo follow from {from_actor.ap_id}")
-        db.query(models.Follower).filter(
-            models.Follower.inbox_object_id == ap_activity_to_undo.id
-        ).delete()
+        db.execute(
+            delete(models.Follower).where(
+                models.Follower.inbox_object_id == ap_activity_to_undo.id
+            )
+        )
         notif = models.Notification(
             notification_type=models.NotificationType.UNFOLLOW,
             actor_id=from_actor.id,
@@ -536,9 +544,13 @@ def _handle_create_activity(
         return None
 
     if created_object.in_reply_to and created_object.in_reply_to.startswith(BASE_URL):
-        db.query(models.OutboxObject).filter(
-            models.OutboxObject.ap_id == created_object.in_reply_to,
-        ).update({"replies_count": models.OutboxObject.replies_count + 1})
+        db.execute(
+            update(models.OutboxObject)
+            .where(
+                models.OutboxObject.ap_id == created_object.in_reply_to,
+            )
+            .values(replies_count=models.OutboxObject.replies_count + 1)
+        )
 
     for tag in tags:
         if tag.get("name") == LOCAL_ACTOR.handle or tag.get("href") == LOCAL_ACTOR.url:
@@ -564,9 +576,11 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
     ra = RemoteObject(ap.unwrap_activity(raw_object), actor=actor)
 
     if (
-        db.query(models.InboxObject)
-        .filter(models.InboxObject.ap_id == ra.ap_id)
-        .count()
+        db.scalar(
+            select(func.count(models.InboxObject.id)).where(
+                models.InboxObject.ap_id == ra.ap_id
+            )
+        )
         > 0
     ):
         logger.info(f"Received duplicate {ra.ap_type} activity: {ra.ap_id}")
@@ -759,21 +773,25 @@ def save_to_inbox(db: Session, raw_object: ap.RawObject) -> None:
 
 
 def public_outbox_objects_count(db: Session) -> int:
-    return (
-        db.query(models.OutboxObject)
-        .filter(
+    return db.scalar(
+        select(func.count(models.OutboxObject.id)).where(
             models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
             models.OutboxObject.is_deleted.is_(False),
         )
-        .count()
     )
 
 
 def fetch_actor_collection(db: Session, url: str) -> list[Actor]:
     if url.startswith(config.BASE_URL):
         if url == config.BASE_URL + "/followers":
-            q = db.query(models.Follower).options(joinedload(models.Follower.actor))
-            return [follower.actor for follower in q.all()]
+            followers = (
+                db.scalars(
+                    select(models.Follower).options(joinedload(models.Follower.actor))
+                )
+                .unique()
+                .all()
+            )
+            return [follower.actor for follower in followers]
         else:
             raise ValueError(f"internal collection for {url}) not supported")
 
@@ -795,19 +813,19 @@ def get_replies_tree(
     # TODO: handle visibility
     tree_nodes: list[AnyboxObject] = []
     tree_nodes.extend(
-        db.query(models.InboxObject)
-        .filter(
-            models.InboxObject.ap_context == requested_object.ap_context,
-        )
-        .all()
+        db.scalars(
+            select(models.InboxObject).where(
+                models.InboxObject.ap_context == requested_object.ap_context,
+            )
+        ).all()
     )
     tree_nodes.extend(
-        db.query(models.OutboxObject)
-        .filter(
-            models.OutboxObject.ap_context == requested_object.ap_context,
-            models.OutboxObject.is_deleted.is_(False),
-        )
-        .all()
+        db.scalars(
+            select(models.OutboxObject).where(
+                models.OutboxObject.ap_context == requested_object.ap_context,
+                models.OutboxObject.is_deleted.is_(False),
+            )
+        ).all()
     )
     nodes_by_in_reply_to = defaultdict(list)
     for node in tree_nodes:

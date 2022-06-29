@@ -13,6 +13,8 @@ from bs4 import BeautifulSoup  # type: ignore
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 from loguru import logger
+from sqlalchemy import func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.templating import _TemplateResponse as TemplateResponse
 
@@ -94,14 +96,16 @@ def render_template(
             "csrf_token": generate_csrf_token() if is_admin else None,
             "highlight_css": HIGHLIGHT_CSS,
             "visibility_enum": ap.VisibilityEnum,
-            "notifications_count": db.query(models.Notification)
-            .filter(models.Notification.is_new.is_(True))
-            .count()
+            "notifications_count": db.scalar(
+                select(func.count(models.Notification.id)).where(
+                    models.Notification.is_new.is_(True)
+                )
+            )
             if is_admin
             else 0,
             "local_actor": LOCAL_ACTOR,
-            "followers_count": db.query(models.Follower).count(),
-            "following_count": db.query(models.Following).count(),
+            "followers_count": db.scalar(select(func.count(models.Follower.id))),
+            "following_count": db.scalar(select(func.count(models.Following.id))),
             **template_args,
         },
     )

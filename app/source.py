@@ -1,6 +1,7 @@
 import re
 
 from markdown import markdown
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models
@@ -43,9 +44,9 @@ def _mentionify(
     mentioned_actors = []
     for mention in re.findall(_MENTION_REGEX, content):
         _, username, domain = mention.split("@")
-        actor = (
-            db.query(models.Actor).filter(models.Actor.handle == mention).one_or_none()
-        )
+        actor = db.execute(
+            select(models.Actor).where(models.Actor.handle == mention)
+        ).scalar_one_or_none()
         if not actor:
             actor_url = webfinger.get_actor_url(mention)
             if not actor_url:

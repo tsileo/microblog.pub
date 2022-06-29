@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Union
 from urllib.parse import urlparse
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 
@@ -151,9 +152,9 @@ def save_actor(db: Session, ap_actor: ap.RawObject) -> "ActorModel":
 def fetch_actor(db: Session, actor_id: str) -> "ActorModel":
     from app import models
 
-    existing_actor = (
-        db.query(models.Actor).filter(models.Actor.ap_id == actor_id).one_or_none()
-    )
+    existing_actor = db.execute(
+        select(models.Actor).where(models.Actor.ap_id == actor_id)
+    ).scalar_one_or_none()
     if existing_actor:
         return existing_actor
 
@@ -183,27 +184,30 @@ def get_actors_metadata(
     ap_actor_ids = [actor.ap_id for actor in actors]
     followers = {
         follower.ap_actor_id: follower.inbox_object.ap_id
-        for follower in db.query(models.Follower)
-        .filter(models.Follower.ap_actor_id.in_(ap_actor_ids))
-        .options(joinedload(models.Follower.inbox_object))
+        for follower in db.scalars(
+            select(models.Follower)
+            .where(models.Follower.ap_actor_id.in_(ap_actor_ids))
+            .options(joinedload(models.Follower.inbox_object))
+        )
+        .unique()
         .all()
     }
     following = {
         following.ap_actor_id
-        for following in db.query(models.Following.ap_actor_id)
-        .filter(models.Following.ap_actor_id.in_(ap_actor_ids))
-        .all()
+        for following in db.execute(
+            select(models.Following.ap_actor_id).where(
+                models.Following.ap_actor_id.in_(ap_actor_ids)
+            )
+        )
     }
     sent_follow_requests = {
         follow_req.ap_object["object"]: follow_req.ap_id
-        for follow_req in db.query(
-            models.OutboxObject.ap_object, models.OutboxObject.ap_id
+        for follow_req in db.execute(
+            select(models.OutboxObject.ap_object, models.OutboxObject.ap_id).where(
+                models.OutboxObject.ap_type == "Follow",
+                models.OutboxObject.undone_by_outbox_object_id.is_(None),
+            )
         )
-        .filter(
-            models.OutboxObject.ap_type == "Follow",
-            models.OutboxObject.undone_by_outbox_object_id.is_(None),
-        )
-        .all()
     }
     idx: ActorsMetadata = {}
     for actor in actors:
