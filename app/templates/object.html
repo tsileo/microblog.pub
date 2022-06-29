@@ -19,7 +19,7 @@
 {% macro display_replies_tree(replies_tree_node) %}
 
 {% if replies_tree_node.is_requested %}
-    {{ utils.display_object_expanded(replies_tree_node.ap_object) }}
+    {{ utils.display_object_expanded(replies_tree_node.ap_object, likes=likes, shares=shares) }}
 {% else %}
     {{ utils.display_object(replies_tree_node.ap_object) }}
 {% endif %}
