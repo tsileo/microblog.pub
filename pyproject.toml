@@ -59,6 +59,7 @@ factory-boy = "^3.2.1"
 pytest-asyncio = "^0.18.3"
 types-Pillow = "^9.0.20"
 types-emoji = "^1.7.2"
+types-cachetools = "^5.2.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

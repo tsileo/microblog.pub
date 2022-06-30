@@ -8,6 +8,8 @@ from fastapi.testclient import TestClient
 
 from app import activitypub as ap
 from app import httpsig
+from app.database import AsyncSession
+from app.httpsig import _KEY_CACHE
 from app.httpsig import HTTPSigInfo
 from app.key import Key
 from tests import factories
@@ -56,6 +58,7 @@ def test_enforce_httpsig__no_signature(
 @pytest.mark.asyncio
 async def test_enforce_httpsig__with_valid_signature(
     respx_mock: respx.MockRouter,
+    async_db_session: AsyncSession,
 ) -> None:
     # Given a remote actor
     privkey, pubkey = factories.generate_key()
@@ -69,7 +72,7 @@ async def test_enforce_httpsig__with_valid_signature(
     auth = httpsig.HTTPXSigAuth(k)
     respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra.ap_actor))
 
-    httpsig._get_public_key.cache_clear()
+    _KEY_CACHE.clear()
 
     async with httpx.AsyncClient(app=_test_app, base_url="http://test") as client:
         response = await client.post(
@@ -105,6 +108,7 @@ def test_httpsig_checker__no_signature(
 @pytest.mark.asyncio
 async def test_httpsig_checker__with_valid_signature(
     respx_mock: respx.MockRouter,
+    async_db_session: AsyncSession,
 ) -> None:
     # Given a remote actor
     privkey, pubkey = factories.generate_key()
@@ -118,7 +122,7 @@ async def test_httpsig_checker__with_valid_signature(
     k.load(privkey)
     auth = httpsig.HTTPXSigAuth(k)
 
-    httpsig._get_public_key.cache_clear()
+    _KEY_CACHE.clear()
 
     async with httpx.AsyncClient(app=_test_app, base_url="http://test") as client:
         response = await client.get(
@@ -137,6 +141,7 @@ async def test_httpsig_checker__with_valid_signature(
 @pytest.mark.asyncio
 async def test_httpsig_checker__with_invvalid_signature(
     respx_mock: respx.MockRouter,
+    async_db_session: AsyncSession,
 ) -> None:
     # Given a remote actor
     privkey, pubkey = factories.generate_key()
@@ -158,7 +163,7 @@ async def test_httpsig_checker__with_invvalid_signature(
     assert ra.ap_id == ra2.ap_id
     respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra2.ap_actor))
 
-    httpsig._get_public_key.cache_clear()
+    _KEY_CACHE.clear()
 
     async with httpx.AsyncClient(app=_test_app, base_url="http://test") as client:
         response = await client.get(

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from typing import Dict
+from typing import MutableMapping
 from typing import Optional
 
 import fastapi
@@ -27,7 +28,7 @@ from app.database import get_db_session
 from app.key import Key
 from app.key import get_key
 
-_KEY_CACHE = LFUCache(256)
+_KEY_CACHE: MutableMapping[str, Key] = LFUCache(256)
 
 
 def _build_signed_string(
@@ -73,6 +74,7 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
 
     # Check if the key belongs to an actor already in DB
     from app import models
+
     existing_actor = (
         await db_session.scalars(
             select(models.Actor).where(models.Actor.ap_id == key_id.split("#")[0])

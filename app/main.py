@@ -5,6 +5,7 @@ import time
 from datetime import timezone
 from io import BytesIO
 from typing import Any
+from typing import MutableMapping
 from typing import Type
 
 import httpx
@@ -57,7 +58,7 @@ from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
 from app.webfinger import get_remote_follow_template
 
-_RESIZED_CACHE = LFUCache(32)
+_RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCache(32)
 
 
 # TODO(ts):
@@ -743,17 +744,13 @@ async def serve_proxy_media_resized(
     # Decode the base64-encoded URL
     url = base64.urlsafe_b64decode(encoded_url).decode()
 
-    is_cached = False
-    is_resized = False
     if cached_resp := _RESIZED_CACHE.get((url, size)):
-        is_resized, resized_content, resized_mimetype, resp_headers = cached_resp
-        if is_resized:
-            return PlainTextResponse(
-                resized_content,
-                media_type=resized_mimetype,
-                headers=resp_headers,
-            )
-        is_cached = True
+        resized_content, resized_mimetype, resp_headers = cached_resp
+        return PlainTextResponse(
+            resized_content,
+            media_type=resized_mimetype,
+            headers=resp_headers,
+        )
 
     # Request the URL (and filter request headers)
     async with httpx.AsyncClient() as client:
@@ -773,7 +770,7 @@ async def serve_proxy_media_resized(
             ]
             + [(b"user-agent", USER_AGENT.encode())],
         )
-    if proxy_resp.status_code != 200 or (is_cached and not is_resized):
+    if proxy_resp.status_code != 200:
         return PlainTextResponse(
             proxy_resp.content,
             status_code=proxy_resp.status_code,
@@ -804,12 +801,14 @@ async def serve_proxy_media_resized(
         resized_buf.seek(0)
         resized_content = resized_buf.read()
         resized_mimetype = i.get_format_mimetype()  # type: ignore
-        _RESIZED_CACHE[(url, size)] = (
-            True,
-            resized_content,
-            resized_mimetype,
-            proxy_resp_headers,
-        )
+
+        # Only cache images < 1MB
+        if len(resized_content) < 2**20:
+            _RESIZED_CACHE[(url, size)] = (
+                resized_content,
+                resized_mimetype,
+                proxy_resp_headers,
+            )
         return PlainTextResponse(
             resized_content,
             media_type=resized_mimetype,

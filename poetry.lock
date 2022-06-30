@@ -1015,6 +1015,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "types-cachetools"
+version = "5.2.1"
+description = "Typing stubs for cachetools"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "types-emoji"
 version = "1.7.2"
 description = "Typing stubs for emoji"
@@ -1143,7 +1151,7 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "91e35a13d21bb5fd3e8916aee95c0a8019bec3cf4f0c677bb86641f1d88dcfe3"
+content-hash = "cbfda21eb816f33407cd124db1ed037e2b1da7cdd72247de5793ba90e52ee648"
 
 [metadata.files]
 aiosqlite = [
@@ -1918,6 +1926,10 @@ tomli-w = [
 types-bleach = [
     {file = "types-bleach-5.0.2.tar.gz", hash = "sha256:e1498c512a62117496cf82be3d129972bb89fd1d6482b001cdeb2759ab3c82f5"},
     {file = "types_bleach-5.0.2-py3-none-any.whl", hash = "sha256:6fcb75ee4b69190fe60340147b66442cecddaefe3c0629433a4240da1ec2dcf6"},
+]
+types-cachetools = [
+    {file = "types-cachetools-5.2.1.tar.gz", hash = "sha256:069cfc825697cd51445c1feabbe4edc1fae2b2315870e7a9a179a7c4a5851bee"},
+    {file = "types_cachetools-5.2.1-py3-none-any.whl", hash = "sha256:b496b7e364ba050c4eaadcc6582f2c9fbb04f8ee7141eb3b311a8589dbd4506a"},
 ]
 types-emoji = [
     {file = "types-emoji-1.7.2.tar.gz", hash = "sha256:a7660fb507b30cb80bcec2d01417d828f1258b9b2cd9fa80918e8e5470c5e037"},
