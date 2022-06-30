@@ -40,6 +40,7 @@ emoji = "^1.7.0"
 PyLD = "^2.0.3"
 aiosqlite = "^0.17.0"
 sqlalchemy2-stubs = "^0.0.2-alpha.24"
+cachetools = "^5.2.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"

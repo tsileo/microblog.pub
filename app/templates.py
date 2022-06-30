@@ -190,7 +190,8 @@ def _clean_html(html: str, note: Object) -> str:
                     strip=True,
                 ),
                 note,
-            )
+            ),
+            is_local=note.ap_id.startswith(BASE_URL),
         )
     except Exception:
         raise
@@ -241,12 +242,15 @@ def _html2text(content: str) -> str:
     return H2T.handle(content)
 
 
-def _replace_emoji(u, data):
+def _replace_emoji(u: str, _) -> str:
     filename = hex(ord(u))[2:]
     return config.EMOJI_TPL.format(filename=filename, raw=u)
 
 
-def _emojify(text: str):
+def _emojify(text: str, is_local: bool) -> str:
+    if not is_local:
+        return text
+
     return emoji.replace_emoji(
         text,
         replace=_replace_emoji,

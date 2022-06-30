@@ -8,21 +8,26 @@ import hashlib
 import typing
 from dataclasses import dataclass
 from datetime import datetime
-from functools import lru_cache
 from typing import Any
 from typing import Dict
 from typing import Optional
 
 import fastapi
 import httpx
+from cachetools import LFUCache
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
 from loguru import logger
+from sqlalchemy import select
 
 from app import activitypub as ap
 from app import config
+from app.database import AsyncSession
+from app.database import get_db_session
 from app.key import Key
 from app.key import get_key
+
+_KEY_CACHE = LFUCache(256)
 
 
 def _build_signed_string(
@@ -62,9 +67,25 @@ def _body_digest(body: bytes) -> str:
     return "SHA-256=" + base64.b64encode(h.digest()).decode("utf-8")
 
 
-@lru_cache(32)
-async def _get_public_key(key_id: str) -> Key:
-    # TODO: use DB to use cache actor
+async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
+    if cached_key := _KEY_CACHE.get(key_id):
+        return cached_key
+
+    # Check if the key belongs to an actor already in DB
+    from app import models
+    existing_actor = (
+        await db_session.scalars(
+            select(models.Actor).where(models.Actor.ap_id == key_id.split("#")[0])
+        )
+    ).one_or_none()
+    if existing_actor and existing_actor.public_key_id == key_id:
+        k = Key(existing_actor.ap_id, key_id)
+        k.load_pub(existing_actor.public_key_as_pem)
+        logger.info(f"Found {key_id} on an existing actor")
+        _KEY_CACHE[key_id] = k
+        return k
+
+    # Fetch it
     from app import activitypub as ap
 
     actor = await ap.fetch(key_id)
@@ -82,6 +103,7 @@ async def _get_public_key(key_id: str) -> Key:
             f"failed to fetch requested key {key_id}: got {actor['publicKey']['id']}"
         )
 
+    _KEY_CACHE[key_id] = k
     return k
 
 
@@ -93,6 +115,7 @@ class HTTPSigInfo:
 
 async def httpsig_checker(
     request: fastapi.Request,
+    db_session: AsyncSession = fastapi.Depends(get_db_session),
 ) -> HTTPSigInfo:
     body = await request.body()
 
@@ -111,7 +134,7 @@ async def httpsig_checker(
     )
 
     try:
-        k = await _get_public_key(hsig["keyId"])
+        k = await _get_public_key(db_session, hsig["keyId"])
     except ap.ObjectIsGoneError:
         logger.info("Actor is gone")
         return HTTPSigInfo(has_valid_signature=False)

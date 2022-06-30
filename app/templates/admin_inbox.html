@@ -16,7 +16,10 @@
     </div>
     {{ utils.display_actor(inbox_object.actor, actors_metadata) }}
 {% else %}
+    <p>
     Implement {{ inbox_object.ap_type }}
+    {{ inbox_object.ap_object }}
+    </p>
 {% endif %}
 {% endfor %}
 

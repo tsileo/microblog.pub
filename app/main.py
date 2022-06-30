@@ -8,6 +8,7 @@ from typing import Any
 from typing import Type
 
 import httpx
+from cachetools import LFUCache
 from fastapi import Depends
 from fastapi import FastAPI
 from fastapi import Form
@@ -55,6 +56,9 @@ from app.uploads import UPLOAD_DIR
 from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
 from app.webfinger import get_remote_follow_template
+
+_RESIZED_CACHE = LFUCache(32)
+
 
 # TODO(ts):
 #
@@ -728,7 +732,7 @@ async def serve_proxy_media(request: Request, encoded_url: str) -> StreamingResp
 
 
 @app.get("/proxy/media/{encoded_url}/{size}")
-def serve_proxy_media_resized(
+async def serve_proxy_media_resized(
     request: Request,
     encoded_url: str,
     size: int,
@@ -738,18 +742,38 @@ def serve_proxy_media_resized(
 
     # Decode the base64-encoded URL
     url = base64.urlsafe_b64decode(encoded_url).decode()
+
+    is_cached = False
+    is_resized = False
+    if cached_resp := _RESIZED_CACHE.get((url, size)):
+        is_resized, resized_content, resized_mimetype, resp_headers = cached_resp
+        if is_resized:
+            return PlainTextResponse(
+                resized_content,
+                media_type=resized_mimetype,
+                headers=resp_headers,
+            )
+        is_cached = True
+
     # Request the URL (and filter request headers)
-    proxy_resp = httpx.get(
-        url,
-        headers=[
-            (k, v)
-            for (k, v) in request.headers.raw
-            if k.lower()
-            not in [b"host", b"cookie", b"x-forwarded-for", b"x-real-ip", b"user-agent"]
-        ]
-        + [(b"user-agent", USER_AGENT.encode())],
-    )
-    if proxy_resp.status_code != 200:
+    async with httpx.AsyncClient() as client:
+        proxy_resp = await client.get(
+            url,
+            headers=[
+                (k, v)
+                for (k, v) in request.headers.raw
+                if k.lower()
+                not in [
+                    b"host",
+                    b"cookie",
+                    b"x-forwarded-for",
+                    b"x-real-ip",
+                    b"user-agent",
+                ]
+            ]
+            + [(b"user-agent", USER_AGENT.encode())],
+        )
+    if proxy_resp.status_code != 200 or (is_cached and not is_resized):
         return PlainTextResponse(
             proxy_resp.content,
             status_code=proxy_resp.status_code,
@@ -772,15 +796,23 @@ def serve_proxy_media_resized(
     try:
         out = BytesIO(proxy_resp.content)
         i = Image.open(out)
-        if i.is_animated:
+        if getattr(i, "is_animated", False):
             raise ValueError
         i.thumbnail((size, size))
         resized_buf = BytesIO()
         i.save(resized_buf, format=i.format)
         resized_buf.seek(0)
+        resized_content = resized_buf.read()
+        resized_mimetype = i.get_format_mimetype()  # type: ignore
+        _RESIZED_CACHE[(url, size)] = (
+            True,
+            resized_content,
+            resized_mimetype,
+            proxy_resp_headers,
+        )
         return PlainTextResponse(
-            resized_buf.read(),
-            media_type=i.get_format_mimetype(),  # type: ignore
+            resized_content,
+            media_type=resized_mimetype,
             headers=proxy_resp_headers,
         )
     except ValueError:
