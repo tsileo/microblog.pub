@@ -1,4 +1,4 @@
-image: alpine/edge
+image: ubuntu/22.10
 sources:
 - https://git.sr.ht/~tsileo/microblog.pub
 packages:
@@ -7,10 +7,10 @@ packages:
 - libxml2-dev
 - libxslt-dev
 - gcc
-- jpeg-dev
-- zlib-dev
-- build-base
+- libjpeg-dev
+- zlib1g-dev
 - libffi-dev
+- python3.10-venv
 tasks:
  - setup: |
     curl -sSL https://install.python-poetry.org | python3 -
