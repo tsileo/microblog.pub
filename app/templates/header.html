@@ -3,8 +3,8 @@
 <div class="h-card p-author">
 <data class="u-photo" value="{{ local_actor.icon_url }}"></data>
 <a href="{{ local_actor.url }}" class="u-url u-uid no-hover title">
-	<span style="font-size:1.1em;">{{ local_actor.name }}</span>
-	<span  style="font-size:0.85em;" class="p-name subtitle-username">{{ local_actor.handle }}</span>
+	<span class="name">{{ local_actor.name }}</span>
+	<span class="p-name handle">{{ local_actor.handle }}</span>
 </a>
 
 <div class="p-note summary">
@@ -22,8 +22,8 @@
 <nav class="flexbox">
     <ul>
         <li>{{ header_link("index", "Notes") }}</li>
-        <li>{{ header_link("followers", "Followers") }} <span>{{ followers_count }}</span></li>
-        <li>{{ header_link("following", "Following") }} <span>{{ following_count }}</span></li>
+        <li>{{ header_link("followers", "Followers") }} <span class="counter">{{ followers_count }}</span></li>
+        <li>{{ header_link("following", "Following") }} <span class="counter">{{ following_count }}</span></li>
         <li>{{ header_link("get_remote_follow", "Remote follow") }}</li>
     </ul>
 </nav>

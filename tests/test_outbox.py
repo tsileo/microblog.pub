@@ -16,6 +16,19 @@ from tests import factories
 from tests.utils import generate_admin_session_cookies
 
 
+def test_outbox__no_activities(
+    db: Session,
+    client: TestClient,
+) -> None:
+    response = client.get("/outbox", headers={"Accept": ap.AP_CONTENT_TYPE})
+
+    assert response.status_code == 200
+
+    json_response = response.json()
+    assert json_response["totalItems"] == 0
+    assert json_response["orderedItems"] == []
+
+
 def test_send_follow_request(
     db: Session,
     client: TestClient,

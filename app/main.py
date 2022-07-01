@@ -551,15 +551,35 @@ async def tag_by_name(
     db_session: AsyncSession = Depends(get_db_session),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
+    where = [
+        models.TaggedOutboxObject.tag == tag,
+        models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+        models.OutboxObject.is_deleted.is_(False),
+    ]
+    tagged_count = await db_session.scalar(
+        select(func.count(models.OutboxObject.id))
+        .join(models.TaggedOutboxObject)
+        .where(*where)
+    )
+    if not tagged_count:
+        raise HTTPException(status_code=404)
+
+    outbox_objects = await db_session.execute(
+        select(models.OutboxObject.ap_id)
+        .join(models.TaggedOutboxObject)
+        .where(*where)
+        .order_by(models.OutboxObject.ap_published_at.desc())
+        .limit(20)
+    )
     # TODO(ts): implement HTML version
     # if is_activitypub_requested(request):
     return ActivityPubResponse(
         {
-            "@context": ap.AS_CTX,  # XXX: extended ctx?
+            "@context": ap.AS_CTX,
             "id": BASE_URL + f"/t/{tag}",
             "type": "OrderedCollection",
-            "totalItems": 0,
-            "orderedItems": [],
+            "totalItems": tagged_count,
+            "orderedItems": [outbox_object.ap_id for outbox_object in outbox_objects],
         }
     )
 
@@ -876,7 +896,8 @@ async def robots_file():
     return """User-agent: *
 Disallow: /followers
 Disallow: /following
-Disallow: /admin"""
+Disallow: /admin
+Disallow: /remote_follow"""
 
 
 async def _get_outbox_for_feed(db_session: AsyncSession) -> list[models.OutboxObject]:

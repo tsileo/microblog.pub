@@ -18,7 +18,7 @@
     </select>
     </p>
     {% for emoji in emojis %}
-    <span class="ji">{{ emoji | emojify | safe }}</span>
+    <span class="ji">{{ emoji | emojify(True) | safe }}</span>
     {% endfor %}
     {% for emoji in custom_emojis %}
     <span class="ji"><img src="{{ emoji.icon.url }}" alt="{{ emoji.name }}" title="{{ emoji.name }}" class="custom-emoji"></span>

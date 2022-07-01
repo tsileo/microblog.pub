@@ -2,6 +2,7 @@
 {% extends "layout.html" %}
 
 {% block head %}
+{% if outbox_object %}
 <link rel="alternate" href="{{ request.url }}" type="application/activity+json">
 <meta name="description" content="{{ outbox_object.content | html2text | trim | truncate(50) }}">
 <meta content="article" property="og:type" />
@@ -11,6 +12,7 @@
 <meta content="{{ outbox_object.content | html2text | trim | truncate(50) }}" property="og:description" />
 <meta content="{{ local_actor.icon_url }}" property="og:image" />
 <meta content="summary" property="twitter:card" />
+{% endif %}
 {% endblock %}
 
 {% block content %}

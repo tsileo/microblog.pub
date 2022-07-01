@@ -136,13 +136,13 @@
 
 {% macro display_actor(actor, actors_metadata) %}
 {% set metadata = actors_metadata.get(actor.ap_id) %}
-<div style="display: flex;column-gap: 20px;margin:20px 0 10px 0;" class="actor-box h-card p-author">
-    <div style="flex: 0 0 48px;">
-        <img src="{{ actor.resized_icon_url }}" style="max-width:45px;">
+<div class="actor-box h-card p-author">
+    <div class="icon-box">
+        <img src="{{ actor.resized_icon_url }}" class="actor-icon">
     </div>
     <a href="{{ actor.url }}" class="u-url" style="">
         <div><strong>{{ actor.display_name | clean_html(actor) | safe  }}</strong></div>
-        <div class="p-name">{{ actor.handle }}</div>
+        <div class="actor-handle p-name">{{ actor.handle }}</div>
     </a>
 </div>
 {% if is_admin and metadata %}
@@ -171,14 +171,13 @@
 {% macro display_og_meta(object) %}
 {% if object.og_meta %}
 {% for og_meta in object.og_meta %}
-<div style="display:flex;column-gap: 20px;margin:20px 0;">
+<div class="activity-og-meta" style="display:flex;column-gap: 20px;margin:20px 0;">
     {% if og_meta.image %}
     <div>
     <img src="{{ og_meta.image | media_proxy_url }}" style="max-width:200px;">
     </div>
     <div>
     <a href="{{ og_meta.url }}">{{ og_meta.title }}</a>
-    {% if og_meta.description %}<p>{{ og_meta.description }}</p>{% endif %}
     <small style="display:block;">{{ og_meta.site_name }}</small>
     </div>
     {% endif %}
@@ -279,7 +278,7 @@
       <img src="{{ object.actor.resized_icon_url }}" alt="" class="actor-icon">
     <div class="activity-header">
         <strong>{{ object.actor.display_name }}</strong>
-        <a href="{{ object.actor.url}}" class="p-author h-card">{{ object.actor.handle }}</a>
+        <a href="{{ object.actor.url}}" class="actor-handle p-author h-card">{{ object.actor.handle }}</a>
         <span class="activity-date" title="{{ object.ap_published_at.isoformat() }}">
             {{ object.visibility.value }}
             <a href="{{ object.url }}" class="u-url u-uid"><time class="dt-published" datetime="{{ object.ap_published_at }}">{{ object.ap_published_at | timeago }}</time></a>
