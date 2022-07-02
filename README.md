@@ -1,5 +1,7 @@
 # microblog.pub
 
+[![builds.sr.ht status](https://builds.sr.ht/~tsileo/microblog.pub.svg)](https://builds.sr.ht/~tsileo/microblog.pub?)
+
 This branch is a complete rewrite of the original microblog.pub server.
 
 The original server became hard to debug, maintain and is not super easy to deploy (due to the dependecies like MongoDB).
