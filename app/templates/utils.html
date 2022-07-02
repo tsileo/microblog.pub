@@ -60,6 +60,15 @@
 </form>
 {% endmacro %}
 
+{% macro admin_delete_button(ap_object_id) %}
+<form action="{{ request.url_for("admin_actions_delete") }}" method="POST" onsubmit="return confirm('Do you really want to delete this object?');">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
+    <input type="submit" value="Delete">
+</form>
+{% endmacro %}
+
 {% macro admin_announce_button(ap_object_id, disabled=False) %}
 <form action="{{ request.url_for("admin_actions_announce") }}" method="POST">
     {{ embed_csrf_token() }}
@@ -320,6 +329,9 @@
     </div>
 
     {% if is_admin %}
+    <div class="bar-item">
+        {{ admin_delete_button(object.ap_id) }}
+    </div>
     <div class="bar-item">
         {{ admin_reply_button(object.ap_id) }}
     </div>

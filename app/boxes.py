@@ -76,6 +76,39 @@ async def save_outbox_object(
     return outbox_object
 
 
+async def send_delete(db_session: AsyncSession, ap_object_id: str) -> None:
+    outbox_object_to_delete = await get_outbox_object_by_ap_id(db_session, ap_object_id)
+    if not outbox_object_to_delete:
+        raise ValueError(f"{ap_object_id} not found in the outbox")
+
+    delete_id = allocate_outbox_id()
+    delete = {
+        "@context": ap.AS_CTX,
+        "id": outbox_object_id(delete_id),
+        "type": "Delete",
+        "actor": ID,
+        "object": ap_object_id,
+    }
+    outbox_object = await save_outbox_object(
+        db_session,
+        delete_id,
+        delete,
+        relates_to_outbox_object_id=outbox_object_to_delete.id,
+    )
+    if not outbox_object.id:
+        raise ValueError("Should never happen")
+
+    outbox_object_to_delete.is_deleted = True
+    await db_session.commit()
+
+    # Compute the original recipients
+    recipients = await _compute_recipients(
+        db_session, outbox_object_to_delete.ap_object
+    )
+    for rcp in recipients:
+        await new_outgoing_activity(db_session, rcp, outbox_object.id)
+
+
 async def send_like(db_session: AsyncSession, ap_object_id: str) -> None:
     inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
     if not inbox_object:

@@ -427,6 +427,18 @@ async def admin_actions_follow(
     return RedirectResponse(redirect_url, status_code=302)
 
 
+@router.post("/actions/delete")
+async def admin_actions_delete(
+    request: Request,
+    ap_object_id: str = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    await boxes.send_delete(db_session, ap_object_id)
+    return RedirectResponse(redirect_url, status_code=302)
+
+
 @router.post("/actions/like")
 async def admin_actions_like(
     request: Request,

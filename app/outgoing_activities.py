@@ -99,8 +99,11 @@ def process_next_outgoing_activity(db: Session) -> bool:
     next_activity.last_try = now()
 
     payload = ap.wrap_object_if_needed(next_activity.outbox_object.ap_object)
-    if payload["type"] == "Create":
+
+    # Use LD sig if the activity may need to be forwarded by recipients
+    if payload["type"] in ["Create", "Delete"]:
         ldsig.generate_signature(payload, k)
+
     logger.info(f"{payload=}")
     try:
         resp = ap.post(next_activity.recipient, payload)
