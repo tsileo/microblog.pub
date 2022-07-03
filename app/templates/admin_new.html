@@ -7,7 +7,7 @@
 {{ utils.display_object(in_reply_to_object) }}
 {% endif %}
 
-<form action="{{ request.url_for("admin_actions_new") }}" enctype="multipart/form-data" method="POST">
+<form class="form" action="{{ request.url_for("admin_actions_new") }}" enctype="multipart/form-data" method="POST">
     {{ utils.embed_csrf_token() }}
     {{ utils.embed_redirect_url() }}
     <p>
@@ -24,12 +24,12 @@
     <span class="ji"><img src="{{ emoji.icon.url }}" alt="{{ emoji.name }}" title="{{ emoji.name }}" class="custom-emoji"></span>
     {% endfor %}
 
-    <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" style="font-size:1.2em;width:95%;">{{ content }}</textarea>
+    <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" placeholder="Hey!" style="font-size:1.2em;width:95%;">{{ content }}</textarea>
     <p>
-        <input type="text" name="content_warning" placeholder="content warning (will mark the post as sensitive)" style="width:300px;">
+        <input type="text" name="content_warning" placeholder="content warning (will mark the post as sensitive)" style="width:95%;">
     </p>
     <p>
-        <input type="checkbox" name="is_sensitive" id="is_sensitive"> <label for="is_sensitive">Mark attachment(s) as sentive</label>
+        <input type="checkbox" name="is_sensitive" id="is_sensitive"> <label for="is_sensitive">Mark attachment(s) as sensitive</label>
     </p>
     <input type="hidden" name="in_reply_to" value="{{ request.query_params.in_reply_to }}">
     <p>

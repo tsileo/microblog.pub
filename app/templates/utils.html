@@ -11,7 +11,7 @@
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_actor_id" value="{{ actor.ap_id }}">
-    <input type="submit" value="Follow">
+    <input type="submit" value="follow">
 </form>
 {% endmacro %}
 
@@ -20,7 +20,7 @@
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
-    <input type="submit" value="Like">
+    <input type="submit" value="like">
 </form>
 {% endmacro %}
 
@@ -29,7 +29,7 @@
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
-    <input type="submit" value="Bookmark">
+    <input type="submit" value="bookmark">
 </form>
 {% endmacro %}
 
@@ -38,7 +38,7 @@
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
-    <input type="submit" value="Unbookmark">
+    <input type="submit" value="unbookmark">
 </form>
 {% endmacro %}
 
@@ -47,7 +47,7 @@
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
-    <input type="submit" value="Pin">
+    <input type="submit" value="pin">
 </form>
 {% endmacro %}
 
@@ -56,7 +56,7 @@
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
-    <input type="submit" value="Unpin">
+    <input type="submit" value="unpin">
 </form>
 {% endmacro %}
 
@@ -65,7 +65,7 @@
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
-    <input type="submit" value="Delete">
+    <input type="submit" value="delete">
 </form>
 {% endmacro %}
 
@@ -74,7 +74,7 @@
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
-    <input type="submit" value="Share" {% if disabled %}title="Cannot share non-public content" disabled{% endif %}>
+    <input type="submit" value="share" {% if disabled %}title="Cannot share non-public content" disabled{% endif %}>
 </form>
 {% endmacro %}
 
@@ -111,36 +111,40 @@
 {% macro admin_reply_button(ap_object_id) %}
 <form action="/admin/new"  method="GET">
 <input type="hidden" name="in_reply_to" value="{{ ap_object_id }}">
-<button type="submit">Reply</button>
+<button type="submit">reply</button>
 </form> 
 {% endmacro %}
 
 {% macro admin_profile_button(ap_actor_id) %}
 <form action="{{ url_for("admin_profile") }}"  method="GET">
 <input type="hidden" name="actor_id" value="{{ ap_actor_id }}">
-<button type="submit">Profile</button>
+<button type="submit">profile</button>
 </form> 
 {% endmacro %}
 
 {% macro admin_expand_button(ap_object_id) %}
 <form action="{{ url_for("admin_object") }}"  method="GET">
 <input type="hidden" name="ap_id" value="{{ ap_object_id }}">
-<button type="submit">Expand</button>
+<button type="submit">expand</button>
 </form> 
 {% endmacro %}
 
 {% macro display_box_filters(route) %}
-<p>Filter by
+<nav class="flexbox">
+<ul>
+    <li>Filter by</li>
 {% for ap_type in ["Note", "Like", "Announce", "Follow"] %}
-<a style="margin-right:12px;" href="{{ url_for(route) }}?filter_by={{ ap_type }}">
-    {% if request.query_params.filter_by == ap_type %}
-    <strong>{{ ap_type }}</strong>
-    {% else %}
-    {{ ap_type }}
-    {% endif %}</a>
-{% endfor %}.
-{% if request.query_params.filter_by %}<a href="{{ url_for(route) }}">Reset filter</a>{% endif %}</p>
-</p>
+    <li><a href="{{ url_for(route) }}?filter_by={{ ap_type }}" {% if request.query_params.filter_by == ap_type %}class="active"{% endif %}>
+        {{ ap_type }}
+        </a>
+    </li>
+{% endfor %}
+{% if request.query_params.filter_by %}
+    <li>
+        <a href="{{ url_for(route) }}">Reset filter</a>
+    </li>
+{% endif %}
+</nav>
 {% endmacro %}
 
 {% macro display_actor(actor, actors_metadata) %}
@@ -156,11 +160,11 @@
 </div>
 {% if is_admin and metadata %}
 <div>
-    <nav class="flexbox">
+    <nav class="flexbox actor-metadata">
     <ul>
             {% if metadata.is_following %}
                 <li>already following</li>
-                <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "Unfollow")}}</li>
+                <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "unfollow")}}</li>
             {% elif metadata.is_follow_request_sent %}
                 <li>follow request sent</li>
             {% else %}
@@ -289,9 +293,9 @@
         <strong>{{ object.actor.display_name }}</strong>
         <a href="{{ object.actor.url}}" class="actor-handle p-author h-card">{{ object.actor.handle }}</a>
         <span class="activity-date" title="{{ object.ap_published_at.isoformat() }}">
-            {{ object.visibility.value }}
             <a href="{{ object.url }}" class="u-url u-uid"><time class="dt-published" datetime="{{ object.ap_published_at }}">{{ object.ap_published_at | timeago }}</time></a>
         </span>
+        {% if is_admin %}<span class="object-visibility">{{ object.visibility.value }}</span>{% endif %}
         {% if object.summary %}
         <p class="p-summary">{{ object.summary | clean_html(object) | safe }}</p>
         {% endif %}
@@ -314,72 +318,74 @@
     {{ display_attachments(object) }}
   </div>
 
-  <div class="activity-bar">
+  <nav class="flexbox activity-bar">
+    <ul>
     {% if object.is_from_outbox %}
-    <div class="bar-item">
+    <li>
         <div class="comment-count">{{ object.likes_count }} like{{ object.likes_count | pluralize }}</div>
-    </div>
+    </li>
     
-    <div class="bar-item">
+    <li>
         <div class="retweet-count">{{ object.announces_count }} share{{ object.announces_count | pluralize }}</div>
-    </div>
+    </li>
 
-    <div class="bar-item">
+    <li>
         <div class="retweet-count">{{ object.replies_count }} repl{{ object.replies_count | pluralize("y", "ies") }}</div>
-    </div>
+    </li>
 
     {% if is_admin %}
-    <div class="bar-item">
+    <li>
         {{ admin_delete_button(object.ap_id) }}
-    </div>
-    <div class="bar-item">
+    </li>
+    <li>
         {{ admin_reply_button(object.ap_id) }}
-    </div>
-    <div class="bar-item">
+    </li>
+    <li>
         {% if object.is_pinned %}
             {{ admin_unpin_button(object.ap_id) }}
         {% else %}
             {{ admin_pin_button(object.ap_id) }}
         {% endif %}
-    </div>
+    </li>
     {% endif %}
     {% endif %}
 
     {% if object.is_from_inbox %}
-            <div class="bar-item">
+            <li>
             {% if object.liked_via_outbox_object_ap_id %}
-                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "Unlike") }}
+                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unlike") }}
             {% else %}
                 {{ admin_like_button(object.ap_id) }}
             {% endif %}
-            </div>
-            <div class="bar-item">
+            </li>
+            <li>
             {% if object.is_bookmarked %}
                 {{ admin_unbookmark_button(object.ap_id) }}
             {% else %}
                 {{ admin_bookmark_button(object.ap_id) }}
             {% endif %}
-            </div>
-            <div class="bar-item">
+            </li>
+            <li>
             {% if object.announced_via_outbox_object_ap_id %}
-                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "Unshare") }}
+                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unshare") }}
             {% else %}
                 {{ admin_announce_button(object.ap_id, disabled=object.visibility not in [visibility_enum.PUBLIC, visibility_enum.UNLISTED]) }}
             {% endif %}
-            </div>
-            <div class="bar-item">
+            </li>
+            <li>
                 {{ admin_reply_button(object.ap_id) }}
-            </div>
-            <div class="bar-item">
+            </li>
+            <li>
                 {{ admin_profile_button(object.actor.ap_id) }}
-            </div>
-            <div class="bar-item">
+            </li>
+            <li>
                 {{ admin_expand_button(object.ap_id) }}
-            </div>
+            </li>
 
 
     {% endif %} 
-  </div>
+    </ul>
+    </nav>
 </div>
 {% endif %}
 {% endmacro %}

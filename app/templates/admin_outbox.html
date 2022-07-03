@@ -16,7 +16,6 @@
         <div class="actor-action">You followed</div>
         {{ utils.display_actor(outbox_object.relates_to_actor, actors_metadata) }}
     {% elif outbox_object.ap_type in ["Article", "Note", "Video"] %}
-        {% if outbox_object.is_deleted %}Deleted{% endif %}
         {{ utils.display_object(outbox_object) }}
     {% else %}
         Implement {{ outbox_object.ap_type }}

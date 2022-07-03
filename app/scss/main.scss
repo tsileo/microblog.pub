@@ -1,8 +1,12 @@
 $font-stack: Helvetica, sans-serif;
 $background: #002B36;  // solarized background color    
 // font-family: Inconsolata, monospace;
+$text-color: #ccc;
 $primary-color: #e14eea;
 $secondary-color: #32cd32;
+
+$form-background-color: #ccc;
+$form-text-color: #222;
 $muted-color: #586e75; // solarized comment text
 // #93a1a1; solarized body text
 
@@ -12,7 +16,7 @@ body {
   font-size: 20px;
   line-height: 32px;
   background: $background;
-  color: #ccc;
+  color: $text-color;
   margin: 0;
   padding: 0;
   display: flex;
@@ -25,14 +29,33 @@ a {
 
 .activity-main {
   a {
-    color: #ddd;
+    color: $text-color;
   }
 }
 .activity-wrap {
 }
 code, pre {
-  color: #859900; // #cb4b16; // #268bd2; // #2aa198;
+  color: $secondary-color; // #cb4b16; // #268bd2; // #2aa198;
   font-family: 'Inconsolata, monospace';
+}
+.form {
+    input, select, textarea {
+        font-size: 20px;
+        border: 0;
+        padding: 5px;
+        background: $form-background-color;
+        color: $form-text-color;
+        &:focus {
+            outline: 1px solid $secondary-color;
+        }
+    }
+    input[type=submit] {
+        font-size: 20px;
+        outline: none;
+        background: $primary-color;
+        color: $form-text-color;
+        padding: 5px;
+    }
 }
 header {
   .title {
@@ -40,22 +63,18 @@ header {
     text-decoration: none;
     .handle {
       font-size: 0.85em;
-      color: #93a1a1;
+      color: $muted-color;
     }
   }
   .counter {
-    color: #93a1a1;
+    color: $muted-color;
   }
 }
-.purple {
-  color: #e14eea;
-}
 a {
-  color: #e14eea;
-}
-
-.green, a:hover {
-  color: #32cd32;
+  color: $primary-color;
+  &:hover {
+    color: $secondary-color;
+  }
 }
 #main {
     flex: 1; 
@@ -69,7 +88,7 @@ footer {
     width: 100%;
     max-width: 960px;
     margin: 20px auto;
-    color: #93a1a1;
+    color: $muted-color;
 }
 .actor-box {
   display: flex;
@@ -81,7 +100,7 @@ footer {
   .actor-handle {
     font-size: 0.85em;
     line-height: 1em;
-    color: #93a1a1;
+    color: $muted-color;
   }
   .actor-icon {
     margin-top: 5px;
@@ -99,10 +118,6 @@ footer {
     }
 }
 
-#admin {
-}
-
-.activity-bar {
 input[type=submit], button {
   font-size: 20px;
   line-height: 32px;
@@ -111,31 +126,13 @@ input[type=submit], button {
   border: none;
   padding: 0!important;
   cursor: pointer;
-  color: #e14eea;
-    }
-    input[type=submit]:hover, button:hover {
-      color: #32cd32;
-
-    }
+  color: $muted-color;
+  &:hover {
+    color: $secondary-color;
+  }
 }
 
 nav.flexbox {
-
-    input[type=submit] {
-  font-size: 20px;
-  line-height: 32px;
-  font-family: "Inconsolata, monospace";
-  background: none!important;
-  border: none;
-  padding: 0!important;
-  cursor: pointer;
-  color: #e14eea;
-    }
-    input[type=submit]:hover {
-      color: #32cd32;
-
-    }
-
     ul {        
         display: flex;
         flex-wrap: wrap;
@@ -185,9 +182,10 @@ nav.flexbox {
         margin-left: 5px;
       }
       .actor-handle {
-        color: #93a1a1;
+        color: $muted-color;
       }
       .activity-date { float:right; }
+      .object-visibility { float:right;color: $muted-color;margin-right:10px; }
     }
   }
   .activity-attachment {
@@ -199,21 +197,19 @@ nav.flexbox {
     }
   }
   .activity-bar {
-    display: flex;
     margin-left: 60px;
     margin-top: 10px;
-    .bar-item {
-      display: flex;
-      margin-right: 20px;
-    }
   }
 }
 .actor-action {
-  padding-left:70px;
   margin-top:20px;
+  margin-bottom:-10px;
   span {
-    float: right;
+    color: $muted-color;
   }
+}
+.actor-metadata {
+    color: $muted-color;
 }
 .emoji, .custom-emoji {
   max-width: 25px;

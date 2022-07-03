@@ -158,15 +158,23 @@ async def admin_bookmarks(
                     models.InboxObject.ap_type.in_(
                         ["Note", "Article", "Video", "Announce"]
                     ),
-                    models.InboxObject.is_hidden_from_stream.is_(False),
-                    models.InboxObject.undone_by_inbox_object_id.is_(None),
                     models.InboxObject.is_bookmarked.is_(True),
+                )
+                .options(
+                    joinedload(models.InboxObject.relates_to_inbox_object),
+                    joinedload(models.InboxObject.relates_to_outbox_object).options(
+                        joinedload(
+                            models.OutboxObject.outbox_object_attachments
+                        ).options(joinedload(models.OutboxObjectAttachment.upload)),
+                    ),
+                    joinedload(models.InboxObject.actor),
                 )
                 .order_by(models.InboxObject.ap_published_at.desc())
                 .limit(20)
             )
-        ).all()
-        # TODO: joinedload + unique
+        )
+        .unique()
+        .all()
     )
     return await templates.render_template(
         db_session,
@@ -185,7 +193,7 @@ async def admin_inbox(
     filter_by: str | None = None,
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
-    where = [models.InboxObject.ap_type.not_in(["Accept"])]
+    where = [models.InboxObject.ap_type.not_in(["Accept", "Delete"])]
     if filter_by:
         where.append(models.InboxObject.ap_type == filter_by)
     if cursor:
@@ -253,7 +261,10 @@ async def admin_outbox(
     filter_by: str | None = None,
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
-    where = [models.OutboxObject.ap_type.not_in(["Accept"])]
+    where = [
+        models.OutboxObject.ap_type.not_in(["Accept", "Delete"]),
+        models.OutboxObject.is_deleted.is_(False),
+    ]
     if filter_by:
         where.append(models.OutboxObject.ap_type == filter_by)
     if cursor:
