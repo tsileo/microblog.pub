@@ -3,9 +3,9 @@
 {% block content %}
 <div style="display:grid;height:80%;">
 <div style="margin:auto;">
-<form action="/admin/login" method="POST">
+<form class="form" action="/admin/login" method="POST">
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-<input type="password" name="password">
+<input type="password" placeholder="password" name="password">
 <input type="submit" value="Login">
 </form>
 </div>

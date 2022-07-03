@@ -282,7 +282,9 @@ async def admin_outbox(
         (
             await db_session.scalars(
                 q.options(
-                    joinedload(models.OutboxObject.relates_to_inbox_object),
+                    joinedload(models.OutboxObject.relates_to_inbox_object).options(
+                        joinedload(models.InboxObject.actor),
+                    ),
                     joinedload(models.OutboxObject.relates_to_outbox_object),
                     joinedload(models.OutboxObject.relates_to_actor),
                     joinedload(models.OutboxObject.outbox_object_attachments).options(

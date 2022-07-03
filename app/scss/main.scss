@@ -26,6 +26,12 @@ body {
 a {
   text-decoration: none;
 }
+.shared-header {
+margin-left:60px;margin-top:30px;margin-bottom:-15px;
+strong {
+color: $primary-color;
+}
+}
 
 .activity-main {
   a {
@@ -36,7 +42,7 @@ a {
 }
 code, pre {
   color: $secondary-color; // #cb4b16; // #268bd2; // #2aa198;
-  font-family: 'Inconsolata, monospace';
+  font-family: monospace;
 }
 .form {
     input, select, textarea {
@@ -118,6 +124,7 @@ footer {
     }
 }
 
+nav {
 input[type=submit], button {
   font-size: 20px;
   line-height: 32px;
@@ -130,6 +137,7 @@ input[type=submit], button {
   &:hover {
     color: $secondary-color;
   }
+}
 }
 
 nav.flexbox {
@@ -184,7 +192,15 @@ nav.flexbox {
       .actor-handle {
         color: $muted-color;
       }
-      .activity-date { float:right; }
+      .activity-date {
+        float:right;
+        a {
+          color: $muted-color;
+          &:hover {
+            color: $secondary-color;
+          }
+        }
+      }
       .object-visibility { float:right;color: $muted-color;margin-right:10px; }
     }
   }
@@ -199,6 +215,13 @@ nav.flexbox {
   .activity-bar {
     margin-left: 60px;
     margin-top: 10px;
+    color: $muted-color;
+    a {
+        color: $muted-color;
+        &:hover {
+            color: $secondary-color;
+        }
+    }
   }
 }
 .actor-action {

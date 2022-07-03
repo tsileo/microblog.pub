@@ -167,7 +167,15 @@ async def index(
         q.options(
             joinedload(models.OutboxObject.outbox_object_attachments).options(
                 joinedload(models.OutboxObjectAttachment.upload)
-            )
+            ),
+            joinedload(models.OutboxObject.relates_to_inbox_object).options(
+                joinedload(models.InboxObject.actor),
+            ),
+            joinedload(models.OutboxObject.relates_to_outbox_object).options(
+                joinedload(models.OutboxObject.outbox_object_attachments).options(
+                    joinedload(models.OutboxObjectAttachment.upload)
+                ),
+            ),
         )
         .order_by(models.OutboxObject.ap_published_at.desc())
         .offset(page_offset)

@@ -320,6 +320,7 @@
 
   <nav class="flexbox activity-bar">
     <ul>
+        {% if not is_admin or object.is_from_outbox %}<li><div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %}>permalink</a></div></li>{% endif %}
     {% if object.is_from_outbox %}
     <li>
         <div class="comment-count">{{ object.likes_count }} like{{ object.likes_count | pluralize }}</div>
@@ -350,7 +351,7 @@
     {% endif %}
     {% endif %}
 
-    {% if object.is_from_inbox %}
+    {% if object.is_from_inbox and is_admin %}
             <li>
             {% if object.liked_via_outbox_object_ap_id %}
                 {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unlike") }}
