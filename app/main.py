@@ -64,22 +64,13 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - inbox/outbox admin
-# - no counters anymore?
-# - allow to show tags in the menu
 # - support update post with history
-# - inbox/outbox in the admin (as in show every objects)
-# - show likes/announces counter for outbox activities
 # - update actor support
 # - hash config/profile to detect when to send Update actor
 #
 # - [ ] block support
-# - [ ] make the media proxy authenticated
 # - [ ] prevent SSRF (urlutils from little-boxes)
 # - [ ] Dockerization
-# - [ ] Webmentions
-# - [ ] custom emoji
-# - [ ] poll/questions support
 # - [ ] cleanup tasks
 
 app = FastAPI(docs_url=None, redoc_url=None)
@@ -564,23 +555,54 @@ async def tag_by_name(
     if not tagged_count:
         raise HTTPException(status_code=404)
 
-    outbox_objects = await db_session.execute(
-        select(models.OutboxObject.ap_id)
-        .join(models.TaggedOutboxObject)
+    if is_activitypub_requested(request):
+        outbox_object_ids = await db_session.execute(
+            select(models.OutboxObject.ap_id)
+            .join(
+                models.TaggedOutboxObject,
+                models.TaggedOutboxObject.outbox_object_id == models.OutboxObject.id,
+            )
+            .where(*where)
+            .order_by(models.OutboxObject.ap_published_at.desc())
+            .limit(20)
+        )
+        return ActivityPubResponse(
+            {
+                "@context": ap.AS_CTX,
+                "id": BASE_URL + f"/t/{tag}",
+                "type": "OrderedCollection",
+                "totalItems": tagged_count,
+                "orderedItems": [
+                    outbox_object.ap_id for outbox_object in outbox_object_ids
+                ],
+            }
+        )
+
+    outbox_objects_result = await db_session.scalars(
+        select(models.OutboxObject)
         .where(*where)
+        .join(
+            models.TaggedOutboxObject,
+            models.TaggedOutboxObject.outbox_object_id == models.OutboxObject.id,
+        )
+        .options(
+            joinedload(models.OutboxObject.outbox_object_attachments).options(
+                joinedload(models.OutboxObjectAttachment.upload)
+            )
+        )
         .order_by(models.OutboxObject.ap_published_at.desc())
         .limit(20)
     )
-    # TODO(ts): implement HTML version
-    # if is_activitypub_requested(request):
-    return ActivityPubResponse(
+    outbox_objects = outbox_objects_result.unique().all()
+
+    return await templates.render_template(
+        db_session,
+        request,
+        "index.html",
         {
-            "@context": ap.AS_CTX,
-            "id": BASE_URL + f"/t/{tag}",
-            "type": "OrderedCollection",
-            "totalItems": tagged_count,
-            "orderedItems": [outbox_object.ap_id for outbox_object in outbox_objects],
-        }
+            "request": request,
+            "objects": outbox_objects,
+        },
     )
 
 
