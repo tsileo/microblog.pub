@@ -209,7 +209,7 @@ def object_visibility(ap_activity: RawObject, actor: "Actor") -> VisibilityEnum:
         return VisibilityEnum.PUBLIC
     elif AS_PUBLIC in cc:
         return VisibilityEnum.UNLISTED
-    elif actor.followers_collection_id in to + cc:
+    elif actor.followers_collection_id and actor.followers_collection_id in to + cc:
         return VisibilityEnum.FOLLOWERS_ONLY
     else:
         return VisibilityEnum.DIRECT

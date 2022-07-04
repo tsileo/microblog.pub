@@ -103,8 +103,8 @@ class Actor:
         return self.ap_actor.get("tag", [])
 
     @property
-    def followers_collection_id(self) -> str:
-        return self.ap_actor["followers"]
+    def followers_collection_id(self) -> str | None:
+        return self.ap_actor.get("followers")
 
 
 class RemoteActor(Actor):
