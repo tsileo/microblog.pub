@@ -721,7 +721,8 @@ async def nodeinfo(
             "software": {
                 "name": "microblogpub",
                 "version": config.VERSION,
-                "repository": "https://github.com/tsileo/microblog.pub",
+                "repository": "https://sr.ht/~tsileo/microblog.pub",
+                "homepage": "https://docs.microblog.pub",
             },
             "protocols": ["activitypub"],
             "services": {"inbound": [], "outbound": []},
