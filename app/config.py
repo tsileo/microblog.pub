@@ -1,4 +1,5 @@
 import os
+import subprocess
 from pathlib import Path
 
 import bcrypt
@@ -16,7 +17,13 @@ ROOT_DIR = Path().parent.resolve()
 
 _CONFIG_FILE = os.getenv("MICROBLOGPUB_CONFIG_FILE", "me.toml")
 
-VERSION = "2.0"
+VERSION_COMMIT = (
+    subprocess.check_output(["git", "rev-parse", "--short=8", "HEAD"])
+    .split()[0]
+    .decode()
+)
+
+VERSION = f"2.0.0+{VERSION_COMMIT}"
 USER_AGENT = f"microblogpub/{VERSION}"
 AP_CONTENT_TYPE = "application/activity+json"
 
