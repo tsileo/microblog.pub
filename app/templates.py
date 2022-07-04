@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import timezone
 from functools import lru_cache
 from typing import Any
+from typing import Callable
 from urllib.parse import urlparse
 
 import bleach
@@ -153,13 +154,104 @@ ALLOWED_TAGS = [
     "colgroup",
     "caption",
     "img",
+    "div",
+    "span",
 ]
 
-ALLOWED_ATTRIBUTES = {
+ALLOWED_CSS_CLASSES = [
+    "highlight",
+    "codehilite",
+    "hll",
+    "c",
+    "err",
+    "g",
+    "k",
+    "l",
+    "n",
+    "o",
+    "x",
+    "p",
+    "ch",
+    "cm",
+    "cp",
+    "cpf",
+    "c1",
+    "cs",
+    "gd",
+    "ge",
+    "gr",
+    "gh",
+    "gi",
+    "go",
+    "gp",
+    "gs",
+    "gu",
+    "gt",
+    "kc",
+    "kd",
+    "kn",
+    "kp",
+    "kr",
+    "kt",
+    "ld",
+    "m",
+    "s",
+    "na",
+    "nb",
+    "nc",
+    "no",
+    "nd",
+    "ni",
+    "ne",
+    "nf",
+    "nl",
+    "nn",
+    "nx",
+    "py",
+    "nt",
+    "nv",
+    "ow",
+    "w",
+    "mb",
+    "mf",
+    "mh",
+    "mi",
+    "mo",
+    "sa",
+    "sb",
+    "sc",
+    "dl",
+    "sd",
+    "s2",
+    "se",
+    "sh",
+    "si",
+    "sx",
+    "sr",
+    "s1",
+    "ss",
+    "bp",
+    "fm",
+    "vc",
+    "vg",
+    "vi",
+    "vm",
+    "il",
+]
+
+
+def _allow_class(_tag: str, name: str, value: str) -> bool:
+    return name == "class" and value in ALLOWED_CSS_CLASSES
+
+
+ALLOWED_ATTRIBUTES: dict[str, list[str] | Callable[[str, str, str], bool]] = {
     "a": ["href", "title"],
     "abbr": ["title"],
     "acronym": ["title"],
     "img": ["src", "alt", "title"],
+    "div": _allow_class,
+    "span": _allow_class,
+    "code": _allow_class,
 }
 
 

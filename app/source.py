@@ -88,6 +88,6 @@ async def markdownify(
     # Handle custom emoji
     tags.extend(emoji.tags(content))
 
-    content = markdown(content, extensions=["mdx_linkify"])
+    content = markdown(content, extensions=["mdx_linkify", "fenced_code", "codehilite"])
 
     return content, tags, mentioned_actors
