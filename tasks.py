@@ -96,7 +96,7 @@ def build_configuration_wizard_image(ctx):
 @task
 def build_docs(ctx):
     # type: (Context) -> None
-    run("poetry run python scripts/generate_docs.py", pty=True, echo=True)
+    run("PYTHONPATH=. poetry run python scripts/generate_docs.py", pty=True, echo=True)
 
 
 @task

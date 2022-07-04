@@ -5,6 +5,8 @@ from jinja2 import FileSystemLoader
 from jinja2 import select_autoescape
 from markdown import markdown
 
+from app.config import VERSION
+
 
 def markdownify(content: str) -> str:
     return markdown(content, extensions=["mdx_linkify"])
@@ -20,7 +22,8 @@ def main() -> None:
 
     readme = Path("README.md")
     template.stream(
-        content=markdownify(readme.read_text().removeprefix("# microblog.pub"))
+        content=markdownify(readme.read_text().removeprefix("# microblog.pub")),
+        version=VERSION,
     ).dump("docs/dist/index.html")
 
 

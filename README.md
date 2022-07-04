@@ -5,6 +5,8 @@
 
 This branch is a complete rewrite of the original microblog.pub server.
 
+Check out the test instance here: [testing.microblog.pub](https://testing.microblog.pub/).
+
 The original server became hard to debug, maintain and is not super easy to deploy (due to the dependecies like MongoDB).
 
 This rewrite is built using "modern" Python 3.10, SQLite and does not need any external tasks queue service.
