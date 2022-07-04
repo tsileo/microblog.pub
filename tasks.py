@@ -74,6 +74,28 @@ def tests(ctx, k=None):
 
 
 @task
+def generate_requirements_txt(ctx, where="requirements.txt"):
+    # type: (Context, str) -> None
+    run(
+        f"poetry export -f requirements.txt --without-hashes > {where}",
+        pty=True,
+        echo=True,
+    )
+
+
+@task(generate_requirements_txt)
+def build_configuration_wizard_image(ctx):
+    # type: (Context) -> None
+    run("docker build -t testmpw -f configuration_wizard.dockerfile .")
+
+
+@task
+def build_docs(ctx):
+    # type: (Context) -> None
+    run("poetry run python scripts/generate_docs.py", pty=True, echo=True)
+
+
+@task
 def download_twemoji(ctx):
     # type: (Context) -> None
     resp = httpx.get(

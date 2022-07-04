@@ -1,0 +1,83 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>microblog.pub - A self-hosted, single-user, ActivityPub powered microblog.</title>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<style>
+body {
+    font-family: Helvetica, sans-serif;
+    font-size: 20px;
+    line-height: 32px;
+    color: #111;
+    background: #ddd;
+}
+nav.flexbox {
+    margin: 30px 0;
+}
+nav.flexbox ul {        
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    list-style-type: none;
+    padding: 0;
+}
+
+nav.flexbox ul li {
+    margin-right: 20px;
+}
+nav.flexbox ul li:last-child {
+    margin-right: 0px;
+}
+h1 {
+    font-weight: normal;
+    text-align: center;
+    margin: 30px auto;
+    color: #111;
+}
+h1 span {
+    color: #1d781d;
+}
+header p {
+    text-align:center;
+}
+a {
+    text-decoration: none;
+}
+nav a, main a, header p a {
+    color: #1d781d;
+}
+nav a:hover, main a:hover, header p a:hover {
+    color: #781D78;
+}
+#main {
+    width: 95%;
+    max-width: 960px;
+    margin: 50px auto;
+}
+</style>
+</head>
+<body>
+<div id="main">
+    <header>
+        <a href="/"><h1>microblog<span>.pub</span></h1></a>
+        <p>A self-hosted, single-user, <a href="https://activitypub.rocks/">ActivityPub</a> powered microblog.</p>
+    </header>
+
+    <nav class="flexbox">
+        <ul>
+            <li><a href="/">Home</a>
+            <li><a href="https://sr.ht/~tsileo/microblog.pub/">Source code</a>
+            <li><a href="https://todo.sr.ht/~tsileo/microblog.pub">Bug tracker</a>
+            <li><a href="https://sr.ht/~tsileo/microblog.pub/lists">Mailing list</a>
+        </ul>
+    </nav>
+
+    <main>
+    {{ content | safe }}
+    </main>
+
+</div>
+</body>
+</html>
