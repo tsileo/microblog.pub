@@ -10,6 +10,9 @@ $form-text-color: #222;
 $muted-color: #586e75; // solarized comment text
 // #93a1a1; solarized body text
 
+// Load custom theme
+@import "vars.scss";
+
 
 body {
   font-family: $font-stack;

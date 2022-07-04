@@ -40,6 +40,10 @@ def lint(ctx):
 @task
 def compile_scss(ctx, watch=False):
     # type: (Context, bool) -> None
+    vars_file = Path("app/scss/vars.scss")
+    if not vars_file.exists():
+        vars_file.write_text("")
+
     if watch:
         run("poetry run boussole watch", echo=True)
     else:
@@ -113,3 +117,9 @@ def download_twemoji(ctx):
         emoji_name = Path(member.name).name
         with open(f"app/static/twemoji/{emoji_name}", "wb") as f:
             f.write(tf.extractfile(member).read())  # type: ignore
+
+
+@task(download_twemoji, compile_scss, migrate_db)
+def setup_static_dir(ctx):
+    # type: (Context) -> None
+    pass
