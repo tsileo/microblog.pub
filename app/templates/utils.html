@@ -240,15 +240,29 @@
 
 {{ display_og_meta(object) }}
 
-<a href="{{ object.url }}" class="u-url u-uid"><time class="dt-published" datetime="{{ object.ap_published_at }}">{{ object.ap_published_at | format_date }}</time></a>
-{{ object.visibility.value }}
-{% if object.is_from_outbox %}
-{{ object.likes_count }} likes
-{% endif %}
-
-{% if object.is_from_outbox %}
-{{ object.announces_count }} shares
-{% endif %}
+<nav class="flexbox">
+    <ul>
+        <li>
+            <a href="{{ object.url }}" class="u-url u-uid"><time class="dt-published" datetime="{{ object.ap_published_at }}">{{ object.ap_published_at | format_date }}</time></a>
+        </li>
+        {% if is_admin %}
+        <li>
+            {{ object.visibility.value }}
+        </li>
+        {% if object.is_from_outbox %}
+        <li>
+            <strong>{{ object.likes_count }}</strong> likes
+        </li>
+        <li> 
+            <strong>{{ object.announces_count }}</strong> shares
+        </li>
+        <li> 
+            <strong>{{ object.replies_count }}</strong> replies
+        </li>
+        {% endif %}
+        {% endif %}
+</ul>
+</nav>
 
 {{ display_attachments(object) }}
 
@@ -257,11 +271,11 @@
     <div style="flex: 0 1 50%;max-width: 50%;">Likes
     <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
 {% for like in likes %}
-<a href="{{ like.actor.url }}" title="{{ like.actor.handle }}" style="height:50px;">
+<a href="{{ like.actor.url }}" title="{{ like.actor.handle }}" style="height:50px;" rel="noreferrer">
     <img src="{{ like.actor.resized_icon_url }}" alt="{{ like.actor.handle}}" style="max-width:50px;">
     </a>
 {% endfor %}
-<div style="width:50px;text-align:center;">And 2223 more.</div>
+<div style="width:50px;text-align:center;">And {{ object.likes_count - 10 }} more.</div>
 
 
     </div>
@@ -270,7 +284,7 @@
     <div style="flex: 0 1 50%;max-width: 50%;">Shares
     <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
 {% for share in shares %}
-<a href="{{ share.actor.url }}" title="{{ share.actor.handle }}" style="height:50px;">
+<a href="{{ share.actor.url }}" title="{{ share.actor.handle }}" style="height:50px;" rel="noreferrer">
     <img src="{{ share.actor.resized_icon_url }}" alt="{{ share.actor.handle}}" style="max-width:50px;">
     </a>
 {% endfor %}
@@ -322,17 +336,21 @@
     <ul>
         {% if not is_admin or object.is_from_outbox %}<li><div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %}>permalink</a></div></li>{% endif %}
     {% if object.is_from_outbox %}
+    {% if object.likes_count %}
     <li>
-        <div class="comment-count">{{ object.likes_count }} like{{ object.likes_count | pluralize }}</div>
+        <a href="{{ object.url }}"><strong>{{ object.likes_count }}</strong> like{{ object.likes_count | pluralize }}</a>
     </li>
-    
+    {% endif %}
+    {% if object.announces_count %}
     <li>
-        <div class="retweet-count">{{ object.announces_count }} share{{ object.announces_count | pluralize }}</div>
+        <a href="{{ object.url }}"><strong>{{ object.announces_count }}</strong> share{{ object.announces_count | pluralize }}</a
     </li>
-
+    {% endif %}
+    {% if object.replies_count %}
     <li>
-        <div class="retweet-count">{{ object.replies_count }} repl{{ object.replies_count | pluralize("y", "ies") }}</div>
+        <a href="{{ object.url }}"><strong>{{ object.replies_count }}</strong> repl{{ object.replies_count | pluralize("y", "ies") }}</a>
     </li>
+    {% endif %}
 
     {% if is_admin %}
     <li>
