@@ -1,31 +1,22 @@
 import base64
+from pathlib import Path
 from typing import Any
 
 from Crypto.PublicKey import RSA
 from Crypto.Util import number
 
-from app.config import KEY_PATH
 
-
-def key_exists() -> bool:
-    return KEY_PATH.exists()
-
-
-def generate_key() -> None:
-    if key_exists():
-        raise ValueError(f"Key at {KEY_PATH} already exists")
+def generate_key(key_path: Path) -> None:
+    if key_path.exists():
+        raise ValueError(f"Key at {key_path} already exists")
     k = RSA.generate(2048)
     privkey_pem = k.exportKey("PEM").decode("utf-8")
-    KEY_PATH.write_text(privkey_pem)
+    key_path.write_text(privkey_pem)
 
 
-def get_pubkey_as_pem() -> str:
-    text = KEY_PATH.read_text()
+def get_pubkey_as_pem(key_path: Path) -> str:
+    text = key_path.read_text()
     return RSA.import_key(text).public_key().export_key("PEM").decode("utf-8")
-
-
-def get_key() -> str:
-    return KEY_PATH.read_text()
 
 
 class Key(object):

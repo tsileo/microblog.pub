@@ -14,16 +14,16 @@ from app import activitypub as ap
 from app import config
 from app import ldsig
 from app import models
+from app.config import KEY_PATH
 from app.database import AsyncSession
 from app.database import SessionLocal
 from app.database import now
 from app.key import Key
-from app.key import get_key
 
 _MAX_RETRIES = 16
 
 k = Key(config.ID, f"{config.ID}#main-key")
-k.load(get_key())
+k.load(KEY_PATH.read_text())
 
 
 async def new_outgoing_activity(
@@ -118,6 +118,8 @@ def process_next_outgoing_activity(db: Session) -> bool:
             if retry_after_value := http_error.response.headers.get("Retry-After"):
                 retry_after = _parse_retry_after(retry_after_value)
             _set_next_try(next_activity, retry_after)
+        elif http_error.response.status_code == 401:
+            _set_next_try(next_activity)
         elif 400 <= http_error.response.status_code < 500:
             logger.info(f"status_code={http_error.response.status_code} not retrying")
             next_activity.is_errored = True

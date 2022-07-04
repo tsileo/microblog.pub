@@ -23,10 +23,10 @@ from sqlalchemy import select
 
 from app import activitypub as ap
 from app import config
+from app.config import KEY_PATH
 from app.database import AsyncSession
 from app.database import get_db_session
 from app.key import Key
-from app.key import get_key
 
 _KEY_CACHE: MutableMapping[str, Key] = LFUCache(256)
 
@@ -208,5 +208,5 @@ class HTTPXSigAuth(httpx.Auth):
 
 
 k = Key(config.ID, f"{config.ID}#main-key")
-k.load(get_key())
+k.load(KEY_PATH.read_text())
 auth = HTTPXSigAuth(k)

@@ -89,7 +89,7 @@ ME = {
     "publicKey": {
         "id": f"{config.ID}#main-key",
         "owner": config.ID,
-        "publicKeyPem": get_pubkey_as_pem(),
+        "publicKeyPem": get_pubkey_as_pem(config.KEY_PATH),
     },
     "alsoKnownAs": [],
 }
