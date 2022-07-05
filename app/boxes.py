@@ -590,6 +590,34 @@ async def _handle_undo_activity(
     # commit will be perfomed in save_to_inbox
 
 
+async def _handle_update_activity(
+    db_session: AsyncSession,
+    from_actor: models.Actor,
+    update_activity: models.InboxObject,
+) -> None:
+    logger.info("Processing Update activity")
+    wrapped_object = await ap.get_object(update_activity.ap_object)
+    if wrapped_object["type"] in ap.ACTOR_TYPES:
+        logger.info("Updating actor")
+
+        updated_actor = RemoteActor(wrapped_object)
+        if (
+            from_actor.ap_id != updated_actor.ap_id
+            or from_actor.ap_type != updated_actor.ap_type
+            or from_actor.handle != updated_actor.handle
+        ):
+            raise ValueError(
+                f"Invalid Update activity {from_actor.ap_actor}/"
+                f"{updated_actor.ap_actor}"
+            )
+
+        # Update the actor
+        from_actor.ap_actor = updated_actor.ap_actor
+    else:
+        # TODO(ts): support updating objects
+        logger.info(f'Cannot update {wrapped_object["type"]}')
+
+
 async def _handle_create_activity(
     db_session: AsyncSession,
     from_actor: models.Actor,
@@ -742,7 +770,7 @@ async def save_to_inbox(
     if activity_ro.ap_type == "Create":
         await _handle_create_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Update":
-        pass
+        await _handle_update_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Delete":
         if relates_to_inbox_object:
             await _handle_delete_activity(db_session, actor, relates_to_inbox_object)

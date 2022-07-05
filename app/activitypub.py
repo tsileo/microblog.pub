@@ -103,7 +103,7 @@ class NotAnObjectError(Exception):
         self.resp = resp
 
 
-async def fetch(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+async def fetch(url: str, params: dict[str, Any] | None = None) -> RawObject:
     async with httpx.AsyncClient() as client:
         resp = await client.get(
             url,
@@ -223,6 +223,19 @@ def get_actor_id(activity: RawObject) -> str:
         return get_id(activity["actor"])
 
 
+async def get_object(activity: RawObject) -> RawObject:
+    if "object" not in activity:
+        raise ValueError(f"No object in {activity}")
+
+    raw_activity_object = activity["object"]
+    if isinstance(raw_activity_object, dict):
+        return raw_activity_object
+    elif isinstance(raw_activity_object, str):
+        return await fetch(raw_activity_object)
+    else:
+        raise ValueError(f"Unexpected object {raw_activity_object}")
+
+
 def wrap_object(activity: RawObject) -> RawObject:
     return {
         "@context": AS_EXTENDED_CTX,
@@ -244,8 +257,8 @@ def wrap_object_if_needed(raw_object: RawObject) -> RawObject:
 
 
 def unwrap_activity(activity: RawObject) -> RawObject:
-    # FIXME(ts): other types to unwrap?
-    if activity["type"] == "Create":
+    # FIXME(ts): deprecate this
+    if activity["type"] in ["Create", "Update"]:
         unwrapped_object = activity["object"]
 
         # Sanity check, ensure the wrapped object actor matches the activity
