@@ -1,4 +1,14 @@
+# Installing
+
+[TOC]
+
+## Docker edition
+
+TODO
+
 ## Python developer edition
+
+Assuming you have a working **Python 3.10+** environment. 
 
 Setup [Poetry](https://python-poetry.org/docs/master/#installing-with-the-official-installer).
 

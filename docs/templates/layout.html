@@ -30,7 +30,10 @@ nav.flexbox ul li {
 nav.flexbox ul li:last-child {
     margin-right: 0px;
 }
-h1 {
+h1, h2, h3, h4, h5, h6 {
+    font-weight: normal;
+}
+header h1 {
     font-weight: normal;
     text-align: center;
     margin: 30px auto;
@@ -80,6 +83,7 @@ code {
         <ul>
             <li><a href="/"{% if path == "/" %} class="active"{% endif %}>Home</a>
             <li><a href="/installing.html"{% if path == "/installing.html" %} class="active"{% endif %}>Installing</a>
+            <li><a href="/user_guide.html"{% if path == "/user_guide.html" %} class="active"{% endif %}>User guide</a>
             <li><a href="https://sr.ht/~tsileo/microblog.pub/">Source code</a>
             <li><a href="https://todo.sr.ht/~tsileo/microblog.pub">Bug tracker</a>
             <li><a href="https://sr.ht/~tsileo/microblog.pub/lists">Mailing list</a>

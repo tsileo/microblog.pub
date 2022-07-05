@@ -10,7 +10,9 @@ from app.config import VERSION
 
 
 def markdownify(content: str) -> str:
-    return markdown(content, extensions=["mdx_linkify", "fenced_code", "codehilite"])
+    return markdown(content, extensions=[
+        "mdx_linkify", "fenced_code", "codehilite", "toc"
+    ])
 
 
 def main() -> None:
@@ -33,10 +35,17 @@ def main() -> None:
 
     install = Path("docs/install.md")
     template.stream(
-        content=markdownify(install.read_text().removeprefix("# microblog.pub")),
+        content=markdownify(install.read_text()),
         version=VERSION,
         path="/installing.html",
     ).dump("docs/dist/installing.html")
+
+    user_guide = Path("docs/user_guide.md")
+    template.stream(
+        content=markdownify(user_guide.read_text()),
+        version=VERSION,
+        path="/user_guide.html",
+    ).dump("docs/dist/user_guide.html")
 
 
 if __name__ == "__main__":
