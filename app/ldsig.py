@@ -9,6 +9,8 @@ from Crypto.Signature import PKCS1_v1_5
 from pyld import jsonld  # type: ignore
 
 from app import activitypub as ap
+from app.database import AsyncSession
+from app.httpsig import _get_public_key
 
 if typing.TYPE_CHECKING:
     from app.key import Key
@@ -52,7 +54,15 @@ def _doc_hash(doc: ap.RawObject) -> str:
     return h.hexdigest()
 
 
-def verify_signature(doc: ap.RawObject, key: "Key") -> bool:
+async def verify_signature(
+    db_session: AsyncSession,
+    doc: ap.RawObject,
+) -> bool:
+    if "signature" not in doc:
+        raise ValueError("No embedded signature")
+
+    key_id = doc["signature"]["creator"]
+    key = await _get_public_key(db_session, key_id)
     to_be_signed = _options_hash(doc) + _doc_hash(doc)
     signature = doc["signature"]["signatureValue"]
     signer = PKCS1_v1_5.new(key.pubkey or key.privkey)  # type: ignore

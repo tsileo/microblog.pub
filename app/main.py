@@ -633,7 +633,7 @@ async def inbox(
     logger.info(f"headers={request.headers}")
     payload = await request.json()
     logger.info(f"{payload=}")
-    await save_to_inbox(db_session, payload)
+    await save_to_inbox(db_session, payload, httpsig_info)
     return Response(status_code=204)
 
 

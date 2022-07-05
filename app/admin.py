@@ -193,7 +193,9 @@ async def admin_inbox(
     filter_by: str | None = None,
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
-    where = [models.InboxObject.ap_type.not_in(["Accept", "Delete"])]
+    where = [
+        models.InboxObject.ap_type.not_in(["Accept", "Delete", "Create", "Update"])
+    ]
     if filter_by:
         where.append(models.InboxObject.ap_type == filter_by)
     if cursor:
