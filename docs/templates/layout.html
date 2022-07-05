@@ -48,6 +48,10 @@ a {
 nav a, main a, header p a {
     color: #1d781d;
 }
+nav a.active, main a.active, header p a.active {
+  color: #781D78;
+  font-weight: bold;
+}
 nav a:hover, main a:hover, header p a:hover {
     color: #781D78;
 }
@@ -60,6 +64,7 @@ code {
     padding: 10px;
     overflow: auto;
     display: block;
+    font-family: monospace;
 }
 </style>
 <link rel="stylesheet" href="static/codehilite.css" type="text/css" />
@@ -73,8 +78,8 @@ code {
 
     <nav class="flexbox">
         <ul>
-            <li><a href="/">Home</a>
-            <li><a href="/installing.html">Installing</a>
+            <li><a href="/"{% if path == "/" %} class="active"{% endif %}>Home</a>
+            <li><a href="/installing.html"{% if path == "/installing.html" %} class="active"{% endif %}>Installing</a>
             <li><a href="https://sr.ht/~tsileo/microblog.pub/">Source code</a>
             <li><a href="https://todo.sr.ht/~tsileo/microblog.pub">Bug tracker</a>
             <li><a href="https://sr.ht/~tsileo/microblog.pub/lists">Mailing list</a>

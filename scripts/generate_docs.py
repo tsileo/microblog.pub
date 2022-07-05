@@ -28,12 +28,14 @@ def main() -> None:
     template.stream(
         content=markdownify(readme.read_text().removeprefix("# microblog.pub")),
         version=VERSION,
+        path="/",
     ).dump("docs/dist/index.html")
 
     install = Path("docs/install.md")
     template.stream(
         content=markdownify(install.read_text().removeprefix("# microblog.pub")),
         version=VERSION,
+        path="/installing.html",
     ).dump("docs/dist/installing.html")
 
 
