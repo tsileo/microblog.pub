@@ -886,6 +886,7 @@ async def get_replies_tree(
                 select(models.InboxObject)
                 .where(
                     models.InboxObject.ap_context == requested_object.ap_context,
+                    models.InboxObject.ap_type.not_in(["Announce"]),
                 )
                 .options(joinedload(models.InboxObject.actor))
             )
@@ -917,7 +918,7 @@ async def get_replies_tree(
     logger.info(nodes_by_in_reply_to)
 
     if len(nodes_by_in_reply_to.get(None, [])) > 1:
-        raise ValueError("Invalid replies tree")
+        raise ValueError(f"Invalid replies tree: {[n.ap_object for n in tree_nodes]}")
 
     def _get_reply_node_children(
         node: ReplyTreeNode,

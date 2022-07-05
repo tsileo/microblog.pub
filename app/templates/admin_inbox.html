@@ -14,7 +14,7 @@
 
 {% for inbox_object in inbox %}
 {% if inbox_object.ap_type == "Announce" %}
-    {{ actor_action(inbox_object, "shared one of your post") }}
+    {{ actor_action(inbox_object, "shared") }}
     {{ utils.display_object(inbox_object.relates_to_anybox_object) }}
 {% elif inbox_object.ap_type in ["Article", "Note", "Video"] %}
 {{ utils.display_object(inbox_object) }}
