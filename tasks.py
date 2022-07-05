@@ -120,6 +120,6 @@ def download_twemoji(ctx):
 
 
 @task(download_twemoji, compile_scss, migrate_db)
-def setup_static_dir(ctx):
+def configuration_wizard(ctx):
     # type: (Context) -> None
-    pass
+    run("PYTHONPATH=. poetry run python scripts/config_wizard.py", pty=True, echo=True)
