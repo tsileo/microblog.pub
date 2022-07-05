@@ -10,9 +10,9 @@ from app.config import VERSION
 
 
 def markdownify(content: str) -> str:
-    return markdown(content, extensions=[
-        "mdx_linkify", "fenced_code", "codehilite", "toc"
-    ])
+    return markdown(
+        content, extensions=["mdx_linkify", "fenced_code", "codehilite", "toc"]
+    )
 
 
 def main() -> None:
