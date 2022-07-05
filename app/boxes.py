@@ -883,30 +883,41 @@ async def get_replies_tree(
     tree_nodes.extend(
         (
             await db_session.scalars(
-                select(models.InboxObject).where(
+                select(models.InboxObject)
+                .where(
                     models.InboxObject.ap_context == requested_object.ap_context,
                 )
+                .options(joinedload(models.InboxObject.actor))
             )
-        ).all()
+        )
+        .unique()
+        .all()
     )
     tree_nodes.extend(
         (
             await db_session.scalars(
-                select(models.OutboxObject).where(
+                select(models.OutboxObject)
+                .where(
                     models.OutboxObject.ap_context == requested_object.ap_context,
                     models.OutboxObject.is_deleted.is_(False),
                 )
+                .options(
+                    joinedload(models.OutboxObject.outbox_object_attachments).options(
+                        joinedload(models.OutboxObjectAttachment.upload)
+                    )
+                )
             )
-        ).all()
+        )
+        .unique()
+        .all()
     )
     nodes_by_in_reply_to = defaultdict(list)
     for node in tree_nodes:
         nodes_by_in_reply_to[node.in_reply_to].append(node)
     logger.info(nodes_by_in_reply_to)
 
-    # TODO: get oldest if we cannot get to root?
-    if len(nodes_by_in_reply_to.get(None, [])) != 1:
-        raise ValueError("Failed to compute replies tree")
+    if len(nodes_by_in_reply_to.get(None, [])) > 1:
+        raise ValueError("Invalid replies tree")
 
     def _get_reply_node_children(
         node: ReplyTreeNode,
@@ -932,7 +943,7 @@ async def get_replies_tree(
     else:
         root_ap_object = sorted(
             tree_nodes,
-            lambda ap_obj: ap_obj.ap_published_at,  # type: ignore
+            key=lambda ap_obj: ap_obj.ap_published_at,  # type: ignore
         )[0]
 
     root_node = ReplyTreeNode(

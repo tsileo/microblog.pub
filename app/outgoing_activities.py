@@ -83,9 +83,10 @@ def process_next_outgoing_activity(db: Session) -> bool:
         models.OutgoingActivity.is_sent.is_(False),
     ]
     q_count = db.scalar(select(func.count(models.OutgoingActivity.id)).where(*where))
-    logger.info(f"{q_count} outgoing activities ready to process")
+    if q_count > 0:
+        logger.info(f"{q_count} outgoing activities ready to process")
     if not q_count:
-        logger.info("No activities to process")
+        # logger.debug("No activities to process")
         return False
 
     next_activity = db.execute(

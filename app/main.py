@@ -739,7 +739,7 @@ async def nodeinfo(
     )
 
 
-proxy_client = httpx.AsyncClient()
+proxy_client = httpx.AsyncClient(follow_redirects=True)
 
 
 @app.get("/proxy/media/{encoded_url}")
@@ -820,6 +820,7 @@ async def serve_proxy_media_resized(
                 ]
             ]
             + [(b"user-agent", USER_AGENT.encode())],
+            follow_redirects=True,
         )
     if proxy_resp.status_code != 200:
         return PlainTextResponse(
