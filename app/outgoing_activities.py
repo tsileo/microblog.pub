@@ -9,6 +9,7 @@ from loguru import logger
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import joinedload
 
 from app import activitypub as ap
 from app import config
@@ -29,11 +30,18 @@ k.load(KEY_PATH.read_text())
 async def new_outgoing_activity(
     db_session: AsyncSession,
     recipient: str,
-    outbox_object_id: int,
+    outbox_object_id: int | None,
+    inbox_object_id: int | None = None,
 ) -> models.OutgoingActivity:
+    if outbox_object_id is None and inbox_object_id is None:
+        raise ValueError("Must reference at least one inbox/outbox activity")
+    elif outbox_object_id and inbox_object_id:
+        raise ValueError("Cannot reference both inbox/outbox activities")
+
     outgoing_activity = models.OutgoingActivity(
         recipient=recipient,
         outbox_object_id=outbox_object_id,
+        inbox_object_id=inbox_object_id,
     )
 
     db_session.add(outgoing_activity)
@@ -93,17 +101,26 @@ def process_next_outgoing_activity(db: Session) -> bool:
         select(models.OutgoingActivity)
         .where(*where)
         .limit(1)
+        .options(
+            joinedload(models.OutgoingActivity.inbox_object),
+            joinedload(models.OutgoingActivity.outbox_object),
+        )
         .order_by(models.OutgoingActivity.next_try)
     ).scalar_one()
 
     next_activity.tries = next_activity.tries + 1
     next_activity.last_try = now()
 
-    payload = ap.wrap_object_if_needed(next_activity.outbox_object.ap_object)
+    payload = ap.wrap_object_if_needed(next_activity.anybox_object.ap_object)
 
     # Use LD sig if the activity may need to be forwarded by recipients
-    if payload["type"] in ["Create", "Delete"]:
-        ldsig.generate_signature(payload, k)
+    if next_activity.anybox_object.is_from_outbox and payload["type"] in [
+        "Create",
+        "Delete",
+    ]:
+        # But only if the object is public (to help with deniability/privacy)
+        if next_activity.outbox_object.visibility == ap.VisibilityEnum.PUBLIC:
+            ldsig.generate_signature(payload, k)
 
     logger.info(f"{payload=}")
     try:

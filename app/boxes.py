@@ -417,6 +417,23 @@ async def _compute_recipients(
     return recipients
 
 
+async def _get_followers_recipients(db_session: AsyncSession) -> set[str]:
+    """Returns all the recipients from the local follower collection."""
+    followers = (
+        (
+            await db_session.scalars(
+                select(models.Follower).options(joinedload(models.Follower.actor))
+            )
+        )
+        .unique()
+        .all()
+    )
+    return {
+        follower.actor.shared_inbox_url or follower.actor.inbox_url
+        for follower in followers
+    }
+
+
 async def get_inbox_object_by_ap_id(
     db_session: AsyncSession, ap_id: str
 ) -> models.InboxObject | None:
@@ -455,6 +472,7 @@ async def get_anybox_object_by_ap_id(
 async def _handle_delete_activity(
     db_session: AsyncSession,
     from_actor: models.Actor,
+    delete_activity: models.InboxObject,
     ap_object_to_delete: models.InboxObject,
 ) -> None:
     if from_actor.ap_id != ap_object_to_delete.actor.ap_id:
@@ -463,6 +481,23 @@ async def _handle_delete_activity(
             f"{from_actor.ap_id}/{ap_object_to_delete.actor.ap_id}"
         )
         return
+
+    # If it's a local replies, it was forwarded, so we also need to forward
+    # the Delete activity if possible
+    if (
+        delete_activity.has_ld_signature
+        and ap_object_to_delete.in_reply_to
+        and ap_object_to_delete.in_reply_to.startswith(BASE_URL)
+    ):
+        logger.info("Forwarding Delete activity as it's a local reply")
+        recipients = await _get_followers_recipients(db_session)
+        for rcp in recipients:
+            await new_outgoing_activity(
+                db_session,
+                rcp,
+                outbox_object_id=None,
+                inbox_object_id=delete_activity.id,
+            )
 
     # TODO(ts): do we need to delete related activities? should we keep
     # bookmarked objects with a deleted flag?
@@ -680,6 +715,19 @@ async def _handle_create_activity(
             .values(replies_count=models.OutboxObject.replies_count + 1)
         )
 
+        # This object is a reply of a local object, we may need to forward it
+        # to our followers (we can only forward JSON-LD signed activities)
+        if create_activity.has_ld_signature:
+            logger.info("Forwarding Create activity as it's a local reply")
+            recipients = await _get_followers_recipients(db_session)
+            for rcp in recipients:
+                await new_outgoing_activity(
+                    db_session,
+                    rcp,
+                    outbox_object_id=None,
+                    inbox_object_id=create_activity.id,
+                )
+
     for tag in tags:
         if tag.get("name") == LOCAL_ACTOR.handle or tag.get("href") == LOCAL_ACTOR.url:
             notif = models.Notification(
@@ -773,7 +821,12 @@ async def save_to_inbox(
         await _handle_update_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Delete":
         if relates_to_inbox_object:
-            await _handle_delete_activity(db_session, actor, relates_to_inbox_object)
+            await _handle_delete_activity(
+                db_session,
+                actor,
+                inbox_object,
+                relates_to_inbox_object,
+            )
         else:
             # TODO(ts): handle delete actor
             logger.info(

@@ -155,6 +155,10 @@ class Object:
     def in_reply_to(self) -> str | None:
         return self.ap_object.get("inReplyTo")
 
+    @property
+    def has_ld_signature(self) -> bool:
+        return bool(self.ap_object.get("signature"))
+
 
 def _to_camel(string: str) -> str:
     cased = "".join(word.capitalize() for word in string.split("_"))

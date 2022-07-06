@@ -113,6 +113,7 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
 class HTTPSigInfo:
     has_valid_signature: bool
     signed_by_ap_actor_id: str | None = None
+    is_ap_actor_gone: bool = False
 
 
 async def httpsig_checker(
@@ -139,7 +140,7 @@ async def httpsig_checker(
         k = await _get_public_key(db_session, hsig["keyId"])
     except ap.ObjectIsGoneError:
         logger.info("Actor is gone")
-        return HTTPSigInfo(has_valid_signature=False)
+        return HTTPSigInfo(has_valid_signature=False, is_ap_actor_gone=True)
     except Exception:
         logger.exception(f'Failed to fetch HTTP sig key {hsig["keyId"]}')
         return HTTPSigInfo(has_valid_signature=False)
@@ -162,6 +163,13 @@ async def enforce_httpsig(
         logger.warning(f"Invalid HTTP sig {httpsig_info=}")
         body = await request.body()
         logger.info(f"{body=}")
+
+        # Special case for Mastoodon instance that keep resending Delete
+        # activities for actor we don't know about if we raise a 401
+        if httpsig_info.is_ap_actor_gone:
+            logger.info("Let's make Mastodon happy, returning a 204")
+            raise fastapi.HTTPException(status_code=204)
+
         raise fastapi.HTTPException(status_code=401, detail="Invalid HTTP sig")
 
     return httpsig_info

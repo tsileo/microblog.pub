@@ -6,6 +6,7 @@ from datetime import datetime
 import pyld  # type: ignore
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
+from loguru import logger
 from pyld import jsonld  # type: ignore
 
 from app import activitypub as ap
@@ -59,7 +60,8 @@ async def verify_signature(
     doc: ap.RawObject,
 ) -> bool:
     if "signature" not in doc:
-        raise ValueError("No embedded signature")
+        logger.warning("The object does contain a signature")
+        return False
 
     key_id = doc["signature"]["creator"]
     key = await _get_public_key(db_session, key_id)
