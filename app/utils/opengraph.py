@@ -40,6 +40,11 @@ def _scrap_og_meta(html: str) -> OpenGraphMeta | None:
 def _urls_from_note(note: ap.RawObject) -> set[str]:
     note_host = urlparse(ap.get_id(note["id"]) or "").netloc
 
+    tags_hrefs = set()
+    for tag in note.get("tag", []):
+        if tag_href := tag.get("href"):
+            tags_hrefs.add(tag_href)
+
     urls = set()
     if "content" in note:
         soup = BeautifulSoup(note["content"], "html5lib")
@@ -58,7 +63,7 @@ def _urls_from_note(note: ap.RawObject) -> set[str]:
             ):
                 urls.add(h)
 
-    return urls
+    return urls - tags_hrefs
 
 
 async def _og_meta_from_url(url: str) -> OpenGraphMeta | None:

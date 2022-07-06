@@ -167,8 +167,8 @@ async def enforce_httpsig(
         # Special case for Mastoodon instance that keep resending Delete
         # activities for actor we don't know about if we raise a 401
         if httpsig_info.is_ap_actor_gone:
-            logger.info("Let's make Mastodon happy, returning a 204")
-            raise fastapi.HTTPException(status_code=204)
+            logger.info("Let's make Mastodon happy, returning a 202")
+            raise fastapi.HTTPException(status_code=202)
 
         raise fastapi.HTTPException(status_code=401, detail="Invalid HTTP sig")
 
