@@ -1,3 +1,4 @@
+import hashlib
 import typing
 from dataclasses import dataclass
 from typing import Union
@@ -226,3 +227,29 @@ async def get_actors_metadata(
             inbox_follow_ap_id=followers.get(actor.ap_id),
         )
     return idx
+
+
+def _actor_hash(actor: Actor) -> bytes:
+    """Used to detect when an actor is updated"""
+    h = hashlib.blake2b(digest_size=32)
+    h.update(actor.ap_id.encode())
+    h.update(actor.handle.encode())
+
+    if actor.name:
+        h.update(actor.name.encode())
+
+    if actor.summary:
+        h.update(actor.summary.encode())
+
+    if actor.url:
+        h.update(actor.url.encode())
+
+    h.update(actor.display_name.encode())
+
+    if actor.icon_url:
+        h.update(actor.icon_url.encode())
+
+    h.update(actor.public_key_id.encode())
+    h.update(actor.public_key_as_pem.encode())
+
+    return h.digest()
