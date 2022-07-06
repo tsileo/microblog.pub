@@ -90,7 +90,8 @@ def _send_actor_update_if_needed(db_session: Session) -> None:
     db_session.add(outbox_object)
     db_session.flush()
 
-    # TODO(ts): also send to every actor we contact (distinct on recipient)
+    # Send the update to the followers collection and all the actor we have ever
+    # contacted
     followers = (
         (
             db_session.scalars(
@@ -103,7 +104,12 @@ def _send_actor_update_if_needed(db_session: Session) -> None:
     for rcp in {
         follower.actor.shared_inbox_url or follower.actor.inbox_url
         for follower in followers
-    }:
+    } + {
+        row.recipient
+        for row in db_session.execute(
+            select(func.distinct(models.OutgoingActivity.recipient).label("recipient"))
+        )
+    }:  # type: ignore
         outgoing_activity = models.OutgoingActivity(
             recipient=rcp,
             outbox_object_id=outbox_object.id,
