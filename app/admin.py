@@ -76,10 +76,23 @@ async def get_lookup(
     request: Request,
     query: str | None = None,
     db_session: AsyncSession = Depends(get_db_session),
-) -> templates.TemplateResponse:
+) -> templates.TemplateResponse | RedirectResponse:
     ap_object = None
     actors_metadata = {}
     if query:
+        requested_object = await boxes.get_anybox_object_by_ap_id(db_session, query)
+        if requested_object:
+            if (
+                requested_object.ap_type == "Create"
+                and requested_object.relates_to_anybox_object
+            ):
+                query = requested_object.relates_to_anybox_object.ap_id
+            return RedirectResponse(
+                request.url_for("admin_object") + f"?ap_id={query}",
+                status_code=302,
+            )
+        # TODO(ts): redirect to admin_profile if the actor is in DB
+
         ap_object = await lookup(db_session, query)
         if ap_object.ap_type in ap.ACTOR_TYPES:
             actors_metadata = await get_actors_metadata(
@@ -266,7 +279,7 @@ async def admin_outbox(
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
     where = [
-        models.OutboxObject.ap_type.not_in(["Accept", "Delete"]),
+        models.OutboxObject.ap_type.not_in(["Accept", "Delete", "Update"]),
         models.OutboxObject.is_deleted.is_(False),
     ]
     if filter_by:

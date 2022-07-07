@@ -332,6 +332,14 @@
 
   <nav class="flexbox activity-bar">
     <ul>
+
+    {% if object.in_reply_to and is_admin %}
+    <li>
+        <a href="{{ url_for("get_lookup") }}?query={{ object.in_reply_to }}" title="{{ object.in_reply_to }}">in reply to {{ object.in_reply_to|truncate(16, True) }}</a>
+    </li>
+    {% endif %}
+
+
         {% if not is_admin or object.is_from_outbox %}<li><div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %}>permalink</a></div></li>{% endif %}
     {% if object.is_from_outbox %}
     {% if object.likes_count %}

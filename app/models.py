@@ -162,7 +162,7 @@ class OutboxObject(Base, BaseObject):
     # Never actually delete from the outbox
     is_deleted = Column(Boolean, nullable=False, default=False)
 
-    # Used for Like, Announce and Undo activities
+    # Used for Create, Like, Announce and Undo activities
     relates_to_inbox_object_id = Column(
         Integer,
         ForeignKey("inbox.id"),

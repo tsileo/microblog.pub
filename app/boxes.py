@@ -455,7 +455,21 @@ async def get_outbox_object_by_ap_id(
 ) -> models.OutboxObject | None:
     return (
         await db_session.execute(
-            select(models.OutboxObject).where(models.OutboxObject.ap_id == ap_id)
+            select(models.OutboxObject)
+            .where(models.OutboxObject.ap_id == ap_id)
+            .options(
+                joinedload(models.OutboxObject.outbox_object_attachments).options(
+                    joinedload(models.OutboxObjectAttachment.upload)
+                ),
+                joinedload(models.OutboxObject.relates_to_inbox_object).options(
+                    joinedload(models.InboxObject.actor),
+                ),
+                joinedload(models.OutboxObject.relates_to_outbox_object).options(
+                    joinedload(models.OutboxObject.outbox_object_attachments).options(
+                        joinedload(models.OutboxObjectAttachment.upload)
+                    ),
+                ),
+            )
         )
     ).scalar_one_or_none()  # type: ignore
 

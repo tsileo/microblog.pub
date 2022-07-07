@@ -64,9 +64,8 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - [ ] show [reply to @truc] next to visiblity
 # - support update post with history
-# - update actor support
-# - hash config/profile to detect when to send Update actor
 #
 # - [ ] block support
 # - [ ] prevent SSRF (urlutils from little-boxes)
