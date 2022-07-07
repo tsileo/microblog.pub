@@ -517,11 +517,8 @@ async def _handle_delete_activity(
                 inbox_object_id=delete_activity.id,
             )
 
-    # TODO(ts): do we need to delete related activities? should we keep
-    # bookmarked objects with a deleted flag?
     logger.info(f"Deleting {ap_object_to_delete.ap_type}/{ap_object_to_delete.ap_id}")
-    await db_session.delete(ap_object_to_delete)
-    await db_session.flush()
+    ap_object_to_delete.is_deleted = True
 
 
 async def _handle_follow_follow_activity(
@@ -575,6 +572,7 @@ async def _handle_undo_activity(
         return
 
     ap_activity_to_undo.undone_by_inbox_object_id = undo_activity.id
+    ap_activity_to_undo.is_deleted = True
 
     if ap_activity_to_undo.ap_type == "Follow":
         logger.info(f"Undo follow from {from_actor.ap_id}")
@@ -635,8 +633,6 @@ async def _handle_undo_activity(
                     inbox_object_id=ap_activity_to_undo.id,
                 )
                 db_session.add(notif)
-
-        # FIXME(ts): what to do with ap_activity_to_undo? flag? delete?
     else:
         logger.warning(f"Don't know how to undo {ap_activity_to_undo.ap_type} activity")
 
@@ -687,6 +683,14 @@ async def _handle_create_activity(
     if "published" in ro.ap_object:
         ap_published_at = isoparse(ro.ap_object["published"])
 
+    is_reply = bool(ro.in_reply_to)
+    is_local_reply = ro.in_reply_to and ro.in_reply_to.startswith(BASE_URL)
+    is_mention = False
+    tags = ro.ap_object.get("tag", [])
+    for tag in tags:
+        if tag.get("name") == LOCAL_ACTOR.handle or tag.get("href") == LOCAL_ACTOR.url:
+            is_mention = True
+
     inbox_object = models.InboxObject(
         server=urlparse(ro.ap_id).netloc,
         actor_id=from_actor.id,
@@ -701,11 +705,7 @@ async def _handle_create_activity(
         relates_to_outbox_object_id=None,
         activity_object_ap_id=ro.activity_object_ap_id,
         # Hide replies from the stream
-        is_hidden_from_stream=(
-            True
-            if (ro.in_reply_to and not ro.in_reply_to.startswith(BASE_URL))
-            else False
-        ),  # TODO: handle mentions
+        is_hidden_from_stream=not (not is_reply or is_mention or is_local_reply),
     )
 
     db_session.add(inbox_object)
@@ -714,28 +714,35 @@ async def _handle_create_activity(
 
     create_activity.relates_to_inbox_object_id = inbox_object.id
 
-    tags = inbox_object.ap_object.get("tag")
-
-    if not tags:
-        logger.info("No tags to process")
-        return None
-
-    if not isinstance(tags, list):
-        logger.info(f"Invalid tags: {tags}")
-        return None
-
-    if inbox_object.in_reply_to and inbox_object.in_reply_to.startswith(BASE_URL):
-        await db_session.execute(
-            update(models.OutboxObject)
-            .where(
-                models.OutboxObject.ap_id == inbox_object.in_reply_to,
-            )
-            .values(replies_count=models.OutboxObject.replies_count + 1)
+    if inbox_object.in_reply_to:
+        replied_object = await get_anybox_object_by_ap_id(
+            db_session, inbox_object.in_reply_to
         )
+        if replied_object:
+            if replied_object.is_from_outbox:
+                await db_session.execute(
+                    update(models.OutboxObject)
+                    .where(
+                        models.OutboxObject.id == replied_object.id,
+                    )
+                    .values(replies_count=models.OutboxObject.replies_count + 1)
+                )
+            else:
+                await db_session.execute(
+                    update(models.InboxObject)
+                    .where(
+                        models.InboxObject.id == replied_object.id,
+                    )
+                    .values(replies_count=models.InboxObject.replies_count + 1)
+                )
 
         # This object is a reply of a local object, we may need to forward it
         # to our followers (we can only forward JSON-LD signed activities)
-        if create_activity.has_ld_signature:
+        if (
+            replied_object
+            and replied_object.is_from_outbox
+            and create_activity.has_ld_signature
+        ):
             logger.info("Forwarding Create activity as it's a local reply")
             recipients = await _get_followers_recipients(db_session)
             for rcp in recipients:
@@ -746,14 +753,13 @@ async def _handle_create_activity(
                     inbox_object_id=create_activity.id,
                 )
 
-    for tag in tags:
-        if tag.get("name") == LOCAL_ACTOR.handle or tag.get("href") == LOCAL_ACTOR.url:
-            notif = models.Notification(
-                notification_type=models.NotificationType.MENTION,
-                actor_id=from_actor.id,
-                inbox_object_id=inbox_object.id,
-            )
-            db_session.add(notif)
+    if is_mention:
+        notif = models.Notification(
+            notification_type=models.NotificationType.MENTION,
+            actor_id=from_actor.id,
+            inbox_object_id=inbox_object.id,
+        )
+        db_session.add(notif)
 
 
 async def save_to_inbox(
@@ -825,7 +831,6 @@ async def save_to_inbox(
         if relates_to_outbox_object
         else None,
         activity_object_ap_id=activity_ro.activity_object_ap_id,
-        # Hide replies from the stream
         is_hidden_from_stream=True,
     )
 
@@ -921,7 +926,9 @@ async def save_to_inbox(
         else:
             # This is announce for a maybe unknown object
             if relates_to_inbox_object:
-                logger.info("Nothing to do, we already know about this object")
+                # We already know about this object, show the announce in the
+                # streal
+                inbox_object.is_hidden_from_stream = False
             else:
                 # Save it as an inbox object
                 if not activity_ro.activity_object_ap_id:
@@ -946,6 +953,7 @@ async def save_to_inbox(
                 db_session.add(announced_inbox_object)
                 await db_session.flush()
                 inbox_object.relates_to_inbox_object_id = announced_inbox_object.id
+                inbox_object.is_hidden_from_stream = False
     elif activity_ro.ap_type in ["Like", "Announce"]:
         if not relates_to_outbox_object:
             logger.info(
@@ -1030,40 +1038,44 @@ async def get_replies_tree(
     db_session: AsyncSession,
     requested_object: AnyboxObject,
 ) -> ReplyTreeNode:
-    # TODO: handle visibility
+    # XXX: PeerTube video don't use context
     tree_nodes: list[AnyboxObject] = []
-    tree_nodes.extend(
-        (
-            await db_session.scalars(
-                select(models.InboxObject)
-                .where(
-                    models.InboxObject.ap_context == requested_object.ap_context,
-                    models.InboxObject.ap_type.not_in(["Announce"]),
+    if requested_object.ap_context is None:
+        tree_nodes = [requested_object]
+    else:
+        # TODO: handle visibility
+        tree_nodes.extend(
+            (
+                await db_session.scalars(
+                    select(models.InboxObject)
+                    .where(
+                        models.InboxObject.ap_context == requested_object.ap_context,
+                        models.InboxObject.ap_type.not_in(["Announce"]),
+                    )
+                    .options(joinedload(models.InboxObject.actor))
                 )
-                .options(joinedload(models.InboxObject.actor))
             )
+            .unique()
+            .all()
         )
-        .unique()
-        .all()
-    )
-    tree_nodes.extend(
-        (
-            await db_session.scalars(
-                select(models.OutboxObject)
-                .where(
-                    models.OutboxObject.ap_context == requested_object.ap_context,
-                    models.OutboxObject.is_deleted.is_(False),
-                )
-                .options(
-                    joinedload(models.OutboxObject.outbox_object_attachments).options(
-                        joinedload(models.OutboxObjectAttachment.upload)
+        tree_nodes.extend(
+            (
+                await db_session.scalars(
+                    select(models.OutboxObject)
+                    .where(
+                        models.OutboxObject.ap_context == requested_object.ap_context,
+                        models.OutboxObject.is_deleted.is_(False),
+                    )
+                    .options(
+                        joinedload(
+                            models.OutboxObject.outbox_object_attachments
+                        ).options(joinedload(models.OutboxObjectAttachment.upload))
                     )
                 )
             )
+            .unique()
+            .all()
         )
-        .unique()
-        .all()
-    )
     nodes_by_in_reply_to = defaultdict(list)
     for node in tree_nodes:
         nodes_by_in_reply_to[node.in_reply_to].append(node)

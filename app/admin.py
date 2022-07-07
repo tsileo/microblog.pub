@@ -172,6 +172,7 @@ async def admin_bookmarks(
                         ["Note", "Article", "Video", "Announce"]
                     ),
                     models.InboxObject.is_bookmarked.is_(True),
+                    models.InboxObject.is_deleted.is_(False),
                 )
                 .options(
                     joinedload(models.InboxObject.relates_to_inbox_object),
@@ -199,6 +200,77 @@ async def admin_bookmarks(
     )
 
 
+@router.get("/stream")
+async def admin_stream(
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+    cursor: str | None = None,
+) -> templates.TemplateResponse:
+    where = [
+        models.InboxObject.is_hidden_from_stream.is_(False),
+        models.InboxObject.is_deleted.is_(False),
+    ]
+    if cursor:
+        where.append(
+            models.InboxObject.ap_published_at < pagination.decode_cursor(cursor)
+        )
+
+    page_size = 20
+    remaining_count = await db_session.scalar(
+        select(func.count(models.InboxObject.id)).where(*where)
+    )
+    q = select(models.InboxObject).where(*where)
+
+    inbox = (
+        (
+            await db_session.scalars(
+                q.options(
+                    joinedload(models.InboxObject.relates_to_inbox_object).options(
+                        joinedload(models.InboxObject.actor)
+                    ),
+                    joinedload(models.InboxObject.relates_to_outbox_object).options(
+                        joinedload(
+                            models.OutboxObject.outbox_object_attachments
+                        ).options(joinedload(models.OutboxObjectAttachment.upload)),
+                    ),
+                    joinedload(models.InboxObject.actor),
+                )
+                .order_by(models.InboxObject.ap_published_at.desc())
+                .limit(20)
+            )
+        )
+        .unique()
+        .all()
+    )
+
+    next_cursor = (
+        pagination.encode_cursor(inbox[-1].ap_published_at)
+        if inbox and remaining_count > page_size
+        else None
+    )
+
+    actors_metadata = await get_actors_metadata(
+        db_session,
+        [
+            inbox_object.actor
+            for inbox_object in inbox
+            if inbox_object.ap_type == "Follow"
+        ],
+    )
+
+    return await templates.render_template(
+        db_session,
+        request,
+        "admin_inbox.html",
+        {
+            "inbox": inbox,
+            "actors_metadata": actors_metadata,
+            "next_cursor": next_cursor,
+            "show_filters": False,
+        },
+    )
+
+
 @router.get("/inbox")
 async def admin_inbox(
     request: Request,
@@ -207,7 +279,10 @@ async def admin_inbox(
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
     where = [
-        models.InboxObject.ap_type.not_in(["Accept", "Delete", "Create", "Update"])
+        models.InboxObject.ap_type.not_in(
+            ["Accept", "Delete", "Create", "Update", "Undo"]
+        ),
+        models.InboxObject.is_deleted.is_(False),
     ]
     if filter_by:
         where.append(models.InboxObject.ap_type == filter_by)
@@ -267,6 +342,7 @@ async def admin_inbox(
             "inbox": inbox,
             "actors_metadata": actors_metadata,
             "next_cursor": next_cursor,
+            "show_filters": True,
         },
     )
 
@@ -425,6 +501,7 @@ async def admin_profile(
         await db_session.scalars(
             select(models.InboxObject)
             .where(
+                models.InboxObject.is_deleted.is_(False),
                 models.InboxObject.actor_id == actor.id,
                 models.InboxObject.ap_type.in_(["Note", "Article", "Video"]),
             )

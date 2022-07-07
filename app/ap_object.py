@@ -103,7 +103,19 @@ class Object:
                             )
                         )
                         break
-
+                    elif link.get("mediaType", "") == "application/x-mpegURL":
+                        for tag in ap.as_list(link.get("tag", [])):
+                            if tag.get("mediaType", "").startswith("video"):
+                                proxied_url = proxied_media_url(tag["href"])
+                                attachments.append(
+                                    Attachment(
+                                        type="Video",
+                                        mediaType=tag["mediaType"],
+                                        url=tag["href"],
+                                        proxiedUrl=proxied_url,
+                                    )
+                                )
+                                break
         return attachments
 
     @property

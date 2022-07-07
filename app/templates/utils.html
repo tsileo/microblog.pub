@@ -210,7 +210,7 @@
     {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
     <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} alt="{{ attachment.name }}"{% endif %} class="attachment">
     {% elif attachment.type == "Video" or (attachment | has_media_type("video")) %}
-    <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachmeent"></video>
+    <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment"></video>
     {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}
     <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} style="width:480px;" class="attachment"></audio>
     {% else %}
@@ -264,7 +264,9 @@
 </ul>
 </nav>
 
+<div class="activity-attachment">
 {{ display_attachments(object) }}
+</div>
 
 {% if likes or shares %}
 <div style="display: flex;column-gap: 20px;margin:20px 0;">

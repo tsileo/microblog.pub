@@ -29,11 +29,11 @@ def main() -> None:
     else:
         generate_key(_KEY_PATH)
 
-    config_file = Path("data/me.toml")
+    config_file = Path("data/profile.toml")
 
     if config_file.exists():
         # Spit out the relative path for the "config artifacts"
-        rconfig_file = "data/me.toml"
+        rconfig_file = "data/profile.toml"
         print(
             f"Existing setup detected, please delete {rconfig_file} "
             "before restarting the wizard"

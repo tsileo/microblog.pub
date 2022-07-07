@@ -100,8 +100,10 @@ class InboxObject(Base, BaseObject):
 
     is_bookmarked = Column(Boolean, nullable=False, default=False)
 
-    # FIXME(ts): do we need this?
-    has_replies = Column(Boolean, nullable=False, default=False)
+    # Used to mark deleted objects, but also activities that were undone
+    is_deleted = Column(Boolean, nullable=False, default=False)
+
+    replies_count = Column(Integer, nullable=False, default=0)
 
     og_meta: Mapped[list[dict[str, Any]] | None] = Column(JSON, nullable=True)
 

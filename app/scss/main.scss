@@ -174,6 +174,17 @@ nav.flexbox {
     }
 }
 
+.activity-expanded {
+  .activity-attachment {
+img, audio, video {
+      width: 100%;
+      max-width: 740px;
+      margin: 30px 0;
+    }
+
+  }
+}
+
 
 .activity-wrap {
   margin: 0 auto;

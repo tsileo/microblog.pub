@@ -15,7 +15,7 @@ from app.utils.emoji import _load_emojis
 
 ROOT_DIR = Path().parent.resolve()
 
-_CONFIG_FILE = os.getenv("MICROBLOGPUB_CONFIG_FILE", "me.toml")
+_CONFIG_FILE = os.getenv("MICROBLOGPUB_CONFIG_FILE", "profile.toml")
 
 VERSION_COMMIT = (
     subprocess.check_output(["git", "rev-parse", "--short=8", "HEAD"])
