@@ -288,7 +288,7 @@
     <div style="flex: 0 1 50%;max-width: 50%;">Shares
     <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
 {% for share in shares %}
-<a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ like.actor.ap_id }}{% else %}{{ like.actor.url }}{% endif %}" title="{{ share.actor.handle }}" style="height:50px;" rel="noreferrer">
+<a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ share.actor.ap_id }}{% else %}{{ share.actor.url }}{% endif %}" title="{{ share.actor.handle }}" style="height:50px;" rel="noreferrer">
     <img src="{{ share.actor.resized_icon_url }}" alt="{{ share.actor.handle}}" style="max-width:50px;">
     </a>
 {% endfor %}
