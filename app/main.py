@@ -479,6 +479,7 @@ async def outbox_by_public_id(
                 .where(
                     models.InboxObject.ap_type == "Like",
                     models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+                    models.InboxObject.is_deleted.is_(False),
                 )
                 .options(joinedload(models.InboxObject.actor))
                 .order_by(models.InboxObject.ap_published_at.desc())
@@ -496,6 +497,7 @@ async def outbox_by_public_id(
                 .filter(
                     models.InboxObject.ap_type == "Announce",
                     models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
+                    models.InboxObject.is_deleted.is_(False),
                 )
                 .options(joinedload(models.InboxObject.actor))
                 .order_by(models.InboxObject.ap_published_at.desc())
