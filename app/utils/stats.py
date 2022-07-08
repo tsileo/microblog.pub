@@ -6,6 +6,7 @@ from sqlalchemy import case
 from sqlalchemy import func
 from sqlalchemy import or_
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from tabulate import tabulate
 
 from app import models
@@ -94,7 +95,12 @@ async def get_outgoing_activity_stats(
                 ).where(f)
             )
         ).one()
-        return OutgoingActivityStatsItem(**dict(row))
+        return OutgoingActivityStatsItem(
+            total_count=row.total_count or 0,
+            waiting_count=row.waiting_count or 0,
+            sent_count=row.sent_count or 0,
+            errored_count=row.errored_count or 0,
+        )
 
     from_inbox = await _get_stats(models.OutgoingActivity.inbox_object_id.is_not(None))
     from_outbox = await _get_stats(
@@ -115,12 +121,28 @@ async def get_outgoing_activity_stats(
 
 def print_stats() -> None:
     async def _get_stats():
-        async with async_session() as session:
-            dat = await get_outgoing_activity_stats(session)
+        async with async_session() as db_session:
+            outgoing_activity_stats = await get_outgoing_activity_stats(db_session)
 
-        return dat
+            outgoing_activities = (
+                (
+                    await db_session.scalars(
+                        select(models.OutgoingActivity)
+                        .options(
+                            joinedload(models.OutgoingActivity.inbox_object),
+                            joinedload(models.OutgoingActivity.outbox_object),
+                        )
+                        .order_by(models.OutgoingActivity.last_try.desc())
+                        .limit(10)
+                    )
+                )
+                .unique()
+                .all()
+            )
 
-    outgoing_activity_stats = asyncio.run(_get_stats())
+        return outgoing_activity_stats, outgoing_activities
+
+    outgoing_activity_stats, outgoing_activities = asyncio.run(_get_stats())
     disk_usage_stats = get_disk_usage_stats()
 
     print()
@@ -139,7 +161,6 @@ def print_stats() -> None:
             headers=["Disk usage", "size"],
         )
     )
-
     print()
     print(
         tabulate(
@@ -152,6 +173,35 @@ def print_stats() -> None:
                 ]
             ],
             headers=["Outgoing activities", "total", "waiting", "sent", "errored"],
+        )
+    )
+    print()
+    print("Outgoing activities log")
+    print("=======================")
+    print()
+    print(
+        tabulate(
+            [
+                (
+                    row.anybox_object.ap_id,
+                    humanize.naturaltime(row.last_try),
+                    row.recipient,
+                    row.tries,
+                    row.last_status_code,
+                    row.is_sent,
+                    row.is_errored,
+                )
+                for row in outgoing_activities
+            ],
+            headers=[
+                "Object",
+                "last try",
+                "recipient",
+                "tries",
+                "status code",
+                "sent",
+                "errored",
+            ],
         )
     )
     print()
