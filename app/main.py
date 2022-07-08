@@ -122,6 +122,17 @@ async def add_security_headers(request: Request, call_next):
     response.headers["x-content-type-options"] = "nosniff"
     response.headers["x-xss-protection"] = "1; mode=block"
     response.headers["x-frame-options"] = "SAMEORIGIN"
+    if request.url.path.startswith("/admin/login") or (
+        is_current_user_admin(request)
+        and not (
+            request.url.path.startswith("/attachments")
+            or request.url.path.startswith("/proxy")
+            or request.url.path.startswith("/static")
+        )
+    ):
+        # Prevent caching (to prevent caching CSRF tokens)
+        response.headers["Cache-Control"] = "private"
+
     # TODO(ts): disallow inline CSS?
     if DEBUG:
         return response

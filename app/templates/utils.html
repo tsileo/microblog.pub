@@ -165,6 +165,7 @@
             {% if metadata.is_following %}
                 <li>already following</li>
                 <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "unfollow")}}</li>
+                <li>{{ admin_profile_button(actor.ap_id) }}</li>
             {% elif metadata.is_follow_request_sent %}
                 <li>follow request sent</li>
             {% else %}
@@ -172,6 +173,9 @@
             {% endif %}
             {% if metadata.is_follower %}
                 <li>follows you</li>
+                {% if not metadata.is_following %}
+                <li>{{ admin_profile_button(actor.ap_id) }}</li>
+                {% endif %}
             {% endif %}
         </li>
     </ul>
