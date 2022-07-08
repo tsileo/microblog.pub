@@ -135,3 +135,11 @@ def install_deps(ctx):
 def update(ctx):
     # type: (Context) -> None
     print("Done")
+
+
+@task
+def stats(ctx):
+    # type: (Context) -> None
+    from app.utils.stats import print_stats
+
+    print_stats()

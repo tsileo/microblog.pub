@@ -84,6 +84,7 @@ def test_process_next_outgoing_activity__server_200(
     outgoing_activity = factories.OutgoingActivityFactory(
         recipient=recipient_inbox_url,
         outbox_object_id=outbox_object.id,
+        inbox_object_id=None,
     )
 
     # When processing the next outgoing activity
@@ -174,6 +175,7 @@ def test_process_next_outgoing_activity__connect_error(
     outgoing_activity = factories.OutgoingActivityFactory(
         recipient=recipient_inbox_url,
         outbox_object_id=outbox_object.id,
+        inbox_object_id=None,
     )
 
     # When processing the next outgoing activity

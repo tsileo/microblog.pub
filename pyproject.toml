@@ -39,6 +39,7 @@ PyLD = "^2.0.3"
 aiosqlite = "^0.17.0"
 cachetools = "^5.2.0"
 humanize = "^4.2.3"
+tabulate = "^0.8.10"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
@@ -60,6 +61,7 @@ types-emoji = "^1.7.2"
 types-cachetools = "^5.2.1"
 sqlalchemy2-stubs = "^0.0.2-alpha.24"
 types-python-dateutil = "^2.8.18"
+types-tabulate = "^0.8.11"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
