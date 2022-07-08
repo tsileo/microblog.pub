@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 import bleach
 import emoji
 import html2text
-import timeago  # type: ignore
+import humanize
 from bs4 import BeautifulSoup  # type: ignore
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
@@ -293,7 +293,7 @@ def _timeago(original_dt: datetime) -> str:
     dt = original_dt
     if dt.tzinfo:
         dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
-    return timeago.format(dt, now().replace(tzinfo=None))
+    return humanize.naturaltime(dt, when=now().replace(tzinfo=None))
 
 
 def _has_media_type(attachment: Attachment, media_type_prefix: str) -> bool:

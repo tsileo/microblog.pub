@@ -16,7 +16,6 @@ itsdangerous = "^2.1.2"
 python-multipart = "^0.0.5"
 tomli = "^2.0.1"
 httpx = "^0.23.0"
-timeago = "^1.0.15"
 SQLAlchemy = {extras = ["asyncio"], version = "^1.4.39"}
 alembic = "^1.8.0"
 bleach = "^5.0.0"

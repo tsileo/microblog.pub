@@ -113,6 +113,7 @@ async def fetch(url: str, params: dict[str, Any] | None = None) -> RawObject:
             },
             params=params,
             follow_redirects=True,
+            auth=auth,
         )
 
     # Special handling for deleted object

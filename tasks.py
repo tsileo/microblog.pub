@@ -125,7 +125,13 @@ def configuration_wizard(ctx):
     run("PYTHONPATH=. poetry run python scripts/config_wizard.py", pty=True, echo=True)
 
 
-@task(compile_scss, migrate_db)
+@task
+def install_deps(ctx):
+    # type: (Context) -> None
+    run("poetry install", pty=True, echo=True)
+
+
+@task(install_deps, compile_scss, migrate_db)
 def update(ctx):
     # type: (Context) -> None
     print("Done")

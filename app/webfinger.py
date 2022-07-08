@@ -38,7 +38,9 @@ async def webfinger(
                     headers={
                         "User-Agent": config.USER_AGENT,
                     },
+                    follow_redirects=True,
                 )
+                resp.raise_for_status()
                 break
             except httpx.HTTPStatusError as http_error:
                 logger.exception("HTTP error")
