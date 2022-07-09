@@ -24,7 +24,9 @@
 {% endfor %}
 
 {% if next_cursor %}
-<p><a href="{{ url_for("admin_outbox") }}?cursor={{ next_cursor }}{% if request.query_params.filter_by %}&filter_by={{ request.query_params.filter_by }}{% endif %}">See more</a></p>
+<div class="box">
+    <p><a href="{{ url_for("admin_outbox") }}?cursor={{ next_cursor }}{% if request.query_params.filter_by %}&filter_by={{ request.query_params.filter_by }}{% endif %}">See more</a></p>
+</div>
 {% endif %}
 
 {% endblock %}

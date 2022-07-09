@@ -15,7 +15,9 @@
 {% endif %}
 
 {% if is_admin %}
-<p><a href="{{ url_for("admin_outbox") }}?filter_by=Follow">Manage follows</a></p>
+<div class="box">
+    <p><a href="{{ url_for("admin_outbox") }}?filter_by=Follow">Manage follows</a></p>
+</div>
 {% endif %}
 
 </div>
