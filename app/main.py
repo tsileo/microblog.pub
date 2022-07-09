@@ -64,7 +64,7 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - [ ] show [reply to @truc] next to visiblity
+# - FT5 text search
 # - support update post with history
 #
 # - [ ] block support

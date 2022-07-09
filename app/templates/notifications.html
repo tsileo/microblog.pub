@@ -1,48 +1,52 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
 {% block content %}
+    <div class="box">
     <h2>Notifications</h2>
+    </div>
     <div id="notifications">
     {%- for notif in notifications %}
     <div>
             {%- if notif.notification_type.value == "new_follower" %}
-                <div title="{{ notif.created_at.isoformat() }}">
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> followed you
                 </div>
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
             {% elif notif.notification_type.value == "unfollow" %}
-                <div title="{{ notif.created_at.isoformat() }}">
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> unfollowed you
                 </div>
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
             {% elif notif.notification_type.value == "like" %}
-                <div title="{{ notif.created_at.isoformat() }}">
+                <di vclass="actor-action" title="{{ notif.created_at.isoformat() }}">
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> liked a post
                 </div>
                 {{ utils.display_object(notif.outbox_object) }}
            {% elif notif.notification_type.value == "undo_like" %}
-                <div title="{{ notif.created_at.isoformat() }}">
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> un-liked a post
                 </div>
                 {{ utils.display_object(notif.outbox_object) }}
             {% elif notif.notification_type.value == "announce" %}
-                <div title="{{ notif.created_at.isoformat() }}">
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> boosted a post
                 </div>
                 {{ utils.display_object(notif.outbox_object) }}
            {% elif notif.notification_type.value == "undo_announce" %}
-                <div title="{{ notif.created_at.isoformat() }}">
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> un-boosted a post
                 </div>
                 {{ utils.display_object(notif.outbox_object) }}
             {% elif notif.notification_type.value == "mention" %}
-                <div title="{{ notif.created_at.isoformat() }}">
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> mentioned you
                 </div>
                 {{ utils.display_object(notif.inbox_object) }}
  
             {% else %}
-            Implement {{ notif.notification_type }}
+            <div class="actor-action">
+                Implement {{ notif.notification_type }}
+            </div>
             {%- endif %}
     </div>
     {%- endfor %}

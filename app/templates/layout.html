@@ -22,7 +22,7 @@
 {% set url_for = request.app.router.url_path_for(url) %}
 <a href="{{ url_for }}" {% if request.url.path == url_for %}class="active"{% endif %}>{{ text }}</a>
 {% endmacro %}
-<div style="margin-bottom:30px;">
+<div style="margin-bottom:30px;padding: 0 20px;">
 <nav class="flexbox">
     <ul>
         <li>Admin</li>

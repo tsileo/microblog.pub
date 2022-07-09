@@ -3,10 +3,11 @@
 {% block content %}
 
 {% if in_reply_to_object %}
-<p>In reply to:</p>
+<div class="actor-action">In reply to:</div>
 {{ utils.display_object(in_reply_to_object) }}
 {% endif %}
 
+<div class="box">
 <form class="form" action="{{ request.url_for("admin_actions_new") }}" enctype="multipart/form-data" method="POST">
     {{ utils.embed_csrf_token() }}
     {{ utils.embed_redirect_url() }}
@@ -39,6 +40,7 @@
         <input type="submit" value="Publish">
     </p>
 </form>
+</div>
 <script>
 // The new post textarea
 var ta = document.getElementsByTagName("textarea")[0];

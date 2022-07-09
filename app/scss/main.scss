@@ -1,5 +1,6 @@
 $font-stack: Helvetica, sans-serif;
 $background: #002B36;  // solarized background color    
+$light-background: #003d4d; //#e6e6e6;
 // font-family: Inconsolata, monospace;
 $text-color: #ccc;
 $primary-color: #e14eea;
@@ -11,7 +12,12 @@ $muted-color: #586e75; // solarized comment text
 // #93a1a1; solarized body text
 
 // Load custom theme
-@import "vars.scss";
+// @import "vars.scss";
+
+
+.light-background {
+    background: $light-background;
+}
 
 
 body {
@@ -34,6 +40,9 @@ margin-left:60px;margin-top:30px;margin-bottom:-15px;
 strong {
 color: $primary-color;
 }
+}
+.box {
+    padding: 0 20px;
 }
 
 .codehilite {
@@ -71,6 +80,7 @@ code, pre {
     }
 }
 header {
+  padding: 0 20px;
   .title {
     font-size: 1.3em;
     text-decoration: none;
@@ -94,7 +104,7 @@ a {
 }
 main {
     width: 100%;
-    max-width: 960px;
+    max-width: 1000px;
     margin: 30px auto;
 }
 footer {
@@ -106,7 +116,7 @@ footer {
 .actor-box {
   display: flex;
   column-gap: 20px;
-  margin:20px 0 10px 0;
+  margin:10px 0;
   .icon-box {
     flex: 0 0 50px;
   }
@@ -116,7 +126,6 @@ footer {
     color: $muted-color;
   }
   .actor-icon {
-    margin-top: 5px;
     max-width: 50px;
   }
 }
@@ -174,17 +183,41 @@ nav.flexbox {
     }
 }
 
-.activity-expanded {
-  .activity-attachment {
-img, audio, video {
-      width: 100%;
-      max-width: 740px;
-      margin: 30px 0;
+.ap-object {
+    margin: 15px 0;
+    padding: 20px;
+    .in-reply-to {
+        color: $muted-color;
+        &:hover {
+            color: $secondary-color;
+        }
     }
-
-  }
+    nav {
+        color: $muted-color;
+    } 
+    nav a {
+        color: $muted-color;
+        &:hover {
+            color: $secondary-color;
+        }
+    }
+    nav a.p {
+        color: $text-color;
+        &:hover {
+            color: $secondary-color;
+        }
+    }
+    .activity-attachment {
+        img, audio, video {
+            width: 100%;
+            max-width: 740px;
+            margin: 30px 0;
+        }
+    }
 }
-
+.ap-object-expanded {
+    border: 2px dashed $secondary-color;
+}
 
 .activity-wrap {
   margin: 0 auto;
@@ -244,7 +277,8 @@ img, audio, video {
 }
 .actor-action {
   margin-top:20px;
-  margin-bottom:-10px;
+  margin-bottom:-20px;
+  padding: 0 20px;
   span {
     color: $muted-color;
   }

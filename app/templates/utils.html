@@ -130,7 +130,7 @@
 {% endmacro %}
 
 {% macro display_box_filters(route) %}
-<nav class="flexbox">
+<nav class="flexbox box">
 <ul>
     <li>Filter by</li>
 {% for ap_type in ["Note", "Like", "Announce", "Follow"] %}
@@ -144,11 +144,17 @@
         <a href="{{ url_for(route) }}">Reset filter</a>
     </li>
 {% endif %}
+</ul>
 </nav>
 {% endmacro %}
 
-{% macro display_actor(actor, actors_metadata) %}
+{% macro display_actor(actor, actors_metadata={}, embedded=False) %}
 {% set metadata = actors_metadata.get(actor.ap_id) %}
+
+{% if not embedded %}
+<div class="ap-object">
+{% endif %}
+
 <div class="actor-box h-card p-author">
     <div class="icon-box">
         <img src="{{ actor.resized_icon_url }}" class="actor-icon">
@@ -161,7 +167,7 @@
 {% if is_admin and metadata %}
 <div>
     <nav class="flexbox actor-metadata">
-    <ul>
+        <ul>
             {% if metadata.is_following %}
                 <li>already following</li>
                 <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "unfollow")}}</li>
@@ -174,12 +180,16 @@
             {% if metadata.is_follower %}
                 <li>follows you</li>
                 {% if not metadata.is_following %}
-                <li>{{ admin_profile_button(actor.ap_id) }}</li>
+                    <li>{{ admin_profile_button(actor.ap_id) }}</li>
                 {% endif %}
+                </li>
             {% endif %}
-        </li>
-    </ul>
+        </ul>
     </nav>
+</div>
+{% endif %}
+
+{% if not embedded %}
 </div>
 {% endif %}
 
@@ -191,7 +201,7 @@
 <div class="activity-og-meta" style="display:flex;column-gap: 20px;margin:20px 0;">
     {% if og_meta.image %}
     <div>
-    <img src="{{ og_meta.image | media_proxy_url }}" style="max-width:200px;">
+    <img src="{{ og_meta.image | media_proxy_url }}" style="max-width:200px;max-height:100px;">
     </div>
     <div>
     <a href="{{ og_meta.url }}">{{ og_meta.title }}</a>
@@ -275,37 +285,197 @@
 {% if likes or shares %}
 <div style="display: flex;column-gap: 20px;margin:20px 0;">
     {% if likes %}
-    <div style="flex: 0 1 50%;max-width: 50%;">Likes
-    <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
-{% for like in likes %}
-<a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ like.actor.ap_id }}{% else %}{{ like.actor.url }}{% endif %}" title="{{ like.actor.handle }}" style="height:50px;" rel="noreferrer">
-    <img src="{{ like.actor.resized_icon_url }}" alt="{{ like.actor.handle}}" style="max-width:50px;">
-    </a>
-{% endfor %}
-
-
-    </div>
-    </div>
+        <div style="flex: 0 1 50%;max-width: 50%;">Likes
+            <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
+            {% for like in likes %}
+                <a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ like.actor.ap_id }}{% else %}{{ like.actor.url }}{% endif %}" title="{{ like.actor.handle }}" style="height:50px;" rel="noreferrer">
+                    <img src="{{ like.actor.resized_icon_url }}" alt="{{ like.actor.handle}}" style="max-width:50px;">
+                </a>
+            {% endfor %}
+            </div>
+        </div>
     {% endif %}
 
     {% if shares %}
-    <div style="flex: 0 1 50%;max-width: 50%;">Shares
-    <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
-{% for share in shares %}
-<a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ share.actor.ap_id }}{% else %}{{ share.actor.url }}{% endif %}" title="{{ share.actor.handle }}" style="height:50px;" rel="noreferrer">
-    <img src="{{ share.actor.resized_icon_url }}" alt="{{ share.actor.handle}}" style="max-width:50px;">
-    </a>
-{% endfor %}
-    </div>
-    </div>
+        <div style="flex: 0 1 50%;max-width: 50%;">Shares
+            <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
+            {% for share in shares %}
+                <a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ share.actor.ap_id }}{% else %}{{ share.actor.url }}{% endif %}" title="{{ share.actor.handle }}" style="height:50px;" rel="noreferrer">
+                    <img src="{{ share.actor.resized_icon_url }}" alt="{{ share.actor.handle}}" style="max-width:50px;">
+                </a>
+            {% endfor %}
+            </div>
+        </div>
     {% endif %}
+</div>
 {% endif %}
 
 </div>
 
 {% endmacro %}
 
-{% macro display_object(object) %}
+
+{% macro display_object(object, likes=[], shares=[], expanded=False) %}
+{% if object.ap_type in ["Note", "Article", "Video"] %}
+<div class="ap-object {% if expanded %}ap-object-expanded {% endif %}h-entry" id="{{ object.permalink_id }}">
+    {{ display_actor(object.actor, {}, embedded=True) }}
+
+    {% if object.in_reply_to %}
+        <a href="{% if is_admin %}{{ url_for("get_lookup") }}?query={% endif %}{{ object.in_reply_to }}" title="{{ object.in_reply_to }}" class="in-reply-to" rel="nofollow">
+            in reply to {{ object.in_reply_to|truncate(64, True) }}
+        </a>
+    {% endif %}
+
+
+    {% if object.summary %}
+        <p class="p-summary">{{ object.summary | clean_html(object) | safe }}</p>
+    {% endif %}
+
+    {% if object.sensitive and object.summary and not request.query_params.show_more == object.permalink_id %}
+        {{ show_more_button(object.permalink_id) }} 
+    {% endif %}
+
+    {% if not object.sensitive or (object.sensitive and object.summary and request.query_params.show_more == object.permalink_id) %}
+        <div class="e-content">
+            {{ object.content | clean_html(object) | safe }}
+        </div>
+    {% endif %}
+
+    {{ display_og_meta(object) }}
+
+    <div class="activity-attachment">
+    {{ display_attachments(object) }}
+    </div>
+
+    <nav class="flexbox activity-bar">
+    <ul>
+        <li>
+            <a href="{{ object.url }}" class="u-url u-uid" title="{{ object.ap_published_at.isoformat() }}">
+                <time class="dt-published" datetime="{{ object.ap_published_at }}">{{ object.ap_published_at | timeago }}</time>
+            </a>
+        </li>
+        {% if is_admin %}
+            <li>
+                {{ object.visibility.value }}
+            </li>
+        {% endif %}
+        <li>
+            <div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %}>permalink</a></div>
+        </li>
+
+        {% if object.is_from_outbox %}
+            {% if object.likes_count %}
+            <li>
+                <a href="{{ object.url }}"><strong>{{ object.likes_count }}</strong> like{{ object.likes_count | pluralize }}</a>
+            </li>
+            {% endif %}
+
+            {% if object.announces_count %}
+            <li>
+                <a href="{{ object.url }}"><strong>{{ object.announces_count }}</strong> share{{ object.announces_count | pluralize }}</a>
+            </li>
+            {% endif %}
+        {% endif %}
+
+        {% if (object.is_from_outbox or is_admin) and object.replies_count %}
+        <li>
+            <a href="{{ object.url }}"><strong>{{ object.replies_count }}</strong> repl{{ object.replies_count | pluralize("y", "ies") }}</a>
+        </li>
+        {% endif %}
+
+    </ul>
+    </nav>
+
+    {% if is_admin %}
+    <nav class="flexbox activity-bar">
+    <ul>
+        {% if object.is_from_outbox %}
+            <li>
+                {{ admin_delete_button(object.ap_id) }}
+            </li>
+
+            <li>
+                {% if object.is_pinned %}
+                    {{ admin_unpin_button(object.ap_id) }}
+                {% else %}
+                    {{ admin_pin_button(object.ap_id) }}
+                {% endif %}
+            </li>
+        {% endif %}
+
+        <li>
+            {{ admin_reply_button(object.ap_id) }}
+        </li>
+
+        <li>
+            {% if object.liked_via_outbox_object_ap_id %}
+                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unlike") }}
+            {% else %}
+                {{ admin_like_button(object.ap_id) }}
+            {% endif %}
+        </li>
+
+        <li>
+            {% if object.is_bookmarked %}
+                {{ admin_unbookmark_button(object.ap_id) }}
+            {% else %}
+                {{ admin_bookmark_button(object.ap_id) }}
+            {% endif %}
+        </li>
+
+        <li>
+            {% if object.announced_via_outbox_object_ap_id %}
+                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unshare") }}
+            {% else %}
+                {{ admin_announce_button(object.ap_id, disabled=object.visibility not in [visibility_enum.PUBLIC, visibility_enum.UNLISTED]) }}
+            {% endif %}
+        </li>
+
+        <li>
+            {{ admin_profile_button(object.actor.ap_id) }}
+        </li>
+        <li>
+            {{ admin_expand_button(object.ap_id) }}
+        </li>
+    </ul>
+    </nav>
+    {% endif %} 
+
+
+    {% if likes or shares %}
+    <div style="display: flex;column-gap: 20px;margin:20px 0;">
+        {% if likes %}
+            <div style="flex: 0 1 50%;max-width: 50%;">Likes
+                <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
+                {% for like in likes %}
+                    <a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ like.actor.ap_id }}{% else %}{{ like.actor.url }}{% endif %}" title="{{ like.actor.handle }}" style="height:50px;" rel="noreferrer">
+                        <img src="{{ like.actor.resized_icon_url }}" alt="{{ like.actor.handle}}" style="max-width:50px;">
+                    </a>
+                {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if shares %}
+            <div style="flex: 0 1 50%;max-width: 50%;">Shares
+                <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
+                {% for share in shares %}
+                    <a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ share.actor.ap_id }}{% else %}{{ share.actor.url }}{% endif %}" title="{{ share.actor.handle }}" style="height:50px;" rel="noreferrer">
+                        <img src="{{ share.actor.resized_icon_url }}" alt="{{ share.actor.handle}}" style="max-width:50px;">
+                    </a>
+                {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro display_object_bak(object) %}
 {% if object.ap_type in ["Note", "Article", "Video"] %}
 <div class="activity-wrap h-entry" id="{{ object.permalink_id }}">
   <div class="activity-content">
