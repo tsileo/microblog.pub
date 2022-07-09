@@ -379,7 +379,7 @@
 
         {% if (object.is_from_outbox or is_admin) and object.replies_count %}
         <li>
-            <a href="{% if is_admin and not object.is_from_outbox %}{{ url_for("admin_object") }}?ap_id={% endif %}{{ object.url }}"><strong>{{ object.replies_count }}</strong> repl{{ object.replies_count | pluralize("y", "ies") }}</a>
+            <a href="{% if is_admin and not object.is_from_outbox %}{{ url_for("admin_object") }}?ap_id={{ object.ap_id }}{% else %}{{ object.url }}{% endif %}"><strong>{{ object.replies_count }}</strong> repl{{ object.replies_count | pluralize("y", "ies") }}</a>
         </li>
         {% endif %}
 
