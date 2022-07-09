@@ -64,6 +64,10 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - indieauth
+# - API for posting notes
+# - outgoing activity for webmentions
+# - allow to block servers
 # - FT5 text search
 # - support update post with history
 #
