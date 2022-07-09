@@ -111,6 +111,7 @@ async def render_template(
             "following_count": await db_session.scalar(
                 select(func.count(models.Following.id))
             ),
+            "actor_types": ap.ACTOR_TYPES,
             **template_args,
         },
     )
