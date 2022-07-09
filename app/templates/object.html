@@ -21,7 +21,7 @@
 {% macro display_replies_tree(replies_tree_node) %}
 
 {% if replies_tree_node.is_requested %}
-    {{ utils.display_object(replies_tree_node.ap_object, likes=likes, shares=shares, expanded=True) }}
+    {{ utils.display_object(replies_tree_node.ap_object, likes=likes, shares=shares, expanded=not replies_tree_node.is_root) }}
 {% else %}
     {{ utils.display_object(replies_tree_node.ap_object) }}
 {% endif %}
