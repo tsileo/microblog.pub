@@ -19,7 +19,9 @@ def test_admin_endpoints_are_authenticated(client: TestClient) -> None:
 
             # Admin routes should redirect to the login page
             assert resp.status_code == 302, f"{method} {route.path} is unauthenticated"
-            assert resp.headers.get("Location") == "http://testserver/admin/login"
+            assert resp.headers.get("Location", "").startswith(
+                "http://testserver/admin/login"
+            )
             routes_tested.append((method, route.path))
 
     assert len(routes_tested) > 0
