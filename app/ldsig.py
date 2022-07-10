@@ -65,7 +65,6 @@ async def verify_signature(
 
     key_id = doc["signature"]["creator"]
     key = await _get_public_key(db_session, key_id)
-    print(key)
     to_be_signed = _options_hash(doc) + _doc_hash(doc)
     signature = doc["signature"]["signatureValue"]
     signer = PKCS1_v1_5.new(key.pubkey or key.privkey)  # type: ignore

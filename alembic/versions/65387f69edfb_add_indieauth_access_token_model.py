@@ -21,7 +21,7 @@ def upgrade() -> None:
     op.create_table('indieauth_access_token',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('indieauth_authorization_request_id', sa.Integer(), nullable=False),
+    sa.Column('indieauth_authorization_request_id', sa.Integer(), nullable=True),
     sa.Column('access_token', sa.String(), nullable=False),
     sa.Column('expires_in', sa.Integer(), nullable=False),
     sa.Column('scope', sa.String(), nullable=False),

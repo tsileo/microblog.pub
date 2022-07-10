@@ -423,7 +423,7 @@ class IndieAuthAccessToken(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
 
     indieauth_authorization_request_id = Column(
-        Integer, ForeignKey("indieauth_authorization_request.id"), nullable=False
+        Integer, ForeignKey("indieauth_authorization_request.id"), nullable=True
     )
 
     access_token = Column(String, nullable=False, unique=True, index=True)
