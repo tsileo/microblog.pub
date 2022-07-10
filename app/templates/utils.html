@@ -234,7 +234,7 @@
   {% endif %}
 {% endmacro %}
 
-{% macro display_object_expanded(object, likes=[], shares=[]) %}
+{% macro display_object_expanded(object, likes=[], shares=[], webmentions=[]) %}
 
 <div class="activity-expanded h-entry">
 
@@ -307,6 +307,18 @@
             </div>
         </div>
     {% endif %}
+
+    {% if webmentions %}
+        <div style="flex: 0 1 50%;max-width: 50%;">Webmentions
+            <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
+            {% for webmention in webmentions %}
+                <a href="{{ webmention.url }}" style="height:50px;" rel="noreferrer">
+                    <img src="{{ webmention.actor_icon_url | media_proxy_url }}" alt="{{ webmention.actor_name }}" style="max-width:50px;">
+                </a>
+            {% endfor %}
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -315,7 +327,7 @@
 {% endmacro %}
 
 
-{% macro display_object(object, likes=[], shares=[], expanded=False) %}
+{% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False) %}
 {% if object.ap_type in ["Note", "Article", "Video"] %}
 <div class="ap-object {% if expanded %}ap-object-expanded {% endif %}h-entry" id="{{ object.permalink_id }}">
     {{ display_actor(object.actor, {}, embedded=True) }}
@@ -375,6 +387,13 @@
                 <a href="{{ object.url }}"><strong>{{ object.announces_count }}</strong> share{{ object.announces_count | pluralize }}</a>
             </li>
             {% endif %}
+
+            {% if object.webmentions %}
+            <li>
+                <a href="{{ object.url }}"><strong>{{ object.webmentions | length }}</strong> webmention{{ object.webmentions | length | pluralize }}</a>
+            </li>
+            {% endif %}
+
         {% endif %}
 
         {% if (object.is_from_outbox or is_admin) and object.replies_count %}
@@ -442,10 +461,10 @@
     {% endif %} 
 
 
-    {% if likes or shares %}
-    <div style="display: flex;column-gap: 20px;margin-top:20px;">
+    {% if likes or shares or webmentions %}
+    <div style="display: flex;column-gap: 20px;flex-wrap: wrap;margin-top:20px;">
         {% if likes %}
-            <div style="flex: 0 1 50%;max-width: 50%;">Likes
+            <div style="flex: 0 1 30%;max-width: 50%;">Likes
                 <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
                 {% for like in likes %}
                     <a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ like.actor.ap_id }}{% else %}{{ like.actor.url }}{% endif %}" title="{{ like.actor.handle }}" style="height:50px;" rel="noreferrer">
@@ -457,7 +476,7 @@
         {% endif %}
 
         {% if shares %}
-            <div style="flex: 0 1 50%;max-width: 50%;">Shares
+            <div style="flex: 0 1 30%;max-width: 50%;">Shares
                 <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
                 {% for share in shares %}
                     <a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ share.actor.ap_id }}{% else %}{{ share.actor.url }}{% endif %}" title="{{ share.actor.handle }}" style="height:50px;" rel="noreferrer">
@@ -467,6 +486,19 @@
                 </div>
             </div>
         {% endif %}
+
+        {% if webmentions %}
+            <div style="flex: 0 1 30%;max-width: 50%;">Webmentions
+                <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
+                {% for webmention in webmentions %}
+                <a href="{{ webmention.url }}" title="{{ webmention.actor_name }}" style="height:50px;" rel="noreferrer">
+                        <img src="{{ webmention.actor_icon_url | media_proxy_url }}" alt="{{ webmention.actor_name }}" style="max-width:50px;">
+                    </a>
+                {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
     </div>
     {% endif %}
 
