@@ -85,6 +85,37 @@ def test_process_next_outgoing_activity__server_200(
         recipient=recipient_inbox_url,
         outbox_object_id=outbox_object.id,
         inbox_object_id=None,
+        webmention_target=None,
+    )
+
+    # When processing the next outgoing activity
+    # Then it is processed
+    assert process_next_outgoing_activity(db) is True
+
+    assert respx_mock.calls.call_count == 1
+
+    outgoing_activity = db.query(models.OutgoingActivity).one()
+    assert outgoing_activity.is_sent is True
+    assert outgoing_activity.last_status_code == 204
+    assert outgoing_activity.error is None
+    assert outgoing_activity.is_errored is False
+
+
+def test_process_next_outgoing_activity__webmention(
+    db: Session,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # And an outgoing activity
+    outbox_object = _setup_outbox_object()
+
+    recipient_url = "https://example.com/webmention"
+    respx_mock.post(recipient_url).mock(return_value=httpx.Response(204))
+
+    outgoing_activity = factories.OutgoingActivityFactory(
+        recipient=recipient_url,
+        outbox_object_id=outbox_object.id,
+        inbox_object_id=None,
+        webmention_target="http://example.com",
     )
 
     # When processing the next outgoing activity
@@ -114,6 +145,8 @@ def test_process_next_outgoing_activity__error_500(
     outgoing_activity = factories.OutgoingActivityFactory(
         recipient=recipient_inbox_url,
         outbox_object_id=outbox_object.id,
+        inbox_object_id=None,
+        webmention_target=None,
     )
 
     # When processing the next outgoing activity
@@ -144,6 +177,8 @@ def test_process_next_outgoing_activity__errored(
     outgoing_activity = factories.OutgoingActivityFactory(
         recipient=recipient_inbox_url,
         outbox_object_id=outbox_object.id,
+        inbox_object_id=None,
+        webmention_target=None,
         tries=_MAX_RETRIES - 1,
     )
 
@@ -176,6 +211,7 @@ def test_process_next_outgoing_activity__connect_error(
         recipient=recipient_inbox_url,
         outbox_object_id=outbox_object.id,
         inbox_object_id=None,
+        webmention_target=None,
     )
 
     # When processing the next outgoing activity

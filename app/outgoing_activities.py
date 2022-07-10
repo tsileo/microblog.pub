@@ -126,16 +126,20 @@ async def new_outgoing_activity(
     recipient: str,
     outbox_object_id: int | None,
     inbox_object_id: int | None = None,
+    webmention_target: str | None = None,
 ) -> models.OutgoingActivity:
     if outbox_object_id is None and inbox_object_id is None:
         raise ValueError("Must reference at least one inbox/outbox activity")
-    elif outbox_object_id and inbox_object_id:
+    if webmention_target and outbox_object_id is None:
+        raise ValueError("Webmentions must reference an outbox activity")
+    if outbox_object_id and inbox_object_id:
         raise ValueError("Cannot reference both inbox/outbox activities")
 
     outgoing_activity = models.OutgoingActivity(
         recipient=recipient,
         outbox_object_id=outbox_object_id,
         inbox_object_id=inbox_object_id,
+        webmention_target=webmention_target,
     )
 
     db_session.add(outgoing_activity)
@@ -205,21 +209,39 @@ def process_next_outgoing_activity(db: Session) -> bool:
     next_activity.tries = next_activity.tries + 1
     next_activity.last_try = now()
 
-    payload = ap.wrap_object_if_needed(next_activity.anybox_object.ap_object)
+    logger.info(f"recipient={next_activity.recipient}")
 
-    # Use LD sig if the activity may need to be forwarded by recipients
-    if next_activity.anybox_object.is_from_outbox and payload["type"] in [
-        "Create",
-        "Update",
-        "Delete",
-    ]:
-        # But only if the object is public (to help with deniability/privacy)
-        if next_activity.outbox_object.visibility == ap.VisibilityEnum.PUBLIC:
-            ldsig.generate_signature(payload, k)
-
-    logger.info(f"{payload=}")
     try:
-        resp = ap.post(next_activity.recipient, payload)
+        if next_activity.webmention_target:
+            webmention_payload = {
+                "source": next_activity.outbox_object.url,
+                "target": next_activity.webmention_target,
+            }
+            logger.info(f"{webmention_payload=}")
+            resp = httpx.post(
+                next_activity.recipient,
+                data=webmention_payload,
+                headers={
+                    "User-Agent": config.USER_AGENT,
+                },
+            )
+            resp.raise_for_status()
+        else:
+            payload = ap.wrap_object_if_needed(next_activity.anybox_object.ap_object)
+
+            # Use LD sig if the activity may need to be forwarded by recipients
+            if next_activity.anybox_object.is_from_outbox and payload["type"] in [
+                "Create",
+                "Update",
+                "Delete",
+            ]:
+                # But only if the object is public (to help with deniability/privacy)
+                if next_activity.outbox_object.visibility == ap.VisibilityEnum.PUBLIC:
+                    ldsig.generate_signature(payload, k)
+
+            logger.info(f"{payload=}")
+
+            resp = ap.post(next_activity.recipient, payload)
     except httpx.HTTPStatusError as http_error:
         logger.exception("Failed")
         next_activity.last_status_code = http_error.response.status_code

@@ -331,6 +331,9 @@ class OutgoingActivity(Base):
     inbox_object_id = Column(Integer, ForeignKey("inbox.id"), nullable=True)
     inbox_object = relationship(InboxObject, uselist=False)
 
+    # The source will be the outbox object URL
+    webmention_target = Column(String, nullable=True)
+
     tries = Column(Integer, nullable=False, default=0)
     next_try = Column(DateTime(timezone=True), nullable=True, default=now)
 
@@ -422,6 +425,7 @@ class IndieAuthAccessToken(Base):
     id = Column(Integer, primary_key=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
 
+    # Will be null for personal access tokens
     indieauth_authorization_request_id = Column(
         Integer, ForeignKey("indieauth_authorization_request.id"), nullable=True
     )
