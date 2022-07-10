@@ -217,7 +217,7 @@ def object_visibility(ap_activity: RawObject, actor: "Actor") -> VisibilityEnum:
 
 
 def get_actor_id(activity: RawObject) -> str:
-    if activity["type"] in ["Note", "Article", "Video"]:
+    if activity["type"] in ["Note", "Article", "Video", "Question", "Page"]:
         attributed_to = as_list(activity["attributedTo"])
         return get_id(attributed_to[0])
     else:
