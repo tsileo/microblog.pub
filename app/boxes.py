@@ -519,7 +519,30 @@ async def _handle_delete_activity(
 
     logger.info(f"Deleting {ap_object_to_delete.ap_type}/{ap_object_to_delete.ap_id}")
     ap_object_to_delete.is_deleted = True
-    # FIXME(ts): decrement reply count for in reply to (and fix reply tree)
+
+    # Decrement the replies counter if needed
+    if ap_object_to_delete.in_reply_to:
+        replied_object = await get_anybox_object_by_ap_id(
+            db_session,
+            ap_object_to_delete.in_reply_to,
+        )
+        if replied_object:
+            if replied_object.is_from_outbox:
+                await db_session.execute(
+                    update(models.OutboxObject)
+                    .where(
+                        models.OutboxObject.id == replied_object.id,
+                    )
+                    .values(replies_count=models.OutboxObject.replies_count - 1)
+                )
+            else:
+                await db_session.execute(
+                    update(models.InboxObject)
+                    .where(
+                        models.InboxObject.id == replied_object.id,
+                    )
+                    .values(replies_count=models.InboxObject.replies_count - 1)
+                )
 
 
 async def _handle_follow_follow_activity(
@@ -1054,6 +1077,7 @@ async def get_replies_tree(
                     .where(
                         models.InboxObject.ap_context == requested_object.ap_context,
                         models.InboxObject.ap_type.not_in(["Announce"]),
+                        models.InboxObject.is_deleted.is_(False),
                     )
                     .options(joinedload(models.InboxObject.actor))
                 )
