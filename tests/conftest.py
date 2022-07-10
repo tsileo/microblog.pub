@@ -4,13 +4,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.database import Base
+from app.database import SessionLocal
 from app.database import async_engine
 from app.database import async_session
 from app.database import engine
 from app.main import app
-from tests.factories import _Session
-
-# _Session = orm.sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
 @pytest.fixture
@@ -26,14 +24,14 @@ async def async_db_session():
 @pytest.fixture
 def db() -> Generator:
     Base.metadata.create_all(bind=engine)
-    # sess = orm.sessionmaker(bind=engine)()
-    yield _Session
-    # yield orm.scoped_session(orm.sessionmaker(bind=engine))
     try:
-        Base.metadata.drop_all(bind=engine)
-    except Exception:
-        # XXX: for some reason, the teardown occasionally fails because of this
-        pass
+        yield SessionLocal()
+    finally:
+        try:
+            Base.metadata.drop_all(bind=engine)
+        except Exception:
+            # XXX: for some reason, the teardown occasionally fails because of this
+            pass
 
 
 @pytest.fixture

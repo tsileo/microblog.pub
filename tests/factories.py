@@ -11,10 +11,10 @@ from app import actor
 from app import models
 from app.actor import RemoteActor
 from app.ap_object import RemoteObject
-from app.database import engine
+from app.database import SessionLocal
 from app.database import now
 
-_Session = orm.scoped_session(orm.sessionmaker(bind=engine))
+_Session = orm.scoped_session(SessionLocal)
 
 
 def generate_key() -> tuple[str, str]:
