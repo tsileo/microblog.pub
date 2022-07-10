@@ -104,7 +104,7 @@ def _send_actor_update_if_needed(db_session: Session) -> None:
     for rcp in {
         follower.actor.shared_inbox_url or follower.actor.inbox_url
         for follower in followers
-    } + {
+    } | {
         row.recipient
         for row in db_session.execute(
             select(func.distinct(models.OutgoingActivity.recipient).label("recipient"))
@@ -124,7 +124,7 @@ def _send_actor_update_if_needed(db_session: Session) -> None:
 async def new_outgoing_activity(
     db_session: AsyncSession,
     recipient: str,
-    outbox_object_id: int | None,
+    outbox_object_id: int | None = None,
     inbox_object_id: int | None = None,
     webmention_target: str | None = None,
 ) -> models.OutgoingActivity:

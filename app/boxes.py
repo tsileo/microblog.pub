@@ -34,6 +34,7 @@ from app.outgoing_activities import new_outgoing_activity
 from app.source import markdownify
 from app.uploads import upload_to_attachment
 from app.utils import opengraph
+from app.utils import webmentions
 
 AnyboxObject = models.InboxObject | models.OutboxObject
 
@@ -371,6 +372,21 @@ async def send_create(
     recipients = await _compute_recipients(db_session, note)
     for rcp in recipients:
         await new_outgoing_activity(db_session, rcp, outbox_object.id)
+
+    # If the note is public, check if we need to send any webmentions
+    if visibility == ap.VisibilityEnum.PUBLIC:
+        possible_targets = opengraph._urls_from_note(note)
+        logger.info(f"webmentions possible targert {possible_targets}")
+        for target in possible_targets:
+            webmention_endpoint = await webmentions.discover_webmention_endpoint(target)
+            logger.info(f"{target=} {webmention_endpoint=}")
+            if webmention_endpoint:
+                await new_outgoing_activity(
+                    db_session,
+                    webmention_endpoint,
+                    outbox_object_id=outbox_object.id,
+                    webmention_target=target,
+                )
 
     return note_id
 
