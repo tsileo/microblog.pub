@@ -38,6 +38,7 @@ from app import httpsig
 from app import indieauth
 from app import models
 from app import templates
+from app import webmentions
 from app.actor import LOCAL_ACTOR
 from app.actor import get_actors_metadata
 from app.boxes import public_outbox_objects_count
@@ -82,6 +83,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(admin.unauthenticated_router, prefix="/admin")
 app.include_router(indieauth.router)
+app.include_router(webmentions.router)
 
 logger.configure(extra={"request_id": "no_req_id"})
 logger.remove()

@@ -3,6 +3,7 @@
 
 {% block head %}
 {% if outbox_object %}
+<link rel="webmention" href="{{ url_for("webmention_endpoint") }}">
 <link rel="alternate" href="{{ request.url }}" type="application/activity+json">
 <meta name="description" content="{{ outbox_object.content | html2text | trim | truncate(50) }}">
 <meta content="article" property="og:type" />
