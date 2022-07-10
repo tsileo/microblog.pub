@@ -100,9 +100,9 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
         k.load_pub(actor["publicKey"]["publicKeyPem"])
 
     # Ensure the right key was fetch
-    if key_id != k.key_id():
+    if key_id not in [k.key_id(), k.owner]:
         raise ValueError(
-            f"failed to fetch requested key {key_id}: got {actor['publicKey']['id']}"
+            f"failed to fetch requested key {key_id}: got {actor['publicKey']}"
         )
 
     _KEY_CACHE[key_id] = k
