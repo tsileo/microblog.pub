@@ -806,9 +806,15 @@ async def save_to_inbox(
     if httpsig_info.signed_by_ap_actor_id != actor.ap_id:
         logger.info(f"Processing a forwarded activity {httpsig_info=}/{actor.ap_id}")
         if not (await ldsig.verify_signature(db_session, raw_object)):
-            logger.warning("Failed to verify LD sig")
-            # FIXME(ts): fetch the remote object
-            raise fastapi.HTTPException(status_code=401, detail="Invalid LD sig")
+            logger.warning(
+                f"Failed to verify LD sig, fetching remote object {raw_object_id}"
+            )
+
+            # Try to fetch the remote object since we failed to verify the LD sig
+            try:
+                raw_object = await ap.fetch(raw_object_id)
+            except Exception:
+                raise fastapi.HTTPException(status_code=401, detail="Invalid LD sig")
 
     if (
         await db_session.scalar(
