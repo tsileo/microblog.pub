@@ -86,11 +86,14 @@ async def send_delete(db_session: AsyncSession, ap_object_id: str) -> None:
 
     delete_id = allocate_outbox_id()
     delete = {
-        "@context": ap.AS_CTX,
+        "@context": ap.AS_EXTENDED_CTX,
         "id": outbox_object_id(delete_id),
         "type": "Delete",
         "actor": ID,
-        "object": ap_object_id,
+        "object": {
+            "type": "Tombstone",
+            "id": ap_object_id,
+        },
     }
     outbox_object = await save_outbox_object(
         db_session,
