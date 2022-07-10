@@ -519,6 +519,7 @@ async def _handle_delete_activity(
 
     logger.info(f"Deleting {ap_object_to_delete.ap_type}/{ap_object_to_delete.ap_id}")
     ap_object_to_delete.is_deleted = True
+    # FIXME(ts): decrement reply count for in reply to (and fix reply tree)
 
 
 async def _handle_follow_follow_activity(
@@ -779,6 +780,8 @@ async def save_to_inbox(
     if httpsig_info.signed_by_ap_actor_id != actor.ap_id:
         logger.info(f"Processing a forwarded activity {httpsig_info=}/{actor.ap_id}")
         if not (await ldsig.verify_signature(db_session, raw_object)):
+            logger.warning("Failed to verify LD sig")
+            # FIXME(ts): fetch the remote object
             raise fastapi.HTTPException(status_code=401, detail="Invalid LD sig")
 
     if (

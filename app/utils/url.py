@@ -8,6 +8,18 @@ from loguru import logger
 from app.config import DEBUG
 
 
+def make_abs(url: str | None, parent: str) -> str | None:
+    if url is None:
+        return None
+
+    if url.startswith("http"):
+        return url
+
+    return (
+        urlparse(parent)._replace(path=url, params="", query="", fragment="").geturl()
+    )
+
+
 class InvalidURLError(Exception):
     pass
 

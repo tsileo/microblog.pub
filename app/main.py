@@ -35,6 +35,7 @@ from app import admin
 from app import boxes
 from app import config
 from app import httpsig
+from app import indieauth
 from app import models
 from app import templates
 from app.actor import LOCAL_ACTOR
@@ -80,6 +81,7 @@ app = FastAPI(docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(admin.unauthenticated_router, prefix="/admin")
+app.include_router(indieauth.router)
 
 logger.configure(extra={"request_id": "no_req_id"})
 logger.remove()

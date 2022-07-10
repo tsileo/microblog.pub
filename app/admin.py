@@ -38,7 +38,7 @@ def user_session_or_redirect(
 ) -> None:
     _RedirectToLoginPage = HTTPException(
         status_code=302,
-        headers={"Location": request.url_for("login")},
+        headers={"Location": request.url_for("login") + f"?redirect={request.url}"},
     )
 
     if not session:
@@ -689,7 +689,10 @@ async def login(
         db_session,
         request,
         "login.html",
-        {"csrf_token": generate_csrf_token()},
+        {
+            "csrf_token": generate_csrf_token(),
+            "redirect": request.query_params.get("redirect", ""),
+        },
     )
 
 
@@ -697,12 +700,13 @@ async def login(
 async def login_validation(
     request: Request,
     password: str = Form(),
+    redirect: str = Form(),
     csrf_check: None = Depends(verify_csrf_token),
 ) -> RedirectResponse:
     if not verify_password(password):
         raise HTTPException(status_code=401)
 
-    resp = RedirectResponse("/admin/inbox", status_code=302)
+    resp = RedirectResponse(redirect or "/admin/inbox", status_code=302)
     resp.set_cookie("session", session_serializer.dumps({"is_logged_in": True}))  # type: ignore  # noqa: E501
 
     return resp

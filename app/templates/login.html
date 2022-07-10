@@ -5,6 +5,7 @@
 <div style="margin:auto;">
 <form class="form" action="/admin/login" method="POST">
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<input type="hidden" name="redirect" value="{{ redirect }}">
 <input type="password" placeholder="password" name="password" autofocus>
 <input type="submit" value="login">
 </form>

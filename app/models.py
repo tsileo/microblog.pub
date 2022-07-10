@@ -398,3 +398,35 @@ class OutboxObjectAttachment(Base):
 
     upload_id = Column(Integer, ForeignKey("upload.id"), nullable=False)
     upload = relationship(Upload, uselist=False)
+
+
+class IndieAuthAuthorizationRequest(Base):
+    __tablename__ = "indieauth_authorization_request"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+
+    code = Column(String, nullable=False, unique=True, index=True)
+    scope = Column(String, nullable=False)
+    redirect_uri = Column(String, nullable=False)
+    client_id = Column(String, nullable=False)
+    code_challenge = Column(String, nullable=True)
+    code_challenge_method = Column(String, nullable=True)
+
+    is_used = Column(Boolean, nullable=False, default=False)
+
+
+class IndieAuthAccessToken(Base):
+    __tablename__ = "indieauth_access_token"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+
+    indieauth_authorization_request_id = Column(
+        Integer, ForeignKey("indieauth_authorization_request.id"), nullable=False
+    )
+
+    access_token = Column(String, nullable=False, unique=True, index=True)
+    expires_in = Column(Integer, nullable=False)
+    scope = Column(String, nullable=False)
+    is_revoked = Column(Boolean, nullable=False, default=False)

@@ -2,6 +2,9 @@
 {% extends "layout.html" %}
 
 {% block head %}
+<link rel="indieauth-metadata" href="{{ url_for("well_known_authorization_server") }}">
+<link rel="authorization_endpoint" href="{{ url_for("indieauth_authorization_endpoint") }}">
+<link rel="token_endpoint" href="{{ url_for("indieauth_token_endpoint") }}">
 <link rel="alternate" href="{{ local_actor.url }}" title="ActivityPub profile"  type="application/activity+json">
 <meta content="profile" property="og:type" />
 <meta content="{{ local_actor.url }}" property="og:url" />

@@ -1,23 +1,10 @@
-from urllib.parse import urlparse
-
 import httpx
 from bs4 import BeautifulSoup  # type: ignore
 from loguru import logger
 
 from app import config
 from app.utils.url import is_url_valid
-
-
-def _make_abs(url: str | None, parent: str) -> str | None:
-    if url is None:
-        return None
-
-    if url.startswith("http"):
-        return url
-
-    return (
-        urlparse(parent)._replace(path=url, params="", query="", fragment="").geturl()
-    )
+from app.utils.url import make_abs
 
 
 async def _discover_webmention_endoint(url: str) -> str | None:
@@ -37,13 +24,13 @@ async def _discover_webmention_endoint(url: str) -> str | None:
 
     for k, v in resp.links.items():
         if k and "webmention" in k:
-            return _make_abs(resp.links[k].get("url"), url)
+            return make_abs(resp.links[k].get("url"), url)
 
     soup = BeautifulSoup(resp.text, "html5lib")
     wlinks = soup.find_all(["link", "a"], attrs={"rel": "webmention"})
     for wlink in wlinks:
         if "href" in wlink.attrs:
-            return _make_abs(wlink.attrs["href"], url)
+            return make_abs(wlink.attrs["href"], url)
 
     return None
 
