@@ -69,12 +69,12 @@ class Object:
 
     @property
     def tags(self) -> list[ap.RawObject]:
-        return self.ap_object.get("tag", [])
+        return ap.as_list(self.ap_object.get("tag", []))
 
     @property
     def attachments(self) -> list["Attachment"]:
         attachments = []
-        for obj in self.ap_object.get("attachment", []):
+        for obj in ap.as_list(self.ap_object.get("attachment", [])):
             proxied_url = proxied_media_url(obj["url"])
             attachments.append(
                 Attachment.parse_obj(
