@@ -34,6 +34,7 @@ def main() -> None:
         content=markdownify(readme.read_text().removeprefix("# microblog.pub")),
         version=VERSION,
         path="/",
+        last_updated=last_updated,
     ).dump("docs/dist/index.html")
 
     install = Path("docs/install.md")
