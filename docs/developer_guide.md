@@ -17,7 +17,7 @@ The server has 2 components:
  - The web server (powered by [FastAPI](https://fastapi.tiangolo.com/) and [Jinja2](https://jinja.palletsprojects.com/en/3.1.x/) templates)
  - An additional process that takes care of sending "outgoing actities" 
 
-## Tasks
+### Tasks
 
 The project uses [Invoke](https://www.pyinvoke.org/) to manage tasks (a Python powered Makefile).
 
