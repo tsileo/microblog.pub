@@ -273,6 +273,9 @@ def _update_inline_imgs(content):
 
 
 def _clean_html(html: str, note: Object) -> str:
+    if html is None:
+        logger.error(f"{html=} for {note.ap_id}/{note.ap_object}")
+        return ""
     try:
         return _emojify(
             _replace_custom_emojis(
