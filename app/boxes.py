@@ -6,7 +6,6 @@ from urllib.parse import urlparse
 
 import fastapi
 import httpx
-from dateutil.parser import isoparse
 from loguru import logger
 from sqlalchemy import delete
 from sqlalchemy import func
@@ -35,6 +34,7 @@ from app.source import markdownify
 from app.uploads import upload_to_attachment
 from app.utils import opengraph
 from app.utils import webmentions
+from app.utils.datetime import parse_isoformat
 
 AnyboxObject = models.InboxObject | models.OutboxObject
 
@@ -724,7 +724,7 @@ async def _handle_create_activity(
 
     ap_published_at = now()
     if "published" in ro.ap_object:
-        ap_published_at = isoparse(ro.ap_object["published"])
+        ap_published_at = parse_isoformat(ro.ap_object["published"])
 
     is_reply = bool(ro.in_reply_to)
     is_local_reply = ro.in_reply_to and ro.in_reply_to.startswith(BASE_URL)
@@ -847,7 +847,7 @@ async def save_to_inbox(
 
     ap_published_at = now()
     if "published" in raw_object:
-        ap_published_at = isoparse(raw_object["published"])
+        ap_published_at = parse_isoformat(raw_object["published"])
 
     activity_ro = RemoteObject(raw_object, actor=actor)
 

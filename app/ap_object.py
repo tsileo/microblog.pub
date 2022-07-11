@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Any
 
 import pydantic
-from dateutil.parser import isoparse
 from markdown import markdown
 
 from app import activitypub as ap
@@ -11,6 +10,7 @@ from app.actor import LOCAL_ACTOR
 from app.actor import Actor
 from app.actor import RemoteActor
 from app.media import proxied_media_url
+from app.utils.datetime import parse_isoformat
 
 
 class Object:
@@ -46,9 +46,9 @@ class Object:
     def ap_published_at(self) -> datetime | None:
         # TODO: default to None? or now()?
         if "published" in self.ap_object:
-            return isoparse(self.ap_object["published"])
+            return parse_isoformat(self.ap_object["published"])
         elif "created" in self.ap_object:
-            return isoparse(self.ap_object["created"])
+            return parse_isoformat(self.ap_object["created"])
         return None
 
     @property
