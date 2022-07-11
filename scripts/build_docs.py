@@ -6,6 +6,7 @@ from jinja2 import FileSystemLoader
 from jinja2 import select_autoescape
 from markdown import markdown
 
+from app.database import now
 from app.config import VERSION
 
 
@@ -26,6 +27,8 @@ def main() -> None:
     shutil.rmtree("docs/dist/static", ignore_errors=True)
     shutil.copytree("docs/static", "docs/dist/static")
 
+    last_updated = now().isoformat()
+
     readme = Path("README.md")
     template.stream(
         content=markdownify(readme.read_text().removeprefix("# microblog.pub")),
@@ -38,6 +41,7 @@ def main() -> None:
         content=markdownify(install.read_text()),
         version=VERSION,
         path="/installing.html",
+        last_updated=last_updated,
     ).dump("docs/dist/installing.html")
 
     user_guide = Path("docs/user_guide.md")
@@ -45,7 +49,16 @@ def main() -> None:
         content=markdownify(user_guide.read_text()),
         version=VERSION,
         path="/user_guide.html",
+        last_updated=last_updated,
     ).dump("docs/dist/user_guide.html")
+
+    developer_guide = Path("docs/developer_guide.md")
+    template.stream(
+        content=markdownify(developer_guide.read_text()),
+        version=VERSION,
+        path="/developer_guide.html",
+        last_updated=last_updated,
+    ).dump("docs/dist/developer_guide.html")
 
 
 if __name__ == "__main__":

@@ -32,6 +32,34 @@ It is still in early development, this README will be updated when I get to depl
     - The UI is pure HTML/CSS
     - Except a tiny bit of hand-written JS in the note composer to insert emoji
  - IndieWeb citizen
-    - Microformats everywhere
-    - Webmentions support
-    - RSS/Atom/JSON feed
+    - [IndieAuth](https://www.w3.org/TR/indieauth/) support (OAuth2 extension)
+    - [Microformats](http://microformats.org/wiki/Main_Page) everywhere
+    - Sends and processes [Webmentions](https://www.w3.org/TR/webmention/)
+    - RSS/Atom/[JSON](https://www.jsonfeed.org/) feed
+ - Easy to backup
+    - Everything is stored in the `data/` directory: config, uploads, secrets and the SQLite database.
+
+## Getting started
+
+Check out the [online documentation](https://docs.microblog.pub).   
+
+## Credits
+
+ - Emoji from [Twemoji](https://twemoji.twitter.com/)
+ - Awesome custom goose emoji from [@pamela@bsd.network](https://bsd.network/@pamela)
+
+
+## Contributing
+
+All the development takes place on [sourcehut](https://sr.ht/~tsileo/microblog.pub/), GitHub is only used as a mirror:
+
+ - [Project](https://sr.ht/~tsileo/microblog.pub/)
+ - [Issue tracker](https://todo.sr.ht/~tsileo/microblog.pub)
+ - [Mailing list](https://sr.ht/~tsileo/microblog.pub/lists)
+
+Contributions are welcomed, check out the [documentation](https://docs.microblog.pub) for more details.
+
+
+## License
+
+The project is licensed under the GNU AGPL v3 LICENSE (see the LICENSE file).

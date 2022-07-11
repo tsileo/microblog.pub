@@ -63,11 +63,15 @@ nav a:hover, main a:hover, header p a:hover {
     max-width: 960px;
     margin: 50px auto;
 }
-code {
+pre code {
     padding: 10px;
     overflow: auto;
     display: block;
     font-family: monospace;
+}
+footer {
+    margin-top: 50px;
+    color: #555;
 }
 </style>
 <link rel="stylesheet" href="static/codehilite.css" type="text/css" />
@@ -83,11 +87,11 @@ code {
         <ul>
             <li><a href="/"{% if path == "/" %} class="active"{% endif %}>Home</a>
             <li><a href="/installing.html"{% if path == "/installing.html" %} class="active"{% endif %}>Installing</a>
-            <li><a href="/user_guide.html"{% if path == "/user_guide.html" %} class="active"{% endif %}>User guide</a>
+            <li><a href="/user_guide.html"{% if path == "/user_guide.html" %} class="active"{% endif %}>User's guide</a>
+            <li><a href="/developer_guide.html"{% if path == "/developer_guide.html" %} class="active"{% endif %}>Developer's guide</a>
             <li><a href="https://sr.ht/~tsileo/microblog.pub/">Source code</a>
             <li><a href="https://todo.sr.ht/~tsileo/microblog.pub">Bug tracker</a>
             <li><a href="https://sr.ht/~tsileo/microblog.pub/lists">Mailing list</a>
-            <li><code>{{ version }}</code></li>
         </ul>
     </nav>
 
@@ -95,6 +99,9 @@ code {
     {{ content | safe }}
     </main>
 
+    <footer>
+        <p>Last updated {{ last_updated }} for <code>{{ version }}</p>
+    </footer>
 </div>
 </body>
 </html>
