@@ -1,15 +1,18 @@
 import os
+import secrets
 import subprocess
 from pathlib import Path
 
 import bcrypt
+import itsdangerous
 import pydantic
 import tomli
 from fastapi import Form
 from fastapi import HTTPException
 from fastapi import Request
 from itsdangerous import TimedSerializer
-from itsdangerous import TimestampSigner
+from itsdangerous import URLSafeTimedSerializer
+from loguru import logger
 
 from app.utils.emoji import _load_emojis
 
@@ -93,17 +96,20 @@ _load_emojis(ROOT_DIR, BASE_URL)
 
 
 session_serializer = TimedSerializer(CONFIG.secret, salt="microblogpub.login")
-csrf_signer = TimestampSigner(
-    os.urandom(16).hex(),
-    salt=os.urandom(16).hex(),
+csrf_serializer = URLSafeTimedSerializer(
+    secrets.token_bytes(32),
+    salt=ID,
 )
 
 
 def generate_csrf_token() -> str:
-    return csrf_signer.sign(os.urandom(16).hex()).decode()
+    return csrf_serializer.dumps(secrets.token_hex(16))  # type: ignore
 
 
 def verify_csrf_token(csrf_token: str = Form()) -> None:
-    if not csrf_signer.validate(csrf_token, max_age=600):
+    try:
+        csrf_serializer.loads(csrf_token, max_age=600)
+    except (itsdangerous.BadData, itsdangerous.SignatureExpired):
+        logger.exception("Failed to verify CSRF token")
         raise HTTPException(status_code=403, detail="CSRF error")
     return None
