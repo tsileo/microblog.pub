@@ -10,7 +10,6 @@ import tomli
 from fastapi import Form
 from fastapi import HTTPException
 from fastapi import Request
-from itsdangerous import TimedSerializer
 from itsdangerous import URLSafeTimedSerializer
 from loguru import logger
 
@@ -95,10 +94,13 @@ EMOJI_TPL = '<img src="/static/twemoji/{filename}.svg" alt="{raw}" class="emoji"
 _load_emojis(ROOT_DIR, BASE_URL)
 
 
-session_serializer = TimedSerializer(CONFIG.secret, salt="microblogpub.login")
+session_serializer = URLSafeTimedSerializer(
+    CONFIG.secret,
+    salt=f"{ID}.session",
+)
 csrf_serializer = URLSafeTimedSerializer(
-    secrets.token_bytes(32),
-    salt=ID,
+    CONFIG.secret,
+    salt=f"{ID}.csrf",
 )
 
 
@@ -108,7 +110,7 @@ def generate_csrf_token() -> str:
 
 def verify_csrf_token(csrf_token: str = Form()) -> None:
     try:
-        csrf_serializer.loads(csrf_token, max_age=600)
+        csrf_serializer.loads(csrf_token, max_age=1800)
     except (itsdangerous.BadData, itsdangerous.SignatureExpired):
         logger.exception("Failed to verify CSRF token")
         raise HTTPException(status_code=403, detail="CSRF error")
