@@ -948,8 +948,9 @@ async def save_to_inbox(
         if not relates_to_outbox_object:
             logger.info(
                 "Received a like for an unknown activity: "
-                f"{activity_ro.activity_object_ap_id}"
+                f"{activity_ro.activity_object_ap_id}, deleting the activity"
             )
+            await db_session.delete(inbox_object)
         else:
             relates_to_outbox_object.likes_count = models.OutboxObject.likes_count + 1
 
