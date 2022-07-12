@@ -35,12 +35,23 @@ body {
 a {
   text-decoration: none;
 }
+
 .shared-header {
-margin-left:60px;margin-top:30px;margin-bottom:-15px;
-strong {
-color: $primary-color;
+    margin-left: 20px;
+    margin-top: 30px;
+    margin-bottom: -20px;
+    strong {
+        color: $primary-color;
+    }
 }
+
+div.highlight {
+    background: #f0f0f0;
+    padding: 10px;
+    overflow: auto;
+    display: block;
 }
+
 .box {
     padding: 0 20px;
 }
