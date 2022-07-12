@@ -1022,7 +1022,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "types-bleach"
-version = "5.0.2"
+version = "5.0.3"
 description = "Typing stubs for bleach"
 category = "dev"
 optional = false
@@ -1038,7 +1038,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-emoji"
-version = "1.7.2"
+version = "1.7.3"
 description = "Typing stubs for emoji"
 category = "dev"
 optional = false
@@ -1046,7 +1046,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-markdown"
-version = "3.3.29"
+version = "3.3.30"
 description = "Typing stubs for Markdown"
 category = "dev"
 optional = false
@@ -1985,22 +1985,13 @@ tomli-w = [
     {file = "tomli_w-1.0.0-py3-none-any.whl", hash = "sha256:9f2a07e8be30a0729e533ec968016807069991ae2fd921a78d42f429ae5f4463"},
     {file = "tomli_w-1.0.0.tar.gz", hash = "sha256:f463434305e0336248cac9c2dc8076b707d8a12d019dd349f5c1e382dd1ae1b9"},
 ]
-types-bleach = [
-    {file = "types-bleach-5.0.2.tar.gz", hash = "sha256:e1498c512a62117496cf82be3d129972bb89fd1d6482b001cdeb2759ab3c82f5"},
-    {file = "types_bleach-5.0.2-py3-none-any.whl", hash = "sha256:6fcb75ee4b69190fe60340147b66442cecddaefe3c0629433a4240da1ec2dcf6"},
-]
+types-bleach = []
 types-cachetools = [
     {file = "types-cachetools-5.2.1.tar.gz", hash = "sha256:069cfc825697cd51445c1feabbe4edc1fae2b2315870e7a9a179a7c4a5851bee"},
     {file = "types_cachetools-5.2.1-py3-none-any.whl", hash = "sha256:b496b7e364ba050c4eaadcc6582f2c9fbb04f8ee7141eb3b311a8589dbd4506a"},
 ]
-types-emoji = [
-    {file = "types-emoji-1.7.2.tar.gz", hash = "sha256:a7660fb507b30cb80bcec2d01417d828f1258b9b2cd9fa80918e8e5470c5e037"},
-    {file = "types_emoji-1.7.2-py3-none-any.whl", hash = "sha256:f4c18bb43e33dc267c650b73d7ae0cd71708c75c79063706d0b91fa9416190c8"},
-]
-types-markdown = [
-    {file = "types-Markdown-3.3.29.tar.gz", hash = "sha256:41297ac02240a8e1d7a9f242dbb4880fd5f390467fb1e2821408580378052160"},
-    {file = "types_Markdown-3.3.29-py3-none-any.whl", hash = "sha256:d2b35c78e8e646d3e09c3af5778697ee92942ee6fc71421f57a08684e7b0eb3b"},
-]
+types-emoji = []
+types-markdown = []
 types-pillow = [
     {file = "types-Pillow-9.2.0.tar.gz", hash = "sha256:6823851e179dcc157424175b5dc0e1204b1c949e1de32417ff2fbfa7e3d3f45b"},
     {file = "types_Pillow-9.2.0-py3-none-any.whl", hash = "sha256:f367d22b54239b09607fcd8d4514b86bac6bf7d6ed1d5bdfa41782ea62083b2a"},
