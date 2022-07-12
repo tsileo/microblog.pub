@@ -721,6 +721,37 @@ async def _handle_create_activity(
         raise ValueError("Object actor does not match activity")
 
     ro = RemoteObject(wrapped_object, actor=from_actor)
+    await _process_note_object(db_session, create_activity, from_actor, ro)
+
+
+async def _handle_read_activity(
+    db_session: AsyncSession,
+    from_actor: models.Actor,
+    read_activity: models.InboxObject,
+) -> None:
+    logger.info("Processing Read activity")
+
+    # Honk uses Read activity to propagate replies, fetch the read object
+    # from the remote server
+    wrapped_object = await ap.fetch(ap.get_id(read_activity.ap_object["object"]))
+
+    wrapped_object_actor = await fetch_actor(
+        db_session, ap.get_actor_id(wrapped_object)
+    )
+    ro = RemoteObject(wrapped_object, actor=wrapped_object_actor)
+
+    # Then process it likes it's coming from a forwarded activity
+    await _process_note_object(db_session, read_activity, wrapped_object_actor, ro)
+
+
+async def _process_note_object(
+    db_session: AsyncSession,
+    parent_activity: models.InboxObject,
+    from_actor: models.Actor,
+    ro: RemoteObject,
+) -> None:
+    if parent_activity.ap_type not in ["Create", "Read"]:
+        raise ValueError(f"Unexpected parent activity {parent_activity.ap_id}")
 
     ap_published_at = now()
     if "published" in ro.ap_object:
@@ -744,7 +775,7 @@ async def _handle_create_activity(
         ap_published_at=ap_published_at,
         ap_object=ro.ap_object,
         visibility=ro.visibility,
-        relates_to_inbox_object_id=create_activity.id,
+        relates_to_inbox_object_id=parent_activity.id,
         relates_to_outbox_object_id=None,
         activity_object_ap_id=ro.activity_object_ap_id,
         # Hide replies from the stream
@@ -755,7 +786,7 @@ async def _handle_create_activity(
     await db_session.flush()
     await db_session.refresh(inbox_object)
 
-    create_activity.relates_to_inbox_object_id = inbox_object.id
+    parent_activity.relates_to_inbox_object_id = inbox_object.id
 
     if inbox_object.in_reply_to:
         replied_object = await get_anybox_object_by_ap_id(
@@ -782,9 +813,10 @@ async def _handle_create_activity(
         # This object is a reply of a local object, we may need to forward it
         # to our followers (we can only forward JSON-LD signed activities)
         if (
-            replied_object
+            parent_activity.ap_type == "Create"
+            and replied_object
             and replied_object.is_from_outbox
-            and create_activity.has_ld_signature
+            and parent_activity.has_ld_signature
         ):
             logger.info("Forwarding Create activity as it's a local reply")
             recipients = await _get_followers_recipients(db_session)
@@ -793,7 +825,7 @@ async def _handle_create_activity(
                     db_session,
                     rcp,
                     outbox_object_id=None,
-                    inbox_object_id=create_activity.id,
+                    inbox_object_id=parent_activity.id,
                 )
 
     if is_mention:
@@ -891,6 +923,8 @@ async def save_to_inbox(
 
     if activity_ro.ap_type == "Create":
         await _handle_create_activity(db_session, actor, inbox_object)
+    elif activity_ro.ap_type == "Read":
+        await _handle_read_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Update":
         await _handle_update_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Delete":
