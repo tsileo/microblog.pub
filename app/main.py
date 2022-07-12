@@ -66,6 +66,7 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - DB models for webmentions
 # - allow to undo follow requests
 # - indieauth tweaks
 # - API for posting notes

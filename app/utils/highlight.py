@@ -16,9 +16,12 @@ def highlight(html: str) -> str:
     for code in soup.find_all("code"):
         if not code.parent.name == "pre":
             continue
-        lexer = guess_lexer(code.text)
+        code_content = (
+            code.encode_contents().decode().replace("<br>", "\n").replace("<br/>", "\n")
+        )
+        lexer = guess_lexer(code_content)
         tag = BeautifulSoup(
-            phighlight(code.text, lexer, _FORMATTER), "html5lib"
+            phighlight(code_content, lexer, _FORMATTER), "html5lib"
         ).body.next
         pre = code.parent
         pre.replaceWith(tag)
