@@ -93,6 +93,9 @@ EMOJI_TPL = '<img src="/static/twemoji/{filename}.svg" alt="{raw}" class="emoji"
 
 _load_emojis(ROOT_DIR, BASE_URL)
 
+# TODO(ts): allow to override this
+CODE_HIGHLIGHTING_THEME = "friendly_grayscale"
+
 
 session_serializer = URLSafeTimedSerializer(
     CONFIG.secret,

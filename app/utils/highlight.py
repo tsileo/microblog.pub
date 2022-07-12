@@ -5,7 +5,9 @@ from pygments import highlight as phighlight  # type: ignore
 from pygments.formatters import HtmlFormatter  # type: ignore
 from pygments.lexers import guess_lexer  # type: ignore
 
-_FORMATTER = HtmlFormatter(style="vim")
+from app.config import CODE_HIGHLIGHTING_THEME
+
+_FORMATTER = HtmlFormatter(style=CODE_HIGHLIGHTING_THEME)
 
 HIGHLIGHT_CSS = _FORMATTER.get_style_defs()
 
