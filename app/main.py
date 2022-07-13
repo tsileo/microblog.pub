@@ -66,6 +66,9 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - incoming activity worker
+# - handle remove activity
+# - retries httpx?
 # - DB models for webmentions
 # - allow to undo follow requests
 # - indieauth tweaks
@@ -760,7 +763,7 @@ async def nodeinfo(
     )
 
 
-proxy_client = httpx.AsyncClient(follow_redirects=True)
+proxy_client = httpx.AsyncClient(follow_redirects=True, http2=True)
 
 
 @app.get("/proxy/media/{encoded_url}")

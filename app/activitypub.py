@@ -14,6 +14,8 @@ from app.key import get_pubkey_as_pem
 if TYPE_CHECKING:
     from app.actor import Actor
 
+_HTTPX_TRANSPORT = httpx.AsyncHTTPTransport(retries=1)
+
 RawObject = dict[str, Any]
 AS_CTX = "https://www.w3.org/ns/activitystreams"
 AS_PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
@@ -46,6 +48,10 @@ AS_EXTENDED_CTX = [
 
 
 class ObjectIsGoneError(Exception):
+    pass
+
+
+class ObjectNotFoundError(Exception):
     pass
 
 
@@ -104,7 +110,7 @@ class NotAnObjectError(Exception):
 
 
 async def fetch(url: str, params: dict[str, Any] | None = None) -> RawObject:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(transport=_HTTPX_TRANSPORT) as client:
         resp = await client.get(
             url,
             headers={
@@ -119,6 +125,8 @@ async def fetch(url: str, params: dict[str, Any] | None = None) -> RawObject:
     # Special handling for deleted object
     if resp.status_code == 410:
         raise ObjectIsGoneError(f"{url} is gone")
+    elif resp.status_code == 404:
+        raise ObjectNotFoundError(f"{url} not found")
 
     resp.raise_for_status()
     try:

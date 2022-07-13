@@ -138,8 +138,8 @@ async def httpsig_checker(
 
     try:
         k = await _get_public_key(db_session, hsig["keyId"])
-    except ap.ObjectIsGoneError:
-        logger.info("Actor is gone")
+    except (ap.ObjectIsGoneError, ap.ObjectNotFoundError):
+        logger.info("Actor is gone or not found")
         return HTTPSigInfo(has_valid_signature=False, is_ap_actor_gone=True)
     except Exception:
         logger.exception(f'Failed to fetch HTTP sig key {hsig["keyId"]}')
