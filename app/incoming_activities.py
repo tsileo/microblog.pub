@@ -13,7 +13,7 @@ from app import models
 from app.boxes import save_to_inbox
 from app.database import AsyncSession
 from app.database import async_session
-from app.database import now
+from app.utils.datetime import now
 
 _MAX_RETRIES = 5
 
@@ -63,7 +63,7 @@ async def process_next_incoming_activity(db_session: AsyncSession) -> bool:
         select(func.count(models.IncomingActivity.id)).where(*where)
     )
     if q_count > 0:
-        logger.info(f"{q_count} outgoing activities ready to process")
+        logger.info(f"{q_count} incoming activities ready to process")
     if not q_count:
         # logger.debug("No activities to process")
         return False

@@ -12,7 +12,7 @@ from app import models
 from app.actor import RemoteActor
 from app.ap_object import RemoteObject
 from app.database import SessionLocal
-from app.database import now
+from app.utils.datetime import now
 
 _Session = orm.scoped_session(SessionLocal)
 

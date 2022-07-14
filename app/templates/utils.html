@@ -388,9 +388,9 @@
             </li>
             {% endif %}
 
-            {% if object.webmentions %}
+            {% if object.webmentions_count %}
             <li>
-                <a href="{{ object.url }}"><strong>{{ object.webmentions | length }}</strong> webmention{{ object.webmentions | length | pluralize }}</a>
+                <a href="{{ object.url }}"><strong>{{ object.webmentions_count }}</strong> webmention{{ object.webmentions_count | pluralize }}</a>
             </li>
             {% endif %}
 
@@ -491,9 +491,12 @@
             <div style="flex: 0 1 30%;max-width: 50%;">Webmentions
                 <div style="display: flex;column-gap: 20px;row-gap:20px;flex-wrap: wrap;margin-top:20px;">
                 {% for webmention in webmentions %}
-                <a href="{{ webmention.url }}" title="{{ webmention.actor_name }}" style="height:50px;" rel="noreferrer">
-                        <img src="{{ webmention.actor_icon_url | media_proxy_url }}" alt="{{ webmention.actor_name }}" style="max-width:50px;">
-                    </a>
+                    {% set wm = webmention.as_facepile_item %}
+                    {% if wm %}
+                        <a href="{{ wm.url }}" title="{{ wm.actor_name }}" style="height:50px;" rel="noreferrer">
+                            <img src="{{ wm.actor_icon_url | media_proxy_url }}" alt="{{ wm.actor_name }}" style="max-width:50px;">
+                        </a>
+                    {% endif %}
                 {% endfor %}
                 </div>
             </div>

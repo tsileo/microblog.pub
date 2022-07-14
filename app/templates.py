@@ -30,8 +30,8 @@ from app.config import VERSION
 from app.config import generate_csrf_token
 from app.config import session_serializer
 from app.database import AsyncSession
-from app.database import now
 from app.media import proxied_media_url
+from app.utils.datetime import now
 from app.utils.highlight import HIGHLIGHT_CSS
 from app.utils.highlight import highlight
 

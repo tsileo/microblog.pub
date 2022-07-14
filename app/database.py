@@ -1,4 +1,3 @@
-import datetime
 from typing import Any
 from typing import AsyncGenerator
 
@@ -21,10 +20,6 @@ async_engine = create_async_engine(DATABASE_URL, future=True, echo=False)
 async_session = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 Base: Any = declarative_base()
-
-
-def now() -> datetime.datetime:
-    return datetime.datetime.now(datetime.timezone.utc)
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:

@@ -27,12 +27,12 @@ from app.ap_object import RemoteObject
 from app.config import BASE_URL
 from app.config import ID
 from app.database import AsyncSession
-from app.database import now
 from app.outgoing_activities import new_outgoing_activity
 from app.source import markdownify
 from app.uploads import upload_to_attachment
 from app.utils import opengraph
 from app.utils import webmentions
+from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
 
 AnyboxObject = models.InboxObject | models.OutboxObject

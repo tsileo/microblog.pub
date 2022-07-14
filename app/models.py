@@ -3,6 +3,7 @@ from typing import Any
 from typing import Optional
 from typing import Union
 
+from loguru import logger
 from sqlalchemy import JSON
 from sqlalchemy import Boolean
 from sqlalchemy import Column
@@ -22,7 +23,8 @@ from app.ap_object import Attachment
 from app.ap_object import Object as BaseObject
 from app.config import BASE_URL
 from app.database import Base
-from app.database import now
+from app.utils import webmentions
+from app.utils.datetime import now
 
 
 class Actor(Base, BaseActor):
@@ -152,9 +154,10 @@ class OutboxObject(Base, BaseObject):
     likes_count = Column(Integer, nullable=False, default=0)
     announces_count = Column(Integer, nullable=False, default=0)
     replies_count = Column(Integer, nullable=False, default=0)
+    webmentions_count: Mapped[int] = Column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     # reactions: Mapped[list[dict[str, Any]] | None] = Column(JSON, nullable=True)
-
-    webmentions = Column(JSON, nullable=True)
 
     og_meta: Mapped[list[dict[str, Any]] | None] = Column(JSON, nullable=True)
 
@@ -457,3 +460,34 @@ class IndieAuthAccessToken(Base):
     expires_in = Column(Integer, nullable=False)
     scope = Column(String, nullable=False)
     is_revoked = Column(Boolean, nullable=False, default=False)
+
+
+class Webmention(Base):
+    __tablename__ = "webmention"
+    __table_args__ = (UniqueConstraint("source", "target", name="uix_source_target"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+
+    is_deleted = Column(Boolean, nullable=False, default=False)
+
+    source: Mapped[str] = Column(String, nullable=False, index=True, unique=True)
+    source_microformats: Mapped[dict[str, Any] | None] = Column(JSON, nullable=True)
+
+    target = Column(String, nullable=False, index=True)
+    outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=False)
+    outbox_object = relationship(OutboxObject, uselist=False)
+
+    @property
+    def as_facepile_item(self) -> webmentions.Webmention | None:
+        if not self.source_microformats:
+            return None
+        try:
+            return webmentions.Webmention.from_microformats(
+                self.source_microformats["items"], self.source
+            )
+        except Exception:
+            logger.warning(
+                f"Failed to generate facefile item for Webmention id={self.id}"
+            )
+            return None

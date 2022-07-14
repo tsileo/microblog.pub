@@ -21,8 +21,8 @@ from app.admin import user_session_or_redirect
 from app.config import verify_csrf_token
 from app.database import AsyncSession
 from app.database import get_db_session
-from app.database import now
 from app.utils import indieauth
+from app.utils.datetime import now
 
 router = APIRouter()
 

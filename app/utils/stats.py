@@ -13,7 +13,7 @@ from app import models
 from app.config import ROOT_DIR
 from app.database import AsyncSession
 from app.database import async_session
-from app.database import now
+from app.utils.datetime import now
 
 _DATA_DIR = ROOT_DIR / "data"
 

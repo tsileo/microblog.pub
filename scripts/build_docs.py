@@ -7,7 +7,7 @@ from jinja2 import select_autoescape
 from markdown import markdown
 
 from app.config import VERSION
-from app.database import now
+from app.utils.datetime import now
 
 
 def markdownify(content: str) -> str:

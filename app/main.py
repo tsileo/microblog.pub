@@ -551,6 +551,17 @@ async def outbox_by_public_id(
         .all()
     )
 
+    webmentions = (
+        await db_session.scalars(
+            select(models.Webmention)
+            .filter(
+                models.Webmention.outbox_object_id == maybe_object.id,
+                models.Webmention.is_deleted.is_(False),
+            )
+            .limit(10)
+        )
+    ).all()
+
     return await templates.render_template(
         db_session,
         request,
@@ -560,6 +571,7 @@ async def outbox_by_public_id(
             "outbox_object": maybe_object,
             "likes": likes,
             "shares": shares,
+            "webmentions": webmentions,
         },
     )
 

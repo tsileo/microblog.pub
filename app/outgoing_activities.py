@@ -20,8 +20,8 @@ from app.actor import _actor_hash
 from app.config import KEY_PATH
 from app.database import AsyncSession
 from app.database import SessionLocal
-from app.database import now
 from app.key import Key
+from app.utils.datetime import now
 
 _MAX_RETRIES = 16
 
