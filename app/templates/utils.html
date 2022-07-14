@@ -362,18 +362,16 @@
     <nav class="flexbox activity-bar">
     <ul>
         <li>
-            <a href="{{ object.url }}" class="u-url u-uid" title="{{ object.ap_published_at.isoformat() }}">
-                <time class="dt-published" datetime="{{ object.ap_published_at }}">{{ object.ap_published_at | timeago }}</time>
-            </a>
+            <div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">permalink</a></div>
+        </li>
+        <li>
+            <time class="dt-published" datetime="{{ object.ap_published_at }}" title="{{ object.ap_published_at.isoformat() }}">{{ object.ap_published_at | timeago }}</time>
         </li>
         {% if is_admin %}
             <li>
                 {{ object.visibility.value }}
             </li>
         {% endif %}
-        <li>
-            <div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %}>permalink</a></div>
-        </li>
 
         {% if object.is_from_outbox %}
             {% if object.likes_count %}

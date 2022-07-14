@@ -1,17 +1,16 @@
 $font-stack: Helvetica, sans-serif;
 $background: #ddd;
 $light-background: #e6e6e6;
-// font-family: Inconsolata, monospace;
 $text-color: #111;
 $primary-color: #1d781d;
 $secondary-color: #781D78;
 
 $form-background-color: #ccc;
-$form-text-color: #111;
+$form-text-color: #333;
 $muted-color: #555; // solarized comment text
 
 // Load custom theme
-@import "vars.scss";
+// @import "vars.scss";
 
 
 .light-background {
@@ -32,7 +31,7 @@ body {
   flex-direction: column;
 }
 a {
-  text-decoration: none;
+    text-decoration: none;
 }
 
 .shared-header {
@@ -56,21 +55,11 @@ div.highlight {
     padding: 0 20px;
 }
 
-.codehilite {
-    margin: 50px 0;
-}
-
-.activity-main {
-  a {
-    color: $text-color;
-  }
-}
-.activity-wrap {
-}
 code, pre {
   color: $secondary-color; // #cb4b16; // #268bd2; // #2aa198;
   font-family: monospace;
 }
+
 .form {
     input, select, textarea {
         font-size: 20px;
@@ -86,10 +75,12 @@ code, pre {
         font-size: 20px;
         outline: none;
         background: $primary-color;
-        color: $form-text-color;
-        padding: 5px;
+        color: $form-background-color;
+        padding: 5px 12px;
+        cursor: pointer;
     }
 }
+
 header {
   padding: 0 20px;
   .title {
@@ -152,19 +143,22 @@ footer {
 }
 
 nav {
-input[type=submit], button {
-  font-size: 20px;
-  line-height: 32px;
-  font-family: "Inconsolata, monospace";
-  background: none!important;
-  border: none;
-  padding: 0!important;
-  cursor: pointer;
-  color: $muted-color;
-  &:hover {
-    color: $secondary-color;
-  }
-}
+    form {
+        margin: 15px 0;
+    }
+    input[type=submit], button {
+        font-size: 20px;
+        line-height: 32px;
+        font-family: $font-stack;
+        background: $form-background-color;
+        color: $form-text-color;
+        border: 1px solid $background;
+        padding: 8px 10px 5px 10px;
+        cursor: pointer;
+        &:hover {
+            border: 1px solid $form-text-color;
+        }
+    }
 }
 
 nav.flexbox {
@@ -186,7 +180,12 @@ nav.flexbox {
         }
     }
     a {
+        color: $primary-color;
         text-decoration: none;
+        &:hover, &:active {
+            color: $secondary-color;
+            text-decoration: underline;
+        }
     }
     a.active {
         color: $secondary-color;
@@ -201,21 +200,15 @@ nav.flexbox {
         color: $muted-color;
         &:hover {
             color: $secondary-color;
+            text-decoration: underline;
         }
     }
     nav {
         color: $muted-color;
-    } 
-    nav a {
-        color: $muted-color;
-        &:hover {
-            color: $secondary-color;
-        }
     }
-    nav a.p {
-        color: $text-color;
-        &:hover {
-            color: $secondary-color;
+    .e-content, .activity-og-meta {
+        a:hover {
+            text-decoration: underline;
         }
     }
     .activity-attachment {
@@ -234,62 +227,6 @@ nav.flexbox {
     border: 2px dashed $secondary-color;
 }
 
-.activity-wrap {
-  margin: 0 auto;
-  padding: 30px 0;
-  .actor-icon {
-    width: 50px;
-    margin-right: 15px;
-    margin-top: 5px;
-  }
-
-  .activity-content {
-    display: flex;
-    align-items:flex-start;
-    .activity-header {
-      width: 100%;
-      strong {
-        font-weight:bold;
-      }
-      span {
-        font-weight:normal;
-        margin-left: 5px;
-      }
-      .actor-handle {
-        color: $muted-color;
-      }
-      .activity-date {
-        float:right;
-        a {
-          color: $muted-color;
-          &:hover {
-            color: $secondary-color;
-          }
-        }
-      }
-      .object-visibility { float:right;color: $muted-color;margin-right:10px; }
-    }
-  }
-  .activity-attachment {
-    padding-left: 60px;
-    img, audio, video {
-      width: 100%;
-      max-width: 740px;
-      margin: 30px 0;
-    }
-  }
-  .activity-bar {
-    margin-left: 60px;
-    margin-top: 10px;
-    color: $muted-color;
-    a {
-        color: $muted-color;
-        &:hover {
-            color: $secondary-color;
-        }
-    }
-  }
-}
 .actor-action {
   margin-top:20px;
   margin-bottom:-20px;
