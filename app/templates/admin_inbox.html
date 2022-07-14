@@ -14,6 +14,12 @@
 
 {% endmacro %}
 
+{% if not inbox %}
+<div class="box">
+    <p>Nothing to see yet, <a href="{{ url_for("get_lookup") }}">start following people in the lookup section</a>.</p>
+</div>
+{% endif %}
+
 {% for inbox_object in inbox %}
 {% if inbox_object.ap_type == "Announce" %}
     {{ actor_action(inbox_object, "shared") }}

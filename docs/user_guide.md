@@ -45,7 +45,8 @@ And only the last 20 interactions (likes/shares/webmentions) will be displayed, 
 
 ## Admin section
 
-You can login to the admin section by visiting `https://yourdomain.tld/admin` and use the password set during the initial configuration.
+You can login to the admin section by clicking on the `Admin` link in the footer or by visiting `https://yourdomain.tld/admin`.
+The password is the one set during the initial configuration.
 
 ### Lookup
 

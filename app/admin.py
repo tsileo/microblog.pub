@@ -700,13 +700,13 @@ async def login(
 async def login_validation(
     request: Request,
     password: str = Form(),
-    redirect: str = Form(),
+    redirect: str | None = Form(None),
     csrf_check: None = Depends(verify_csrf_token),
 ) -> RedirectResponse:
     if not verify_password(password):
         raise HTTPException(status_code=401)
 
-    resp = RedirectResponse(redirect or "/admin/inbox", status_code=302)
+    resp = RedirectResponse(redirect or "/admin/stream", status_code=302)
     resp.set_cookie("session", session_serializer.dumps({"is_logged_in": True}))  # type: ignore  # noqa: E501
 
     return resp
