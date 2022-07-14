@@ -245,11 +245,20 @@ def _allow_class(_tag: str, name: str, value: str) -> bool:
     return name == "class" and value in ALLOWED_CSS_CLASSES
 
 
+def _allow_img_attrs(_tag: str, name: str, value: str) -> bool:
+    if name in ["src", "alt", "title"]:
+        return True
+    if name == "class" and value == "inline-img":
+        return True
+
+    return False
+
+
 ALLOWED_ATTRIBUTES: dict[str, list[str] | Callable[[str, str, str], bool]] = {
     "a": ["href", "title"],
     "abbr": ["title"],
     "acronym": ["title"],
-    "img": ["src", "alt", "title"],
+    "img": _allow_img_attrs,
     "div": _allow_class,
     "span": _allow_class,
     "code": _allow_class,
@@ -267,7 +276,8 @@ def _update_inline_imgs(content):
         if not img.attrs.get("src"):
             continue
 
-        img.attrs["src"] = _media_proxy_url(img.attrs["src"])
+        img.attrs["src"] = _media_proxy_url(img.attrs["src"]) + "/740"
+        img["class"] = "inline-img"
 
     return soup.find("body").decode_contents()
 

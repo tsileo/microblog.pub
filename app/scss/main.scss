@@ -226,6 +226,9 @@ nav.flexbox {
             margin: 30px 0;
         }
     }
+    img.inline-img {
+        max-width: 740px;
+    }
 }
 .ap-object-expanded {
     border: 2px dashed $secondary-color;
