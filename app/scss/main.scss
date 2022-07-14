@@ -1,18 +1,16 @@
 $font-stack: Helvetica, sans-serif;
-$background: #002B36;  // solarized background color    
-$light-background: #003d4d; //#e6e6e6;
+$background: #ddd;
 // font-family: Inconsolata, monospace;
-$text-color: #ccc;
-$primary-color: #e14eea;
-$secondary-color: #32cd32;
+$text-color: #111;
+$primary-color: #1d781d;
+$secondary-color: #781D78;
 
 $form-background-color: #ccc;
-$form-text-color: #222;
-$muted-color: #586e75; // solarized comment text
-// #93a1a1; solarized body text
+$form-text-color: #111;
+$muted-color: #555; // solarized comment text
 
 // Load custom theme
-// @import "vars.scss";
+@import "vars.scss";
 
 
 .light-background {
@@ -227,6 +225,7 @@ nav.flexbox {
         }
     }
     img.inline-img {
+        display: block;
         max-width: 740px;
     }
 }
