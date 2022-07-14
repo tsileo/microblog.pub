@@ -90,7 +90,9 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
     # Fetch it
     from app import activitypub as ap
 
-    actor = await ap.fetch(key_id)
+    # Without signing the request as if it's the first contact, the 2 servers
+    # might race to fetch each other key
+    actor = await ap.fetch(key_id, disable_httpsig=True)
     if actor["type"] == "Key":
         # The Key is not embedded in the Person
         k = Key(actor["owner"], actor["id"])

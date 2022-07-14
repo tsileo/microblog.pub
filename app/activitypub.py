@@ -107,7 +107,11 @@ class NotAnObjectError(Exception):
         self.resp = resp
 
 
-async def fetch(url: str, params: dict[str, Any] | None = None) -> RawObject:
+async def fetch(
+    url: str,
+    params: dict[str, Any] | None = None,
+    disable_httpsig: bool = False,
+) -> RawObject:
     async with httpx.AsyncClient() as client:
         resp = await client.get(
             url,
@@ -117,7 +121,7 @@ async def fetch(url: str, params: dict[str, Any] | None = None) -> RawObject:
             },
             params=params,
             follow_redirects=True,
-            auth=auth,
+            auth=None if disable_httpsig else auth,
         )
 
     # Special handling for deleted object
