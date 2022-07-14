@@ -14,6 +14,6 @@
     {% if ap_object and ap_object.ap_type in actor_types %}
     {{ utils.display_actor(ap_object, actors_metadata) }}
     {% elif ap_object %}
-    {{ utils.display_object_expanded(ap_object) }}
+    {{ utils.display_object(ap_object, actors_metadata=actors_metadata) }}
     {% endif %}
 {% endblock %}

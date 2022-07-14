@@ -14,8 +14,6 @@ from app.key import get_pubkey_as_pem
 if TYPE_CHECKING:
     from app.actor import Actor
 
-_HTTPX_TRANSPORT = httpx.AsyncHTTPTransport(retries=1)
-
 RawObject = dict[str, Any]
 AS_CTX = "https://www.w3.org/ns/activitystreams"
 AS_PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
@@ -110,7 +108,7 @@ class NotAnObjectError(Exception):
 
 
 async def fetch(url: str, params: dict[str, Any] | None = None) -> RawObject:
-    async with httpx.AsyncClient(transport=_HTTPX_TRANSPORT) as client:
+    async with httpx.AsyncClient() as client:
         resp = await client.get(
             url,
             headers={

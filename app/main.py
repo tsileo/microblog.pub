@@ -104,7 +104,7 @@ class CustomMiddleware:
             await self.app(scope, receive, send)
             return
 
-        response_details = {}
+        response_details = {"status_code": None}
         start_time = time.perf_counter()
         request_id = os.urandom(8).hex()
 
