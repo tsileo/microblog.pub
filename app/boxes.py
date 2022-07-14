@@ -16,7 +16,6 @@ from sqlalchemy.orm import joinedload
 
 from app import activitypub as ap
 from app import config
-from app import httpsig
 from app import ldsig
 from app import models
 from app.actor import LOCAL_ACTOR
@@ -840,7 +839,7 @@ async def _process_note_object(
 async def save_to_inbox(
     db_session: AsyncSession,
     raw_object: ap.RawObject,
-    httpsig_info: httpsig.HTTPSigInfo,
+    sent_by_ap_actor_id: str,
 ) -> None:
     try:
         actor = await fetch_actor(db_session, ap.get_id(raw_object["actor"]))
@@ -851,8 +850,10 @@ async def save_to_inbox(
     raw_object_id = ap.get_id(raw_object)
 
     # Ensure forwarded activities have a valid LD sig
-    if httpsig_info.signed_by_ap_actor_id != actor.ap_id:
-        logger.info(f"Processing a forwarded activity {httpsig_info=}/{actor.ap_id}")
+    if sent_by_ap_actor_id != actor.ap_id:
+        logger.info(
+            f"Processing a forwarded activity {sent_by_ap_actor_id=}/{actor.ap_id}"
+        )
         if not (await ldsig.verify_signature(db_session, raw_object)):
             logger.warning(
                 f"Failed to verify LD sig, fetching remote object {raw_object_id}"

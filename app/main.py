@@ -42,7 +42,6 @@ from app import webmentions
 from app.actor import LOCAL_ACTOR
 from app.actor import get_actors_metadata
 from app.boxes import public_outbox_objects_count
-from app.boxes import save_to_inbox
 from app.config import BASE_URL
 from app.config import DEBUG
 from app.config import DOMAIN
@@ -54,6 +53,7 @@ from app.config import is_activitypub_requested
 from app.config import verify_csrf_token
 from app.database import AsyncSession
 from app.database import get_db_session
+from app.incoming_activities import new_ap_incoming_activity
 from app.templates import is_current_user_admin
 from app.uploads import UPLOAD_DIR
 from app.utils import pagination
@@ -657,8 +657,8 @@ async def inbox(
     logger.info(f"headers={request.headers}")
     payload = await request.json()
     logger.info(f"{payload=}")
-    await save_to_inbox(db_session, payload, httpsig_info)
-    return Response(status_code=204)
+    await new_ap_incoming_activity(db_session, httpsig_info, payload)
+    return Response(status_code=202)
 
 
 @app.get("/remote_follow")

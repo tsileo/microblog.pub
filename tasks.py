@@ -1,3 +1,4 @@
+import asyncio
 import io
 import tarfile
 from pathlib import Path
@@ -62,6 +63,14 @@ def process_outgoing_activities(ctx):
     from app.outgoing_activities import loop
 
     loop()
+
+
+@task
+def process_incoming_activities(ctx):
+    # type: (Context) -> None
+    from app.incoming_activities import loop
+
+    asyncio.run(loop())
 
 
 @task

@@ -316,6 +316,29 @@ class Notification(Base):
     inbox_object = relationship(InboxObject, uselist=False)
 
 
+class IncomingActivity(Base):
+    __tablename__ = "incoming_activity"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+
+    # An incoming activity can be a webmention
+    webmention_source = Column(String, nullable=True)
+    # or an AP object
+    sent_by_ap_actor_id = Column(String, nullable=True)
+    ap_id = Column(String, nullable=True, index=True)
+    ap_object: Mapped[ap.RawObject] = Column(JSON, nullable=True)
+
+    tries = Column(Integer, nullable=False, default=0)
+    next_try = Column(DateTime(timezone=True), nullable=True, default=now)
+
+    last_try = Column(DateTime(timezone=True), nullable=True)
+
+    is_processed = Column(Boolean, nullable=False, default=False)
+    is_errored = Column(Boolean, nullable=False, default=False)
+    error = Column(String, nullable=True)
+
+
 class OutgoingActivity(Base):
     __tablename__ = "outgoing_activity"
 
