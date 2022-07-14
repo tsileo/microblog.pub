@@ -81,11 +81,12 @@ async def process_next_incoming_activity(db_session: AsyncSession) -> bool:
     next_activity.last_try = now()
 
     try:
-        await save_to_inbox(
-            db_session,
-            next_activity.ap_object,
-            next_activity.sent_by_ap_actor_id,
-        )
+        async with db_session.begin_nested():
+            await save_to_inbox(
+                db_session,
+                next_activity.ap_object,
+                next_activity.sent_by_ap_actor_id,
+            )
     except Exception:
         logger.exception("Failed")
         next_activity.error = traceback.format_exc()
