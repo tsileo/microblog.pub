@@ -22,6 +22,7 @@ from app.database import AsyncSession
 from app.database import SessionLocal
 from app.key import Key
 from app.utils.datetime import now
+from app.utils.url import check_url
 
 _MAX_RETRIES = 16
 
@@ -218,6 +219,7 @@ def process_next_outgoing_activity(db: Session) -> bool:
                 "target": next_activity.webmention_target,
             }
             logger.info(f"{webmention_payload=}")
+            check_url(next_activity.recipient)
             resp = httpx.post(
                 next_activity.recipient,
                 data=webmention_payload,

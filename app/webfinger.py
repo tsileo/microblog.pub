@@ -5,6 +5,7 @@ import httpx
 from loguru import logger
 
 from app import config
+from app.utils.url import check_url
 
 
 async def webfinger(
@@ -32,6 +33,7 @@ async def webfinger(
         for i, proto in enumerate(protos):
             try:
                 url = f"{proto}://{host}/.well-known/webfinger"
+                check_url(url)
                 resp = await client.get(
                     url,
                     params={"resource": resource},

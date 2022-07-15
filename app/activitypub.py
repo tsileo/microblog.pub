@@ -10,6 +10,7 @@ from app import config
 from app.config import AP_CONTENT_TYPE  # noqa: F401
 from app.httpsig import auth
 from app.key import get_pubkey_as_pem
+from app.utils.url import check_url
 
 if TYPE_CHECKING:
     from app.actor import Actor
@@ -112,6 +113,8 @@ async def fetch(
     params: dict[str, Any] | None = None,
     disable_httpsig: bool = False,
 ) -> RawObject:
+    check_url(url)
+
     async with httpx.AsyncClient() as client:
         resp = await client.get(
             url,
@@ -291,6 +294,8 @@ def remove_context(raw_object: RawObject) -> RawObject:
 
 
 def post(url: str, payload: dict[str, Any]) -> httpx.Response:
+    check_url(url)
+
     resp = httpx.post(
         url,
         headers={

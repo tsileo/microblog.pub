@@ -66,6 +66,7 @@ from app.templates import is_current_user_admin
 from app.uploads import UPLOAD_DIR
 from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
+from app.utils.url import check_url
 from app.webfinger import get_remote_follow_template
 
 _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCache(32)
@@ -76,15 +77,12 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # Next:
 # - fix stream (only content from follows + mention, and dedup shares)
 # - custom emoji in data/
-# - handle remove activity
-# - retries httpx?
-# - DB models for webmentions
 # - allow to undo follow requests
 # - indieauth tweaks
 # - API for posting notes
 # - allow to block servers
 # - FT5 text search
-# - support update post with history
+# - support update post with history?
 #
 # - [ ] block support
 # - [ ] prevent SSRF (urlutils from little-boxes)
@@ -93,6 +91,12 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 
 
 class CustomMiddleware:
+    """Raw ASGI middleware as using starlette base middleware causes issues
+    with both:
+     - Jinja2: https://github.com/encode/starlette/issues/472
+     - async SQLAchemy: https://github.com/tiangolo/fastapi/issues/4719
+    """
+
     def __init__(
         self,
         app: ASGI3Application,
@@ -808,6 +812,8 @@ proxy_client = httpx.AsyncClient(follow_redirects=True, http2=True)
 async def serve_proxy_media(request: Request, encoded_url: str) -> StreamingResponse:
     # Decode the base64-encoded URL
     url = base64.urlsafe_b64decode(encoded_url).decode()
+    check_url(url)
+
     # Request the URL (and filter request headers)
     proxy_req = proxy_client.build_request(
         request.method,
@@ -856,6 +862,7 @@ async def serve_proxy_media_resized(
 
     # Decode the base64-encoded URL
     url = base64.urlsafe_b64decode(encoded_url).decode()
+    check_url(url)
 
     if cached_resp := _RESIZED_CACHE.get((url, size)):
         resized_content, resized_mimetype, resp_headers = cached_resp
