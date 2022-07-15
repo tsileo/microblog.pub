@@ -65,6 +65,7 @@ def is_url_valid(url: str) -> bool:
     return True
 
 
+@functools.lru_cache(maxsize=512)
 def check_url(url: str) -> None:
     logger.debug(f"check_url {url=}")
     if not is_url_valid(url):
