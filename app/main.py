@@ -1064,12 +1064,25 @@ async def _gen_rss_feed(
     for outbox_object in outbox_objects:
         if not outbox_object.ap_published_at:
             raise ValueError(f"{outbox_object} has no published date")
+
+        content = outbox_object.content
+        if content is None:
+            raise ValueError("Should never happen")
+
+        if outbox_object.attachments:
+            for attachment in outbox_object.attachments:
+                if attachment.type == "Image" or attachment.media_type.startswith(
+                    "image"
+                ):
+                    content += f'<img src="{attachment.url}">'
+                # TODO(ts): other attachment types
+
         fe = fg.add_entry()
         fe.id(outbox_object.url)
         fe.link(href=outbox_object.url)
         fe.title(outbox_object.url)
-        fe.description(outbox_object.content)
-        fe.content(outbox_object.content)
+        fe.description(content)
+        fe.content(content)
         fe.published(outbox_object.ap_published_at.replace(tzinfo=timezone.utc))
 
     return fg
