@@ -70,6 +70,7 @@ def _body_digest(body: bytes) -> str:
 
 async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
     if cached_key := _KEY_CACHE.get(key_id):
+        logger.info(f"Key {key_id} found in cache")
         return cached_key
 
     # Check if the key belongs to an actor already in DB

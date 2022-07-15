@@ -32,9 +32,11 @@ from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from starlette.background import BackgroundTask
+from starlette.datastructures import Headers
 from starlette.datastructures import MutableHeaders
 from starlette.responses import JSONResponse
 from starlette.types import Message
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # type: ignore
 
 from app import activitypub as ap
 from app import admin
@@ -143,9 +145,13 @@ class CustomMiddleware:
             server_host, server_port = scope["server"]  # type: ignore
             request_method = scope["method"]
             request_path = scope["path"]
+            headers = Headers(raw=scope["headers"])  # type: ignore
+            user_agent = headers.get("user-agent")
             logger.info(
                 f"{client_host}:{client_port} - "
-                f"{request_method} {scheme}://{server_host}:{server_port}{request_path}"
+                f"{request_method} "
+                f"{scheme}://{server_host}:{server_port}{request_path} - "
+                f'"{user_agent}"'
             )
             try:
                 await self.app(scope, receive, send_wrapper)  # type: ignore
@@ -165,6 +171,7 @@ app.include_router(admin.router, prefix="/admin")
 app.include_router(admin.unauthenticated_router, prefix="/admin")
 app.include_router(indieauth.router)
 app.include_router(webmentions.router)
+app.add_middleware(ProxyHeadersMiddleware)
 app.add_middleware(CustomMiddleware)
 
 logger.configure(extra={"request_id": "no_req_id"})
@@ -728,8 +735,6 @@ async def post_remote_follow(
 @app.get("/.well-known/webfinger")
 async def wellknown_webfinger(resource: str) -> JSONResponse:
     """Exposes/servers WebFinger data."""
-    omg = f"acct:{USERNAME}@{DOMAIN}"
-    logger.info(f"{resource == omg}/{resource}/{omg}/{len(resource)}/{len(omg)}")
     if resource not in [f"acct:{USERNAME}@{DOMAIN}", ID]:
         logger.info(f"Got invalid req for {resource}")
         raise HTTPException(status_code=404)
