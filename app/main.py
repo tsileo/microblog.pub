@@ -75,6 +75,7 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 #
 # Next:
 # - fix stream (only content from follows + mention, and dedup shares)
+# - custom emoji in data/
 # - handle remove activity
 # - retries httpx?
 # - DB models for webmentions

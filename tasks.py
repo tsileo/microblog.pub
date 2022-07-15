@@ -41,9 +41,9 @@ def lint(ctx):
 @task
 def compile_scss(ctx, watch=False):
     # type: (Context, bool) -> None
-    vars_file = Path("app/scss/vars.scss")
-    if not vars_file.exists():
-        vars_file.write_text("")
+    theme_file = Path("data/_theme.scss")
+    if not theme_file.exists():
+        theme_file.write_text("// override vars for theming here")
 
     if watch:
         run("poetry run boussole watch", echo=True)

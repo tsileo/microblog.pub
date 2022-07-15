@@ -1,5 +1,10 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
+
+{% block head %}
+<title>Remote follow {{ local_actor.display_name }}</title>
+{% endblock %}
+
 {% block content %}
 {% include "header.html" %}
 

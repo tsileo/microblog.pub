@@ -2,8 +2,8 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 {% endmacro %}
 
-{% macro embed_redirect_url() %}
-<input type="hidden" name="redirect_url" value="{{ request.url }}">
+{% macro embed_redirect_url(permalink_id=None) %}
+<input type="hidden" name="redirect_url" value="{{ request.url }}{% if permalink_id %}#{{ permalink_id }}{% endif %}">
 {% endmacro %}
 
 {% macro admin_follow_button(actor) %}
@@ -15,46 +15,46 @@
 </form>
 {% endmacro %}
 
-{% macro admin_like_button(ap_object_id) %}
+{% macro admin_like_button(ap_object_id, permalink_id) %}
 <form action="{{ request.url_for("admin_actions_like") }}" method="POST">
     {{ embed_csrf_token() }}
-    {{ embed_redirect_url() }}
+    {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="like">
 </form>
 {% endmacro %}
 
-{% macro admin_bookmark_button(ap_object_id) %}
+{% macro admin_bookmark_button(ap_object_id, permalink_id) %}
 <form action="{{ request.url_for("admin_actions_bookmark") }}" method="POST">
     {{ embed_csrf_token() }}
-    {{ embed_redirect_url() }}
+    {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="bookmark">
 </form>
 {% endmacro %}
 
-{% macro admin_unbookmark_button(ap_object_id) %}
+{% macro admin_unbookmark_button(ap_object_id, permalink_id) %}
 <form action="{{ request.url_for("admin_actions_unbookmark") }}" method="POST">
     {{ embed_csrf_token() }}
-    {{ embed_redirect_url() }}
+    {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="unbookmark">
 </form>
 {% endmacro %}
 
-{% macro admin_pin_button(ap_object_id) %}
+{% macro admin_pin_button(ap_object_id, permalink_id) %}
 <form action="{{ request.url_for("admin_actions_pin") }}" method="POST">
     {{ embed_csrf_token() }}
-    {{ embed_redirect_url() }}
+    {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="pin">
 </form>
 {% endmacro %}
 
-{% macro admin_unpin_button(ap_object_id) %}
+{% macro admin_unpin_button(ap_object_id, permalink_id) %}
 <form action="{{ request.url_for("admin_actions_unpin") }}" method="POST">
     {{ embed_csrf_token() }}
-    {{ embed_redirect_url() }}
+    {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="unpin">
 </form>
@@ -69,41 +69,41 @@
 </form>
 {% endmacro %}
 
-{% macro admin_announce_button(ap_object_id, disabled=False) %}
+{% macro admin_announce_button(ap_object_id, disabled=False, permalink_id=None) %}
 <form action="{{ request.url_for("admin_actions_announce") }}" method="POST">
     {{ embed_csrf_token() }}
-    {{ embed_redirect_url() }}
+    {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="share" {% if disabled %}title="Cannot share non-public content" disabled{% endif %}>
 </form>
 {% endmacro %}
 
-{% macro admin_undo_button(ap_object_id, action="Undo") %}
+{% macro admin_undo_button(ap_object_id, action="undo", permalink_id=None) %}
 <form action="{{ request.url_for("admin_actions_undo") }}" method="POST">
     {{ embed_csrf_token() }}
-    {{ embed_redirect_url() }}
+    {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="{{ action }}">
 </form>
 {% endmacro %}
 
 {% macro sensitive_button(permalink_id) %}
-<form action=""  method="GET">
+<form action="{{ request.url }}#{{ permalink_id }}"  method="GET">
 <input type="hidden" name="show_sensitive" value="{{ permalink_id }}">
 {% for k, v in request.query_params.items() %}
 <input type="hidden" name="{{k}}" value="{{v}}">
 {% endfor %}
-<button type="submit">display sensitive content</button>
+<button type="submit" class="show-sensitive-btn">display sensitive content</button>
 </form> 
 {% endmacro %}
 
 {% macro show_more_button(permalink_id) %}
-<form action=""  method="GET">
+<form action="{{ request.url }}#{{ permalink_id }}"  method="GET">
 <input type="hidden" name="show_more" value="{{ permalink_id }}">
 {% for k, v in request.query_params.items() %}
 <input type="hidden" name="{{k}}" value="{{v}}">
 {% endfor %}
-<button type="submit">show more</button>
+<button type="submit" class="show-more-btn">show more</button>
 </form> 
 {% endmacro %}
 
@@ -320,9 +320,9 @@
 
             <li>
                 {% if object.is_pinned %}
-                    {{ admin_unpin_button(object.ap_id) }}
+                    {{ admin_unpin_button(object.ap_id, object.permalink_id) }}
                 {% else %}
-                    {{ admin_pin_button(object.ap_id) }}
+                    {{ admin_pin_button(object.ap_id, object.permalink) }}
                 {% endif %}
             </li>
         {% endif %}
@@ -333,17 +333,17 @@
 
         <li>
             {% if object.liked_via_outbox_object_ap_id %}
-                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unlike") }}
+                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unlike", object.permalink_id) }}
             {% else %}
-                {{ admin_like_button(object.ap_id) }}
+                {{ admin_like_button(object.ap_id, object.permalink_id) }}
             {% endif %}
         </li>
 
         <li>
             {% if object.is_bookmarked %}
-                {{ admin_unbookmark_button(object.ap_id) }}
+                {{ admin_unbookmark_button(object.ap_id, object.permalink_id) }}
             {% else %}
-                {{ admin_bookmark_button(object.ap_id) }}
+                {{ admin_bookmark_button(object.ap_id, object.permalink_id) }}
             {% endif %}
         </li>
 
@@ -351,7 +351,7 @@
             {% if object.announced_via_outbox_object_ap_id %}
                 {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unshare") }}
             {% else %}
-                {{ admin_announce_button(object.ap_id, disabled=object.visibility not in [visibility_enum.PUBLIC, visibility_enum.UNLISTED]) }}
+                {{ admin_announce_button(object.ap_id, disabled=object.visibility not in [visibility_enum.PUBLIC, visibility_enum.UNLISTED], permalink_id=object.permalink_id) }}
             {% endif %}
         </li>
 

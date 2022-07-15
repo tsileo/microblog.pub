@@ -1,5 +1,10 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
+
+{% block head %}
+<title>{{ local_actor.display_name }} - New</title>
+{% endblock %}
+
 {% block content %}
 
 {% if in_reply_to_object %}

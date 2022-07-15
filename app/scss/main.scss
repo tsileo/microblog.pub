@@ -10,7 +10,7 @@ $form-text-color: #333;
 $muted-color: #555; // solarized comment text
 
 // Load custom theme
-// @import "vars.scss";
+// @import "theme.scss";
 
 
 .light-background {
@@ -142,22 +142,31 @@ footer {
     }
 }
 
+@mixin admin-button() {
+    font-size: 20px;
+    line-height: 32px;
+    font-family: $font-stack;
+    background: $form-background-color;
+    color: $form-text-color;
+    border: 1px solid $background;
+    padding: 8px 10px 5px 10px;
+    cursor: pointer;
+    &:hover {
+        border: 1px solid $form-text-color;
+    }
+}
+
+.show-sensitive-btn, .show-more-btn {
+    @include admin-button;
+    margin: 20px 0;
+}
+
 nav {
     form {
         margin: 15px 0;
     }
     input[type=submit], button {
-        font-size: 20px;
-        line-height: 32px;
-        font-family: $font-stack;
-        background: $form-background-color;
-        color: $form-text-color;
-        border: 1px solid $background;
-        padding: 8px 10px 5px 10px;
-        cursor: pointer;
-        &:hover {
-            border: 1px solid $form-text-color;
-        }
+        @include admin-button;
     }
 }
 

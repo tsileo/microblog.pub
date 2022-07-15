@@ -1,5 +1,6 @@
 import hashlib
 from datetime import datetime
+from functools import cached_property
 from typing import Any
 
 import pydantic
@@ -26,7 +27,7 @@ class Object:
     def is_from_inbox(self) -> bool:
         return False
 
-    @property
+    @cached_property
     def ap_type(self) -> str:
         return self.ap_object["type"]
 
@@ -42,7 +43,7 @@ class Object:
     def ap_actor_id(self) -> str:
         return ap.get_actor_id(self.ap_object)
 
-    @property
+    @cached_property
     def ap_published_at(self) -> datetime | None:
         # TODO: default to None? or now()?
         if "published" in self.ap_object:
@@ -55,7 +56,7 @@ class Object:
     def actor(self) -> Actor:
         raise NotImplementedError()
 
-    @property
+    @cached_property
     def visibility(self) -> ap.VisibilityEnum:
         return ap.object_visibility(self.ap_object, self.actor)
 
@@ -71,7 +72,7 @@ class Object:
     def tags(self) -> list[ap.RawObject]:
         return ap.as_list(self.ap_object.get("tag", []))
 
-    @property
+    @cached_property
     def attachments(self) -> list["Attachment"]:
         attachments = []
         for obj in ap.as_list(self.ap_object.get("attachment", [])):
@@ -130,7 +131,7 @@ class Object:
 
         return None
 
-    @property
+    @cached_property
     def content(self) -> str | None:
         content = self.ap_object.get("content")
         if not content:
@@ -146,7 +147,7 @@ class Object:
     def summary(self) -> str | None:
         return self.ap_object.get("summary")
 
-    @property
+    @cached_property
     def permalink_id(self) -> str:
         return (
             "permalink-"

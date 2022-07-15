@@ -1,5 +1,10 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
+
+{% block head %}
+<title>{{ local_actor.display_name }} - Lookup</title>
+{% endblock %}
+
 {% block content %}
 
     <div class="box">
