@@ -272,7 +272,7 @@
             <div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">permalink</a></div>
         </li>
         <li>
-            <time class="dt-published" datetime="{{ object.ap_published_at }}" title="{{ object.ap_published_at.isoformat() }}">{{ object.ap_published_at | timeago }}</time>
+            <time class="dt-published" datetime="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}" title="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}">{{ object.ap_published_at | timeago }}</time>
         </li>
         {% if is_admin %}
             <li>

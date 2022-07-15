@@ -128,9 +128,9 @@ class CustomMiddleware:
                 headers["x-xss-protection"] = "1; mode=block"
                 headers["x-frame-options"] = "SAMEORIGIN"
                 # TODO(ts): disallow inline CSS?
-                headers["content-security-policy"] = (
-                    "default-src 'self'" + " style-src 'self' 'unsafe-inline';"
-                )
+                headers[
+                    "content-security-policy"
+                ] = "default-src 'self' style-src 'unsafe-inline';"
                 if not DEBUG:
                     headers[
                         "strict-transport-security"
