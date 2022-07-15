@@ -72,7 +72,7 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - incoming activity worker
+# - fix stream (only content from follows + mention, and dedup shares)
 # - handle remove activity
 # - retries httpx?
 # - DB models for webmentions

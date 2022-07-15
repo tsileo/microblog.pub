@@ -836,6 +836,20 @@ async def _process_note_object(
         db_session.add(notif)
 
 
+async def _process_transient_object(
+    db_session: AsyncSession,
+    raw_object: ap.RawObject,
+    from_actor: models.Actor,
+) -> None:
+    ap_type = raw_object["type"]
+    if ap_type in ["Add", "Remove"]:
+        logger.info(f"Dropping unsupported {ap_type} object")
+    else:
+        logger.warning(f"Received unknown {ap_type} object")
+
+    return None
+
+
 async def save_to_inbox(
     db_session: AsyncSession,
     raw_object: ap.RawObject,
@@ -846,6 +860,10 @@ async def save_to_inbox(
     except httpx.HTTPStatusError:
         logger.exception("Failed to fetch actor")
         return
+
+    if "id" not in raw_object:
+        await _process_transient_object(db_session, raw_object, actor)
+        return None
 
     raw_object_id = ap.get_id(raw_object)
 

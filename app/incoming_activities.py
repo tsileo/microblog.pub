@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from app import activitypub as ap
 from app import httpsig
+from app import ldsig
 from app import models
 from app.boxes import save_to_inbox
 from app.database import AsyncSession
@@ -22,10 +23,23 @@ async def new_ap_incoming_activity(
     db_session: AsyncSession,
     httpsig_info: httpsig.HTTPSigInfo,
     raw_object: ap.RawObject,
-) -> models.IncomingActivity:
+) -> models.IncomingActivity | None:
+    ap_id: str
+    if "id" not in raw_object:
+        if "@context" not in raw_object:
+            logger.warning(f"Dropping invalid object: {raw_object}")
+            return None
+        else:
+            # This is a transient object, Build the JSON LD hash as the ID
+            ap_id = ldsig._doc_hash(raw_object)
+    else:
+        ap_id = ap.get_id(raw_object)
+
+    # TODO(ts): dedup first
+
     incoming_activity = models.IncomingActivity(
         sent_by_ap_actor_id=httpsig_info.signed_by_ap_actor_id,
-        ap_id=ap.get_id(raw_object),
+        ap_id=ap_id,
         ap_object=raw_object,
     )
     db_session.add(incoming_activity)
