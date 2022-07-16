@@ -16,7 +16,7 @@ from app.database import AsyncSession
 from app.database import async_session
 from app.utils.datetime import now
 
-_MAX_RETRIES = 5
+_MAX_RETRIES = 8
 
 
 async def new_ap_incoming_activity(
@@ -90,6 +90,11 @@ async def process_next_incoming_activity(db_session: AsyncSession) -> bool:
             .order_by(models.IncomingActivity.next_try.asc())
         )
     ).scalar_one()
+
+    logger.info(
+        f"incoming_activity={next_activity.ap_object}/"
+        f"{next_activity.sent_by_ap_actor_id}"
+    )
 
     next_activity.tries = next_activity.tries + 1
     next_activity.last_try = now()
