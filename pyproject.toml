@@ -19,7 +19,6 @@ httpx = {extras = ["http2"], version = "^0.23.0"}
 SQLAlchemy = {extras = ["asyncio"], version = "^1.4.39"}
 alembic = "^1.8.0"
 bleach = "^5.0.0"
-requests = "^2.27.1"
 Markdown = "^3.3.7"
 prompt-toolkit = "^3.0.29"
 tomli-w = "^1.0.0"
@@ -47,7 +46,6 @@ black = "^22.3.0"
 flake8 = "^4.0.1"
 mypy = "^0.960"
 isort = "^5.10.1"
-types-requests = "^2.27.29"
 invoke = "^1.7.1"
 libsass = "^0.21.0"
 pytest = "^7.1.2"
@@ -63,6 +61,7 @@ types-cachetools = "^5.2.1"
 sqlalchemy2-stubs = "^0.0.2-alpha.24"
 types-python-dateutil = "^2.8.18"
 types-tabulate = "^0.8.11"
+types-requests = "^2.28.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
