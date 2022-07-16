@@ -76,7 +76,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 #
 # Next:
 # - fix stream (only content from follows + mention, and dedup shares)
-# - custom emoji in data/
 # - allow to undo follow requests
 # - indieauth tweaks
 # - API for posting notes
@@ -171,6 +170,11 @@ class CustomMiddleware:
 
 
 app = FastAPI(docs_url=None, redoc_url=None)
+app.mount(
+    "/static/custom_emoji",
+    StaticFiles(directory="data/custom_emoji"),
+    name="static_custom_emoji",
+)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(admin.unauthenticated_router, prefix="/admin")

@@ -15,23 +15,27 @@ EMOJIS_BY_NAME: dict[str, "RawObject"] = {}
 def _load_emojis(root_dir: Path, base_url: str) -> None:
     if EMOJIS:
         return
-    for emoji in (root_dir / "app" / "static" / "emoji").iterdir():
-        mt = mimetypes.guess_type(emoji.name)[0]
-        if mt and mt.startswith("image/"):
-            name = emoji.name.split(".")[0]
-            ap_emoji: "RawObject" = {
-                "type": "Emoji",
-                "name": f":{name}:",
-                "updated": "1970-01-01T00:00:00Z",  # XXX: we don't track date
-                "id": f"{base_url}/e/{name}",
-                "icon": {
-                    "mediaType": mt,
-                    "type": "Image",
-                    "url": f"{base_url}/static/emoji/{emoji.name}",
-                },
-            }
-            EMOJIS[emoji.name] = ap_emoji
-            EMOJIS_BY_NAME[ap_emoji["name"]] = ap_emoji
+    for dir_name, path in (
+        (root_dir / "app" / "static" / "emoji", "emoji"),
+        (root_dir / "data" / "custom_emoji", "custom_emoji"),
+    ):
+        for emoji in dir_name.iterdir():
+            mt = mimetypes.guess_type(emoji.name)[0]
+            if mt and mt.startswith("image/"):
+                name = emoji.name.split(".")[0]
+                ap_emoji: "RawObject" = {
+                    "type": "Emoji",
+                    "name": f":{name}:",
+                    "updated": "1970-01-01T00:00:00Z",  # XXX: we don't track date
+                    "id": f"{base_url}/e/{name}",
+                    "icon": {
+                        "mediaType": mt,
+                        "type": "Image",
+                        "url": f"{base_url}/static/{path}/{emoji.name}",
+                    },
+                }
+                EMOJIS[emoji.name] = ap_emoji
+                EMOJIS_BY_NAME[ap_emoji["name"]] = ap_emoji
 
 
 def tags(content: str) -> list["RawObject"]:
