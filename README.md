@@ -34,6 +34,7 @@ It is still in early development, this README will be updated when I get to depl
  - IndieWeb citizen
     - [IndieAuth](https://www.w3.org/TR/indieauth/) support (OAuth2 extension)
     - [Microformats](http://microformats.org/wiki/Main_Page) everywhere
+    - [Micropub](https://www.w3.org/TR/micropub/) support
     - Sends and processes [Webmentions](https://www.w3.org/TR/webmention/)
     - RSS/Atom/[JSON](https://www.jsonfeed.org/) feed
  - Easy to backup
