@@ -147,6 +147,10 @@ class Object:
     def summary(self) -> str | None:
         return self.ap_object.get("summary")
 
+    @property
+    def name(self) -> str | None:
+        return self.ap_object.get("name")
+
     @cached_property
     def permalink_id(self) -> str:
         return (

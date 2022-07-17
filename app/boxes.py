@@ -392,6 +392,77 @@ async def send_create(
     return note_id
 
 
+async def send_update(
+    db_session: AsyncSession,
+    ap_id: str,
+    source: str,
+) -> str:
+    outbox_object = await get_outbox_object_by_ap_id(db_session, ap_id)
+    if not outbox_object:
+        raise ValueError(f"{ap_id} not found")
+
+    revisions = outbox_object.revisions or []
+    revisions.append(
+        {
+            "ap_object": outbox_object.ap_object,
+            "source": outbox_object.source,
+            "updated": (
+                outbox_object.ap_object.get("updated")
+                or outbox_object.ap_object.get("published")
+            ),
+        }
+    )
+
+    updated = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    content, tags, mentioned_actors = await markdownify(db_session, source)
+
+    note = {
+        "@context": ap.AS_EXTENDED_CTX,
+        "type": outbox_object.ap_type,
+        "id": outbox_object.ap_id,
+        "attributedTo": ID,
+        "content": content,
+        "to": outbox_object.ap_object["to"],
+        "cc": outbox_object.ap_object["cc"],
+        "published": outbox_object.ap_object["published"],
+        "context": outbox_object.ap_context,
+        "conversation": outbox_object.ap_context,
+        "url": outbox_object.url,
+        "tag": tags,
+        "summary": outbox_object.summary,
+        "inReplyTo": outbox_object.in_reply_to,
+        "sensitive": outbox_object.sensitive,
+        "attachment": outbox_object.ap_object["attachment"],
+        "updated": updated,
+    }
+
+    outbox_object.ap_object = note
+    outbox_object.source = source
+    outbox_object.revisions = revisions
+    await db_session.commit()
+
+    recipients = await _compute_recipients(db_session, note)
+    for rcp in recipients:
+        await new_outgoing_activity(db_session, rcp, outbox_object.id)
+
+    # If the note is public, check if we need to send any webmentions
+    if outbox_object.visibility == ap.VisibilityEnum.PUBLIC:
+        possible_targets = opengraph._urls_from_note(note)
+        logger.info(f"webmentions possible targert {possible_targets}")
+        for target in possible_targets:
+            webmention_endpoint = await webmentions.discover_webmention_endpoint(target)
+            logger.info(f"{target=} {webmention_endpoint=}")
+            if webmention_endpoint:
+                await new_outgoing_activity(
+                    db_session,
+                    webmention_endpoint,
+                    outbox_object_id=outbox_object.id,
+                    webmention_target=target,
+                )
+
+    return outbox_object.public_id  # type: ignore
+
+
 async def _compute_recipients(
     db_session: AsyncSession, ap_object: ap.RawObject
 ) -> set[str]:

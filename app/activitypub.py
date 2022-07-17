@@ -251,16 +251,30 @@ async def get_object(activity: RawObject) -> RawObject:
 
 
 def wrap_object(activity: RawObject) -> RawObject:
-    return {
-        "@context": AS_EXTENDED_CTX,
-        "actor": config.ID,
-        "to": activity.get("to", []),
-        "cc": activity.get("cc", []),
-        "id": activity["id"] + "/activity",
-        "object": remove_context(activity),
-        "published": activity["published"],
-        "type": "Create",
-    }
+    # TODO(ts): improve Create VS Update
+    if "updated" in activity:
+        return {
+            "@context": AS_EXTENDED_CTX,
+            "actor": config.ID,
+            "to": activity.get("to", []),
+            "cc": activity.get("cc", []),
+            "id": activity["id"] + "/update_activity/" + activity["updated"],
+            "object": remove_context(activity),
+            "published": activity["published"],
+            "updated": activity["updated"],
+            "type": "Update",
+        }
+    else:
+        return {
+            "@context": AS_EXTENDED_CTX,
+            "actor": config.ID,
+            "to": activity.get("to", []),
+            "cc": activity.get("cc", []),
+            "id": activity["id"] + "/activity",
+            "object": remove_context(activity),
+            "published": activity["published"],
+            "type": "Create",
+        }
 
 
 def wrap_object_if_needed(raw_object: RawObject) -> RawObject:

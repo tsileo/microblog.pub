@@ -292,6 +292,13 @@ async def verify_access_token(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> AccessTokenInfo:
     token = request.headers.get("Authorization", "").removeprefix("Bearer ")
+
+    # Check if the token is within the form data
+    if not token:
+        form_data = await request.form()
+        if "access_token" in form_data:
+            token = form_data.get("access_token")
+
     is_token_valid, access_token = await _check_access_token(db_session, token)
     if not is_token_valid:
         raise HTTPException(

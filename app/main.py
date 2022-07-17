@@ -44,6 +44,7 @@ from app import boxes
 from app import config
 from app import httpsig
 from app import indieauth
+from app import micropub
 from app import models
 from app import templates
 from app import webmentions
@@ -177,6 +178,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(admin.unauthenticated_router, prefix="/admin")
 app.include_router(indieauth.router)
+app.include_router(micropub.router)
 app.include_router(webmentions.router)
 app.add_middleware(ProxyHeadersMiddleware)
 app.add_middleware(CustomMiddleware)

@@ -3,6 +3,7 @@ from typing import Any
 from typing import Optional
 from typing import Union
 
+import pydantic
 from loguru import logger
 from sqlalchemy import JSON
 from sqlalchemy import Boolean
@@ -12,6 +13,7 @@ from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import String
+from sqlalchemy import Table
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import relationship
@@ -23,8 +25,15 @@ from app.ap_object import Attachment
 from app.ap_object import Object as BaseObject
 from app.config import BASE_URL
 from app.database import Base
+from app.database import metadata_obj
 from app.utils import webmentions
 from app.utils.datetime import now
+
+
+class ObjectRevision(pydantic.BaseModel):
+    ap_object: ap.RawObject
+    source: str
+    updated_at: str
 
 
 class Actor(Base, BaseActor):
@@ -147,6 +156,7 @@ class OutboxObject(Base, BaseObject):
 
     # Source content for activities (like Notes)
     source = Column(String, nullable=True)
+    revisions: Mapped[list[dict[str, Any]] | None] = Column(JSON, nullable=True)
 
     ap_published_at = Column(DateTime(timezone=True), nullable=False, default=now)
     visibility = Column(Enum(ap.VisibilityEnum), nullable=False)
@@ -491,3 +501,18 @@ class Webmention(Base):
                 f"Failed to generate facefile item for Webmention id={self.id}"
             )
             return None
+
+
+outbox_fts = Table(
+    "outbox_fts",
+    metadata_obj,
+    Column("rowid", Integer),
+    Column("outbox_fts", String),
+    Column("summary", String, nullable=True),
+    Column("name", String, nullable=True),
+    Column("source", String),
+)
+
+# db.execute(select(outbox_fts.c.rowid).where(outbox_fts.c.outbox_fts.op("MATCH")("toto AND omg"))).all()  # noqa
+# db.execute(select(models.OutboxObject).join(outbox_fts, outbox_fts.c.rowid == models.OutboxObject.id).where(outbox_fts.c.outbox_fts.op("MATCH")("toto2"))).scalars()  # noqa
+# db.execute(insert(outbox_fts).values({"outbox_fts": "delete", "rowid": 1, "source": dat[0].source}))  # noqa

@@ -1,6 +1,7 @@
 from typing import Any
 from typing import AsyncGenerator
 
+from sqlalchemy import MetaData
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -20,6 +21,7 @@ async_engine = create_async_engine(DATABASE_URL, future=True, echo=False)
 async_session = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 Base: Any = declarative_base()
+metadata_obj = MetaData()
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
