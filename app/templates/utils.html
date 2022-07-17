@@ -97,6 +97,17 @@
 </form> 
 {% endmacro %}
 
+{% macro hide_sensitive_button(permalink_id) %}
+<form action="{{ request.url }}#{{ permalink_id }}"  method="GET">
+    {% for k, v in request.query_params.items() %}
+        {% if not (k == "show_sensitive" and v == permalink_id) %}
+            <input type="hidden" name="{{k}}" value="{{v}}">
+        {% endif %}
+    {% endfor %}
+    <button type="submit" class="show-sensitive-btn">hide sensitive content</button>
+</form> 
+{% endmacro %}
+
 {% macro show_more_button(permalink_id) %}
 <form action="{{ request.url }}#{{ permalink_id }}"  method="GET">
 <input type="hidden" name="show_more" value="{{ permalink_id }}">
@@ -106,6 +117,18 @@
 <button type="submit" class="show-more-btn">show more</button>
 </form> 
 {% endmacro %}
+
+{% macro show_less_button(permalink_id) %}
+<form action="{{ request.url }}#{{ permalink_id }}"  method="GET">
+    {% for k, v in request.query_params.items() %}
+        {% if not (k == "show_more" and v == permalink_id) %}
+            <input type="hidden" name="{{k}}" value="{{v}}">
+        {% endif %}
+    {% endfor %}
+    <button type="submit" class="show-more-btn">show less</button>
+</form> 
+{% endmacro %}
+
 
 
 {% macro admin_reply_button(ap_object_id) %}
@@ -215,11 +238,14 @@
 
 
 {% macro display_attachments(object) %}
-  {% if object.attachments and object.sensitive and not request.query_params.show_sensitive == object.permalink_id %}
-  {{ sensitive_button(object.permalink_id )}}
+  {% if object.attachments and object.sensitive and not object.permalink_id in request.query_params.getlist("show_sensitive") %}
+      {{ sensitive_button(object.permalink_id )}}
   {% endif %}
 
-  {% if object.attachments and (not object.sensitive or (object.sensitive and request.query_params["show_sensitive"] == object.permalink_id)) %}
+  {% if object.attachments and (not object.sensitive or (object.sensitive and object.permalink_id in request.query_params.getlist("show_sensitive"))) %}
+    {% if object.sensitive %}
+        {{ hide_sensitive_button(object.permalink_id) }}
+    {% endif %}
     {% for attachment in object.attachments %}
     {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
     <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} alt="{{ attachment.name }}"{% endif %} class="attachment">
@@ -250,11 +276,14 @@
         <p class="p-summary">{{ object.summary | clean_html(object) | safe }}</p>
     {% endif %}
 
-    {% if object.sensitive and object.summary and not request.query_params.show_more == object.permalink_id %}
+    {% if object.sensitive and object.summary and object.permalink_id not in request.query_params.getlist("show_more") %}
         {{ show_more_button(object.permalink_id) }} 
     {% endif %}
 
-    {% if not object.sensitive or (object.sensitive and object.summary and request.query_params.show_more == object.permalink_id) %}
+    {% if not object.sensitive or (object.sensitive and object.summary and object.permalink_id in request.query_params.getlist("show_more")) %}
+        {% if object.sensitive and object.summary %}
+            {{ show_less_button(object.permalink_id) }} 
+        {% endif %}
         <div class="e-content">
             {{ object.content | clean_html(object) | safe }}
         </div>
