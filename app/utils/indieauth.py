@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 from app.utils import microformats
 from app.utils.url import make_abs
@@ -22,6 +23,14 @@ def _get_prop(props: dict[str, Any], name: str, default=None) -> Any:
 
 
 async def get_client_id_data(url: str) -> IndieAuthClient | None:
+    # Don't fetch localhost URL
+    if urlparse(url).netloc == "localhost":
+        return IndieAuthClient(
+            logo=None,
+            name=url,
+            url=url,
+        )
+
     maybe_data_and_html = await microformats.fetch_and_parse(url)
     if maybe_data_and_html is not None:
         data: dict[str, Any] = maybe_data_and_html[0]
