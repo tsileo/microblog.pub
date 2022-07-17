@@ -75,7 +75,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - fix stream (only content from follows + mention, and dedup shares)
 # - allow to undo follow requests
 # - indieauth tweaks
 # - API for posting notes

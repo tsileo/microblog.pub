@@ -2,6 +2,7 @@
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import timedelta
 from urllib.parse import urlparse
 
 import fastapi
@@ -32,6 +33,7 @@ from app.source import markdownify
 from app.uploads import upload_to_attachment
 from app.utils import opengraph
 from app.utils import webmentions
+from app.utils.datetime import as_utc
 from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
 
@@ -435,9 +437,8 @@ async def _compute_recipients(
     return recipients
 
 
-async def _get_followers_recipients(db_session: AsyncSession) -> set[str]:
-    """Returns all the recipients from the local follower collection."""
-    followers = (
+async def _get_followers(db_session: AsyncSession) -> list[models.Follower]:
+    return (
         (
             await db_session.scalars(
                 select(models.Follower).options(joinedload(models.Follower.actor))
@@ -446,8 +447,13 @@ async def _get_followers_recipients(db_session: AsyncSession) -> set[str]:
         .unique()
         .all()
     )
+
+
+async def _get_followers_recipients(db_session: AsyncSession) -> set[str]:
+    """Returns all the recipients from the local follower collection."""
+    followers = await _get_followers(db_session)
     return {
-        follower.actor.shared_inbox_url or follower.actor.inbox_url
+        follower.actor.shared_inbox_url or follower.actor.inbox_url  # type: ignore
         for follower in followers
     }
 
@@ -756,6 +762,9 @@ async def _process_note_object(
     if "published" in ro.ap_object:
         ap_published_at = parse_isoformat(ro.ap_object["published"])
 
+    followers = await _get_followers(db_session)
+
+    is_from_followers = ro.actor.ap_id in {f.ap_actor_id for f in followers}
     is_reply = bool(ro.in_reply_to)
     is_local_reply = ro.in_reply_to and ro.in_reply_to.startswith(BASE_URL)
     is_mention = False
@@ -778,7 +787,9 @@ async def _process_note_object(
         relates_to_outbox_object_id=None,
         activity_object_ap_id=ro.activity_object_ap_id,
         # Hide replies from the stream
-        is_hidden_from_stream=not (not is_reply or is_mention or is_local_reply),
+        is_hidden_from_stream=not (
+            (not is_reply and is_from_followers) or is_mention or is_local_reply
+        ),
     )
 
     db_session.add(inbox_object)
@@ -1032,8 +1043,12 @@ async def save_to_inbox(
             # This is announce for a maybe unknown object
             if relates_to_inbox_object:
                 # We already know about this object, show the announce in the
-                # streal
-                inbox_object.is_hidden_from_stream = False
+                # stream if it's not already there
+                if (
+                    now()
+                    - as_utc(relates_to_inbox_object.ap_published_at)  # type: ignore
+                ) > timedelta(hours=1):
+                    inbox_object.is_hidden_from_stream = False
             else:
                 # Save it as an inbox object
                 if not activity_ro.activity_object_ap_id:
@@ -1067,7 +1082,6 @@ async def save_to_inbox(
             )
         else:
             if activity_ro.ap_type == "Like":
-                # TODO(ts): notification
                 relates_to_outbox_object.likes_count = (
                     models.OutboxObject.likes_count + 1
                 )
@@ -1080,7 +1094,6 @@ async def save_to_inbox(
                 )
                 db_session.add(notif)
             elif activity_ro.ap_type == "Announce":
-                # TODO(ts): notification
                 relates_to_outbox_object.announces_count = (
                     models.OutboxObject.announces_count + 1
                 )
