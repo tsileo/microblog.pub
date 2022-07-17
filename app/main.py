@@ -134,11 +134,6 @@ class CustomMiddleware:
                 headers[
                     "content-security-policy"
                 ] = "default-src 'self'; style-src 'self' 'unsafe-inline';"
-                headers["permissions-policy"] = (
-                    "geolocation=(), midi=(), camera=(), usb=(), "
-                    "magnetometer=(), accelerometer=(), vr=(), speaker=(), "
-                    "ambient-light-sensor=(), gyroscope=(), microphone=()"
-                )
                 if not DEBUG:
                     headers[
                         "strict-transport-security"
