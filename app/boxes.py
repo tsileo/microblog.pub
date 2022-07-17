@@ -437,6 +437,18 @@ async def _compute_recipients(
     return recipients
 
 
+async def _get_following(db_session: AsyncSession) -> list[models.Follower]:
+    return (
+        (
+            await db_session.scalars(
+                select(models.Following).options(joinedload(models.Following.actor))
+            )
+        )
+        .unique()
+        .all()
+    )
+
+
 async def _get_followers(db_session: AsyncSession) -> list[models.Follower]:
     return (
         (
@@ -762,9 +774,9 @@ async def _process_note_object(
     if "published" in ro.ap_object:
         ap_published_at = parse_isoformat(ro.ap_object["published"])
 
-    followers = await _get_followers(db_session)
+    following = await _get_following(db_session)
 
-    is_from_followers = ro.actor.ap_id in {f.ap_actor_id for f in followers}
+    is_from_following = ro.actor.ap_id in {f.ap_actor_id for f in following}
     is_reply = bool(ro.in_reply_to)
     is_local_reply = ro.in_reply_to and ro.in_reply_to.startswith(BASE_URL)
     is_mention = False
@@ -788,7 +800,7 @@ async def _process_note_object(
         activity_object_ap_id=ro.activity_object_ap_id,
         # Hide replies from the stream
         is_hidden_from_stream=not (
-            (not is_reply and is_from_followers) or is_mention or is_local_reply
+            (not is_reply and is_from_following) or is_mention or is_local_reply
         ),
     )
 
