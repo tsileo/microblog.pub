@@ -161,7 +161,7 @@ testing = ["pytest"]
 name = "boussole"
 version = "2.0.0"
 description = "Commandline interface to build Sass projects using libsass-python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -248,7 +248,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 name = "colorlog"
 version = "6.6.0"
 description = "Add colours to the output of Python's logging module."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -489,7 +489,7 @@ python-versions = "*"
 name = "invoke"
 version = "1.7.1"
 description = "Pythonic task execution"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -533,7 +533,7 @@ i18n = ["Babel (>=2.7)"]
 name = "libsass"
 version = "0.21.0"
 description = "Sass for Python: A straightforward binding of libsass for Python."
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -741,7 +741,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 name = "pyaml"
 version = "21.10.1"
 description = "PyYAML-based module to produce pretty and readable YAML-serialized data"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -894,7 +894,7 @@ six = ">=1.4.0"
 name = "pyyaml"
 version = "6.0"
 description = "YAML parser and emitter for Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -1021,6 +1021,17 @@ anyio = ">=3.4.0,<5"
 
 [package.extras]
 full = ["itsdangerous", "jinja2", "python-multipart", "pyyaml", "requests"]
+
+[[package]]
+name = "supervisor"
+version = "4.2.4"
+description = "A system for controlling process state under UNIX"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+testing = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "tabulate"
@@ -1165,7 +1176,7 @@ standard = ["websockets (>=10.0)", "httptools (>=0.4.0)", "watchgod (>=0.6)", "p
 name = "watchdog"
 version = "2.1.9"
 description = "Filesystem events monitoring"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -1202,7 +1213,7 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "d0c330a9153ced7f4ba61e5354bc7bb3136a3d11f4f700bb76498c20e200c509"
+content-hash = "5ee42d968baa21950366d1ca0597fb1e0e45e6e26005f93acbcf8b43cd1fb370"
 
 [metadata.files]
 aiosqlite = [
@@ -2002,6 +2013,7 @@ starlette = [
     {file = "starlette-0.19.1-py3-none-any.whl", hash = "sha256:5a60c5c2d051f3a8eb546136aa0c9399773a689595e099e0877704d5888279bf"},
     {file = "starlette-0.19.1.tar.gz", hash = "sha256:c6d21096774ecb9639acad41b86b7706e52ba3bf1dc13ea4ed9ad593d47e24c7"},
 ]
+supervisor = []
 tabulate = []
 tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},

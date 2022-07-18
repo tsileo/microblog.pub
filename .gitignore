@@ -4,4 +4,4 @@ __pycache__/
 .pytest_cache/
 docs/dist/
 requirements.txt
-app/scss/_vars.scss
+app/_version.py

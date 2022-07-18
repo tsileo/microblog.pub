@@ -40,6 +40,9 @@ cachetools = "^5.2.0"
 humanize = "^4.2.3"
 tabulate = "^0.8.10"
 asgiref = "^3.5.2"
+supervisor = "^4.2.4"
+invoke = "^1.7.1"
+boussole = "^2.0.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"

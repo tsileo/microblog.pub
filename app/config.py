@@ -1,6 +1,5 @@
 import os
 import secrets
-import subprocess
 from pathlib import Path
 
 import bcrypt
@@ -19,11 +18,13 @@ ROOT_DIR = Path().parent.resolve()
 
 _CONFIG_FILE = os.getenv("MICROBLOGPUB_CONFIG_FILE", "profile.toml")
 
-VERSION_COMMIT = (
-    subprocess.check_output(["git", "rev-parse", "--short=8", "HEAD"])
-    .split()[0]
-    .decode()
-)
+VERSION_COMMIT = "dev"
+
+try:
+    from app._version import VERSION_COMMIT  # type: ignore
+except ImportError:
+    pass
+
 
 VERSION = f"2.0.0+{VERSION_COMMIT}"
 USER_AGENT = f"microblogpub/{VERSION}"
