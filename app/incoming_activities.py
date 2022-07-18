@@ -108,6 +108,7 @@ async def process_next_incoming_activity(db_session: AsyncSession) -> bool:
         )
     except Exception:
         logger.exception("Failed")
+        await db_session.rollback()
         next_activity.error = traceback.format_exc()
         _set_next_try(next_activity)
     else:

@@ -145,7 +145,8 @@ async def save_actor(db_session: AsyncSession, ap_actor: ap.RawObject) -> "Actor
         handle=_handle(ap_actor),
     )
     db_session.add(actor)
-    await db_session.commit()
+    await db_session.flush()
+    await db_session.refresh(actor)
     return actor
 
 
