@@ -93,7 +93,13 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
 
     # Without signing the request as if it's the first contact, the 2 servers
     # might race to fetch each other key
-    actor = await ap.fetch(key_id, disable_httpsig=True)
+    try:
+        actor = await ap.fetch(key_id, disable_httpsig=True)
+    except httpx.HTTPStatusError as http_err:
+        if http_err.response.status_code in [401, 403]:
+            actor = await ap.fetch(key_id, disable_httpsig=False)
+        else:
+            raise
     if actor["type"] == "Key":
         # The Key is not embedded in the Person
         k = Key(actor["owner"], actor["id"])
