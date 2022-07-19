@@ -11,9 +11,9 @@
 <div class="box">
 <h2>Remotely follow {{ local_actor.display_name }}</h2>
 <form class="form" action="{{ url_for("post_remote_follow") }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{remote_follow_csrf_token}}">
+    {{ utils.embed_csrf_token() }}
     <input type="text" name="profile" placeholder="you@instance.tld" autofocus>
-    <input type="submit" value="Follow">
+    <input type="submit" value="follow">
 </form>
 </div>
 
