@@ -129,7 +129,7 @@ class Object:
                 if u["mediaType"] == "text/html":
                     return u["href"]
 
-        return None
+        return self.ap_id
 
     @cached_property
     def content(self) -> str | None:
