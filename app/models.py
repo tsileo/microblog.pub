@@ -300,35 +300,6 @@ class Following(Base):
     ap_actor_id = Column(String, nullable=False, unique=True)
 
 
-@enum.unique
-class NotificationType(str, enum.Enum):
-    NEW_FOLLOWER = "new_follower"
-    UNFOLLOW = "unfollow"
-    LIKE = "like"
-    UNDO_LIKE = "undo_like"
-    ANNOUNCE = "announce"
-    UNDO_ANNOUNCE = "undo_announce"
-    MENTION = "mention"
-
-
-class Notification(Base):
-    __tablename__ = "notifications"
-
-    id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
-    notification_type = Column(Enum(NotificationType), nullable=True)
-    is_new = Column(Boolean, nullable=False, default=True)
-
-    actor_id = Column(Integer, ForeignKey("actor.id"), nullable=True)
-    actor = relationship(Actor, uselist=False)
-
-    outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=True)
-    outbox_object = relationship(OutboxObject, uselist=False)
-
-    inbox_object_id = Column(Integer, ForeignKey("inbox.id"), nullable=True)
-    inbox_object = relationship(InboxObject, uselist=False)
-
-
 class IncomingActivity(Base):
     __tablename__ = "incoming_activity"
 
@@ -501,6 +472,43 @@ class Webmention(Base):
                 f"Failed to generate facefile item for Webmention id={self.id}"
             )
             return None
+
+
+@enum.unique
+class NotificationType(str, enum.Enum):
+    NEW_FOLLOWER = "new_follower"
+    UNFOLLOW = "unfollow"
+    LIKE = "like"
+    UNDO_LIKE = "undo_like"
+    ANNOUNCE = "announce"
+    UNDO_ANNOUNCE = "undo_announce"
+    MENTION = "mention"
+    NEW_WEBMENTION = "new_webmention"
+    UPDATED_WEBMENTION = "updated_webmention"
+    DELETED_WEBMENTION = "deleted_webmention"
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+    notification_type = Column(Enum(NotificationType), nullable=True)
+    is_new = Column(Boolean, nullable=False, default=True)
+
+    actor_id = Column(Integer, ForeignKey("actor.id"), nullable=True)
+    actor = relationship(Actor, uselist=False)
+
+    outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=True)
+    outbox_object = relationship(OutboxObject, uselist=False)
+
+    inbox_object_id = Column(Integer, ForeignKey("inbox.id"), nullable=True)
+    inbox_object = relationship(InboxObject, uselist=False)
+
+    webmention_id = Column(
+        Integer, ForeignKey("webmention.id", name="fk_webmention_id"), nullable=True
+    )
+    webmention = relationship(Webmention, uselist=False)
 
 
 outbox_fts = Table(

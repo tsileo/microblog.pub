@@ -435,6 +435,7 @@ async def get_notifications(
                             models.OutboxObject.outbox_object_attachments
                         ).options(joinedload(models.OutboxObjectAttachment.upload)),
                     ),
+                    joinedload(models.Notification.webmention),
                 )
                 .order_by(models.Notification.created_at.desc())
             )

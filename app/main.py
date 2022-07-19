@@ -76,6 +76,8 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - Webmention notification
+# - Page support
 # - Article support
 # - indieauth tweaks
 # - API for posting notes

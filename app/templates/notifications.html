@@ -47,7 +47,36 @@
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> mentioned you
                 </div>
                 {{ utils.display_object(notif.inbox_object) }}
- 
+            {% elif notif.notification_type.value == "new_webmention" %}
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
+                    new webmention from 
+                    {% set facepile_item = notif.webmention.as_facepile_item %}
+                    {% if facepile_item %}
+                        <a href="{{ facepile_item.actor_url }}">{{ facepile_item.actor_name }}</a>
+                    {% endif %}
+                    <a style="font-weight:bold;" href="{{ notif.webmention.source }}">{{ notif.webmention.source }}</a>
+                </div>
+                {{ utils.display_object(notif.outbox_object) }}
+            {% elif notif.notification_type.value == "updated_webmention" %}
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
+                    updated webmention from 
+                    {% set facepile_item = notif.webmention.as_facepile_item %}
+                    {% if facepile_item %}
+                        <a href="{{ facepile_item.actor_url }}">{{ facepile_item.actor_name }}</a>
+                    {% endif %}
+                    <a style="font-weight:bold;" href="{{ notif.webmention.source }}">{{ notif.webmention.source }}</a>
+                </div>
+                {{ utils.display_object(notif.outbox_object) }}
+            {% elif notif.notification_type.value == "deleted_webmention" %}
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
+                    deleted webmention from 
+                    {% set facepile_item = notif.webmention.as_facepile_item %}
+                    {% if facepile_item %}
+                        <a href="{{ facepile_item.actor_url }}">{{ facepile_item.actor_name }}</a>
+                    {% endif %}
+                    <a style="font-weight:bold;" href="{{ notif.webmention.source }}">{{ notif.webmention.source }}</a>
+                </div>
+                {{ utils.display_object(notif.outbox_object) }}
             {% else %}
             <div class="actor-action">
                 Implement {{ notif.notification_type }}

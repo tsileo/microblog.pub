@@ -1,3 +1,4 @@
+import httpx
 from bs4 import BeautifulSoup  # type: ignore
 from fastapi import APIRouter
 from fastapi import Depends
@@ -73,33 +74,53 @@ async def webmention_endpoint(
             await db_session.commit()
         raise HTTPException(status_code=400, detail="Invalid target")
 
-    maybe_data_and_html = await microformats.fetch_and_parse(source)
-    if not maybe_data_and_html:
-        logger.info("failed to fetch source")
+    is_webmention_deleted = False
+    try:
+        data_and_html = await microformats.fetch_and_parse(source)
+    except microformats.URLNotFoundOrGone:
+        is_webmention_deleted = True
+    except httpx.HTTPError:
+        raise HTTPException(status_code=500, detail=f"Fetch to process {source}")
 
+    data, html = data_and_html
+    is_target_found_in_source = is_source_containing_target(html, target)
+
+    data, html = data_and_html
+    if is_webmention_deleted or not is_target_found_in_source:
+        logger.warning(f"target {target=} not found in source")
         if existing_webmention_in_db:
             logger.info("Deleting existing Webmention")
             mentioned_object.webmentions_count = mentioned_object.webmentions_count - 1
             existing_webmention_in_db.is_deleted = True
-            await db_session.commit()
-        raise HTTPException(status_code=400, detail="failed to fetch source")
 
-    data, html = maybe_data_and_html
+            notif = models.Notification(
+                notification_type=models.NotificationType.DELETED_WEBMENTION,
+                outbox_object_id=mentioned_object.id,
+                webmention_id=existing_webmention_in_db.id,
+            )
+            db_session.add(notif)
 
-    if not is_source_containing_target(html, target):
-        logger.warning("target not found in source")
-
-        if existing_webmention_in_db:
-            logger.info("Deleting existing Webmention")
-            mentioned_object.webmentions_count = mentioned_object.webmentions_count - 1
-            existing_webmention_in_db.is_deleted = True
             await db_session.commit()
 
-        raise HTTPException(status_code=400, detail="target not found in source")
+        if not is_target_found_in_source:
+            raise HTTPException(
+                status_code=400,
+                detail="target not found in source",
+            )
+        else:
+            return JSONResponse(content={}, status_code=200)
 
     if existing_webmention_in_db:
+        # Undelete if needed
         existing_webmention_in_db.is_deleted = False
         existing_webmention_in_db.source_microformats = data
+
+        notif = models.Notification(
+            notification_type=models.NotificationType.UPDATED_WEBMENTION,
+            outbox_object_id=mentioned_object.id,
+            webmention_id=existing_webmention_in_db.id,
+        )
+        db_session.add(notif)
     else:
         new_webmention = models.Webmention(
             source=source,
@@ -108,6 +129,14 @@ async def webmention_endpoint(
             outbox_object_id=mentioned_object.id,
         )
         db_session.add(new_webmention)
+        await db_session.flush()
+
+        notif = models.Notification(
+            notification_type=models.NotificationType.NEW_WEBMENTION,
+            outbox_object_id=mentioned_object.id,
+            webmention_id=new_webmention.id,
+        )
+        db_session.add(notif)
 
         mentioned_object.webmentions_count = mentioned_object.webmentions_count + 1
 
