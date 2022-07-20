@@ -32,7 +32,12 @@ _KEY_CACHE: MutableMapping[str, Key] = LFUCache(256)
 
 
 def _build_signed_string(
-    signed_headers: str, method: str, path: str, headers: Any, body_digest: str | None
+    signed_headers: str,
+    method: str,
+    path: str,
+    headers: Any,
+    body_digest: str | None,
+    sig_data: dict[str, Any],
 ) -> str:
     out = []
     for signed_header in signed_headers.split(" "):
@@ -40,6 +45,12 @@ def _build_signed_string(
             out.append("(request-target): " + method.lower() + " " + path)
         elif signed_header == "digest" and body_digest:
             out.append("digest: " + body_digest)
+        elif signed_header in ["(created)", "(expires)"]:
+            out.append(
+                signed_header
+                + ": "
+                + sig_data[signed_header[1 : len(signed_header) - 1]]
+            )
         else:
             out.append(signed_header + ": " + headers[signed_header])
     return "\n".join(out)
@@ -143,6 +154,7 @@ async def httpsig_checker(
         request.url.path,
         request.headers,
         _body_digest(body) if body else None,
+        hsig,
     )
 
     try:
@@ -208,7 +220,7 @@ class HTTPXSigAuth(httpx.Auth):
             sigheaders = "(request-target) user-agent host date accept"
 
         to_be_signed = _build_signed_string(
-            sigheaders, r.method, r.url.path, r.headers, bodydigest
+            sigheaders, r.method, r.url.path, r.headers, bodydigest, {}
         )
         if not self.key.privkey:
             raise ValueError("Should never happen")
