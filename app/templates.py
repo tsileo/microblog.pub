@@ -315,7 +315,9 @@ def _timeago(original_dt: datetime) -> str:
 
 
 def _has_media_type(attachment: Attachment, media_type_prefix: str) -> bool:
-    return attachment.media_type.startswith(media_type_prefix)
+    if attachment.media_type:
+        return attachment.media_type.startswith(media_type_prefix)
+    return False
 
 
 def _format_date(dt: datetime) -> str:

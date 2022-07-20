@@ -76,6 +76,20 @@ class Object:
     def attachments(self) -> list["Attachment"]:
         attachments = []
         for obj in ap.as_list(self.ap_object.get("attachment", [])):
+            if obj.get("type") == "Link":
+                attachments.append(
+                    Attachment.parse_obj(
+                        {
+                            "proxiedUrl": None,
+                            "resizedUrl": None,
+                            "mediaType": None,
+                            "type": "Link",
+                            "url": obj["href"],
+                        }
+                    )
+                )
+                continue
+
             proxied_url = proxied_media_url(obj["url"])
             attachments.append(
                 Attachment.parse_obj(
@@ -189,12 +203,12 @@ class BaseModel(pydantic.BaseModel):
 
 class Attachment(BaseModel):
     type: str
-    media_type: str
+    media_type: str | None
     name: str | None
     url: str
 
-    # Extra fields for the templates
-    proxied_url: str
+    # Extra fields for the templates (and only for media)
+    proxied_url: str | None = None
     resized_url: str | None = None
 
 

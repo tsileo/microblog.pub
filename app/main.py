@@ -78,7 +78,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # Next:
 # - UI support for updating posts
 # - Support for processing update
-# - Page support
 # - Article support
 # - Fix tests
 # - Fix SQL tx in the codebase
@@ -1087,8 +1086,8 @@ async def _gen_rss_feed(
 
         if outbox_object.attachments:
             for attachment in outbox_object.attachments:
-                if attachment.type == "Image" or attachment.media_type.startswith(
-                    "image"
+                if attachment.type == "Image" or (
+                    attachment.media_type and attachment.media_type.startswith("image")
                 ):
                     content += f'<img src="{attachment.url}">'
                 # TODO(ts): other attachment types

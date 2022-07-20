@@ -254,6 +254,8 @@
     <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment"></video>
     {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}
     <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} style="width:480px;" class="attachment"></audio>
+    {% elif attachment.type == "Link" %}
+        <a href="{{ attachment.url }}" class="attachment" style="display:inline-block;margin-bottom: 15px;">{{ attachment.url }}</a>
     {% else %}
     <a href="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment">{{ attachment.url }}</a>
     {% endif %}
@@ -262,7 +264,7 @@
 {% endmacro %}
 
 {% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}) %}
-{% if object.ap_type in ["Note", "Article", "Video"] %}
+{% if object.ap_type in ["Note", "Article", "Video", "Page"] %}
 <div class="ap-object {% if expanded %}ap-object-expanded {% endif %}h-entry" id="{{ object.permalink_id }}">
     {{ display_actor(object.actor, actors_metadata, embedded=True) }}
 
@@ -271,7 +273,6 @@
             in reply to {{ object.in_reply_to|truncate(64, True) }}
         </a>
     {% endif %}
-
 
     {% if object.summary %}
         <p class="p-summary">{{ object.summary | clean_html(object) | safe }}</p>
