@@ -852,7 +852,7 @@ async def _process_note_object(
     is_local_reply = ro.in_reply_to and ro.in_reply_to.startswith(BASE_URL)
     is_mention = False
     tags = ro.ap_object.get("tag", [])
-    for tag in tags:
+    for tag in ap.as_list(tags):
         if tag.get("name") == LOCAL_ACTOR.handle or tag.get("href") == LOCAL_ACTOR.url:
             is_mention = True
 
