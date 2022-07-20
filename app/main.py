@@ -76,19 +76,19 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - Webmention notification
+# - UI support for updating posts
+# - Support for processing update
 # - Page support
 # - Article support
+# - Fix tests
+# - Fix SQL tx in the codebase
 # - indieauth tweaks
 # - API for posting notes
 # - allow to block servers
 # - FT5 text search
 # - support update post with history?
-#
-# - [ ] block support
-# - [ ] prevent SSRF (urlutils from little-boxes)
-# - [ ] Dockerization
-# - [ ] cleanup tasks
+# - block support
+# - cleanup tasks
 
 
 class CustomMiddleware:

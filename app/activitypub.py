@@ -82,7 +82,11 @@ ME = {
     "preferredUsername": config.USERNAME,
     "name": config.CONFIG.name,
     "summary": config.CONFIG.summary,
-    "endpoints": {},
+    "endpoints": {
+        # For compat with servers expecting a sharedInbox...
+        "sharedInbox": config.BASE_URL
+        + "/inbox",
+    },
     "url": config.ID,
     "manuallyApprovesFollowers": False,
     "attachment": [],
@@ -96,7 +100,6 @@ ME = {
         "owner": config.ID,
         "publicKeyPem": get_pubkey_as_pem(config.KEY_PATH),
     },
-    "alsoKnownAs": [],
 }
 
 
