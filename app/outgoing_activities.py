@@ -144,7 +144,7 @@ async def new_outgoing_activity(
     )
 
     db_session.add(outgoing_activity)
-    await db_session.commit()
+    await db_session.flush()
     await db_session.refresh(outgoing_activity)
     return outgoing_activity
 
