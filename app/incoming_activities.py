@@ -98,6 +98,7 @@ async def process_next_incoming_activity(db_session: AsyncSession) -> bool:
 
     next_activity.tries = next_activity.tries + 1
     next_activity.last_try = now()
+    await db_session.commit()
 
     try:
         # async with db_session.begin_nested():
