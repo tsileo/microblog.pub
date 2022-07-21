@@ -23,7 +23,7 @@
                 </div>
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
             {% elif notif.notification_type.value == "like" %}
-                <di vclass="actor-action" title="{{ notif.created_at.isoformat() }}">
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> liked a post
                 </div>
                 {{ utils.display_object(notif.outbox_object) }}

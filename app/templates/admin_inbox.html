@@ -8,7 +8,7 @@
 
 {% macro actor_action(inbox_object, text) %}
     <div class="actor-action">
-        <a href="{{ url_for("admin_profile") }}?actor_id={{ inbox_object.actor.ap_id }}">{{ inbox_object.actor.display_name }}</a> {{ text }}
+        <a href="{{ url_for("admin_profile") }}?actor_id={{ inbox_object.actor.ap_id }}">{{ inbox_object.actor.display_name | clean_html(inbox_object.actor) | safe }}</a> {{ text }}
         <span>{{ inbox_object.ap_published_at | timeago }}</span>
     </div>
 
