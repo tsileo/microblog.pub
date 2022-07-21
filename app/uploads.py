@@ -96,7 +96,11 @@ async def save_upload(db_session: AsyncSession, f: UploadFile) -> models.Upload:
     return new_upload
 
 
-def upload_to_attachment(upload: models.Upload, filename: str) -> ap.RawObject:
+def upload_to_attachment(
+    upload: models.Upload,
+    filename: str,
+    alt_text: str | None,
+) -> ap.RawObject:
     extra_attachment_fields = {}
     if upload.blurhash:
         extra_attachment_fields.update(
@@ -109,7 +113,7 @@ def upload_to_attachment(upload: models.Upload, filename: str) -> ap.RawObject:
     return {
         "type": "Document",
         "mediaType": upload.content_type,
-        "name": filename,
+        "name": alt_text or filename,
         "url": BASE_URL + f"/attachments/{upload.content_hash}/{filename}",
         **extra_attachment_fields,
     }

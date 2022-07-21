@@ -39,8 +39,9 @@
     </p>
     <input type="hidden" name="in_reply_to" value="{{ request.query_params.in_reply_to }}">
     <p>
-        <input name="files" type="file" multiple>
+        <input id="files" name="files" type="file" multiple style="width:95%;">
     </p>
+    <div id="alts"></div>
     <p>
         <input type="submit" value="Publish">
     </p>

@@ -30,7 +30,7 @@ It is still in early development, this README will be updated when I get to depl
     - Strict access control for your outbox enforced via HTTP signature
  - **No** Javascript
     - The UI is pure HTML/CSS
-    - Except a tiny bit of hand-written JS in the note composer to insert emoji
+    - Except tiny bits of hand-written JS in the note composer to insert emoji and add alt text to images
  - IndieWeb citizen
     - [IndieAuth](https://www.w3.org/TR/indieauth/) support (OAuth2 extension)
     - [Microformats](http://microformats.org/wiki/Main_Page) everywhere

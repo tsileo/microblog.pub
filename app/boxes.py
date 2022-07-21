@@ -286,7 +286,7 @@ async def send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
 async def send_create(
     db_session: AsyncSession,
     source: str,
-    uploads: list[tuple[models.Upload, str]],
+    uploads: list[tuple[models.Upload, str, str | None]],
     in_reply_to: str | None,
     visibility: ap.VisibilityEnum,
     content_warning: str | None = None,
@@ -315,8 +315,8 @@ async def send_create(
                 .values(replies_count=models.OutboxObject.replies_count + 1)
             )
 
-    for (upload, filename) in uploads:
-        attachments.append(upload_to_attachment(upload, filename))
+    for (upload, filename, alt_text) in uploads:
+        attachments.append(upload_to_attachment(upload, filename, alt_text))
 
     to = []
     cc = []
@@ -366,9 +366,12 @@ async def send_create(
             )
             db_session.add(tagged_object)
 
-    for (upload, filename) in uploads:
+    for (upload, filename, alt) in uploads:
         outbox_object_attachment = models.OutboxObjectAttachment(
-            filename=filename, outbox_object_id=outbox_object.id, upload_id=upload.id
+            filename=filename,
+            alt=alt,
+            outbox_object_id=outbox_object.id,
+            upload_id=upload.id,
         )
         db_session.add(outbox_object_attachment)
 

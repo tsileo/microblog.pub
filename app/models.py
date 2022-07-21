@@ -234,7 +234,7 @@ class OutboxObject(Base, BaseObject):
                     {
                         "type": "Document",
                         "mediaType": attachment.upload.content_type,
-                        "name": attachment.filename,
+                        "name": attachment.alt or attachment.filename,
                         "url": url,
                         "proxiedUrl": url,
                         "resizedUrl": BASE_URL
@@ -403,6 +403,7 @@ class OutboxObjectAttachment(Base):
     id = Column(Integer, primary_key=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
     filename = Column(String, nullable=False)
+    alt = Column(String, nullable=True)
 
     outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=False)
 

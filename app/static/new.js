@@ -30,3 +30,23 @@ var items = document.getElementsByClassName("ji")
 for (var i = 0; i < items.length; i++) {
     items[i].addEventListener('click', ji);
 }
+
+// Add new input text dynamically to allow setting an alt text on attachments
+var files = document.getElementById("files");
+var alts = document.getElementById("alts");
+files.addEventListener("change", function(e) {
+    // Reset the div content
+    alts.innerHTML = "";
+
+    // Add an input for each files
+    for (var i = 0; i < e.target.files.length; i++) {
+        var p = document.createElement("p");
+        var altInput = document.createElement("input");
+        altInput.setAttribute("type", "text");
+        altInput.setAttribute("name", "alt_" + e.target.files[i].name);
+        altInput.setAttribute("placeholder", "Alt text for " + e.target.files[i].name);
+        altInput.setAttribute("style", "width:95%;")
+        p.appendChild(altInput);
+        alts.appendChild(p);
+    }
+});

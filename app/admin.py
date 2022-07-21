@@ -662,10 +662,12 @@ async def admin_actions_new(
 ) -> RedirectResponse:
     # XXX: for some reason, no files restuls in an empty single file
     uploads = []
+    raw_form_data = await request.form()
     if len(files) >= 1 and files[0].filename:
         for f in files:
             upload = await save_upload(db_session, f)
-            uploads.append((upload, f.filename))
+            uploads.append((upload, f.filename, raw_form_data.get("alt_" + f.filename)))
+
     public_id = await boxes.send_create(
         db_session,
         source=content,
