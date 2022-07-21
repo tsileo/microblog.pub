@@ -1,13 +1,10 @@
-"""Implements HTTP signature for Flask requests.
-
-Mastodon instances won't accept requests that are not signed using this scheme.
-
-"""
 import base64
 import hashlib
 import typing
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from typing import Any
 from typing import Dict
 from typing import MutableMapping
@@ -18,6 +15,7 @@ import httpx
 from cachetools import LFUCache
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
+from dateutil.parser import parse
 from loguru import logger
 from sqlalchemy import select
 
@@ -27,6 +25,7 @@ from app.config import KEY_PATH
 from app.database import AsyncSession
 from app.database import get_db_session
 from app.key import Key
+from app.utils.datetime import now
 
 _KEY_CACHE: MutableMapping[str, Key] = LFUCache(256)
 
@@ -38,9 +37,17 @@ def _build_signed_string(
     headers: Any,
     body_digest: str | None,
     sig_data: dict[str, Any],
-) -> str:
+) -> tuple[str, datetime | None]:
+    signature_date: datetime | None = None
     out = []
     for signed_header in signed_headers.split(" "):
+        if signed_header == "(created)":
+            signature_date = datetime.fromtimestamp(int(sig_data["created"])).replace(
+                tzinfo=timezone.utc
+            )
+        elif signed_header == "date":
+            signature_date = parse(headers["date"])
+
         if signed_header == "(request-target)":
             out.append("(request-target): " + method.lower() + " " + path)
         elif signed_header == "digest" and body_digest:
@@ -53,7 +60,7 @@ def _build_signed_string(
             )
         else:
             out.append(signed_header + ": " + headers[signed_header])
-    return "\n".join(out)
+    return "\n".join(out), signature_date
 
 
 def _parse_sig_header(val: Optional[str]) -> Optional[Dict[str, str]]:
@@ -111,6 +118,7 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
             actor = await ap.fetch(key_id, disable_httpsig=False)
         else:
             raise
+
     if actor["type"] == "Key":
         # The Key is not embedded in the Person
         k = Key(actor["owner"], actor["id"])
@@ -134,6 +142,8 @@ class HTTPSigInfo:
     has_valid_signature: bool
     signed_by_ap_actor_id: str | None = None
     is_ap_actor_gone: bool = False
+    is_unsupported_algorithm: bool = False
+    is_expired: bool = False
 
 
 async def httpsig_checker(
@@ -147,8 +157,15 @@ async def httpsig_checker(
         logger.info("No HTTP signature found")
         return HTTPSigInfo(has_valid_signature=False)
 
+    if alg := hsig.get("algorithm") not in ["rsa-sha256", "hs2019"]:
+        logger.info(f"Unsupported HTTP sig algorithm: {alg}")
+        return HTTPSigInfo(
+            has_valid_signature=False,
+            is_unsupported_algorithm=True,
+        )
+
     logger.debug(f"hsig={hsig}")
-    signed_string = _build_signed_string(
+    signed_string, signature_date = _build_signed_string(
         hsig["headers"],
         request.method,
         request.url.path,
@@ -156,6 +173,14 @@ async def httpsig_checker(
         _body_digest(body) if body else None,
         hsig,
     )
+
+    # Sanity checks on the signature date
+    if signature_date is None or now() - signature_date > timedelta(hours=12):
+        logger.info(f"Signature expired: {signature_date=}")
+        return HTTPSigInfo(
+            has_valid_signature=False,
+            is_expired=True,
+        )
 
     try:
         k = await _get_public_key(db_session, hsig["keyId"])
@@ -180,6 +205,7 @@ async def enforce_httpsig(
     request: fastapi.Request,
     httpsig_info: HTTPSigInfo = fastapi.Depends(httpsig_checker),
 ) -> HTTPSigInfo:
+    """FastAPI Depends"""
     if not httpsig_info.has_valid_signature:
         logger.warning(f"Invalid HTTP sig {httpsig_info=}")
         body = await request.body()
@@ -191,7 +217,13 @@ async def enforce_httpsig(
             logger.info("Let's make Mastodon happy, returning a 202")
             raise fastapi.HTTPException(status_code=202)
 
-        raise fastapi.HTTPException(status_code=401, detail="Invalid HTTP sig")
+        detail = "Invalid HTTP sig"
+        if httpsig_info.is_unsupported_algorithm:
+            detail = "Unsupported signature algorithm, must be rsa-sha256 or hs2019"
+        elif httpsig_info.is_expired:
+            detail = "Signature expired"
+
+        raise fastapi.HTTPException(status_code=401, detail=detail)
 
     return httpsig_info
 
@@ -219,7 +251,7 @@ class HTTPXSigAuth(httpx.Auth):
         else:
             sigheaders = "(request-target) user-agent host date accept"
 
-        to_be_signed = _build_signed_string(
+        to_be_signed, _ = _build_signed_string(
             sigheaders, r.method, r.url.path, r.headers, bodydigest, {}
         )
         if not self.key.privkey:

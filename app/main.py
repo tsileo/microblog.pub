@@ -76,6 +76,8 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - show pending follow request (and prevent double follow?)
+# - a way to add alt text on image (maybe via special markup in content?)
 # - UI support for updating posts
 # - Support for processing update
 # - Article support
