@@ -479,11 +479,18 @@ class Webmention(Base):
 class NotificationType(str, enum.Enum):
     NEW_FOLLOWER = "new_follower"
     UNFOLLOW = "unfollow"
+
+    FOLLOW_REQUEST_ACCEPTED = "follow_request_accepted"
+    FOLLOW_REQUEST_REJECTED = "follow_request_rejected"
+
     LIKE = "like"
     UNDO_LIKE = "undo_like"
+
     ANNOUNCE = "announce"
     UNDO_ANNOUNCE = "undo_announce"
+
     MENTION = "mention"
+
     NEW_WEBMENTION = "new_webmention"
     UPDATED_WEBMENTION = "updated_webmention"
     DELETED_WEBMENTION = "deleted_webmention"

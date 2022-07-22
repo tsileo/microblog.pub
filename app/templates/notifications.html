@@ -22,6 +22,16 @@
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> unfollowed you
                 </div>
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {%- elif notif.notification_type.value == "follow_request_accepted" %}
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
+                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> accepted your follow request
+                </div>
+                {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {%- elif notif.notification_type.value == "follow_request_rejected" %}
+                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
+                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> rejected your follow request
+                </div>
+                {{ utils.display_actor(notif.actor, actors_metadata) }}
             {% elif notif.notification_type.value == "like" %}
                 <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
                     <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> liked a post

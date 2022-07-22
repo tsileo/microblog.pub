@@ -1105,6 +1105,18 @@ async def save_to_inbox(
                     ap_actor_id=actor.ap_id,
                 )
                 db_session.add(following)
+
+                notif_type = (
+                    models.NotificationType.FOLLOW_REQUEST_ACCEPTED
+                    if activity_ro.ap_type == "Accept"
+                    else models.NotificationType.FOLLOW_REQUEST_REJECTED
+                )
+                notif = models.Notification(
+                    notification_type=notif_type,
+                    actor_id=actor.id,
+                    inbox_object_id=inbox_object.id,
+                )
+                db_session.add(notif)
             else:
                 logger.info(
                     "Received an Accept for an unsupported activity: "
