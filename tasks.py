@@ -44,6 +44,9 @@ def lint(ctx):
 @task
 def compile_scss(ctx, watch=False):
     # type: (Context, bool) -> None
+    from app.utils.favicon import build_favicon
+
+    build_favicon()
     theme_file = Path("data/_theme.scss")
     if not theme_file.exists():
         theme_file.write_text("// override vars for theming here")
