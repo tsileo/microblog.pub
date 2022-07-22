@@ -11,6 +11,7 @@ import emoji
 import html2text
 import humanize
 from bs4 import BeautifulSoup  # type: ignore
+from dateutil.parser import parse
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 from loguru import logger
@@ -369,6 +370,17 @@ def _emojify(text: str, is_local: bool) -> str:
     )
 
 
+def _parse_datetime(dt: str) -> datetime:
+    return parse(dt)
+
+
+def _poll_item_pct(item: ap.RawObject, voters_count: int) -> int:
+    if voters_count == 0:
+        return 0
+
+    return int(item["replies"]["totalItems"] * 100 / voters_count)
+
+
 _templates.env.filters["domain"] = _filter_domain
 _templates.env.filters["media_proxy_url"] = _media_proxy_url
 _templates.env.filters["clean_html"] = _clean_html
@@ -378,3 +390,5 @@ _templates.env.filters["has_media_type"] = _has_media_type
 _templates.env.filters["html2text"] = _html2text
 _templates.env.filters["emojify"] = _emojify
 _templates.env.filters["pluralize"] = _pluralize
+_templates.env.filters["parse_datetime"] = _parse_datetime
+_templates.env.filters["poll_item_pct"] = _poll_item_pct

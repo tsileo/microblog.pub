@@ -264,7 +264,7 @@
 {% endmacro %}
 
 {% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}) %}
-{% if object.ap_type in ["Note", "Article", "Video", "Page"] %}
+{% if object.ap_type in ["Note", "Article", "Video", "Page", "Question"] %}
 <div class="ap-object {% if expanded %}ap-object-expanded {% endif %}h-entry" id="{{ object.permalink_id }}">
     {{ display_actor(object.actor, actors_metadata, embedded=True) }}
 
@@ -291,6 +291,25 @@
         </div>
     {% endif %}
 
+    {% if object.ap_type == "Question" %}
+
+        {% if object.ap_object.oneOf %}
+            <ul style="list-style-type: none;padding:0;">
+            {% set items = object.ap_object.oneOf or object.ap_object.anyOf %}
+            {% for item in object.ap_object.oneOf %}
+            <li style="display:block;">
+                {% set pct = item | poll_item_pct(object.ap_object.votersCount) %}
+                <p style="margin:20px 0 10px 0;">{{ item.name | clean_html(object) | safe }} <span style="float:right;">{{ pct }}% <span class="muted">({{ item.replies.totalItems }} votes)</span></span></p>
+                <svg class="poll-bar">
+                    <line x1="0" y1="10px" x2="{{ pct }}%" y2="10px" style="stroke-width: 20px;"></line>
+                </svg>
+            </li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+
+    {% endif %}
+
     {{ display_og_meta(object) }}
 
     <div class="activity-attachment">
@@ -305,6 +324,10 @@
         <li>
             <time class="dt-published" datetime="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}" title="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}">{{ object.ap_published_at | timeago }}</time>
         </li>
+        {% if object.ap_type == "Question" %}
+            <li>ends {{ object.ap_object.endTime | parse_datetime | timeago }}</li>
+            <li>{{ object.ap_object.votersCount }} voters</li>
+        {% endif %}
         {% if is_admin %}
             <li>
                 {{ object.visibility.value }}

@@ -12,6 +12,17 @@ $muted-color: #555; // solarized comment text
 // Load custom theme
 // @import "theme.scss";
 
+.muted {
+    color: $muted-color;
+}
+
+.poll-bar {
+   width:100%;height:20px;
+   line {
+        stroke: $secondary-color;
+   }
+}
+
 
 .light-background {
     background: $light-background;

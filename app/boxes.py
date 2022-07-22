@@ -799,6 +799,28 @@ async def _handle_update_activity(
 
         # Update the actor
         from_actor.ap_actor = updated_actor.ap_actor
+    elif (ap_type := wrapped_object["type"]) in [
+        "Question",
+        "Note",
+        "Article",
+        "Page",
+        "Video",
+    ]:
+        logger.info(f"Updating {ap_type}")
+        existing_object = await get_inbox_object_by_ap_id(
+            db_session, wrapped_object["id"]
+        )
+        if not existing_object:
+            logger.info(f"{ap_type} not found in the inbox")
+        elif existing_object.actor.ap_id != from_actor.ap_id:
+            logger.warning(
+                f"Update actor does not match the {ap_type} actor {from_actor.ap_id}"
+                f"/{existing_object.actor.ap_id}"
+            )
+        else:
+            # Everything looks correct, update the object in the inbox
+            logger.info(f"Updating {existing_object.ap_id}")
+            existing_object.ap_object = wrapped_object
     else:
         # TODO(ts): support updating objects
         logger.info(f'Cannot update {wrapped_object["type"]}')
