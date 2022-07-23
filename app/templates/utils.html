@@ -292,6 +292,12 @@
     {% endif %}
 
     {% if object.ap_type == "Question" %}
+        {% if object.is_from_inbox %}
+            <form action="{{ request.url_for("admin_actions_vote") }}" method="POST">
+                {{ embed_csrf_token() }}
+                {{ embed_redirect_url(object.permalink_id) }}
+                <input type="hidden" name="in_reply_to" value="{{ object.ap_id }}">
+        {% endif %}
 
         {% if object.ap_object.oneOf %}
             <ul style="list-style-type: none;padding:0;">
@@ -299,14 +305,27 @@
             {% for item in object.ap_object.oneOf %}
             <li style="display:block;">
                 {% set pct = item | poll_item_pct(object.ap_object.votersCount) %}
-                <p style="margin:20px 0 10px 0;">{{ item.name | clean_html(object) | safe }} <span style="float:right;">{{ pct }}% <span class="muted">({{ item.replies.totalItems }} votes)</span></span></p>
+                <p style="margin:20px 0 10px 0;">
+                    {% if object.is_from_inbox %}
+                        <input type="radio" name="name" value="{{ item.name }}">
+                    {% endif %}
+                    {{ item.name | clean_html(object) | safe }} <span style="float:right;">{{ pct }}% <span class="muted">({{ item.replies.totalItems }} votes)</span></span>
+                </p>
                 <svg class="poll-bar">
-                    <line x1="0" y1="10px" x2="{{ pct }}%" y2="10px" style="stroke-width: 20px;"></line>
+                    <line x1="0" y1="10px" x2="{{ pct or 1 }}%" y2="10px" style="stroke-width: 20px;"></line>
                 </svg>
             </li>
             {% endfor %}
             </ul>
         {% endif %}
+
+        {% if object.is_from_inbox %}
+            <p class="form">
+                <input type="submit" value="vote">
+            </p>
+            </form>
+        {% endif %}
+
 
     {% endif %}
 
@@ -325,7 +344,8 @@
             <time class="dt-published" datetime="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}" title="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}">{{ object.ap_published_at | timeago }}</time>
         </li>
         {% if object.ap_type == "Question" %}
-            <li>ends {{ object.ap_object.endTime | parse_datetime | timeago }}</li>
+        {% set endAt = object.ap_object.endTime | parse_datetime %}
+            <li>ends <time title="{{ endAt.replace(microsecond=0).isoformat() }}">{{ endAt | timeago }}</time></li>
             <li>{{ object.ap_object.votersCount }} voters</li>
         {% endif %}
         {% if is_admin %}

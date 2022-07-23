@@ -108,6 +108,7 @@ class InboxObject(Base, BaseObject):
     # Link the oubox AP ID to allow undo without any extra query
     liked_via_outbox_object_ap_id = Column(String, nullable=True)
     announced_via_outbox_object_ap_id = Column(String, nullable=True)
+    voted_for_answers: Mapped[list[str] | None] = Column(JSON, nullable=True)
 
     is_bookmarked = Column(Boolean, nullable=False, default=False)
 

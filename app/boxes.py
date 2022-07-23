@@ -398,6 +398,112 @@ async def send_create(
     return note_id
 
 
+async def send_vote(
+    db_session: AsyncSession,
+    in_reply_to: str,
+    name: str,
+) -> str:
+    logger.info(f"Send vote {name}")
+    vote_id = allocate_outbox_id()
+    published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+    in_reply_to_object = await get_anybox_object_by_ap_id(db_session, in_reply_to)
+    if not in_reply_to_object:
+        raise ValueError(f"Invalid in reply to {in_reply_to=}")
+    if not in_reply_to_object.ap_context:
+        raise ValueError("Object has no context")
+    context = in_reply_to_object.ap_context
+
+    to = [in_reply_to_object.actor.ap_id]
+
+    note = {
+        "@context": ap.AS_EXTENDED_CTX,
+        "type": "Note",
+        "id": outbox_object_id(vote_id),
+        "attributedTo": ID,
+        "name": name,
+        "to": to,
+        "cc": [],
+        "published": published,
+        "context": context,
+        "conversation": context,
+        "url": outbox_object_id(vote_id),
+        "inReplyTo": in_reply_to,
+    }
+    outbox_object = await save_outbox_object(db_session, vote_id, note)
+    if not outbox_object.id:
+        raise ValueError("Should never happen")
+
+    recipients = await _compute_recipients(db_session, note)
+    for rcp in recipients:
+        await new_outgoing_activity(db_session, rcp, outbox_object.id)
+
+    await db_session.commit()
+    return vote_id
+
+
+async def send_question(
+    db_session: AsyncSession,
+    source: str,
+) -> str:
+    note_id = allocate_outbox_id()
+    published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    context = f"{ID}/contexts/" + uuid.uuid4().hex
+    content, tags, mentioned_actors = await markdownify(db_session, source)
+
+    to = [ap.AS_PUBLIC]
+    cc = [f"{BASE_URL}/followers"]
+
+    note = {
+        "@context": ap.AS_EXTENDED_CTX,
+        "type": "Question",
+        "id": outbox_object_id(note_id),
+        "attributedTo": ID,
+        "content": content,
+        "to": to,
+        "cc": cc,
+        "published": published,
+        "context": context,
+        "conversation": context,
+        "url": outbox_object_id(note_id),
+        "tag": tags,
+        "votersCount": 0,
+        "endTime": (now() + timedelta(minutes=5)).isoformat().replace("+00:00", "Z"),
+        "anyOf": [
+            {
+                "type": "Note",
+                "name": "A",
+                "replies": {"type": "Collection", "totalItems": 0},
+            },
+            {
+                "type": "Note",
+                "name": "B",
+                "replies": {"type": "Collection", "totalItems": 0},
+            },
+        ],
+        "summary": None,
+        "sensitive": False,
+    }
+    outbox_object = await save_outbox_object(db_session, note_id, note, source=source)
+    if not outbox_object.id:
+        raise ValueError("Should never happen")
+
+    for tag in tags:
+        if tag["type"] == "Hashtag":
+            tagged_object = models.TaggedOutboxObject(
+                tag=tag["name"][1:],
+                outbox_object_id=outbox_object.id,
+            )
+            db_session.add(tagged_object)
+
+    recipients = await _compute_recipients(db_session, note)
+    for rcp in recipients:
+        await new_outgoing_activity(db_session, rcp, outbox_object.id)
+
+    await db_session.commit()
+    return note_id
+
+
 async def send_update(
     db_session: AsyncSession,
     ap_id: str,

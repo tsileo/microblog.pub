@@ -6,6 +6,7 @@ from fastapi import Request
 from fastapi import UploadFile
 from fastapi.exceptions import HTTPException
 from fastapi.responses import RedirectResponse
+from loguru import logger
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
@@ -681,6 +682,26 @@ async def admin_actions_new(
         request.url_for("outbox_by_public_id", public_id=public_id),
         status_code=302,
     )
+
+
+@router.post("/actions/vote")
+async def admin_actions_vote(
+    request: Request,
+    redirect_url: str = Form(),
+    in_reply_to: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    form_data = await request.form()
+    names = form_data.getlist("name")
+    logger.info(f"{names=}")
+    for name in names:
+        await boxes.send_vote(
+            db_session,
+            in_reply_to=in_reply_to,
+            name=name,
+        )
+    return RedirectResponse(redirect_url, status_code=302)
 
 
 @unauthenticated_router.get("/login")

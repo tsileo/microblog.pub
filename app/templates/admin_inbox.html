@@ -24,7 +24,7 @@
 {% if inbox_object.ap_type == "Announce" %}
     {{ actor_action(inbox_object, "shared") }}
     {{ utils.display_object(inbox_object.relates_to_anybox_object) }}
-{% elif inbox_object.ap_type in ["Article", "Note", "Video"] %}
+{% elif inbox_object.ap_type in ["Article", "Note", "Video", "Page", "Question"] %}
 {{ utils.display_object(inbox_object) }}
 {% elif inbox_object.ap_type == "Follow" %}
     {{ actor_action(inbox_object, "followed you") }}

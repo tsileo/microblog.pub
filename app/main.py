@@ -76,7 +76,7 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - show pending follow request (and prevent double follow?)
+# - prevent double accept/double follow
 # - UI support for updating posts
 # - Article support
 # - Fix tests

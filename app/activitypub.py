@@ -35,6 +35,7 @@ AS_EXTENDED_CTX = [
         "featured": {"@id": "toot:featured", "@type": "@id"},
         "Emoji": "toot:Emoji",
         "blurhash": "toot:blurhash",
+        "votersCount": "toot:votersCount",
         # schema
         "schema": "http://schema.org#",
         "PropertyValue": "schema:PropertyValue",
@@ -281,7 +282,7 @@ def wrap_object(activity: RawObject) -> RawObject:
 
 
 def wrap_object_if_needed(raw_object: RawObject) -> RawObject:
-    if raw_object["type"] in ["Note"]:
+    if raw_object["type"] in ["Note", "Article", "Question"]:
         return wrap_object(raw_object)
 
     return raw_object
