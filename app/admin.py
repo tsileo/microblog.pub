@@ -281,7 +281,7 @@ async def admin_inbox(
 ) -> templates.TemplateResponse:
     where = [
         models.InboxObject.ap_type.not_in(
-            ["Accept", "Delete", "Create", "Update", "Undo", "Read"]
+            ["Accept", "Delete", "Create", "Update", "Undo", "Read", "Add", "Remove"]
         ),
         models.InboxObject.is_deleted.is_(False),
     ]
@@ -695,12 +695,11 @@ async def admin_actions_vote(
     form_data = await request.form()
     names = form_data.getlist("name")
     logger.info(f"{names=}")
-    for name in names:
-        await boxes.send_vote(
-            db_session,
-            in_reply_to=in_reply_to,
-            name=name,
-        )
+    await boxes.send_vote(
+        db_session,
+        in_reply_to=in_reply_to,
+        names=names,
+    )
     return RedirectResponse(redirect_url, status_code=302)
 
 

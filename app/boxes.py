@@ -401,42 +401,48 @@ async def send_create(
 async def send_vote(
     db_session: AsyncSession,
     in_reply_to: str,
-    name: str,
+    names: list[str],
 ) -> str:
-    logger.info(f"Send vote {name}")
-    vote_id = allocate_outbox_id()
+    logger.info(f"Send vote {names}")
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
-    in_reply_to_object = await get_anybox_object_by_ap_id(db_session, in_reply_to)
+    in_reply_to_object = await get_inbox_object_by_ap_id(db_session, in_reply_to)
     if not in_reply_to_object:
         raise ValueError(f"Invalid in reply to {in_reply_to=}")
     if not in_reply_to_object.ap_context:
         raise ValueError("Object has no context")
     context = in_reply_to_object.ap_context
 
+    # TODO: ensure the name are valid?
+
+    # Save the answers
+    in_reply_to_object.voted_for_answers = names
+
     to = [in_reply_to_object.actor.ap_id]
 
-    note = {
-        "@context": ap.AS_EXTENDED_CTX,
-        "type": "Note",
-        "id": outbox_object_id(vote_id),
-        "attributedTo": ID,
-        "name": name,
-        "to": to,
-        "cc": [],
-        "published": published,
-        "context": context,
-        "conversation": context,
-        "url": outbox_object_id(vote_id),
-        "inReplyTo": in_reply_to,
-    }
-    outbox_object = await save_outbox_object(db_session, vote_id, note)
-    if not outbox_object.id:
-        raise ValueError("Should never happen")
+    for name in names:
+        vote_id = allocate_outbox_id()
+        note = {
+            "@context": ap.AS_EXTENDED_CTX,
+            "type": "Note",
+            "id": outbox_object_id(vote_id),
+            "attributedTo": ID,
+            "name": name,
+            "to": to,
+            "cc": [],
+            "published": published,
+            "context": context,
+            "conversation": context,
+            "url": outbox_object_id(vote_id),
+            "inReplyTo": in_reply_to,
+        }
+        outbox_object = await save_outbox_object(db_session, vote_id, note)
+        if not outbox_object.id:
+            raise ValueError("Should never happen")
 
-    recipients = await _compute_recipients(db_session, note)
-    for rcp in recipients:
-        await new_outgoing_activity(db_session, rcp, outbox_object.id)
+        recipients = await _compute_recipients(db_session, note)
+        for rcp in recipients:
+            await new_outgoing_activity(db_session, rcp, outbox_object.id)
 
     await db_session.commit()
     return vote_id

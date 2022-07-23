@@ -11,6 +11,7 @@ from app.actor import LOCAL_ACTOR
 from app.actor import Actor
 from app.actor import RemoteActor
 from app.media import proxied_media_url
+from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
 
 
@@ -189,6 +190,20 @@ class Object:
     @property
     def has_ld_signature(self) -> bool:
         return bool(self.ap_object.get("signature"))
+
+    @property
+    def is_poll_ended(self) -> bool:
+        if "endTime" in self.ap_object:
+            return now() > parse_isoformat(self.ap_object["endTime"])
+        return False
+
+    @cached_property
+    def poll_items(self) -> list[ap.RawObject] | None:
+        return self.ap_object.get("oneOf") or self.ap_object.get("anyOf")
+
+    @cached_property
+    def is_one_of_poll(self) -> bool:
+        return bool(self.ap_object.get("oneOf"))
 
 
 def _to_camel(string: str) -> str:

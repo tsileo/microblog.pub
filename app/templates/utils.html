@@ -292,24 +292,36 @@
     {% endif %}
 
     {% if object.ap_type == "Question" %}
-        {% if object.is_from_inbox %}
+        {% if is_admin and object.is_from_inbox and not object.is_poll_ended and not object.voted_for_answers  %}
             <form action="{{ request.url_for("admin_actions_vote") }}" method="POST">
                 {{ embed_csrf_token() }}
                 {{ embed_redirect_url(object.permalink_id) }}
                 <input type="hidden" name="in_reply_to" value="{{ object.ap_id }}">
         {% endif %}
 
-        {% if object.ap_object.oneOf %}
+        {% if object.poll_items %}
             <ul style="list-style-type: none;padding:0;">
-            {% set items = object.ap_object.oneOf or object.ap_object.anyOf %}
-            {% for item in object.ap_object.oneOf %}
+            {% for item in object.poll_items %}
             <li style="display:block;">
                 {% set pct = item | poll_item_pct(object.ap_object.votersCount) %}
+                {% set can_vote = is_admin and object.is_from_inbox and not object.is_poll_ended and not object.voted_for_answers %}
                 <p style="margin:20px 0 10px 0;">
-                    {% if object.is_from_inbox %}
-                        <input type="radio" name="name" value="{{ item.name }}">
+                    {% if can_vote %}
+                    <input type="{% if object.is_one_of_poll %}radio{% else %}checkbox{% endif %}" name="name" value="{{ item.name }}" id="{{object.permalink_id}}-{{item.name}}">
+                    <label for="{{object.permalink_id}}-{{item.name}}">
                     {% endif %}
-                    {{ item.name | clean_html(object) | safe }} <span style="float:right;">{{ pct }}% <span class="muted">({{ item.replies.totalItems }} votes)</span></span>
+ 
+                    {{ item.name | clean_html(object) | safe }}
+
+                    {% if object.voted_for_answers and item.name in object.voted_for_answers %}
+                    <span class="muted" style="padding-left:20px;">you voted for this answer</span>
+                    {% endif %}
+
+                    {% if can_vote %}
+                    </label>
+                    {% endif %}
+
+                    <span style="float:right;">{{ pct }}% <span class="muted">({{ item.replies.totalItems }} votes)</span></span>
                 </p>
                 <svg class="poll-bar">
                     <line x1="0" y1="10px" x2="{{ pct or 1 }}%" y2="10px" style="stroke-width: 20px;"></line>
@@ -319,7 +331,7 @@
             </ul>
         {% endif %}
 
-        {% if object.is_from_inbox %}
+        {% if can_vote %}
             <p class="form">
                 <input type="submit" value="vote">
             </p>
@@ -345,8 +357,12 @@
         </li>
         {% if object.ap_type == "Question" %}
         {% set endAt = object.ap_object.endTime | parse_datetime %}
-            <li>ends <time title="{{ endAt.replace(microsecond=0).isoformat() }}">{{ endAt | timeago }}</time></li>
-            <li>{{ object.ap_object.votersCount }} voters</li>
+            <li>
+                {% if object.is_poll_ended %}ended{% else %}ends{% endif %} <time title="{{ endAt.replace(microsecond=0).isoformat() }}">{{ endAt | timeago }}</time>
+            </li>
+            <li>
+                {{ object.ap_object.votersCount }} voters
+            </li>
         {% endif %}
         {% if is_admin %}
             <li>
