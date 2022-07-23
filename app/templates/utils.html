@@ -292,7 +292,8 @@
     {% endif %}
 
     {% if object.ap_type == "Question" %}
-        {% if is_admin and object.is_from_inbox and not object.is_poll_ended and not object.voted_for_answers  %}
+        {% set can_vote = is_admin and object.is_from_inbox and not object.is_poll_ended and not object.voted_for_answers %}
+        {% if can_vote %}
             <form action="{{ request.url_for("admin_actions_vote") }}" method="POST">
                 {{ embed_csrf_token() }}
                 {{ embed_redirect_url(object.permalink_id) }}
@@ -304,7 +305,6 @@
             {% for item in object.poll_items %}
             <li style="display:block;">
                 {% set pct = item | poll_item_pct(object.ap_object.votersCount) %}
-                {% set can_vote = is_admin and object.is_from_inbox and not object.is_poll_ended and not object.voted_for_answers %}
                 <p style="margin:20px 0 10px 0;">
                     {% if can_vote %}
                     <input type="{% if object.is_one_of_poll %}radio{% else %}checkbox{% endif %}" name="name" value="{{ item.name }}" id="{{object.permalink_id}}-{{item.name}}">
