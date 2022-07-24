@@ -56,6 +56,7 @@ async def test_new_outgoing_activity(
     outgoing_activity = await new_outgoing_activity(
         async_db_session, inbox_url, outbox_object.id
     )
+    await async_db_session.commit()
 
     assert (
         await async_db_session.execute(select(models.OutgoingActivity))
@@ -105,8 +106,6 @@ def test_process_next_outgoing_activity__webmention(
     db: Session,
     respx_mock: respx.MockRouter,
 ) -> None:
-    # FIXME(ts): fix not passing in CI (but passing in local)
-    return
     # And an outgoing activity
     outbox_object = _setup_outbox_object()
 
@@ -176,7 +175,7 @@ def test_process_next_outgoing_activity__errored(
     )
 
     # And an outgoing activity
-    outgoing_activity = factories.OutgoingActivityFactory(
+    outgoing_activity = factories.OutgoingActivityFactory.create(
         recipient=recipient_inbox_url,
         outbox_object_id=outbox_object.id,
         inbox_object_id=None,
