@@ -24,7 +24,7 @@
 <div class="h-feed">
 <data class="p-name" value="{{ local_actor.display_name}}'s notes"></data>
 {% for outbox_object in objects %}
-{% if outbox_object.ap_type in ["Note", "Article", "Video"] %}
+{% if outbox_object.ap_type in ["Note", "Article", "Video", "Question"] %}
 {{ utils.display_object(outbox_object) }}
 {% elif outbox_object.ap_type == "Announce" %}
 <div class="shared-header"><strong>{{ local_actor.display_name }}</strong> shared</div>

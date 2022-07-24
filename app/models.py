@@ -11,10 +11,12 @@ from sqlalchemy import Column
 from sqlalchemy import DateTime
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
+from sqlalchemy import Index
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import Table
 from sqlalchemy import UniqueConstraint
+from sqlalchemy import text
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import relationship
 
@@ -474,6 +476,44 @@ class Webmention(Base):
                 f"Failed to generate facefile item for Webmention id={self.id}"
             )
             return None
+
+
+class PollAnswer(Base):
+    __tablename__ = "poll_answer"
+    __table_args__ = (
+        # Enforce a single answer for poll/actor/answer
+        UniqueConstraint(
+            "outbox_object_id",
+            "name",
+            "actor_id",
+            name="uix_outbox_object_id_name_actor_id",
+        ),
+        # Enforce an actor can only vote once on a "oneOf" Question
+        Index(
+            "uix_one_of_outbox_object_id_actor_id",
+            "outbox_object_id",
+            "actor_id",
+            unique=True,
+            sqlite_where=text('poll_type = "oneOf"'),
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+
+    outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=False)
+    outbox_object = relationship(OutboxObject, uselist=False)
+
+    # oneOf|anyOf
+    poll_type = Column(String, nullable=False)
+
+    inbox_object_id = Column(Integer, ForeignKey("inbox.id"), nullable=False)
+    inbox_object = relationship(InboxObject, uselist=False)
+
+    actor_id = Column(Integer, ForeignKey("actor.id"), nullable=False)
+    actor = relationship(Actor, uselist=False)
+
+    name = Column(String, nullable=False)
 
 
 @enum.unique
