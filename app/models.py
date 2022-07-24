@@ -116,6 +116,7 @@ class InboxObject(Base, BaseObject):
 
     # Used to mark deleted objects, but also activities that were undone
     is_deleted = Column(Boolean, nullable=False, default=False)
+    is_transient = Column(Boolean, nullable=False, default=False, server_default="0")
 
     replies_count = Column(Integer, nullable=False, default=0)
 
@@ -176,6 +177,7 @@ class OutboxObject(Base, BaseObject):
 
     # For the featured collection
     is_pinned = Column(Boolean, nullable=False, default=False)
+    is_transient = Column(Boolean, nullable=False, default=False, server_default="0")
 
     # Never actually delete from the outbox
     is_deleted = Column(Boolean, nullable=False, default=False)

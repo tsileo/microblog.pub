@@ -284,6 +284,7 @@ async def admin_inbox(
             ["Accept", "Delete", "Create", "Update", "Undo", "Read", "Add", "Remove"]
         ),
         models.InboxObject.is_deleted.is_(False),
+        models.InboxObject.is_transient.is_(False),
     ]
     if filter_by:
         where.append(models.InboxObject.ap_type == filter_by)
@@ -358,6 +359,7 @@ async def admin_outbox(
     where = [
         models.OutboxObject.ap_type.not_in(["Accept", "Delete", "Update"]),
         models.OutboxObject.is_deleted.is_(False),
+        models.OutboxObject.is_transient.is_(False),
     ]
     if filter_by:
         where.append(models.OutboxObject.ap_type == filter_by)
@@ -658,6 +660,7 @@ async def admin_actions_new(
     content_warning: str | None = Form(None),
     is_sensitive: bool = Form(False),
     visibility: str = Form(),
+    poll_type: str | None = Form(None),
     csrf_check: None = Depends(verify_csrf_token),
     db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
@@ -669,14 +672,33 @@ async def admin_actions_new(
             upload = await save_upload(db_session, f)
             uploads.append((upload, f.filename, raw_form_data.get("alt_" + f.filename)))
 
+    ap_type = "Note"
+
+    poll_duration_in_minutes = None
+    if poll_type:
+        ap_type = "Question"
+        answers = []
+        for i in ["1", "2", "3", "4"]:
+            if answer := raw_form_data.get(f"poll_answer_{i}"):
+                answers.append(answer)
+
+        if not answers or len(answers) < 2:
+            raise ValueError("Question must have at least 2 answers")
+
+        poll_duration_in_minutes = int(raw_form_data["poll_duration"])
+
     public_id = await boxes.send_create(
         db_session,
+        ap_type=ap_type,
         source=content,
         uploads=uploads,
         in_reply_to=in_reply_to or None,
         visibility=ap.VisibilityEnum[visibility],
         content_warning=content_warning or None,
         is_sensitive=True if content_warning else is_sensitive,
+        poll_type=poll_type,
+        poll_answers=answers,
+        poll_duration_in_minutes=poll_duration_in_minutes,
     )
     return RedirectResponse(
         request.url_for("outbox_by_public_id", public_id=public_id),

@@ -134,13 +134,16 @@ class Object:
                                 break
         return attachments
 
-    @property
+    @cached_property
     def url(self) -> str | None:
         obj_url = self.ap_object.get("url")
         if isinstance(obj_url, str):
             return obj_url
         elif obj_url:
             for u in ap.as_list(obj_url):
+                if u.get("type") == "Link":
+                    return u["href"]
+
                 if u["mediaType"] == "text/html":
                     return u["href"]
 

@@ -152,6 +152,7 @@ async def post_micropub_endpoint(
 
     public_id = await send_create(
         db_session,
+        "Note",
         content,
         uploads=[],
         in_reply_to=None,

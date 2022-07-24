@@ -291,7 +291,7 @@
         </div>
     {% endif %}
 
-    {% if object.ap_type == "Question" %}
+    {% if object.ap_type == "Question" and (not object.sensitive or (object.sensitive and object.permalink_id in request.query_params.getlist("show_more"))) %}
         {% set can_vote = is_admin and object.is_from_inbox and not object.is_poll_ended and not object.voted_for_answers %}
         {% if can_vote %}
             <form action="{{ request.url_for("admin_actions_vote") }}" method="POST">

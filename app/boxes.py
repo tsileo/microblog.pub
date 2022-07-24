@@ -56,6 +56,7 @@ async def save_outbox_object(
     relates_to_outbox_object_id: int | None = None,
     relates_to_actor_id: int | None = None,
     source: str | None = None,
+    is_transient: bool = False,
 ) -> models.OutboxObject:
     ra = await RemoteObject.from_raw_object(raw_object)
 
@@ -73,6 +74,7 @@ async def save_outbox_object(
         activity_object_ap_id=ra.activity_object_ap_id,
         is_hidden_from_homepage=True if ra.in_reply_to else False,
         source=source,
+        is_transient=is_transient,
     )
     db_session.add(outbox_object)
     await db_session.flush()
@@ -285,12 +287,16 @@ async def send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
 
 async def send_create(
     db_session: AsyncSession,
+    ap_type: str,
     source: str,
     uploads: list[tuple[models.Upload, str, str | None]],
     in_reply_to: str | None,
     visibility: ap.VisibilityEnum,
     content_warning: str | None = None,
     is_sensitive: bool = False,
+    poll_type: str | None = None,
+    poll_answers: list[str] | None = None,
+    poll_duration_in_minutes: int | None = None,
 ) -> str:
     note_id = allocate_outbox_id()
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -336,9 +342,35 @@ async def send_create(
     else:
         raise ValueError(f"Unhandled visibility {visibility}")
 
-    note = {
+    extra_obj_attrs = {}
+    if ap_type == "Question":
+        if not poll_answers or len(poll_answers) < 2:
+            raise ValueError("Question must have at least 2 possible answers")
+
+        if not poll_type:
+            raise ValueError("Mising poll_type")
+
+        if not poll_duration_in_minutes:
+            raise ValueError("Missing poll_duration_in_minutes")
+
+        extra_obj_attrs = {
+            "votersCount": 0,
+            "endTime": (now() + timedelta(minutes=poll_duration_in_minutes))
+            .isoformat()
+            .replace("+00:00", "Z"),
+            poll_type: [
+                {
+                    "type": "Note",
+                    "name": answer,
+                    "replies": {"type": "Collection", "totalItems": 0},
+                }
+                for answer in poll_answers
+            ],
+        }
+
+    obj = {
         "@context": ap.AS_EXTENDED_CTX,
-        "type": "Note",
+        "type": ap_type,
         "id": outbox_object_id(note_id),
         "attributedTo": ID,
         "content": content,
@@ -353,8 +385,9 @@ async def send_create(
         "inReplyTo": in_reply_to,
         "sensitive": is_sensitive,
         "attachment": attachments,
+        **extra_obj_attrs,  # type: ignore
     }
-    outbox_object = await save_outbox_object(db_session, note_id, note, source=source)
+    outbox_object = await save_outbox_object(db_session, note_id, obj, source=source)
     if not outbox_object.id:
         raise ValueError("Should never happen")
 
@@ -375,13 +408,13 @@ async def send_create(
         )
         db_session.add(outbox_object_attachment)
 
-    recipients = await _compute_recipients(db_session, note)
+    recipients = await _compute_recipients(db_session, obj)
     for rcp in recipients:
         await new_outgoing_activity(db_session, rcp, outbox_object.id)
 
     # If the note is public, check if we need to send any webmentions
     if visibility == ap.VisibilityEnum.PUBLIC:
-        possible_targets = opengraph._urls_from_note(note)
+        possible_targets = opengraph._urls_from_note(obj)
         logger.info(f"webmentions possible targert {possible_targets}")
         for target in possible_targets:
             webmention_endpoint = await webmentions.discover_webmention_endpoint(target)
@@ -436,7 +469,9 @@ async def send_vote(
             "url": outbox_object_id(vote_id),
             "inReplyTo": in_reply_to,
         }
-        outbox_object = await save_outbox_object(db_session, vote_id, note)
+        outbox_object = await save_outbox_object(
+            db_session, vote_id, note, is_transient=True
+        )
         if not outbox_object.id:
             raise ValueError("Should never happen")
 
@@ -446,68 +481,6 @@ async def send_vote(
 
     await db_session.commit()
     return vote_id
-
-
-async def send_question(
-    db_session: AsyncSession,
-    source: str,
-) -> str:
-    note_id = allocate_outbox_id()
-    published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    context = f"{ID}/contexts/" + uuid.uuid4().hex
-    content, tags, mentioned_actors = await markdownify(db_session, source)
-
-    to = [ap.AS_PUBLIC]
-    cc = [f"{BASE_URL}/followers"]
-
-    note = {
-        "@context": ap.AS_EXTENDED_CTX,
-        "type": "Question",
-        "id": outbox_object_id(note_id),
-        "attributedTo": ID,
-        "content": content,
-        "to": to,
-        "cc": cc,
-        "published": published,
-        "context": context,
-        "conversation": context,
-        "url": outbox_object_id(note_id),
-        "tag": tags,
-        "votersCount": 0,
-        "endTime": (now() + timedelta(minutes=5)).isoformat().replace("+00:00", "Z"),
-        "oneOf": [
-            {
-                "type": "Note",
-                "name": "A",
-                "replies": {"type": "Collection", "totalItems": 0},
-            },
-            {
-                "type": "Note",
-                "name": "B",
-                "replies": {"type": "Collection", "totalItems": 0},
-            },
-        ],
-        "summary": None,
-        "sensitive": False,
-    }
-    outbox_object = await save_outbox_object(db_session, note_id, note, source=source)
-    if not outbox_object.id:
-        raise ValueError("Should never happen")
-
-    for tag in tags:
-        if tag["type"] == "Hashtag":
-            tagged_object = models.TaggedOutboxObject(
-                tag=tag["name"][1:],
-                outbox_object_id=outbox_object.id,
-            )
-            db_session.add(tagged_object)
-
-    recipients = await _compute_recipients(db_session, note)
-    for rcp in recipients:
-        await new_outgoing_activity(db_session, rcp, outbox_object.id)
-
-    await db_session.commit()
-    return note_id
 
 
 async def send_update(
@@ -989,7 +962,11 @@ async def _process_note_object(
 
     is_from_following = ro.actor.ap_id in {f.ap_actor_id for f in following}
     is_reply = bool(ro.in_reply_to)
-    is_local_reply = ro.in_reply_to and ro.in_reply_to.startswith(BASE_URL)
+    is_local_reply = (
+        ro.in_reply_to
+        and ro.in_reply_to.startswith(BASE_URL)
+        and ro.content  # Hide votes from Question
+    )
     is_mention = False
     tags = ro.ap_object.get("tag", [])
     for tag in ap.as_list(tags):
@@ -1099,6 +1076,7 @@ async def _handle_vote_answer(
         logger.warning(f"Invalid answer {answer_name=}")
         return
 
+    answer.is_transient = True
     poll_answer = models.PollAnswer(
         outbox_object_id=question.id,
         poll_type="oneOf" if question.is_one_of_poll else "anyOf",
