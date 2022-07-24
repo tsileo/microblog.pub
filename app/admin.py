@@ -675,14 +675,15 @@ async def admin_actions_new(
     ap_type = "Note"
 
     poll_duration_in_minutes = None
+    poll_answers = None
     if poll_type:
         ap_type = "Question"
-        answers = []
+        poll_answers = []
         for i in ["1", "2", "3", "4"]:
             if answer := raw_form_data.get(f"poll_answer_{i}"):
-                answers.append(answer)
+                poll_answers.append(answer)
 
-        if not answers or len(answers) < 2:
+        if not poll_answers or len(poll_answers) < 2:
             raise ValueError("Question must have at least 2 answers")
 
         poll_duration_in_minutes = int(raw_form_data["poll_duration"])
@@ -697,7 +698,7 @@ async def admin_actions_new(
         content_warning=content_warning or None,
         is_sensitive=True if content_warning else is_sensitive,
         poll_type=poll_type,
-        poll_answers=answers,
+        poll_answers=poll_answers,
         poll_duration_in_minutes=poll_duration_in_minutes,
     )
     return RedirectResponse(
