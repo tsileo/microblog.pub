@@ -156,7 +156,7 @@
 <nav class="flexbox box">
 <ul>
     <li>Filter by</li>
-{% for ap_type in ["Note", "Like", "Announce", "Follow"] %}
+{% for ap_type in ["Note", "Article", "Page", "Question", "Like", "Announce", "Follow"] %}
     <li><a href="{{ url_for(route) }}?filter_by={{ ap_type }}" {% if request.query_params.filter_by == ap_type %}class="active"{% endif %}>
         {{ ap_type }}
         </a>
