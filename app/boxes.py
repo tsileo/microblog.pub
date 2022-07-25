@@ -297,6 +297,7 @@ async def send_create(
     poll_type: str | None = None,
     poll_answers: list[str] | None = None,
     poll_duration_in_minutes: int | None = None,
+    name: str | None = None,
 ) -> str:
     note_id = allocate_outbox_id()
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -367,6 +368,11 @@ async def send_create(
                 for answer in poll_answers
             ],
         }
+    elif ap_type == "Article":
+        if not name:
+            raise ValueError("Article must have a name")
+
+        extra_obj_attrs = {"name": name}
 
     obj = {
         "@context": ap.AS_EXTENDED_CTX,

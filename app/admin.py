@@ -661,6 +661,7 @@ async def admin_actions_new(
     is_sensitive: bool = Form(False),
     visibility: str = Form(),
     poll_type: str | None = Form(None),
+    name: str | None = Form(None),
     csrf_check: None = Depends(verify_csrf_token),
     db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
@@ -687,6 +688,8 @@ async def admin_actions_new(
             raise ValueError("Question must have at least 2 answers")
 
         poll_duration_in_minutes = int(raw_form_data["poll_duration"])
+    elif name:
+        ap_type = "Article"
 
     public_id = await boxes.send_create(
         db_session,
@@ -700,6 +703,7 @@ async def admin_actions_new(
         poll_type=poll_type,
         poll_answers=poll_answers,
         poll_duration_in_minutes=poll_duration_in_minutes,
+        name=name,
     )
     return RedirectResponse(
         request.url_for("outbox_by_public_id", public_id=public_id),

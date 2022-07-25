@@ -215,6 +215,7 @@ async def index(
         models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
         models.OutboxObject.is_deleted.is_(False),
         models.OutboxObject.is_hidden_from_homepage.is_(False),
+        models.OutboxObject.ap_type != "Article",
     )
     q = select(models.OutboxObject).where(*where)
     total_count = await db_session.scalar(
@@ -253,6 +254,51 @@ async def index(
             "current_page": page,
             "has_next_page": page_offset + len(outbox_objects) < total_count,
             "has_previous_page": page > 1,
+        },
+    )
+
+
+@app.get("/articles")
+async def articles(
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+    _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
+    page: int | None = None,
+) -> templates.TemplateResponse | ActivityPubResponse:
+    # TODO: special ActivityPub collection for Article
+
+    where = (
+        models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+        models.OutboxObject.is_deleted.is_(False),
+        models.OutboxObject.is_hidden_from_homepage.is_(False),
+        models.OutboxObject.ap_type == "Article",
+    )
+    q = select(models.OutboxObject).where(*where)
+
+    outbox_objects_result = await db_session.scalars(
+        q.options(
+            joinedload(models.OutboxObject.outbox_object_attachments).options(
+                joinedload(models.OutboxObjectAttachment.upload)
+            ),
+            joinedload(models.OutboxObject.relates_to_inbox_object).options(
+                joinedload(models.InboxObject.actor),
+            ),
+            joinedload(models.OutboxObject.relates_to_outbox_object).options(
+                joinedload(models.OutboxObject.outbox_object_attachments).options(
+                    joinedload(models.OutboxObjectAttachment.upload)
+                ),
+            ),
+        ).order_by(models.OutboxObject.ap_published_at.desc())
+    )
+    outbox_objects = outbox_objects_result.unique().all()
+
+    return await templates.render_template(
+        db_session,
+        request,
+        "articles.html",
+        {
+            "request": request,
+            "objects": outbox_objects,
         },
     )
 

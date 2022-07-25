@@ -4,14 +4,14 @@
 {% block head %}
 {% if outbox_object %}
 {% set excerpt = outbox_object.content | html2text | trim | truncate(50) %}
-<title>{{ local_actor.display_name }}: "{{ excerpt }}"</title>
+<title>{% if outbox_object.name %}{{ outbox_object.name }}{% else %}{{ local_actor.display_name }}: "{{ excerpt }}"{% endif %}</title>
 <link rel="webmention" href="{{ url_for("webmention_endpoint") }}">
 <link rel="alternate" href="{{ request.url }}" type="application/activity+json">
 <meta name="description" content="{{ excerpt }}">
 <meta content="article" property="og:type" />
 <meta content="{{ outbox_object.url }}" property="og:url" />
 <meta content="{{ local_actor.display_name }}'s microblog" property="og:site_name" />
-<meta content="Note" property="og:title" />
+<meta content="{% if outbox_object.name %}{{ name }}{% else %}Note{% endif %}" property="og:title" />
 <meta content="{{ excerpt }}" property="og:description" />
 <meta content="{{ local_actor.icon_url }}" property="og:image" />
 <meta content="summary" property="twitter:card" />
@@ -24,7 +24,7 @@
 {% macro display_replies_tree(replies_tree_node) %}
 
 {% if replies_tree_node.is_requested %}
-{{ utils.display_object(replies_tree_node.ap_object, likes=likes, shares=shares, webmentions=webmentions, expanded=not replies_tree_node.is_root) }}
+{{ utils.display_object(replies_tree_node.ap_object, likes=likes, shares=shares, webmentions=webmentions, expanded=not replies_tree_node.is_root, is_object_page=True) }}
 {% else %}
     {{ utils.display_object(replies_tree_node.ap_object) }}
 {% endif %}

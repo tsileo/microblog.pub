@@ -15,7 +15,7 @@
 <div class="box">
 <nav class="flexbox">
 <ul>
-{% for ap_type in ["Note", "Question"] %}
+{% for ap_type in ["Note", "Article", "Question"] %}
 <li><a href="?type={{ ap_type }}" {% if request.query_params.get("type", "Note") == ap_type %}class="active"{% endif %}>
         {{ ap_type }}
         </a>
@@ -35,6 +35,13 @@
         {% endfor %}
     </select>
     </p>
+
+    {% if request.query_params.type == "Article" %}
+    <p>
+        <input type="text" style="width:95%" name="name" placeholder="Title">     
+    </p>
+    {% endif %}
+
     {% for emoji in emojis %}
     <span class="ji">{{ emoji | emojify(True) | safe }}</span>
     {% endfor %}

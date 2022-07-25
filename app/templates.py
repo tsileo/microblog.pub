@@ -109,6 +109,14 @@ async def render_template(
             )
             if is_admin
             else 0,
+            "articles_count": await db_session.scalar(
+                select(func.count(models.OutboxObject.id)).where(
+                    models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+                    models.OutboxObject.is_deleted.is_(False),
+                    models.OutboxObject.is_hidden_from_homepage.is_(False),
+                    models.OutboxObject.ap_type == "Article",
+                )
+            ),
             "local_actor": LOCAL_ACTOR,
             "followers_count": await db_session.scalar(
                 select(func.count(models.Follower.id))

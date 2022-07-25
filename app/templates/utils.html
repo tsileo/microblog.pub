@@ -263,16 +263,35 @@
   {% endif %}
 {% endmacro %}
 
-{% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}) %}
+{% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}, is_object_page=False) %}
+{% set is_article_mode = object.is_from_outbox and object.ap_type == "Article" and is_object_page %}
 {% if object.ap_type in ["Note", "Article", "Video", "Page", "Question"] %}
 <div class="ap-object {% if expanded %}ap-object-expanded {% endif %}h-entry" id="{{ object.permalink_id }}">
+
+    {% if is_article_mode %}
+    <data class="h-card">
+        <data class="u-photo" value="{{ local_actor.icon_url }}"></data>
+        <data class="u-url" value="{{ local_actor.url}}"></data>
+        <data class="p-name" value="{{ local_actor.handle }}"></data>
+    </data>
+    {% else %}
     {{ display_actor(object.actor, actors_metadata, embedded=True) }}
+    {% endif %}
 
     {% if object.in_reply_to %}
         <a href="{% if is_admin %}{{ url_for("get_lookup") }}?query={% endif %}{{ object.in_reply_to }}" title="{{ object.in_reply_to }}" class="in-reply-to" rel="nofollow">
             in reply to {{ object.in_reply_to|truncate(64, True) }}
         </a>
     {% endif %}
+
+    {% if object.ap_type == "Article" %}
+        <h2 class="p-name" style="margin-top:0;">{{ object.name }}</h2>
+    {% endif %}
+
+    {% if is_article_mode %}
+                <time class="dt-published muted" datetime="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}" title="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}">{{ object.ap_published_at.strftime("%b %d, %Y") }}</time>
+    {% endif %}
+
 
     {% if object.summary %}
         <p class="p-summary">{{ object.summary | clean_html(object) | safe }}</p>
@@ -352,9 +371,11 @@
         <li>
             <div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">permalink</a></div>
         </li>
-        <li>
-            <time class="dt-published" datetime="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}" title="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}">{{ object.ap_published_at | timeago }}</time>
-        </li>
+        {% if not is_article_mode %}
+            <li>
+                <time class="dt-published" datetime="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}" title="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}">{{ object.ap_published_at | timeago }}</time>
+            </li>
+        {% endif %}
         {% if object.ap_type == "Question" %}
         {% set endAt = object.ap_object.endTime | parse_datetime %}
             <li>
