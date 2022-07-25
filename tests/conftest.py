@@ -24,10 +24,12 @@ async def async_db_session():
 @pytest.fixture
 def db() -> Generator:
     Base.metadata.create_all(bind=engine)
-    try:
-        yield _Session
-    finally:
-        Base.metadata.drop_all(bind=engine)
+    with _Session() as db_session:
+        try:
+            yield db_session
+        finally:
+            db_session.close()
+            Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
