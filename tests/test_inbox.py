@@ -3,6 +3,7 @@ from uuid import uuid4
 import httpx
 import respx
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import activitypub as ap
@@ -13,7 +14,9 @@ from app.incoming_activities import process_next_incoming_activity
 from tests import factories
 from tests.utils import mock_httpsig_checker
 from tests.utils import run_async
+from tests.utils import setup_inbox_delete
 from tests.utils import setup_remote_actor
+from tests.utils import setup_remote_actor_as_follower
 
 
 def test_inbox_requires_httpsig(
@@ -41,7 +44,7 @@ def test_inbox_follow_request(
     )
     respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra.ap_actor))
 
-    # When sending a Follow activity
+    # When receiving a Follow activity
     follow_activity = RemoteObject(
         factories.build_follow_activity(
             from_remote_actor=ra,
@@ -108,7 +111,7 @@ def test_inbox_accept_follow_request(
         follow_id, follow_from_outbox
     )
 
-    # When sending a Accept activity
+    # When receiving a Accept activity
     accept_activity = RemoteObject(
         factories.build_accept_activity(
             from_remote_actor=ra,
@@ -137,3 +140,111 @@ def test_inbox_accept_follow_request(
     # And a following entry was created internally
     following = db.query(models.Following).one()
     assert following.ap_actor_id == actor_in_db.ap_id
+
+
+def test_inbox__create_from_follower(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # Given a remote actor
+    ra = setup_remote_actor(respx_mock)
+
+    # Who is also a follower
+    setup_remote_actor_as_follower(ra)
+
+    create_activity = factories.build_create_activity(
+        factories.build_note_object(
+            from_remote_actor=ra,
+            outbox_public_id=str(uuid4()),
+            content="Hello",
+            to=[LOCAL_ACTOR.ap_id],
+        )
+    )
+
+    # When receiving a Create activity
+    ro = RemoteObject(create_activity, ra)
+
+    with mock_httpsig_checker(ra):
+        response = client.post(
+            "/inbox",
+            headers={"Content-Type": ap.AS_CTX},
+            json=ro.ap_object,
+        )
+
+    # Then the server returns a 204
+    assert response.status_code == 202
+
+    # And when processing the incoming activity
+    run_async(process_next_incoming_activity)
+
+    # Then the Create activity was saved
+    create_activity_from_inbox: models.InboxObject | None = db.execute(
+        select(models.InboxObject).where(models.InboxObject.ap_type == "Create")
+    ).scalar_one_or_none()
+    assert create_activity_from_inbox
+    assert create_activity_from_inbox.ap_id == ro.ap_id
+
+    # And the Note object was created
+    note_activity_from_inbox: models.InboxObject | None = db.execute(
+        select(models.InboxObject).where(models.InboxObject.ap_type == "Note")
+    ).scalar_one_or_none()
+    assert note_activity_from_inbox
+    assert note_activity_from_inbox.ap_id == ro.activity_object_ap_id
+
+
+def test_inbox__create_already_deleted_object(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # Given a remote actor
+    ra = setup_remote_actor(respx_mock)
+
+    # Who is also a follower
+    follower = setup_remote_actor_as_follower(ra)
+
+    # And a Create activity for a Note object
+    create_activity = factories.build_create_activity(
+        factories.build_note_object(
+            from_remote_actor=ra,
+            outbox_public_id=str(uuid4()),
+            content="Hello",
+            to=[LOCAL_ACTOR.ap_id],
+        )
+    )
+    ro = RemoteObject(create_activity, ra)
+
+    # And a Delete activity received for the create object
+    setup_inbox_delete(follower.actor, ro.activity_object_ap_id)  # type: ignore
+
+    # When receiving a Create activity
+    with mock_httpsig_checker(ra):
+        response = client.post(
+            "/inbox",
+            headers={"Content-Type": ap.AS_CTX},
+            json=ro.ap_object,
+        )
+
+    # Then the server returns a 204
+    assert response.status_code == 202
+
+    # And when processing the incoming activity
+    run_async(process_next_incoming_activity)
+
+    # Then the Create activity was saved
+    create_activity_from_inbox: models.InboxObject | None = db.execute(
+        select(models.InboxObject).where(models.InboxObject.ap_type == "Create")
+    ).scalar_one_or_none()
+    assert create_activity_from_inbox
+    assert create_activity_from_inbox.ap_id == ro.ap_id
+    # But it has the deleted flag
+    assert create_activity_from_inbox.is_deleted is True
+
+    # And the Note wasn't created
+    assert (
+        db.execute(
+            select(models.InboxObject).where(models.InboxObject.ap_type == "Note")
+        ).scalar_one_or_none()
+        is None
+    )

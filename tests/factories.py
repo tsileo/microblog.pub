@@ -36,6 +36,24 @@ def build_follow_activity(
     }
 
 
+def build_delete_activity(
+    from_remote_actor: actor.RemoteActor | models.Actor,
+    deleted_object_ap_id: str,
+    outbox_public_id: str | None = None,
+) -> ap.RawObject:
+    return {
+        "@context": ap.AS_CTX,
+        "type": "Delete",
+        "id": (
+            from_remote_actor.ap_id  # type: ignore
+            + "/follow/"
+            + (outbox_public_id or uuid4().hex)
+        ),
+        "actor": from_remote_actor.ap_id,
+        "object": deleted_object_ap_id,
+    }
+
+
 def build_accept_activity(
     from_remote_actor: actor.RemoteActor,
     for_remote_object: RemoteObject,
@@ -77,6 +95,19 @@ def build_note_object(
         "summary": None,
         "inReplyTo": None,
         "sensitive": False,
+    }
+
+
+def build_create_activity(obj: ap.RawObject) -> ap.RawObject:
+    return {
+        "@context": ap.AS_EXTENDED_CTX,
+        "actor": obj["attributedTo"],
+        "to": obj.get("to", []),
+        "cc": obj.get("cc", []),
+        "id": obj["id"] + "/activity",
+        "object": ap.remove_context(obj),
+        "published": obj["published"],
+        "type": "Create",
     }
 
 

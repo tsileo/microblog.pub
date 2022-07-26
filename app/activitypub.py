@@ -261,7 +261,7 @@ async def get_object(activity: RawObject) -> RawObject:
 
 
 def wrap_object(activity: RawObject) -> RawObject:
-    # TODO(ts): improve Create VS Update
+    # TODO(tsileo): improve Create VS Update with a `update=True` flag
     if "updated" in activity:
         return {
             "@context": AS_EXTENDED_CTX,

@@ -73,6 +73,22 @@ def setup_remote_actor_as_follower(ra: actor.RemoteActor) -> models.Follower:
     return follower
 
 
+def setup_inbox_delete(
+    actor: models.Actor, deleted_object_ap_id: str
+) -> models.InboxObject:
+    follow_from_inbox = RemoteObject(
+        factories.build_delete_activity(
+            from_remote_actor=actor,
+            deleted_object_ap_id=deleted_object_ap_id,
+        ),
+        actor,
+    )
+    inbox_object = factories.InboxObjectFactory.from_remote_object(
+        follow_from_inbox, actor
+    )
+    return inbox_object
+
+
 def run_async(func, *args, **kwargs):
     async def _func():
         async with async_session() as db:

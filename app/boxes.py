@@ -654,6 +654,25 @@ async def get_inbox_object_by_ap_id(
     ).scalar_one_or_none()  # type: ignore
 
 
+async def get_inbox_delete_for_activity_object_ap_id(
+    db_session: AsyncSession, activity_object_ap_id: str
+) -> models.InboxObject | None:
+    return (
+        await db_session.execute(
+            select(models.InboxObject)
+            .where(
+                models.InboxObject.ap_type == "Delete",
+                models.InboxObject.activity_object_ap_id == activity_object_ap_id,
+            )
+            .options(
+                joinedload(models.InboxObject.actor),
+                joinedload(models.InboxObject.relates_to_inbox_object),
+                joinedload(models.InboxObject.relates_to_outbox_object),
+            )
+        )
+    ).scalar_one_or_none()  # type: ignore
+
+
 async def get_outbox_object_by_ap_id(
     db_session: AsyncSession, ap_id: str
 ) -> models.OutboxObject | None:
@@ -695,8 +714,16 @@ async def _handle_delete_activity(
     db_session: AsyncSession,
     from_actor: models.Actor,
     delete_activity: models.InboxObject,
-    ap_object_to_delete: models.InboxObject,
+    ap_object_to_delete: models.InboxObject | None,
 ) -> None:
+    if ap_object_to_delete is None:
+        logger.info(
+            "Received Delete for an unknown object "
+            f"{delete_activity.activity_object_ap_id}"
+        )
+        # TODO(tsileo): support deleting actor
+        return
+
     if from_actor.ap_id != ap_object_to_delete.actor.ap_id:
         logger.warning(
             "Actor mismatch between the activity and the object: "
@@ -724,11 +751,18 @@ async def _handle_delete_activity(
     logger.info(f"Deleting {ap_object_to_delete.ap_type}/{ap_object_to_delete.ap_id}")
     ap_object_to_delete.is_deleted = True
 
+    await _revert_side_effect_for_deleted_object(db_session, ap_object_to_delete)
+
+
+async def _revert_side_effect_for_deleted_object(
+    db_session: AsyncSession,
+    deleted_ap_object: models.InboxObject,
+) -> None:
     # Decrement the replies counter if needed
-    if ap_object_to_delete.in_reply_to:
+    if deleted_ap_object.in_reply_to:
         replied_object = await get_anybox_object_by_ap_id(
             db_session,
-            ap_object_to_delete.in_reply_to,
+            deleted_ap_object.in_reply_to,
         )
         if replied_object:
             if replied_object.is_from_outbox:
@@ -928,6 +962,24 @@ async def _handle_create_activity(
         raise ValueError("Object actor does not match activity")
 
     ro = RemoteObject(wrapped_object, actor=from_actor)
+
+    # Check if we already received a delete for this object (happens often
+    # with forwarded replies)
+    delete_object = await get_inbox_delete_for_activity_object_ap_id(
+        db_session,
+        ro.ap_id,
+    )
+    if delete_object:
+        if delete_object.actor.ap_id != from_actor.ap_id:
+            logger.warning(
+                f"Got a Delete for {ro.ap_id} from {delete_object.actor.ap_id}??"
+            )
+        else:
+            logger.info("Got a Delete for this object, deleting activity")
+            create_activity.is_deleted = True
+            await db_session.flush()
+            return None
+
     await _process_note_object(db_session, create_activity, from_actor, ro)
 
 
@@ -1251,19 +1303,12 @@ async def save_to_inbox(
     elif activity_ro.ap_type == "Update":
         await _handle_update_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Delete":
-        if relates_to_inbox_object:
-            await _handle_delete_activity(
-                db_session,
-                actor,
-                inbox_object,
-                relates_to_inbox_object,
-            )
-        else:
-            # TODO(ts): handle delete actor
-            logger.info(
-                "Received a Delete for an unknown object: "
-                f"{activity_ro.activity_object_ap_id}"
-            )
+        await _handle_delete_activity(
+            db_session,
+            actor,
+            inbox_object,
+            relates_to_inbox_object,
+        )
     elif activity_ro.ap_type == "Follow":
         await _handle_follow_follow_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Undo":
