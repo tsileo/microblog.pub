@@ -1,20 +1,16 @@
 from unittest import mock
-from uuid import uuid4
 
-import httpx
 import respx
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app import activitypub as ap
-from app import actor
 from app import models
 from app import webfinger
-from app.actor import LOCAL_ACTOR
-from app.ap_object import RemoteObject
 from app.config import generate_csrf_token
-from tests import factories
 from tests.utils import generate_admin_session_cookies
+from tests.utils import setup_remote_actor
+from tests.utils import setup_remote_actor_as_follower
 
 
 def test_outbox__no_activities(
@@ -30,47 +26,13 @@ def test_outbox__no_activities(
     assert json_response["orderedItems"] == []
 
 
-def _setup_remote_actor(respx_mock: respx.MockRouter) -> actor.RemoteActor:
-    ra = factories.RemoteActorFactory(
-        base_url="https://example.com",
-        username="toto",
-        public_key="pk",
-    )
-    respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra.ap_actor))
-    return ra
-
-
-def _remote_actor_as_follower(ra: actor.RemoteActor) -> models.Follower:
-    actor = factories.ActorFactory.from_remote_actor(ra)
-
-    follow_id = uuid4().hex
-    follow_from_inbox = RemoteObject(
-        factories.build_follow_activity(
-            from_remote_actor=ra,
-            for_remote_actor=LOCAL_ACTOR,
-            outbox_public_id=follow_id,
-        ),
-        ra,
-    )
-    inbox_object = factories.InboxObjectFactory.from_remote_object(
-        follow_from_inbox, actor
-    )
-
-    follower = factories.FollowerFactory(
-        inbox_object_id=inbox_object.id,
-        actor_id=actor.id,
-        ap_actor_id=actor.ap_id,
-    )
-    return follower
-
-
 def test_send_follow_request(
     db: Session,
     client: TestClient,
     respx_mock: respx.MockRouter,
 ) -> None:
     # given a remote actor
-    ra = _setup_remote_actor(respx_mock)
+    ra = setup_remote_actor(respx_mock)
 
     response = client.post(
         "/admin/actions/follow",
@@ -103,7 +65,7 @@ def test_send_create_activity__no_followers_and_with_mention(
     respx_mock: respx.MockRouter,
 ) -> None:
     # given a remote actor
-    ra = _setup_remote_actor(respx_mock)
+    ra = setup_remote_actor(respx_mock)
 
     with mock.patch.object(webfinger, "get_actor_url", return_value=ra.ap_id):
         response = client.post(
@@ -136,10 +98,10 @@ def test_send_create_activity__with_followers(
     respx_mock: respx.MockRouter,
 ) -> None:
     # given a remote actor
-    ra = _setup_remote_actor(respx_mock)
+    ra = setup_remote_actor(respx_mock)
 
     # who is a follower
-    follower = _remote_actor_as_follower(ra)
+    follower = setup_remote_actor_as_follower(ra)
 
     with mock.patch.object(webfinger, "get_actor_url", return_value=ra.ap_id):
         response = client.post(
@@ -172,10 +134,10 @@ def test_send_create_activity__question__one_of(
     respx_mock: respx.MockRouter,
 ) -> None:
     # given a remote actor
-    ra = _setup_remote_actor(respx_mock)
+    ra = setup_remote_actor(respx_mock)
 
     # who is a follower
-    follower = _remote_actor_as_follower(ra)
+    follower = setup_remote_actor_as_follower(ra)
 
     with mock.patch.object(webfinger, "get_actor_url", return_value=ra.ap_id):
         response = client.post(
@@ -216,10 +178,10 @@ def test_send_create_activity__question__any_of(
     respx_mock: respx.MockRouter,
 ) -> None:
     # given a remote actor
-    ra = _setup_remote_actor(respx_mock)
+    ra = setup_remote_actor(respx_mock)
 
     # who is a follower
-    follower = _remote_actor_as_follower(ra)
+    follower = setup_remote_actor_as_follower(ra)
 
     with mock.patch.object(webfinger, "get_actor_url", return_value=ra.ap_id):
         response = client.post(
@@ -262,10 +224,10 @@ def test_send_create_activity__article(
     respx_mock: respx.MockRouter,
 ) -> None:
     # given a remote actor
-    ra = _setup_remote_actor(respx_mock)
+    ra = setup_remote_actor(respx_mock)
 
     # who is a follower
-    follower = _remote_actor_as_follower(ra)
+    follower = setup_remote_actor_as_follower(ra)
 
     with mock.patch.object(webfinger, "get_actor_url", return_value=ra.ap_id):
         response = client.post(

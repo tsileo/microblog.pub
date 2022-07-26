@@ -9,8 +9,11 @@ from app import activitypub as ap
 from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import RemoteObject
+from app.incoming_activities import process_next_incoming_activity
 from tests import factories
 from tests.utils import mock_httpsig_checker
+from tests.utils import run_async
+from tests.utils import setup_remote_actor
 
 
 def test_inbox_requires_httpsig(
@@ -56,8 +59,7 @@ def test_inbox_follow_request(
     # Then the server returns a 204
     assert response.status_code == 202
 
-    # TODO: processing incoming activity instead
-    return
+    run_async(process_next_incoming_activity)
 
     # And the actor was saved in DB
     saved_actor = db.query(models.Actor).one()
@@ -89,12 +91,7 @@ def test_inbox_accept_follow_request(
     respx_mock: respx.MockRouter,
 ) -> None:
     # Given a remote actor
-    ra = factories.RemoteActorFactory(
-        base_url="https://example.com",
-        username="toto",
-        public_key="pk",
-    )
-    respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra.ap_actor))
+    ra = setup_remote_actor(respx_mock)
     actor_in_db = factories.ActorFactory.from_remote_actor(ra)
 
     # And a Follow activity in the outbox
@@ -129,8 +126,7 @@ def test_inbox_accept_follow_request(
     # Then the server returns a 204
     assert response.status_code == 202
 
-    # TODO: processing incoming activity instead
-    return
+    run_async(process_next_incoming_activity)
 
     # And the Accept activity was saved in the inbox
     inbox_activity = db.query(models.InboxObject).one()
