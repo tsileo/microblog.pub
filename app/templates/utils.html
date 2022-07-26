@@ -297,12 +297,12 @@
         <p class="p-summary">{{ object.summary | clean_html(object) | safe }}</p>
     {% endif %}
 
-    {% if object.sensitive and object.summary and object.permalink_id not in request.query_params.getlist("show_more") %}
+    {% if object.sensitive and object.permalink_id not in request.query_params.getlist("show_more") %}
         {{ show_more_button(object.permalink_id) }} 
     {% endif %}
 
-    {% if not object.sensitive or (object.sensitive and object.summary and object.permalink_id in request.query_params.getlist("show_more")) %}
-        {% if object.sensitive and object.summary %}
+    {% if not object.sensitive or (object.sensitive and object.permalink_id in request.query_params.getlist("show_more")) %}
+        {% if object.sensitive %}
             {{ show_less_button(object.permalink_id) }} 
         {% endif %}
         <div class="e-content">

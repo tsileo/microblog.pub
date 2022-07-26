@@ -79,7 +79,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # - prevent double accept/double follow
 # - UI support for updating posts
 # - Article support
-# - Fix tests
 # - Fix SQL tx in the codebase
 # - indieauth tweaks
 # - API for posting notes

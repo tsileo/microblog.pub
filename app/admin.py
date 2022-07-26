@@ -1,3 +1,4 @@
+import httpx
 from fastapi import APIRouter
 from fastapi import Cookie
 from fastapi import Depends
@@ -78,6 +79,7 @@ async def get_lookup(
     query: str | None = None,
     db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse | RedirectResponse:
+    error = None
     ap_object = None
     actors_metadata = {}
     if query:
@@ -94,16 +96,24 @@ async def get_lookup(
             )
         # TODO(ts): redirect to admin_profile if the actor is in DB
 
-        ap_object = await lookup(db_session, query)
-        if ap_object.ap_type in ap.ACTOR_TYPES:
-            actors_metadata = await get_actors_metadata(
-                db_session, [ap_object]  # type: ignore
-            )
+        try:
+            ap_object = await lookup(db_session, query)
+        except httpx.TimeoutException:
+            error = ap.FetchErrorTypeEnum.TIMEOUT
+        except (ap.ObjectNotFoundError, ap.ObjectIsGoneError):
+            error = ap.FetchErrorTypeEnum.NOT_FOUND
+        except Exception:
+            logger.exception(f"Failed to lookup {query}")
+            error = ap.FetchErrorTypeEnum.INTERNAL_ERROR
         else:
-            actors_metadata = await get_actors_metadata(
-                db_session, [ap_object.actor]  # type: ignore
-            )
-        print(ap_object)
+            if ap_object.ap_type in ap.ACTOR_TYPES:
+                actors_metadata = await get_actors_metadata(
+                    db_session, [ap_object]  # type: ignore
+                )
+            else:
+                actors_metadata = await get_actors_metadata(
+                    db_session, [ap_object.actor]  # type: ignore
+                )
     return await templates.render_template(
         db_session,
         request,
@@ -112,6 +122,7 @@ async def get_lookup(
             "query": query,
             "ap_object": ap_object,
             "actors_metadata": actors_metadata,
+            "error": error,
         },
     )
 

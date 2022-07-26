@@ -55,6 +55,12 @@ class ObjectNotFoundError(Exception):
     pass
 
 
+class FetchErrorTypeEnum(str, enum.Enum):
+    TIMEOUT = "TIMEOUT"
+    NOT_FOUND = "NOT_FOUND"
+    INTERNAL_ERROR = "INTERNAL_ERROR"
+
+
 class VisibilityEnum(str, enum.Enum):
     PUBLIC = "public"
     UNLISTED = "unlisted"
