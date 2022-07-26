@@ -281,7 +281,7 @@ class Follower(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, default=now)
 
     actor_id = Column(Integer, ForeignKey("actor.id"), nullable=False, unique=True)
-    actor = relationship(Actor, uselist=False)
+    actor: Mapped[Actor] = relationship(Actor, uselist=False)
 
     inbox_object_id = Column(Integer, ForeignKey("inbox.id"), nullable=False)
     inbox_object = relationship(InboxObject, uselist=False)

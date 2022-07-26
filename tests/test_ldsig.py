@@ -1,7 +1,5 @@
 from copy import deepcopy
 
-import pytest
-
 from app import activitypub as ap
 from app import ldsig
 from app.key import Key
@@ -30,7 +28,6 @@ _SAMPLE_CREATE = {
 }
 
 
-@pytest.mark.skip(reason="Working but slow")
 def test_linked_data_sig():
     privkey, pubkey = factories.generate_key()
     ra = factories.RemoteActorFactory(
