@@ -196,7 +196,7 @@
     </a>
 </div>
 
-{% if actor.summary %}
+{% if with_details and actor.summary %}
     <div class="p-note">
         {{ actor.summary | clean_html(actor) | safe }}
     </div>
