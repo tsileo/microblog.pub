@@ -1423,7 +1423,14 @@ async def save_to_inbox(
                 db_session.add(announced_inbox_object)
                 await db_session.flush()
                 inbox_object.relates_to_inbox_object_id = announced_inbox_object.id
-                inbox_object.is_hidden_from_stream = False
+
+                # Only show the announce in the stream if it comes from an actor
+                # in the following collection
+                followings = await _get_following(db_session)
+                is_from_following = inbox_object.actor.ap_id in {
+                    f.ap_actor_id for f in followings
+                }
+                inbox_object.is_hidden_from_stream = not is_from_following
     elif activity_ro.ap_type in ["Like", "Announce"]:
         if not relates_to_outbox_object:
             logger.info(
