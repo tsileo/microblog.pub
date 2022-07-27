@@ -513,18 +513,31 @@ async def admin_profile(
     actors_metadata = await get_actors_metadata(db_session, [actor])
 
     inbox_objects = (
-        await db_session.scalars(
-            select(models.InboxObject)
-            .where(
-                models.InboxObject.is_deleted.is_(False),
-                models.InboxObject.actor_id == actor.id,
-                models.InboxObject.ap_type.in_(
-                    ["Note", "Article", "Video", "Page", "Announce"]
-                ),
+        (
+            await db_session.scalars(
+                select(models.InboxObject)
+                .where(
+                    models.InboxObject.is_deleted.is_(False),
+                    models.InboxObject.actor_id == actor.id,
+                    models.InboxObject.ap_type.in_(
+                        ["Note", "Article", "Video", "Page", "Announce"]
+                    ),
+                )
+                .options(
+                    joinedload(models.InboxObject.relates_to_inbox_object),
+                    joinedload(models.InboxObject.relates_to_outbox_object).options(
+                        joinedload(
+                            models.OutboxObject.outbox_object_attachments
+                        ).options(joinedload(models.OutboxObjectAttachment.upload)),
+                    ),
+                    joinedload(models.InboxObject.actor),
+                )
+                .order_by(models.InboxObject.ap_published_at.desc())
             )
-            .order_by(models.InboxObject.ap_published_at.desc())
         )
-    ).all()
+        .unique()
+        .all()
+    )
 
     return await templates.render_template(
         db_session,
