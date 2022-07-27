@@ -38,6 +38,8 @@ def highlight(html: str) -> str:
             lexer = guess_lexer(code_content)
 
         # Replace the code with Pygment output
+        # XXX: the HTML escaping causes issue with Python type annotations
+        code_content = code_content.replace(") -&gt; ", ") -> ")
         code.parent.replaceWith(
             BeautifulSoup(
                 phighlight(code_content, lexer, _FORMATTER), "html5lib"
