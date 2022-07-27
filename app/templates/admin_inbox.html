@@ -6,14 +6,6 @@
 {{ utils.display_box_filters("admin_inbox") }}
 {% endif %}
 
-{% macro actor_action(inbox_object, text) %}
-    <div class="actor-action">
-        <a href="{{ url_for("admin_profile") }}?actor_id={{ inbox_object.actor.ap_id }}">{{ inbox_object.actor.display_name | clean_html(inbox_object.actor) | safe }}</a> {{ text }}
-        <span>{{ inbox_object.ap_published_at | timeago }}</span>
-    </div>
-
-{% endmacro %}
-
 {% if not inbox %}
 <div class="box">
     <p>Nothing to see yet, <a href="{{ url_for("get_lookup") }}">start following people in the lookup section</a>.</p>
@@ -22,15 +14,15 @@
 
 {% for inbox_object in inbox %}
 {% if inbox_object.ap_type == "Announce" %}
-    {{ actor_action(inbox_object, "shared") }}
+    {{ utils.actor_action(inbox_object, "shared") }}
     {{ utils.display_object(inbox_object.relates_to_anybox_object) }}
 {% elif inbox_object.ap_type in ["Article", "Note", "Video", "Page", "Question"] %}
 {{ utils.display_object(inbox_object) }}
 {% elif inbox_object.ap_type == "Follow" %}
-    {{ actor_action(inbox_object, "followed you") }}
+    {{ utils.actor_action(inbox_object, "followed you") }}
     {{ utils.display_actor(inbox_object.actor, actors_metadata) }}
 {% elif inbox_object.ap_type == "Like" %}
-    {{ actor_action(inbox_object, "liked one of your post") }}
+    {{ utils.actor_action(inbox_object, "liked one of your post") }}
     {{ utils.display_object(inbox_object.relates_to_anybox_object) }}
 {% else %}
     <p>

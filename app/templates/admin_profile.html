@@ -3,6 +3,11 @@
 {% block content %}
     {{ utils.display_actor(actor, actors_metadata) }}
     {% for inbox_object in inbox_objects %}
-        {{ utils.display_object(inbox_object) }}
+        {% if inbox_object.ap_type == "Announce" %}
+            {{ utils.actor_action(inbox_object, "shared") }}
+            {{ utils.display_object(inbox_object.relates_to_anybox_object) }}
+        {% else %}
+                {{ utils.display_object(inbox_object) }}
+        {% endif %}
     {% endfor %}
 {% endblock %}
