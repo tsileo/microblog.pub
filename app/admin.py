@@ -518,7 +518,9 @@ async def admin_profile(
             .where(
                 models.InboxObject.is_deleted.is_(False),
                 models.InboxObject.actor_id == actor.id,
-                models.InboxObject.ap_type.in_(["Note", "Article", "Video"]),
+                models.InboxObject.ap_type.in_(
+                    ["Note", "Article", "Video", "Page", "Announce"]
+                ),
             )
             .order_by(models.InboxObject.ap_published_at.desc())
         )
