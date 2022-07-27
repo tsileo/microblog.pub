@@ -1239,6 +1239,12 @@ async def save_to_inbox(
             except Exception:
                 raise fastapi.HTTPException(status_code=401, detail="Invalid LD sig")
 
+            # Transient activities from Mastodon like Like are not fetchable and
+            # will return the actor instead
+            if raw_object["id"] != raw_object_id:
+                logger.info(f"Unable to fetch {raw_object_id}")
+                return None
+
     if (
         await db_session.scalar(
             select(func.count(models.InboxObject.id)).where(
