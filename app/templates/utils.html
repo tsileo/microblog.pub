@@ -179,7 +179,7 @@
 
 {% endmacro %}
 
-{% macro display_actor(actor, actors_metadata={}, embedded=False) %}
+{% macro display_actor(actor, actors_metadata={}, embedded=False, with_details=False) %}
 {% set metadata = actors_metadata.get(actor.ap_id) %}
 
 {% if not embedded %}
@@ -195,6 +195,14 @@
         <div class="actor-handle p-name">{{ actor.handle }}</div>
     </a>
 </div>
+
+{% if actor.summary %}
+    <div class="p-note">
+        {{ actor.summary | clean_html(actor) | safe }}
+    </div>
+{% endif %}
+
+
 {% if is_admin and metadata %}
 <div>
     <nav class="flexbox actor-metadata">
