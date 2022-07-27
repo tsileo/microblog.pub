@@ -1390,15 +1390,23 @@ async def save_to_inbox(
             )
             db_session.add(notif)
         else:
+            # Only show the announce in the stream if it comes from an actor
+            # in the following collection
+            followings = await _get_following(db_session)
+            is_from_following = inbox_object.actor.ap_id in {
+                f.ap_actor_id for f in followings
+            }
+
             # This is announce for a maybe unknown object
             if relates_to_inbox_object:
                 # We already know about this object, show the announce in the
-                # stream if it's not already there
+                # stream if it's not already there, from an followed actor
+                # and if we haven't seen it recently
                 if (
                     now()
                     - as_utc(relates_to_inbox_object.ap_published_at)  # type: ignore
                 ) > timedelta(hours=1):
-                    inbox_object.is_hidden_from_stream = False
+                    inbox_object.is_hidden_from_stream = not is_from_following
             else:
                 # Save it as an inbox object
                 if not activity_ro.activity_object_ap_id:
@@ -1423,14 +1431,8 @@ async def save_to_inbox(
                 db_session.add(announced_inbox_object)
                 await db_session.flush()
                 inbox_object.relates_to_inbox_object_id = announced_inbox_object.id
-
-                # Only show the announce in the stream if it comes from an actor
-                # in the following collection
-                followings = await _get_following(db_session)
-                is_from_following = inbox_object.actor.ap_id in {
-                    f.ap_actor_id for f in followings
-                }
                 inbox_object.is_hidden_from_stream = not is_from_following
+
     elif activity_ro.ap_type in ["Like", "Announce"]:
         if not relates_to_outbox_object:
             logger.info(
