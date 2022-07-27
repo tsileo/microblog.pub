@@ -524,7 +524,9 @@ async def admin_profile(
                     ),
                 )
                 .options(
-                    joinedload(models.InboxObject.relates_to_inbox_object),
+                    joinedload(models.InboxObject.relates_to_inbox_object).options(
+                        joinedload(models.InboxObject.actor)
+                    ),
                     joinedload(models.InboxObject.relates_to_outbox_object).options(
                         joinedload(
                             models.OutboxObject.outbox_object_attachments
