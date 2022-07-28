@@ -4,7 +4,41 @@
 
 ## Docker edition
 
-TODO
+Assuming Docker and [Docker Compose](https://docs.docker.com/compose/install/) are already installed.
+
+For now, there's no image published on Docker Hub.
+
+Clone the repository.
+
+```bash
+git clone https://git.sr.ht/~tsileo/microblog.pub your-domain.tld
+```
+
+Build the Docker image.
+
+```bash
+make build
+```
+
+Run the configuration wizard.
+
+```bash
+make config
+```
+
+Build static assets.
+
+```bash
+make update
+```
+
+Start the app with Docker Compose, it will listen on port 8000 by default.
+
+```bash
+docker compose up -d
+```
+
+Setup a reverse proxy (see the [Reverse Proxy section](/installing.html#reverse-proxy)).
 
 ## Python developer edition
 
@@ -45,6 +79,10 @@ Run the two processes with supervisord.
 ```bash
 VENV_DIR=/home/ubuntu/.cache/pypoetry/virtualenvs/microblogpub-chx-y1oE-py3.10 poetry run supervisord -c misc/supervisord.conf -n
 ```
+
+Setup a reverse proxy (see the next section).
+
+## Reverse proxy
 
 You will also want to setup a reverse proxy like Nginx, see [uvicorn documentation](https://www.uvicorn.org/deployment/#running-behind-nginx):
 

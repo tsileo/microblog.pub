@@ -1,6 +1,10 @@
 SHELL := /bin/bash
 PWD=$(shell pwd)
 
+.PHONY: build
+build:
+	docker build -t microblogpub/microblogpub .
+
 .PHONY: config
 config:
 	# Run and remove instantly
