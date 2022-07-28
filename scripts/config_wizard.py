@@ -8,11 +8,21 @@ import bcrypt
 import tomli_w
 from markdown import markdown  # type: ignore
 from prompt_toolkit import prompt
+from prompt_toolkit.key_binding import KeyBindings
 
 from app.key import generate_key
 
 _ROOT_DIR = Path().parent.resolve()
 _KEY_PATH = _ROOT_DIR / "data" / "key.pem"
+
+
+_kb = KeyBindings()
+
+
+@_kb.add("c-@")
+def _(event):
+    """Save multi-line buffer on CTRL + space"""
+    event.current_buffer.validate_and_handle()
 
 
 def main() -> None:
@@ -52,8 +62,9 @@ def main() -> None:
         prompt(
             (
                 "summary (short description, in markdown, "
-                "press [ESC] then [ENTER] to submit):\n"
+                "press [CTRL] + [SPACE] to submit):\n"
             ),
+            key_bindings=_kb,
             multiline=True,
         )
     )

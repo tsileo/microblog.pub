@@ -141,7 +141,7 @@ def install_deps(ctx):
     run("poetry install", pty=True, echo=True)
 
 
-@task(install_deps, compile_scss, migrate_db)
+@task(compile_scss, migrate_db)
 def update(ctx):
     # type: (Context) -> None
     print("Done")
