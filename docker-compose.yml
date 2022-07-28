@@ -8,5 +8,6 @@ services:
     restart: always
     volumes:
       - ./data:/app/data
+      - ./app/static:/app/app/static
     ports:
       - "8000:8000"
