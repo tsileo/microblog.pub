@@ -17,6 +17,7 @@ from app import boxes
 from app import models
 from app import templates
 from app.actor import LOCAL_ACTOR
+from app.actor import fetch_actor
 from app.actor import get_actors_metadata
 from app.boxes import get_inbox_object_by_ap_id
 from app.boxes import get_outbox_object_by_ap_id
@@ -148,7 +149,8 @@ async def admin_new(
             content += f"{in_reply_to_object.actor.handle} "
         for tag in in_reply_to_object.tags:
             if tag.get("type") == "Mention" and tag["name"] != LOCAL_ACTOR.handle:
-                content += f'{tag["name"]} '
+                mentioned_actor = await fetch_actor(db_session, tag["href"])
+                content += f"{mentioned_actor.handle} "
 
     return await templates.render_template(
         db_session,
