@@ -10,7 +10,7 @@ $form-text-color: #333;
 $muted-color: #555; // solarized comment text
 
 // Load custom theme
-// @import "theme.scss";
+@import "theme.scss";
 
 .muted {
     color: $muted-color;
@@ -122,8 +122,9 @@ main {
 }
 footer {
     width: 100%;
-    max-width: 960px;
+    max-width: 1000px;
     margin: 20px auto;
+    padding: 0 20px;
     color: $muted-color;
 }
 .actor-box {
