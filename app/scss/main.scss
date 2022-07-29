@@ -104,6 +104,11 @@ header {
   .counter {
     color: $muted-color;
   }
+  .summary {
+    a:hover {
+      text-decoration: underline;
+    }
+  }
 }
 a {
   color: $primary-color;
