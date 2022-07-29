@@ -629,12 +629,20 @@ async def _get_followers(db_session: AsyncSession) -> list[models.Follower]:
     )
 
 
-async def _get_followers_recipients(db_session: AsyncSession) -> set[str]:
+async def _get_followers_recipients(
+    db_session: AsyncSession,
+    skip_actors: list[models.Actor] | None = None,
+) -> set[str]:
     """Returns all the recipients from the local follower collection."""
+    actor_ap_ids_to_skip = []
+    if skip_actors:
+        actor_ap_ids_to_skip = [actor.ap_id for actor in skip_actors]
+
     followers = await _get_followers(db_session)
     return {
         follower.actor.shared_inbox_url or follower.actor.inbox_url  # type: ignore
         for follower in followers
+        if follower.actor.ap_id not in actor_ap_ids_to_skip
     }
 
 
@@ -715,6 +723,7 @@ async def _handle_delete_activity(
     from_actor: models.Actor,
     delete_activity: models.InboxObject,
     ap_object_to_delete: models.InboxObject | None,
+    forwarded_by_actor: models.Actor | None,
 ) -> None:
     if ap_object_to_delete is None:
         logger.info(
@@ -731,33 +740,26 @@ async def _handle_delete_activity(
         )
         return
 
-    # If it's a local replies, it was forwarded, so we also need to forward
-    # the Delete activity if possible
-    if (
-        delete_activity.has_ld_signature
-        and ap_object_to_delete.in_reply_to
-        and ap_object_to_delete.in_reply_to.startswith(BASE_URL)
-    ):
-        logger.info("Forwarding Delete activity as it's a local reply")
-        recipients = await _get_followers_recipients(db_session)
-        for rcp in recipients:
-            await new_outgoing_activity(
-                db_session,
-                rcp,
-                outbox_object_id=None,
-                inbox_object_id=delete_activity.id,
-            )
-
     logger.info(f"Deleting {ap_object_to_delete.ap_type}/{ap_object_to_delete.ap_id}")
+    await _revert_side_effect_for_deleted_object(
+        db_session,
+        delete_activity,
+        ap_object_to_delete,
+        forwarded_by_actor,
+    )
     ap_object_to_delete.is_deleted = True
 
-    await _revert_side_effect_for_deleted_object(db_session, ap_object_to_delete)
+    await db_session.flush()
 
 
 async def _revert_side_effect_for_deleted_object(
     db_session: AsyncSession,
+    delete_activity: models.InboxObject,
     deleted_ap_object: models.InboxObject,
+    forwarded_by_actor: models.Actor | None,
 ) -> None:
+    is_delete_needs_to_be_forwarded = False
+
     # Decrement the replies counter if needed
     if deleted_ap_object.in_reply_to:
         replied_object = await get_anybox_object_by_ap_id(
@@ -766,6 +768,10 @@ async def _revert_side_effect_for_deleted_object(
         )
         if replied_object:
             if replied_object.is_from_outbox:
+                # It's a local reply that was likely forwarded, the Delete
+                # also needs to be forwarded
+                is_delete_needs_to_be_forwarded = True
+
                 await db_session.execute(
                     update(models.OutboxObject)
                     .where(
@@ -781,6 +787,36 @@ async def _revert_side_effect_for_deleted_object(
                     )
                     .values(replies_count=models.InboxObject.replies_count - 1)
                 )
+
+    # Delete any Like/Announce
+    await db_session.execute(
+        update(models.OutboxObject)
+        .where(
+            models.OutboxObject.activity_object_ap_id == deleted_ap_object.ap_id,
+        )
+        .values(is_deleted=True)
+    )
+
+    # If it's a local replies, it was forwarded, so we also need to forward
+    # the Delete activity if possible
+    if delete_activity.has_ld_signature and is_delete_needs_to_be_forwarded:
+        logger.info("Forwarding Delete activity as it's a local reply")
+
+        # Don't forward to the forwarding actor and the original Delete actor
+        skip_actors = [delete_activity.actor]
+        if forwarded_by_actor:
+            skip_actors.append(forwarded_by_actor)
+        recipients = await _get_followers_recipients(
+            db_session,
+            skip_actors=skip_actors,
+        )
+        for rcp in recipients:
+            await new_outgoing_activity(
+                db_session,
+                rcp,
+                outbox_object_id=None,
+                inbox_object_id=delete_activity.id,
+            )
 
 
 async def _handle_follow_follow_activity(
@@ -1222,12 +1258,15 @@ async def save_to_inbox(
         return None
 
     raw_object_id = ap.get_id(raw_object)
+    forwarded_by_actor = None
 
     # Ensure forwarded activities have a valid LD sig
     if sent_by_ap_actor_id != actor.ap_id:
         logger.info(
             f"Processing a forwarded activity {sent_by_ap_actor_id=}/{actor.ap_id}"
         )
+        forwarded_by_actor = await fetch_actor(db_session, sent_by_ap_actor_id)
+
         if not (await ldsig.verify_signature(db_session, raw_object)):
             logger.warning(
                 f"Failed to verify LD sig, fetching remote object {raw_object_id}"
@@ -1314,6 +1353,7 @@ async def save_to_inbox(
             actor,
             inbox_object,
             relates_to_inbox_object,
+            forwarded_by_actor=forwarded_by_actor,
         )
     elif activity_ro.ap_type == "Follow":
         await _handle_follow_follow_activity(db_session, actor, inbox_object)
