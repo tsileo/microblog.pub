@@ -1,6 +1,7 @@
 from typing import Generator
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.database import Base
@@ -11,7 +12,7 @@ from app.main import app
 from tests.factories import _Session
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_db_session():
     async with async_session() as session:
         async with async_engine.begin() as conn:

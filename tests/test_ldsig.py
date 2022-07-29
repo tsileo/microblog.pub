@@ -1,7 +1,12 @@
 from copy import deepcopy
 
+import httpx
+import pytest
+from respx import MockRouter
+
 from app import activitypub as ap
 from app import ldsig
+from app.database import AsyncSession
 from app.key import Key
 from tests import factories
 
@@ -28,7 +33,11 @@ _SAMPLE_CREATE = {
 }
 
 
-def test_linked_data_sig():
+@pytest.mark.asyncio
+async def test_linked_data_sig(
+    async_db_session: AsyncSession,
+    respx_mock: MockRouter,
+) -> None:
     privkey, pubkey = factories.generate_key()
     ra = factories.RemoteActorFactory(
         base_url="https://microblog.pub",
@@ -37,8 +46,9 @@ def test_linked_data_sig():
     )
     k = Key(ra.ap_id, f"{ra.ap_id}#main-key")
     k.load(privkey)
+    respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra.ap_actor))
 
     doc = deepcopy(_SAMPLE_CREATE)
 
     ldsig.generate_signature(doc, k)
-    assert ldsig.verify_signature(doc, k)
+    assert (await ldsig.verify_signature(async_db_session, doc)) is True

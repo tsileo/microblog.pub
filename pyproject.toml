@@ -83,3 +83,6 @@ extend-exclude = '''
   | alembic/versions
 )/
 '''
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
