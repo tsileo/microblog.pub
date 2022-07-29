@@ -76,6 +76,9 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - allow to set trusted_hosts=["*"] for Docker in config
+#   - maybe rename profile.toml to config.toml or add server.toml
+# - share nginx config in doc
 # - prevent double accept/double follow
 # - UI support for updating posts
 # - indieauth tweaks
