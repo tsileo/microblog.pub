@@ -4,10 +4,10 @@ $light-background: #e6e6e6;
 $text-color: #111;
 $primary-color: #1d781d;
 $secondary-color: #781D78;
-
 $form-background-color: #ccc;
 $form-text-color: #333;
 $muted-color: #555; // solarized comment text
+$primary-button-text-color: #fff;
 
 // Load custom theme
 @import "theme.scss";
@@ -22,7 +22,6 @@ $muted-color: #555; // solarized comment text
         stroke: $secondary-color;
    }
 }
-
 
 .light-background {
     background: $light-background;
@@ -86,7 +85,7 @@ code, pre {
         font-size: 20px;
         outline: none;
         background: $primary-color;
-        color: $form-background-color;
+        color: $primary-button-text-color;
         padding: 5px 12px;
         cursor: pointer;
     }
