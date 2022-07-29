@@ -78,8 +78,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # Next:
 # - prevent double accept/double follow
 # - UI support for updating posts
-# - Article support
-# - Fix SQL tx in the codebase
 # - indieauth tweaks
 # - API for posting notes
 # - allow to block servers
@@ -171,9 +169,9 @@ class CustomMiddleware:
 
 app = FastAPI(docs_url=None, redoc_url=None)
 app.mount(
-    "/static/custom_emoji",
+    "/custom_emoji",
     StaticFiles(directory="data/custom_emoji"),
-    name="static_custom_emoji",
+    name="custom_emoji",
 )
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(admin.router, prefix="/admin")

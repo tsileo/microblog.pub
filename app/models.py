@@ -564,6 +564,7 @@ class Notification(Base):
 
 outbox_fts = Table(
     "outbox_fts",
+    # TODO(tsileo): use Base.metadata
     metadata_obj,
     Column("rowid", Integer),
     Column("outbox_fts", String),

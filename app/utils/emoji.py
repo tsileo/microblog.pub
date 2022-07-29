@@ -16,7 +16,7 @@ def _load_emojis(root_dir: Path, base_url: str) -> None:
     if EMOJIS:
         return
     for dir_name, path in (
-        (root_dir / "app" / "static" / "emoji", "emoji"),
+        (root_dir / "app" / "static" / "emoji", "static/emoji"),
         (root_dir / "data" / "custom_emoji", "custom_emoji"),
     ):
         for emoji in dir_name.iterdir():
@@ -31,7 +31,7 @@ def _load_emojis(root_dir: Path, base_url: str) -> None:
                     "icon": {
                         "mediaType": mt,
                         "type": "Image",
-                        "url": f"{base_url}/static/{path}/{emoji.name}",
+                        "url": f"{base_url}/{path}/{emoji.name}",
                     },
                 }
                 EMOJIS[emoji.name] = ap_emoji
