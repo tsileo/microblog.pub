@@ -6,3 +6,4 @@ data/**
 docs/
 .mypy_cache
 .pytest_cache
+docker-compose.yml
