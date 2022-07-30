@@ -25,4 +25,4 @@ RUN chown -R 1000:1000 /app
 USER microblogpub
 WORKDIR /app
 EXPOSE 8000
-CMD ["supervisord", "-n", "-c", "misc/docker-supervisord.conf"]
+CMD ["./misc/docker_start.sh"]

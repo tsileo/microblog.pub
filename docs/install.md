@@ -32,12 +32,6 @@ Update `data/profile.toml` and add this line:
 trusted_hosts = ["*"]
 ```
 
-Build static assets.
-
-```bash
-make update
-```
-
 Start the app with Docker Compose, it will listen on port 8000 by default.
 
 ```bash
