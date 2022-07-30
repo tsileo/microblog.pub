@@ -991,6 +991,7 @@ async def _handle_create_activity(
     db_session: AsyncSession,
     from_actor: models.Actor,
     create_activity: models.InboxObject,
+    forwarded_by_actor: models.Actor | None = None,
 ) -> None:
     logger.info("Processing Create activity")
     wrapped_object = ap.unwrap_activity(create_activity.ap_object)
@@ -1016,7 +1017,13 @@ async def _handle_create_activity(
             await db_session.flush()
             return None
 
-    await _process_note_object(db_session, create_activity, from_actor, ro)
+    await _process_note_object(
+        db_session,
+        create_activity,
+        from_actor,
+        ro,
+        forwarded_by_actor=forwarded_by_actor,
+    )
 
 
 async def _handle_read_activity(
@@ -1044,6 +1051,7 @@ async def _process_note_object(
     parent_activity: models.InboxObject,
     from_actor: models.Actor,
     ro: RemoteObject,
+    forwarded_by_actor: models.Actor | None = None,
 ) -> None:
     if parent_activity.ap_type not in ["Create", "Read"]:
         raise ValueError(f"Unexpected parent activity {parent_activity.ap_id}")
@@ -1133,7 +1141,13 @@ async def _process_note_object(
             and parent_activity.has_ld_signature
         ):
             logger.info("Forwarding Create activity as it's a local reply")
-            recipients = await _get_followers_recipients(db_session)
+            skip_actors = [parent_activity.actor]
+            if forwarded_by_actor:
+                skip_actors.append(forwarded_by_actor)
+            recipients = await _get_followers_recipients(
+                db_session,
+                skip_actors=skip_actors,
+            )
             for rcp in recipients:
                 await new_outgoing_activity(
                     db_session,
@@ -1342,7 +1356,9 @@ async def save_to_inbox(
     await db_session.refresh(inbox_object)
 
     if activity_ro.ap_type == "Create":
-        await _handle_create_activity(db_session, actor, inbox_object)
+        await _handle_create_activity(
+            db_session, actor, inbox_object, forwarded_by_actor=forwarded_by_actor
+        )
     elif activity_ro.ap_type == "Read":
         await _handle_read_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Update":
