@@ -26,6 +26,12 @@ Run the configuration wizard.
 make config
 ```
 
+Update `data/profile.toml` and add this line:
+
+```toml
+trusted_hosts = ["*"]
+```
+
 Build static assets.
 
 ```bash
