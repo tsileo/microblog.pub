@@ -875,7 +875,14 @@ async def _proxy_get(
             (k, v)
             for (k, v) in request.headers.raw
             if k.lower()
-            not in [b"host", b"cookie", b"x-forwarded-for", b"x-real-ip", b"user-agent"]
+            not in [
+                b"host",
+                b"cookie",
+                b"x-forwarded-for",
+                b"x-forwarded-proto",
+                b"x-real-ip",
+                b"user-agent",
+            ]
         ]
         + [(b"user-agent", USER_AGENT.encode())],
     )
