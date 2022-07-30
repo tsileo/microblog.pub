@@ -5,15 +5,13 @@ A self-hosted, single-user, ActivityPub powered microblog.
 [![builds.sr.ht status](https://builds.sr.ht/~tsileo/microblog.pub.svg)](https://builds.sr.ht/~tsileo/microblog.pub?)
 [![AGPL 3.0](https://img.shields.io/badge/license-AGPL_3.0-blue.svg?style=flat)](https://git.sr.ht/~tsileo/microblog.pub/tree/v2/item/LICENSE)
 
-This branch is a complete rewrite of the original microblog.pub server.
+Instances in the wild:
 
-Check out the test instance here: [testing.microblog.pub](https://testing.microblog.pub/).
+ - [microblog.pub](https://microblog.pub/) (follow to get updated about the project)
+ - [hexa.ninja](https://hexa.ninja) (theme customization example)
+ - [testing.microblog.pub](https://testing.microblog.pub/)
 
-The original server became hard to debug, maintain and is not super easy to deploy (due to the dependecies like MongoDB).
-
-This rewrite is built using "modern" Python 3.10, SQLite and does not need any external tasks queue service.
-
-It is still in early development, this README will be updated when I get to deploy a personal instance in the wild.
+There are still some rough edges, but the server is mostly functional.
 
 ## Features
 
@@ -22,7 +20,9 @@ It is still in early development, this README will be updated when I get to depl
     - Consume most of the content types available (notes, articles, videos, pictures...)
  - Exposes your ActivityPub profile as a minimalist microblog
     - Author notes in Markdown, with code highlighting support
+    - Dedicated section for articles/blog posts (enabled when the first article is posted)
  - Lightweight
+    - Uses SQLite, and no external dependencies except Python 3.10+
     - Can be deployed on small VPS
  - Privacy-aware
     - EXIF metadata (like GPS location) are stripped before storage

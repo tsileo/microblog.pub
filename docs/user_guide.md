@@ -37,6 +37,19 @@ Whenever one of these config items is updated, an `Update` activity will be sent
 
 You can add custom emoji in the `data/custom_emoji` directory and they will be picked automatically.
 
+#### Custom CSS
+
+The CSS is written with [SCSS](https://sass-lang.com/documentation/syntax).
+
+You can override colors by editing `data/_theme.scss`:
+
+```scss
+$primary-color: #e14eea;                                                                            
+$secondary-color: #32cd32;
+```
+
+See `app/scss/main.scss` to see what variables can be overidden.
+
 ## Public website
 
 Public notes will be visible on the homepage.

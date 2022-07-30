@@ -27,7 +27,7 @@ def main() -> None:
     shutil.rmtree("docs/dist/static", ignore_errors=True)
     shutil.copytree("docs/static", "docs/dist/static")
 
-    last_updated = now().isoformat()
+    last_updated = now().replace(second=0, microsecond=0).isoformat()
 
     readme = Path("README.md")
     template.stream(
