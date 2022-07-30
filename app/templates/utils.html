@@ -458,33 +458,35 @@
             {{ admin_reply_button(object.ap_id) }}
         </li>
 
-        <li>
-            {% if object.liked_via_outbox_object_ap_id %}
-                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unlike", object.permalink_id) }}
-            {% else %}
-                {{ admin_like_button(object.ap_id, object.permalink_id) }}
-            {% endif %}
-        </li>
+        {% if object.is_from_inbox %}
+            <li>
+                {% if object.liked_via_outbox_object_ap_id %}
+                    {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unlike", object.permalink_id) }}
+                {% else %}
+                    {{ admin_like_button(object.ap_id, object.permalink_id) }}
+                {% endif %}
+            </li>
 
-        <li>
-            {% if object.is_bookmarked %}
-                {{ admin_unbookmark_button(object.ap_id, object.permalink_id) }}
-            {% else %}
-                {{ admin_bookmark_button(object.ap_id, object.permalink_id) }}
-            {% endif %}
-        </li>
+            <li>
+                {% if object.is_bookmarked %}
+                    {{ admin_unbookmark_button(object.ap_id, object.permalink_id) }}
+                {% else %}
+                    {{ admin_bookmark_button(object.ap_id, object.permalink_id) }}
+                {% endif %}
+            </li>
 
-        <li>
-            {% if object.announced_via_outbox_object_ap_id %}
-                {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unshare") }}
-            {% else %}
-                {{ admin_announce_button(object.ap_id, disabled=object.visibility not in [visibility_enum.PUBLIC, visibility_enum.UNLISTED], permalink_id=object.permalink_id) }}
-            {% endif %}
-        </li>
+            <li>
+                {% if object.announced_via_outbox_object_ap_id %}
+                    {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unshare") }}
+                {% else %}
+                    {{ admin_announce_button(object.ap_id, disabled=object.visibility not in [visibility_enum.PUBLIC, visibility_enum.UNLISTED], permalink_id=object.permalink_id) }}
+                {% endif %}
+            </li>
 
-        <li>
-            {{ admin_profile_button(object.actor.ap_id) }}
-        </li>
+            <li>
+                {{ admin_profile_button(object.actor.ap_id) }}
+            </li>
+        {% endif %}
         <li>
             {{ admin_expand_button(object.ap_id) }}
         </li>
