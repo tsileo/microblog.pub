@@ -76,8 +76,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - allow to set trusted_hosts=["*"] for Docker in config
-#   - maybe rename profile.toml to config.toml or add server.toml
 # - share nginx config in doc
 # - prevent double accept/double follow
 # - UI support for updating posts
@@ -182,8 +180,10 @@ app.include_router(admin.unauthenticated_router, prefix="/admin")
 app.include_router(indieauth.router)
 app.include_router(micropub.router)
 app.include_router(webmentions.router)
-app.add_middleware(ProxyHeadersMiddleware)
+
+# XXX: order matters, the proxy middleware needs to be last
 app.add_middleware(CustomMiddleware)
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=config.CONFIG.trusted_hosts)
 
 logger.configure(extra={"request_id": "no_req_id"})
 logger.remove()

@@ -41,6 +41,7 @@ class Config(pydantic.BaseModel):
     icon_url: str
     secret: str
     debug: bool = False
+    trusted_hosts: list[str] = ["127.0.0.1"]
 
     # Config items to make tests easier
     sqlalchemy_database: str | None = None
