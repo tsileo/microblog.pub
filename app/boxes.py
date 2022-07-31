@@ -1601,7 +1601,7 @@ async def get_replies_tree(
                     select(models.InboxObject)
                     .where(
                         models.InboxObject.ap_context == requested_object.ap_context,
-                        models.InboxObject.ap_type.not_in(["Announce"]),
+                        models.InboxObject.ap_type.in_(["Note", "Page", "Article"]),
                         models.InboxObject.is_deleted.is_(False),
                     )
                     .options(joinedload(models.InboxObject.actor))
@@ -1617,6 +1617,7 @@ async def get_replies_tree(
                     .where(
                         models.OutboxObject.ap_context == requested_object.ap_context,
                         models.OutboxObject.is_deleted.is_(False),
+                        models.OutboxObject.ap_type.in_(["Note", "Page", "Article"]),
                     )
                     .options(
                         joinedload(
