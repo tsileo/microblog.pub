@@ -52,7 +52,9 @@ class Actor:
 
     @property
     def display_name(self) -> str:
-        return self.name or self.preferred_username
+        if self.name:
+            return self.name
+        return self.preferred_username
 
     @property
     def handle(self) -> str:
