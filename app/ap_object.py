@@ -196,13 +196,35 @@ class Object:
 
     @property
     def is_poll_ended(self) -> bool:
-        if self.ap_object.get("endTime"):
-            return now() > parse_isoformat(self.ap_object["endTime"])
+        if self.poll_end_time:
+            return now() > self.poll_end_time
         return False
 
     @cached_property
     def poll_items(self) -> list[ap.RawObject] | None:
         return self.ap_object.get("oneOf") or self.ap_object.get("anyOf")
+
+    @cached_property
+    def poll_end_time(self) -> datetime | None:
+        # Some polls may not have an end time
+        if self.ap_object.get("endTime"):
+            return parse_isoformat(self.ap_object["endTime"])
+
+        return None
+
+    @cached_property
+    def poll_voters_count(self) -> int | None:
+        if not self.poll_items:
+            return None
+        # Only Mastodon set this attribute
+        if self.ap_object.get("votersCount"):
+            return self.ap_object["votersCount"]
+        else:
+            voters_count = 0
+            for item in self.poll_items:
+                voters_count += item.get("replies", {}).get("totalItems", 0)
+
+            return voters_count
 
     @cached_property
     def is_one_of_poll(self) -> bool:

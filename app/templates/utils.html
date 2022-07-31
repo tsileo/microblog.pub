@@ -381,7 +381,7 @@
             <ul style="list-style-type: none;padding:0;">
             {% for item in object.poll_items %}
             <li style="display:block;">
-                {% set pct = item | poll_item_pct(object.ap_object.votersCount) %}
+                {% set pct = item | poll_item_pct(object.poll_voters_count) %}
                 <p style="margin:20px 0 10px 0;">
                     {% if can_vote %}
                     <input type="{% if object.is_one_of_poll %}radio{% else %}checkbox{% endif %}" name="name" value="{{ item.name }}" id="{{object.permalink_id}}-{{item.name}}">
@@ -435,12 +435,16 @@
             </li>
         {% endif %}
         {% if object.ap_type == "Question" %}
-        {% set endAt = object.ap_object.endTime | parse_datetime %}
+            {% if object.poll_end_time %}
+                <li>
+                    {% if object.is_poll_ended %}ended{% else %}ends{% endif %}
+                    <time title="{{ object.poll_end_time.replace(microsecond=0).isoformat() }}">
+                        {{ object.poll_end_time | timeago }}
+                    </time>
+                </li>
+            {% endif %}
             <li>
-                {% if object.is_poll_ended %}ended{% else %}ends{% endif %} <time title="{{ endAt.replace(microsecond=0).isoformat() }}">{{ endAt | timeago }}</time>
-            </li>
-            <li>
-                {{ object.ap_object.votersCount }} voters
+                {{ object.poll_voters_count }} voters
             </li>
         {% endif %}
         {% if is_admin %}
