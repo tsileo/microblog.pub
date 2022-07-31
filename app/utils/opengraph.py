@@ -17,7 +17,7 @@ class OpenGraphMeta(BaseModel):
     title: str
     image: str
     description: str
-    site_name: str
+    site_name: str | None = None
 
 
 def _scrap_og_meta(html: str) -> OpenGraphMeta | None:
@@ -29,10 +29,10 @@ def _scrap_og_meta(html: str) -> OpenGraphMeta | None:
     raw = {}
     for field in OpenGraphMeta.__fields__.keys():
         og_field = f"og:{field}"
-        if not ogs.get(og_field):
+        if not ogs.get(og_field) and field != "site_name":
             return None
 
-        raw[field] = ogs[og_field]
+        raw[field] = ogs.get(og_field, None)
 
     return OpenGraphMeta.parse_obj(raw)
 

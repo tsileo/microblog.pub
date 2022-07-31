@@ -285,7 +285,9 @@
     </div>
     <div>
         <a href="{{ og_meta.url }}">{{ og_meta.title }}</a>
-        <small style="display:block;">{{ og_meta.site_name }}</small>
+        {% if og_meta.site_name %}
+            <small style="display:block;">{{ og_meta.site_name }}</small>
+        {% endif %}
     </div>
     {% endif %}
 </div>
