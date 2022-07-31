@@ -1,6 +1,7 @@
 import hashlib
 import typing
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Union
 from urllib.parse import urlparse
 
@@ -66,8 +67,8 @@ class Actor:
         return self.ap_actor["inbox"]
 
     @property
-    def shared_inbox_url(self) -> str | None:
-        return self.ap_actor.get("endpoints", {}).get("sharedInbox")
+    def shared_inbox_url(self) -> str:
+        return self.ap_actor.get("endpoints", {}).get("sharedInbox") or self.inbox_url
 
     @property
     def icon_url(self) -> str | None:
@@ -106,6 +107,10 @@ class Actor:
     @property
     def followers_collection_id(self) -> str | None:
         return self.ap_actor.get("followers")
+
+    @cached_property
+    def attachments(self) -> list[ap.RawObject]:
+        return ap.as_list(self.ap_actor.get("attachment", []))
 
 
 class RemoteActor(Actor):

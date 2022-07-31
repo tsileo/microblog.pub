@@ -196,13 +196,6 @@
     </a>
 </div>
 
-{% if with_details and actor.summary %}
-    <div class="p-note">
-        {{ actor.summary | clean_html(actor) | safe }}
-    </div>
-{% endif %}
-
-
 {% if is_admin and metadata %}
 <div>
     <nav class="flexbox actor-metadata">
@@ -227,6 +220,27 @@
         </ul>
     </nav>
 </div>
+{% endif %}
+
+{% if with_details %}
+    {% if actor.summary %}
+        <div class="p-note">
+            {{ actor.summary | clean_html(actor) | safe }}
+        </div>
+    {% endif %}
+
+    {% if actor.attachments %}
+    <div id="profile-props">
+        <dl>
+            {% for prop in actor.attachments %}
+                {% if prop.type == "PropertyValue" %}
+                    <dt>{{ prop.name }}</dt>
+                    <dd>{{ prop.value | clean_html(actor) | safe }}</dd>
+                {% endif %}
+            {% endfor %}
+        </dl>
+    </div>
+    {% endif %}
 {% endif %}
 
 {% if not embedded %}

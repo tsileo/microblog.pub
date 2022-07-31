@@ -76,7 +76,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - share nginx config in doc
 # - prevent double accept/double follow
 # - UI support for updating posts
 # - indieauth tweaks

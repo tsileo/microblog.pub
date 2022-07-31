@@ -577,7 +577,7 @@ async def _compute_recipients(
         # If we got a local collection, assume it's a collection of actors
         if r.startswith(BASE_URL):
             for actor in await fetch_actor_collection(db_session, r):
-                recipients.add(actor.shared_inbox_url or actor.inbox_url)
+                recipients.add(actor.shared_inbox_url)
 
             continue
 
@@ -588,19 +588,19 @@ async def _compute_recipients(
             )
         ).scalar_one_or_none()  # type: ignore
         if known_actor:
-            recipients.add(known_actor.shared_inbox_url or known_actor.inbox_url)
+            recipients.add(known_actor.shared_inbox_url)
             continue
 
         # Fetch the object
         raw_object = await ap.fetch(r)
         if raw_object.get("type") in ap.ACTOR_TYPES:
             saved_actor = await save_actor(db_session, raw_object)
-            recipients.add(saved_actor.shared_inbox_url or saved_actor.inbox_url)
+            recipients.add(saved_actor.shared_inbox_url)
         else:
             # Assume it's a collection of actors
             for raw_actor in await ap.parse_collection(payload=raw_object):
                 actor = RemoteActor(raw_actor)
-                recipients.add(actor.shared_inbox_url or actor.inbox_url)
+                recipients.add(actor.shared_inbox_url)
 
     return recipients
 
@@ -640,7 +640,7 @@ async def _get_followers_recipients(
 
     followers = await _get_followers(db_session)
     return {
-        follower.actor.shared_inbox_url or follower.actor.inbox_url  # type: ignore
+        follower.actor.shared_inbox_url  # type: ignore
         for follower in followers
         if follower.actor.ap_id not in actor_ap_ids_to_skip
     }
