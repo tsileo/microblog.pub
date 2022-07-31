@@ -196,7 +196,7 @@ class Object:
 
     @property
     def is_poll_ended(self) -> bool:
-        if "endTime" in self.ap_object:
+        if self.ap_object.get("endTime"):
             return now() > parse_isoformat(self.ap_object["endTime"])
         return False
 
