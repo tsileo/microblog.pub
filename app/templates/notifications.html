@@ -5,6 +5,13 @@
 <title>{{ local_actor.display_name }} - Notifications</title>
 {% endblock %}
 
+{% macro notif_actor_action(notif, text) %}
+    <div class="actor-action">
+        <a href="{{ url_for("admin_profile") }}?actor_id={{ notif.actor.ap_id }}">{{ notif.actor.display_name | clean_html(notif.actor) | safe }}</a> {{ text }}
+        <span title="{{ notif.created_at.isoformat() }}">{{ notif.created_at | timeago }}</span>
+    </div>
+{% endmacro %}
+
 {% block content %}
     <div class="box">
     <h2>Notifications</h2>
@@ -13,49 +20,31 @@
     {%- for notif in notifications %}
     <div>
             {%- if notif.notification_type.value == "new_follower" %}
-                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
-                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> followed you
-                </div>
+                {{ notif_actor_action(notif, "followed you") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
             {% elif notif.notification_type.value == "unfollow" %}
-                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
-                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> unfollowed you
-                </div>
+                {{ notif_actor_action(notif, "unfollowed you") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
             {%- elif notif.notification_type.value == "follow_request_accepted" %}
-                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
-                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> accepted your follow request
-                </div>
+                {{ notif_actor_action(notif, "accepted your follow request") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
             {%- elif notif.notification_type.value == "follow_request_rejected" %}
-                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
-                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> rejected your follow request
-                </div>
+                {{ notif_actor_action(notif, "rejected your follow request") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
             {% elif notif.notification_type.value == "like" %}
-                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
-                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> liked a post
-                </div>
+                {{ notif_actor_action(notif, "liked a post") }}
                 {{ utils.display_object(notif.outbox_object) }}
            {% elif notif.notification_type.value == "undo_like" %}
-                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
-                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> un-liked a post
-                </div>
+                {{ notif_actor_action(notif, "unliked a post") }}
                 {{ utils.display_object(notif.outbox_object) }}
             {% elif notif.notification_type.value == "announce" %}
-                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
-                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> boosted a post
-                </div>
+                {{ notif_actor_action(notif, "shared a post") }}
                 {{ utils.display_object(notif.outbox_object) }}
            {% elif notif.notification_type.value == "undo_announce" %}
-                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
-                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> un-boosted a post
-                </div>
+                {{ notif_actor_action(notif, "unshared a post") }}
                 {{ utils.display_object(notif.outbox_object) }}
             {% elif notif.notification_type.value == "mention" %}
-                <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
-                    <a style="font-weight:bold;" href="{{ notif.actor.url }}">{{ notif.actor.display_name }}</a> mentioned you
-                </div>
+                {{ notif_actor_action(notif, "mentioned you") }}
                 {{ utils.display_object(notif.inbox_object) }}
             {% elif notif.notification_type.value == "new_webmention" %}
                 <div class="actor-action" title="{{ notif.created_at.isoformat() }}">
