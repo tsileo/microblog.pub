@@ -83,7 +83,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # - allow to block servers
 # - FT5 text search
 # - support update post with history?
-# - block support
 # - cleanup tasks
 
 

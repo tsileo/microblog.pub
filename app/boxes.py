@@ -321,6 +321,14 @@ async def send_create(
                 )
                 .values(replies_count=models.OutboxObject.replies_count + 1)
             )
+        elif in_reply_to_object.is_from_inbox:
+            await db_session.execute(
+                update(models.InboxObject)
+                .where(
+                    models.InboxObject.ap_id == in_reply_to,
+                )
+                .values(replies_count=models.InboxObject.replies_count + 1)
+            )
 
     for (upload, filename, alt_text) in uploads:
         attachments.append(upload_to_attachment(upload, filename, alt_text))
