@@ -6,6 +6,24 @@
 <input type="hidden" name="redirect_url" value="{{ request.url }}{% if permalink_id %}#{{ permalink_id }}{% endif %}">
 {% endmacro %}
 
+{% macro admin_block_button(actor) %}
+<form action="{{ request.url_for("admin_actions_block") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_actor_id" value="{{ actor.ap_id }}">
+    <input type="submit" value="block">
+</form>
+{% endmacro %}
+
+{% macro admin_unblock_button(actor) %}
+<form action="{{ request.url_for("admin_actions_unblock") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_actor_id" value="{{ actor.ap_id }}">
+    <input type="submit" value="unblock">
+</form>
+{% endmacro %}
+
 {% macro admin_follow_button(actor) %}
 <form action="{{ request.url_for("admin_actions_follow") }}" method="POST">
     {{ embed_csrf_token() }}
@@ -217,6 +235,14 @@
                 {% endif %}
                 </li>
             {% endif %}
+            {% if actor.is_from_db %}
+                {% if actor.is_blocked %}
+                    <li>blocked</li>
+                    <li>{{ admin_unblock_button(actor) }}</li>
+                {% else %}
+                    <li>{{ admin_block_button(actor) }}</li>
+                {% endif %}
+            {% endif %}
         </ul>
     </nav>
 </div>
@@ -255,11 +281,11 @@
 <div class="activity-og-meta" style="display:flex;column-gap: 20px;margin:20px 0;">
     {% if og_meta.image %}
     <div>
-    <img src="{{ og_meta.image | media_proxy_url }}" style="max-width:200px;max-height:100px;">
+        <img src="{{ og_meta.image | media_proxy_url }}" style="max-width:200px;max-height:100px;">
     </div>
     <div>
-    <a href="{{ og_meta.url }}">{{ og_meta.title }}</a>
-    <small style="display:block;">{{ og_meta.site_name }}</small>
+        <a href="{{ og_meta.url }}">{{ og_meta.title }}</a>
+        <small style="display:block;">{{ og_meta.site_name }}</small>
     </div>
     {% endif %}
 </div>

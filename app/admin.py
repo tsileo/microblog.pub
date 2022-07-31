@@ -563,8 +563,38 @@ async def admin_actions_follow(
     csrf_check: None = Depends(verify_csrf_token),
     db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
-    print(f"Following {ap_actor_id}")
+    logger.info(f"Following {ap_actor_id}")
     await send_follow(db_session, ap_actor_id)
+    return RedirectResponse(redirect_url, status_code=302)
+
+
+@router.post("/actions/block")
+async def admin_actions_block(
+    request: Request,
+    ap_actor_id: str = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    logger.info(f"Blocking {ap_actor_id}")
+    actor = await fetch_actor(db_session, ap_actor_id)
+    actor.is_blocked = True
+    await db_session.commit()
+    return RedirectResponse(redirect_url, status_code=302)
+
+
+@router.post("/actions/unblock")
+async def admin_actions_unblock(
+    request: Request,
+    ap_actor_id: str = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    logger.info(f"Unblocking {ap_actor_id}")
+    actor = await fetch_actor(db_session, ap_actor_id)
+    actor.is_blocked = False
+    await db_session.commit()
     return RedirectResponse(redirect_url, status_code=302)
 
 

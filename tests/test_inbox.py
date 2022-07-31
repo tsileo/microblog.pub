@@ -3,6 +3,7 @@ from uuid import uuid4
 import httpx
 import respx
 from fastapi.testclient import TestClient
+from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -247,4 +248,53 @@ def test_inbox__create_already_deleted_object(
             select(models.InboxObject).where(models.InboxObject.ap_type == "Note")
         ).scalar_one_or_none()
         is None
+    )
+
+
+def test_inbox__actor_is_blocked(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # Given a remote actor
+    ra = setup_remote_actor(respx_mock)
+
+    # Who is also a follower
+    follower = setup_remote_actor_as_follower(ra)
+    follower.actor.is_blocked = True
+    db.commit()
+
+    create_activity = factories.build_create_activity(
+        factories.build_note_object(
+            from_remote_actor=ra,
+            outbox_public_id=str(uuid4()),
+            content="Hello",
+            to=[LOCAL_ACTOR.ap_id],
+        )
+    )
+
+    # When receiving a Create activity
+    ro = RemoteObject(create_activity, ra)
+
+    with mock_httpsig_checker(ra):
+        response = client.post(
+            "/inbox",
+            headers={"Content-Type": ap.AS_CTX},
+            json=ro.ap_object,
+        )
+
+    # Then the server returns a 204
+    assert response.status_code == 202
+
+    # And when processing the incoming activity from a blocked actor
+    run_async(process_next_incoming_activity)
+
+    # Then the Create activity was discarded
+    assert (
+        db.scalar(
+            select(func.count(models.InboxObject.id)).where(
+                models.InboxObject.ap_type != "Follow"
+            )
+        )
+        == 0
     )

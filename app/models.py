@@ -51,6 +51,8 @@ class Actor(Base, BaseActor):
 
     handle = Column(String, nullable=True, index=True)
 
+    is_blocked = Column(Boolean, nullable=False, default=False, server_default="0")
+
     @property
     def is_from_db(self) -> bool:
         return True

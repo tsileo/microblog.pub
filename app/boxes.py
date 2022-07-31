@@ -1271,6 +1271,10 @@ async def save_to_inbox(
         await _process_transient_object(db_session, raw_object, actor)
         return None
 
+    if actor.is_blocked:
+        logger.warning("Actor {actor.ap_id} is blocked, ignoring object")
+        return None
+
     raw_object_id = ap.get_id(raw_object)
     forwarded_by_actor = None
 
