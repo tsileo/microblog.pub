@@ -136,6 +136,7 @@ async def admin_new(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
     content = ""
+    content_warning = None
     in_reply_to_object = None
     if in_reply_to:
         in_reply_to_object = await boxes.get_anybox_object_by_ap_id(
@@ -152,6 +153,10 @@ async def admin_new(
                 mentioned_actor = await fetch_actor(db_session, tag["href"])
                 content += f"{mentioned_actor.handle} "
 
+        # Copy the content warning if any
+        if in_reply_to_object.summary:
+            content_warning = in_reply_to_object.summary
+
     return await templates.render_template(
         db_session,
         request,
@@ -159,6 +164,7 @@ async def admin_new(
         {
             "in_reply_to_object": in_reply_to_object,
             "content": content,
+            "content_warning": content_warning,
             "visibility_choices": [
                 (v.name, ap.VisibilityEnum.get_display_name(v))
                 for v in ap.VisibilityEnum

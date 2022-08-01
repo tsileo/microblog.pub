@@ -76,6 +76,7 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - allow to manually approve follow requests
 # - prevent double accept/double follow
 # - UI support for updating posts
 # - indieauth tweaks
