@@ -523,6 +523,8 @@ class PollAnswer(Base):
 @enum.unique
 class NotificationType(str, enum.Enum):
     NEW_FOLLOWER = "new_follower"
+    PENDING_INCOMING_FOLLOWER = "pending_incoming_follower"
+    REJECTED_FOLLOWER = "rejected_follower"
     UNFOLLOW = "unfollow"
 
     FOLLOW_REQUEST_ACCEPTED = "follow_request_accepted"
@@ -562,6 +564,9 @@ class Notification(Base):
         Integer, ForeignKey("webmention.id", name="fk_webmention_id"), nullable=True
     )
     webmention = relationship(Webmention, uselist=False)
+
+    is_accepted = Column(Boolean, nullable=True)
+    is_rejected = Column(Boolean, nullable=True)
 
 
 outbox_fts = Table(

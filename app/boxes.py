@@ -27,6 +27,7 @@ from app.actor import save_actor
 from app.ap_object import RemoteObject
 from app.config import BASE_URL
 from app.config import ID
+from app.config import MANUALLY_APPROVES_FOLLOWERS
 from app.database import AsyncSession
 from app.outgoing_activities import new_outgoing_activity
 from app.source import markdownify
@@ -654,6 +655,22 @@ async def _get_followers_recipients(
     }
 
 
+async def get_notification_by_id(
+    db_session: AsyncSession, notification_id: int
+) -> models.Notification | None:
+    return (
+        await db_session.execute(
+            select(models.Notification)
+            .where(models.Notification.id == notification_id)
+            .options(
+                joinedload(models.Notification.inbox_object).options(
+                    joinedload(models.InboxObject.actor)
+                ),
+            )
+        )
+    ).scalar_one_or_none()  # type: ignore
+
+
 async def get_inbox_object_by_ap_id(
     db_session: AsyncSession, ap_id: str
 ) -> models.InboxObject | None:
@@ -832,6 +849,57 @@ async def _handle_follow_follow_activity(
     from_actor: models.Actor,
     inbox_object: models.InboxObject,
 ) -> None:
+    if MANUALLY_APPROVES_FOLLOWERS:
+        notif = models.Notification(
+            notification_type=models.NotificationType.PENDING_INCOMING_FOLLOWER,
+            actor_id=from_actor.id,
+            inbox_object_id=inbox_object.id,
+        )
+        db_session.add(notif)
+        return None
+
+    await _send_accept(db_session, from_actor, inbox_object)
+
+
+async def _get_incoming_follow_from_notification_id(
+    db_session: AsyncSession,
+    notification_id: int,
+) -> tuple[models.Notification, models.InboxObject]:
+    notif = await get_notification_by_id(db_session, notification_id)
+    if notif is None:
+        raise ValueError(f"Notification {notification_id=} not found")
+
+    if notif.inbox_object is None:
+        raise ValueError("Should never happen")
+
+    if ap_type := notif.inbox_object.ap_type != "Follow":
+        raise ValueError(f"Unexpected {ap_type=}")
+
+    return notif, notif.inbox_object
+
+
+async def send_accept(
+    db_session: AsyncSession,
+    notification_id: int,
+) -> None:
+    notif, incoming_follow_request = await _get_incoming_follow_from_notification_id(
+        db_session, notification_id
+    )
+
+    await _send_accept(
+        db_session, incoming_follow_request.actor, incoming_follow_request
+    )
+    notif.is_accepted = True
+
+    await db_session.commit()
+
+
+async def _send_accept(
+    db_session: AsyncSession,
+    from_actor: models.Actor,
+    inbox_object: models.InboxObject,
+) -> None:
+
     follower = models.Follower(
         actor_id=from_actor.id,
         inbox_object_id=inbox_object.id,
@@ -852,13 +920,58 @@ async def _handle_follow_follow_activity(
         "actor": ID,
         "object": inbox_object.ap_id,
     }
-    outbox_activity = await save_outbox_object(db_session, reply_id, reply)
+    outbox_activity = await save_outbox_object(
+        db_session, reply_id, reply, relates_to_inbox_object_id=inbox_object.id
+    )
     if not outbox_activity.id:
         raise ValueError("Should never happen")
     await new_outgoing_activity(db_session, from_actor.inbox_url, outbox_activity.id)
 
     notif = models.Notification(
         notification_type=models.NotificationType.NEW_FOLLOWER,
+        actor_id=from_actor.id,
+    )
+    db_session.add(notif)
+
+
+async def send_reject(
+    db_session: AsyncSession,
+    notification_id: int,
+) -> None:
+    notif, incoming_follow_request = await _get_incoming_follow_from_notification_id(
+        db_session, notification_id
+    )
+
+    await _send_reject(
+        db_session, incoming_follow_request.actor, incoming_follow_request
+    )
+    notif.is_rejected = True
+    await db_session.commit()
+
+
+async def _send_reject(
+    db_session: AsyncSession,
+    from_actor: models.Actor,
+    inbox_object: models.InboxObject,
+) -> None:
+    # Reply with an Accept
+    reply_id = allocate_outbox_id()
+    reply = {
+        "@context": ap.AS_CTX,
+        "id": outbox_object_id(reply_id),
+        "type": "Reject",
+        "actor": ID,
+        "object": inbox_object.ap_id,
+    }
+    outbox_activity = await save_outbox_object(
+        db_session, reply_id, reply, relates_to_inbox_object_id=inbox_object.id
+    )
+    if not outbox_activity.id:
+        raise ValueError("Should never happen")
+    await new_outgoing_activity(db_session, from_actor.inbox_url, outbox_activity.id)
+
+    notif = models.Notification(
+        notification_type=models.NotificationType.REJECTED_FOLLOWER,
         actor_id=from_actor.id,
     )
     db_session.add(notif)

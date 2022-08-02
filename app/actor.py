@@ -218,6 +218,7 @@ async def get_actors_metadata(
             select(models.OutboxObject.ap_object, models.OutboxObject.ap_id).where(
                 models.OutboxObject.ap_type == "Follow",
                 models.OutboxObject.undone_by_outbox_object_id.is_(None),
+                models.OutboxObject.activity_object_ap_id.in_(ap_actor_ids),
             )
         )
     }

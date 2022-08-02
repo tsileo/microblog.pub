@@ -42,6 +42,7 @@ class Config(pydantic.BaseModel):
     secret: str
     debug: bool = False
     trusted_hosts: list[str] = ["127.0.0.1"]
+    manually_approves_followers: bool = False
 
     # Config items to make tests easier
     sqlalchemy_database: str | None = None
@@ -82,6 +83,7 @@ DOMAIN = CONFIG.domain
 _SCHEME = "https" if CONFIG.https else "http"
 ID = f"{_SCHEME}://{DOMAIN}"
 USERNAME = CONFIG.username
+MANUALLY_APPROVES_FOLLOWERS = CONFIG.manually_approves_followers
 BASE_URL = ID
 DEBUG = CONFIG.debug
 DB_PATH = CONFIG.sqlalchemy_database or ROOT_DIR / "data" / "microblogpub.db"

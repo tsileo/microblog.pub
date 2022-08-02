@@ -33,6 +33,24 @@
 </form>
 {% endmacro %}
 
+{% macro admin_accept_incoming_follow_button(notif) %}
+<form action="{{ request.url_for("admin_actions_accept_incoming_follow") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="notification_id" value="{{ notif.id }}">
+    <input type="submit" value="accept follow">
+</form>
+{% endmacro %}
+
+{% macro admin_reject_incoming_follow_button(notif) %}
+<form action="{{ request.url_for("admin_actions_reject_incoming_follow") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="notification_id" value="{{ notif.id }}">
+    <input type="submit" value="reject follow">
+</form>
+{% endmacro %}
+
 {% macro admin_like_button(ap_object_id, permalink_id) %}
 <form action="{{ request.url_for("admin_actions_like") }}" method="POST">
     {{ embed_csrf_token() }}
@@ -197,7 +215,7 @@
 
 {% endmacro %}
 
-{% macro display_actor(actor, actors_metadata={}, embedded=False, with_details=False) %}
+{% macro display_actor(actor, actors_metadata={}, embedded=False, with_details=False, pending_incoming_follow_notif=None) %}
 {% set metadata = actors_metadata.get(actor.ap_id) %}
 
 {% if not embedded %}
@@ -241,6 +259,20 @@
                     <li>{{ admin_unblock_button(actor) }}</li>
                 {% else %}
                     <li>{{ admin_block_button(actor) }}</li>
+                {% endif %}
+            {% endif %}
+            {% if pending_incoming_follow_notif %}
+                {% if not pending_incoming_follow_notif.is_accepted and not pending_incoming_follow_notif.is_rejected %}
+                    <li>
+                        {{ admin_accept_incoming_follow_button(pending_incoming_follow_notif) }}
+                    </li>
+                    <li>
+                        {{ admin_reject_incoming_follow_button(pending_incoming_follow_notif) }}
+                    </li>
+                {% elif pending_incoming_follow_notif.is_accepted %}
+                    <li>accepted</li>
+                {% else %}
+                    <li>rejected</li>
                 {% endif %}
             {% endif %}
         </ul>

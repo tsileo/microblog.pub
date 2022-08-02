@@ -95,7 +95,7 @@ ME = {
         + "/inbox",
     },
     "url": config.ID,
-    "manuallyApprovesFollowers": False,
+    "manuallyApprovesFollowers": config.CONFIG.manually_approves_followers,
     "attachment": [],
     "icon": {
         "mediaType": mimetypes.guess_type(config.CONFIG.icon_url)[0],

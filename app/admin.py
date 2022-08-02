@@ -616,6 +616,30 @@ async def admin_actions_delete(
     return RedirectResponse(redirect_url, status_code=302)
 
 
+@router.post("/actions/accept_incoming_follow")
+async def admin_actions_accept_incoming_follow(
+    request: Request,
+    notification_id: int = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    await boxes.send_accept(db_session, notification_id)
+    return RedirectResponse(redirect_url, status_code=302)
+
+
+@router.post("/actions/reject_incoming_follow")
+async def admin_actions_reject_incoming_follow(
+    request: Request,
+    notification_id: int = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    await boxes.send_reject(db_session, notification_id)
+    return RedirectResponse(redirect_url, status_code=302)
+
+
 @router.post("/actions/like")
 async def admin_actions_like(
     request: Request,

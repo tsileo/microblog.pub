@@ -22,6 +22,10 @@
             {%- if notif.notification_type.value == "new_follower" %}
                 {{ notif_actor_action(notif, "followed you") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {%- elif notif.notification_type.value == "pending_incoming_follower" %}
+                {{ notif_actor_action(notif, "sent a follow request") }}
+                {{ utils.display_actor(notif.actor, actors_metadata, pending_incoming_follow_notif=notif) }}
+            {% elif notif.notification_type.value == "rejected_follower" %}
             {% elif notif.notification_type.value == "unfollow" %}
                 {{ notif_actor_action(notif, "unfollowed you") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}

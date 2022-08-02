@@ -1,3 +1,4 @@
+from unittest import mock
 from uuid import uuid4
 
 import httpx
@@ -32,7 +33,7 @@ def test_inbox_requires_httpsig(
     assert response.json()["detail"] == "Invalid HTTP sig"
 
 
-def test_inbox_follow_request(
+def test_inbox_incoming_follow_request(
     db: Session,
     client: TestClient,
     respx_mock: respx.MockRouter,
@@ -66,11 +67,11 @@ def test_inbox_follow_request(
     run_async(process_next_incoming_activity)
 
     # And the actor was saved in DB
-    saved_actor = db.query(models.Actor).one()
+    saved_actor = db.execute(select(models.Actor)).scalar_one()
     assert saved_actor.ap_id == ra.ap_id
 
     # And the Follow activity was saved in the inbox
-    inbox_object = db.query(models.InboxObject).one()
+    inbox_object = db.execute(select(models.InboxObject)).scalar_one()
     assert inbox_object.ap_object == follow_activity.ap_object
 
     # And a follower was internally created
@@ -80,13 +81,59 @@ def test_inbox_follow_request(
     assert follower.inbox_object_id == inbox_object.id
 
     # And an Accept activity was created in the outbox
-    outbox_object = db.query(models.OutboxObject).one()
+    outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
     assert outbox_object.ap_type == "Accept"
     assert outbox_object.activity_object_ap_id == follow_activity.ap_id
 
     # And an outgoing activity was created to track the Accept activity delivery
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = db.execute(select(models.OutgoingActivity)).scalar_one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
+
+
+def test_inbox_incoming_follow_request__manually_approves_followers(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # Given a remote actor
+    ra = factories.RemoteActorFactory(
+        base_url="https://example.com",
+        username="toto",
+        public_key="pk",
+    )
+    respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra.ap_actor))
+
+    # When receiving a Follow activity
+    follow_activity = RemoteObject(
+        factories.build_follow_activity(
+            from_remote_actor=ra,
+            for_remote_actor=LOCAL_ACTOR,
+        ),
+        ra,
+    )
+    with mock_httpsig_checker(ra):
+        response = client.post(
+            "/inbox",
+            headers={"Content-Type": ap.AS_CTX},
+            json=follow_activity.ap_object,
+        )
+
+    # Then the server returns a 204
+    assert response.status_code == 202
+
+    with mock.patch("app.boxes.MANUALLY_APPROVES_FOLLOWERS", True):
+        run_async(process_next_incoming_activity)
+
+    # And the actor was saved in DB
+    saved_actor = db.execute(select(models.Actor)).scalar_one()
+    assert saved_actor.ap_id == ra.ap_id
+
+    # And the Follow activity was saved in the inbox
+    inbox_object = db.execute(select(models.InboxObject)).scalar_one()
+    assert inbox_object.ap_object == follow_activity.ap_object
+
+    # And no follower was internally created
+    assert db.scalar(select(func.count(models.Follower.id))) == 0
 
 
 def test_inbox_accept_follow_request(
@@ -133,13 +180,13 @@ def test_inbox_accept_follow_request(
     run_async(process_next_incoming_activity)
 
     # And the Accept activity was saved in the inbox
-    inbox_activity = db.query(models.InboxObject).one()
+    inbox_activity = db.execute(select(models.InboxObject)).scalar_one()
     assert inbox_activity.ap_type == "Accept"
     assert inbox_activity.relates_to_outbox_object_id == outbox_object.id
     assert inbox_activity.actor_id == actor_in_db.id
 
     # And a following entry was created internally
-    following = db.query(models.Following).one()
+    following = db.execute(select(models.Following)).scalar_one()
     assert following.ap_actor_id == actor_in_db.ap_id
 
 
