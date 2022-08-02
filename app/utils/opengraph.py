@@ -15,24 +15,31 @@ from app.utils.url import is_url_valid
 class OpenGraphMeta(BaseModel):
     url: str
     title: str
-    image: str
-    description: str
-    site_name: str | None = None
+    image: str | None
+    description: str | None
+    site_name: str
 
 
-def _scrap_og_meta(html: str) -> OpenGraphMeta | None:
+def _scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
     soup = BeautifulSoup(html, "html5lib")
     ogs = {
         og.attrs["property"]: og.attrs.get("content")
         for og in soup.html.head.findAll(property=re.compile(r"^og"))
     }
-    raw = {}
+    raw = {
+        "url": url,
+        "title": soup.find("title").text,
+        "image": None,
+        "description": None,
+        "site_name": urlparse(url).netloc,
+    }
     for field in OpenGraphMeta.__fields__.keys():
         og_field = f"og:{field}"
-        if not ogs.get(og_field) and field != "site_name":
-            return None
+        if ogs.get(og_field):
+            raw[field] = ogs.get(og_field, None)
 
-        raw[field] = ogs.get(og_field, None)
+    if "title" not in raw:
+        return None
 
     return OpenGraphMeta.parse_obj(raw)
 
@@ -58,7 +65,7 @@ def _urls_from_note(note: ap.RawObject) -> set[str]:
                 and is_url_valid(h)
                 and (
                     not mimetype
-                    or mimetype.split("/")[0] in ["image", "video", "audio"]
+                    or mimetype.split("/")[0] not in ["image", "video", "audio"]
                 )
             ):
                 urls.add(h)
@@ -81,7 +88,7 @@ async def _og_meta_from_url(url: str) -> OpenGraphMeta | None:
     if not (ct := resp.headers.get("content-type")) or not ct.startswith("text/html"):
         return None
 
-    return _scrap_og_meta(resp.text)
+    return _scrap_og_meta(url, resp.text)
 
 
 async def og_meta_from_note(note: ap.RawObject) -> list[dict[str, Any]]:

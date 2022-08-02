@@ -315,13 +315,13 @@
     <div>
         <img src="{{ og_meta.image | media_proxy_url }}" style="max-width:200px;max-height:100px;">
     </div>
+    {% endif %}
     <div>
         <a href="{{ og_meta.url }}">{{ og_meta.title }}</a>
         {% if og_meta.site_name %}
             <small style="display:block;">{{ og_meta.site_name }}</small>
         {% endif %}
     </div>
-    {% endif %}
 </div>
 {% endfor %}
 {% endif %}
