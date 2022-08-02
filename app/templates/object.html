@@ -19,7 +19,10 @@
 {% endblock %}
 
 {% block content %}
+
+{% if outbox_object %}
 {% include "header.html" %}
+{% endif %}
 
 {% macro display_replies_tree(replies_tree_node) %}
 

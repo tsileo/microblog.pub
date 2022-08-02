@@ -1,4 +1,9 @@
 {%- import "utils.html" as utils with context -%}
+
+{% block head %}
+<title>{{ local_actor.display_name }} - {{ actor.display_name }}</title>
+{% endblock %}
+
 {% extends "layout.html" %}
 {% block content %}
     {{ utils.display_actor(actor, actors_metadata, with_details=True) }}

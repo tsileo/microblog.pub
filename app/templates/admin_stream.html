@@ -1,5 +1,10 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
+
+{% block head %}
+<title>{{ local_actor.display_name }} - Stream</title>
+{% endblock %}
+
 {% block content %}
 
 {% for inbox_object in stream %}
