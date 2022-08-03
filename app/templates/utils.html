@@ -339,7 +339,9 @@
     {% endif %}
     {% for attachment in object.attachments %}
     {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
-    <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} title="{{ attachment.name }}" alt="{{ attachment.name }}"{% endif %} class="attachment">
+        {% if attachment.url not in object.inlined_images %}
+            <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} title="{{ attachment.name }}" alt="{{ attachment.name }}"{% endif %} class="attachment">
+        {% endif %}
     {% elif attachment.type == "Video" or (attachment | has_media_type("video")) %}
     <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment"></video>
     {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}

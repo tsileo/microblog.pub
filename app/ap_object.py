@@ -4,6 +4,7 @@ from functools import cached_property
 from typing import Any
 
 import pydantic
+from bs4 import BeautifulSoup  # type: ignore
 from markdown import markdown
 
 from app import activitypub as ap
@@ -74,6 +75,23 @@ class Object:
         return ap.as_list(self.ap_object.get("tag", []))
 
     @cached_property
+    def inlined_images(self) -> set[str]:
+        image_urls: set[str] = set()
+        if not self.content:
+            return image_urls
+
+        soup = BeautifulSoup(self.content, "html5lib")
+        imgs = soup.find_all("img")
+
+        for img in imgs:
+            if not img.attrs.get("src"):
+                continue
+
+            image_urls.add(img.attrs["src"])
+
+        return image_urls
+
+    @cached_property
     def attachments(self) -> list["Attachment"]:
         attachments = []
         for obj in ap.as_list(self.ap_object.get("attachment", [])):
@@ -97,7 +115,7 @@ class Object:
                     {
                         "proxiedUrl": proxied_url,
                         "resizedUrl": proxied_url + "/740"
-                        if obj["mediaType"].startswith("image")
+                        if obj.get("mediaType", "").startswith("image")
                         else None,
                         **obj,
                     }
