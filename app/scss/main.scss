@@ -12,6 +12,12 @@ $primary-button-text-color: #fff;
 // Load custom theme
 @import "theme.scss";
 
+blockquote {
+  border-left: 3px solid $secondary-color;
+  margin-left: 0;
+  padding-left: 1.5em;
+}
+
 .muted {
     color: $muted-color;
 }
