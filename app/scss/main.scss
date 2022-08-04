@@ -8,6 +8,7 @@ $form-background-color: #ccc;
 $form-text-color: #333;
 $muted-color: #555; // solarized comment text
 $primary-button-text-color: #fff;
+$code-highlight-background: #f0f0f0;
 
 // Load custom theme
 @import "theme.scss";
@@ -60,7 +61,7 @@ a {
 }
 
 div.highlight {
-    background: #f0f0f0;
+    background: $code-highlight-background;
     padding: 0 10px;
     overflow: auto;
     display: block;

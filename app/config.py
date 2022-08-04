@@ -49,6 +49,7 @@ class Config(pydantic.BaseModel):
     trusted_hosts: list[str] = ["127.0.0.1"]
     manually_approves_followers: bool = False
     privacy_replace: list[_PrivacyReplace] | None = None
+    code_highlighting_theme = "friendly_grayscale"
 
     # Config items to make tests easier
     sqlalchemy_database: str | None = None
@@ -106,8 +107,7 @@ EMOJI_TPL = '<img src="/static/twemoji/{filename}.svg" alt="{raw}" class="emoji"
 
 _load_emojis(ROOT_DIR, BASE_URL)
 
-# TODO(ts): allow to override this
-CODE_HIGHLIGHTING_THEME = "friendly_grayscale"
+CODE_HIGHLIGHTING_THEME = CONFIG.code_highlighting_theme
 
 
 session_serializer = URLSafeTimedSerializer(
