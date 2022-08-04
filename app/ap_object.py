@@ -2,7 +2,6 @@ import hashlib
 from datetime import datetime
 from functools import cached_property
 from typing import Any
-from urllib.parse import urlparse
 
 import pydantic
 from bs4 import BeautifulSoup  # type: ignore
@@ -12,8 +11,8 @@ from app import activitypub as ap
 from app.actor import LOCAL_ACTOR
 from app.actor import Actor
 from app.actor import RemoteActor
-from app.config import PRIVACY_REPLACE
 from app.media import proxied_media_url
+from app.utils import privacy_replace
 from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
 
@@ -179,20 +178,7 @@ class Object:
         if self.ap_object.get("mediaType") == "text/markdown":
             content = markdown(content, extensions=["mdx_linkify"])
 
-        if not PRIVACY_REPLACE:
-            return content
-
-        soup = BeautifulSoup(content, "html5lib")
-        links = soup.find_all("a", href=True)
-
-        for link in links:
-            parsed_href = urlparse(link.attrs["href"])
-            if new_netloc := PRIVACY_REPLACE.get(
-                parsed_href.netloc.removeprefix("www.")
-            ):
-                link.attrs["href"] = parsed_href._replace(netloc=new_netloc).geturl()
-
-        return soup.find("body").decode_contents()
+        return privacy_replace.replace_content(content)
 
     @property
     def summary(self) -> str | None:

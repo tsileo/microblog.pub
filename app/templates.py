@@ -32,6 +32,7 @@ from app.config import generate_csrf_token
 from app.config import session_serializer
 from app.database import AsyncSession
 from app.media import proxied_media_url
+from app.utils import privacy_replace
 from app.utils.datetime import now
 from app.utils.highlight import HIGHLIGHT_CSS
 from app.utils.highlight import highlight
@@ -400,3 +401,4 @@ _templates.env.filters["emojify"] = _emojify
 _templates.env.filters["pluralize"] = _pluralize
 _templates.env.filters["parse_datetime"] = _parse_datetime
 _templates.env.filters["poll_item_pct"] = _poll_item_pct
+_templates.env.filters["privacy_replace_url"] = privacy_replace.replace_url

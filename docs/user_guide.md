@@ -43,6 +43,9 @@ To do so, just add as these extra config items, this is a sample config that rew
 domain = "youtube.com"
 replace_by  ="yewtu.be"
 [[privacy_replace]]
+domain = "youtu.be"
+replace_by = "yewtu.be"
+[[privacy_replace]]
 domain = "twitter.com"
 replace_by = "nitter.net"
 [[privacy_replace]]

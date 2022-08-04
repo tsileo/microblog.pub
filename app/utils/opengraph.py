@@ -15,6 +15,7 @@ from app.database import AsyncSession
 from app.models import InboxObject
 from app.models import OutboxObject
 from app.utils.url import is_url_valid
+from app.utils.url import make_abs
 
 
 class OpenGraphMeta(BaseModel):
@@ -45,6 +46,10 @@ def _scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
 
     if "title" not in raw:
         return None
+
+    for maybe_rel in {"url", "image"}:
+        if u := raw.get(maybe_rel):
+            raw[maybe_rel] = make_abs(u, url)
 
     return OpenGraphMeta.parse_obj(raw)
 
