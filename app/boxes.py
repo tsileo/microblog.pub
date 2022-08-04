@@ -1209,6 +1209,7 @@ async def _process_note_object(
         relates_to_inbox_object_id=parent_activity.id,
         relates_to_outbox_object_id=None,
         activity_object_ap_id=ro.activity_object_ap_id,
+        og_meta=await opengraph.og_meta_from_note(ro.ap_object),
         # Hide replies from the stream
         is_hidden_from_stream=not (
             (not is_reply and is_from_following) or is_mention or is_local_reply
