@@ -59,21 +59,21 @@ async def save_outbox_object(
     source: str | None = None,
     is_transient: bool = False,
 ) -> models.OutboxObject:
-    ra = await RemoteObject.from_raw_object(raw_object)
+    ro = await RemoteObject.from_raw_object(raw_object)
 
     outbox_object = models.OutboxObject(
         public_id=public_id,
-        ap_type=ra.ap_type,
-        ap_id=ra.ap_id,
-        ap_context=ra.ap_context,
-        ap_object=ra.ap_object,
-        visibility=ra.visibility,
-        og_meta=await opengraph.og_meta_from_note(ra.ap_object),
+        ap_type=ro.ap_type,
+        ap_id=ro.ap_id,
+        ap_context=ro.ap_context,
+        ap_object=ro.ap_object,
+        visibility=ro.visibility,
+        og_meta=await opengraph.og_meta_from_note(db_session, ro),
         relates_to_inbox_object_id=relates_to_inbox_object_id,
         relates_to_outbox_object_id=relates_to_outbox_object_id,
         relates_to_actor_id=relates_to_actor_id,
-        activity_object_ap_id=ra.activity_object_ap_id,
-        is_hidden_from_homepage=True if ra.in_reply_to else False,
+        activity_object_ap_id=ro.activity_object_ap_id,
+        is_hidden_from_homepage=True if ro.in_reply_to else False,
         source=source,
         is_transient=is_transient,
     )
@@ -429,7 +429,7 @@ async def send_create(
 
     # If the note is public, check if we need to send any webmentions
     if visibility == ap.VisibilityEnum.PUBLIC:
-        possible_targets = opengraph._urls_from_note(obj)
+        possible_targets = await opengraph.external_urls(db_session, outbox_object)
         logger.info(f"webmentions possible targert {possible_targets}")
         for target in possible_targets:
             webmention_endpoint = await webmentions.discover_webmention_endpoint(target)
@@ -552,7 +552,8 @@ async def send_update(
 
     # If the note is public, check if we need to send any webmentions
     if outbox_object.visibility == ap.VisibilityEnum.PUBLIC:
-        possible_targets = opengraph._urls_from_note(note)
+
+        possible_targets = await opengraph.external_urls(db_session, outbox_object)
         logger.info(f"webmentions possible targert {possible_targets}")
         for target in possible_targets:
             webmention_endpoint = await webmentions.discover_webmention_endpoint(target)
@@ -1209,7 +1210,7 @@ async def _process_note_object(
         relates_to_inbox_object_id=parent_activity.id,
         relates_to_outbox_object_id=None,
         activity_object_ap_id=ro.activity_object_ap_id,
-        og_meta=await opengraph.og_meta_from_note(ro.ap_object),
+        og_meta=await opengraph.og_meta_from_note(db_session, ro),
         # Hide replies from the stream
         is_hidden_from_stream=not (
             (not is_reply and is_from_following) or is_mention or is_local_reply
@@ -1614,6 +1615,9 @@ async def save_to_inbox(
                     ap_published_at=announced_object.ap_published_at,
                     ap_object=announced_object.ap_object,
                     visibility=announced_object.visibility,
+                    og_meta=await opengraph.og_meta_from_note(
+                        db_session, announced_object
+                    ),
                     is_hidden_from_stream=True,
                 )
                 db_session.add(announced_inbox_object)

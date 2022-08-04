@@ -7,8 +7,13 @@ import httpx
 from bs4 import BeautifulSoup  # type: ignore
 from pydantic import BaseModel
 
-from app import activitypub as ap
+from app import ap_object
 from app import config
+from app.actor import LOCAL_ACTOR
+from app.actor import fetch_actor
+from app.database import AsyncSession
+from app.models import InboxObject
+from app.models import OutboxObject
 from app.utils.url import is_url_valid
 
 
@@ -44,17 +49,23 @@ def _scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
     return OpenGraphMeta.parse_obj(raw)
 
 
-def _urls_from_note(note: ap.RawObject) -> set[str]:
-    note_host = urlparse(ap.get_id(note["id"]) or "").netloc
+async def external_urls(
+    db_session: AsyncSession,
+    ro: ap_object.RemoteObject | OutboxObject | InboxObject,
+) -> set[str]:
+    note_host = urlparse(ro.ap_id).netloc
 
     tags_hrefs = set()
-    for tag in note.get("tag", []):
+    for tag in ro.tags:
         if tag_href := tag.get("href"):
             tags_hrefs.add(tag_href)
+        if tag.get("type") == "Mention" and tag["name"] != LOCAL_ACTOR.handle:
+            mentioned_actor = await fetch_actor(db_session, tag["href"])
+            tags_hrefs.add(mentioned_actor.url)
 
     urls = set()
-    if "content" in note:
-        soup = BeautifulSoup(note["content"], "html5lib")
+    if ro.content:
+        soup = BeautifulSoup(ro.content, "html5lib")
         for link in soup.find_all("a"):
             h = link.get("href")
             ph = urlparse(h)
@@ -91,9 +102,12 @@ async def _og_meta_from_url(url: str) -> OpenGraphMeta | None:
     return _scrap_og_meta(url, resp.text)
 
 
-async def og_meta_from_note(note: ap.RawObject) -> list[dict[str, Any]]:
+async def og_meta_from_note(
+    db_session: AsyncSession,
+    ro: ap_object.RemoteObject,
+) -> list[dict[str, Any]]:
     og_meta = []
-    urls = _urls_from_note(note)
+    urls = await external_urls(db_session, ro)
     for url in urls:
         try:
             maybe_og_meta = await _og_meta_from_url(url)
