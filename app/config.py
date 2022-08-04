@@ -31,6 +31,11 @@ USER_AGENT = f"microblogpub/{VERSION}"
 AP_CONTENT_TYPE = "application/activity+json"
 
 
+class _PrivacyReplace(pydantic.BaseModel):
+    domain: str
+    replace_by: str
+
+
 class Config(pydantic.BaseModel):
     domain: str
     username: str
@@ -43,6 +48,7 @@ class Config(pydantic.BaseModel):
     debug: bool = False
     trusted_hosts: list[str] = ["127.0.0.1"]
     manually_approves_followers: bool = False
+    privacy_replace: list[_PrivacyReplace] | None = None
 
     # Config items to make tests easier
     sqlalchemy_database: str | None = None
@@ -84,6 +90,9 @@ _SCHEME = "https" if CONFIG.https else "http"
 ID = f"{_SCHEME}://{DOMAIN}"
 USERNAME = CONFIG.username
 MANUALLY_APPROVES_FOLLOWERS = CONFIG.manually_approves_followers
+PRIVACY_REPLACE = None
+if CONFIG.privacy_replace:
+    PRIVACY_REPLACE = {pr.domain: pr.replace_by for pr in CONFIG.privacy_replace}
 BASE_URL = ID
 DEBUG = CONFIG.debug
 DB_PATH = CONFIG.sqlalchemy_database or ROOT_DIR / "data" / "microblogpub.db"

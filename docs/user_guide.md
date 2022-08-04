@@ -31,6 +31,28 @@ You can tweak your profile by tweaking these items:
 
 Whenever one of these config items is updated, an `Update` activity will be sent to all know server to update your remote profile.
 
+### Privacy replace
+
+You can define domain to be rewrited to more "privacy friendly" alternatives, like [Invidious](https://invidious.io/)
+or [Nitter](https://nitter.net/about).
+
+To do so, just add as these extra config items, this is a sample config that rewrite URLs for Twitter, Youtube, Reddit and Medium:
+
+```toml
+[[privacy_replace]]
+domain = "youtube.com"
+replace_by  ="yewtu.be"
+[[privacy_replace]]
+domain = "twitter.com"
+replace_by = "nitter.net"
+[[privacy_replace]]
+domain = "medium.com"
+replace_by = "scribe.rip"
+[[privacy_replace]]
+domain = "reddit.com"
+replace_by = "teddit.net"
+```
+
 ### Customization
 
 #### Custom emoji
