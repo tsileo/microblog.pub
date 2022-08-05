@@ -1110,7 +1110,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-requests"
-version = "2.28.7"
+version = "2.28.8"
 description = "Typing stubs for requests"
 category = "dev"
 optional = false
@@ -1129,7 +1129,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-urllib3"
-version = "1.26.21"
+version = "1.26.22"
 description = "Typing stubs for urllib3"
 category = "dev"
 optional = false
@@ -2015,13 +2015,13 @@ types-pillow = [
 ]
 types-python-dateutil = []
 types-requests = [
-    {file = "types-requests-2.28.7.tar.gz", hash = "sha256:36385618d4bd2ee3211d4d2e78b44f067ceb5984865c0f253f3c9ecb964526cf"},
-    {file = "types_requests-2.28.7-py3-none-any.whl", hash = "sha256:38015d310d13cf7d4d712d2507178349e13fd5dab85259dab7d9a9884c2c9c2a"},
+    {file = "types-requests-2.28.8.tar.gz", hash = "sha256:7a9f7b152d594a1c18dd4932cdd2596b8efbeedfd73caa4e4abb3755805b4685"},
+    {file = "types_requests-2.28.8-py3-none-any.whl", hash = "sha256:b0421f9f2d0dd0f8df2c75f974686517ca67473f05b466232d4c6384d765ad7a"},
 ]
 types-tabulate = []
 types-urllib3 = [
-    {file = "types-urllib3-1.26.21.tar.gz", hash = "sha256:2f7fb7ae6a1884241e588c7becd5f005ce1e03f6eface8a3f65e378c2adf9516"},
-    {file = "types_urllib3-1.26.21-py3-none-any.whl", hash = "sha256:2f960d8681002a37385263c372882fd12c676e10b127553738a2b6064e4438d1"},
+    {file = "types-urllib3-1.26.22.tar.gz", hash = "sha256:b05af90e73889e688094008a97ca95788db8bf3736e2776fd43fb6b171485d94"},
+    {file = "types_urllib3-1.26.22-py3-none-any.whl", hash = "sha256:09a8783e1002472e8d1e1f3792d4c5cca1fffebb9b48ee1512aae6d16fe186bc"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.3.0-py3-none-any.whl", hash = "sha256:25642c956049920a5aa49edcdd6ab1e06d7e5d467fc00e0506c44ac86fbfca02"},
