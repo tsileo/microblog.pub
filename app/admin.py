@@ -300,7 +300,17 @@ async def admin_inbox(
 ) -> templates.TemplateResponse:
     where = [
         models.InboxObject.ap_type.not_in(
-            ["Accept", "Delete", "Create", "Update", "Undo", "Read", "Add", "Remove"]
+            [
+                "Accept",
+                "Delete",
+                "Create",
+                "Update",
+                "Undo",
+                "Read",
+                "Add",
+                "Remove",
+                "EmojiReact",
+            ]
         ),
         models.InboxObject.is_deleted.is_(False),
         models.InboxObject.is_transient.is_(False),

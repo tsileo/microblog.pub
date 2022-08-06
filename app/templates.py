@@ -88,8 +88,11 @@ async def render_template(
     db_session: AsyncSession,
     request: Request,
     template: str,
-    template_args: dict[str, Any] = {},
+    template_args: dict[str, Any] | None = None,
 ) -> TemplateResponse:
+    if template_args is None:
+        template_args = {}
+
     is_admin = False
     is_admin = is_current_user_admin(request)
 
