@@ -103,7 +103,7 @@ async def render_template(
             "debug": DEBUG,
             "microblogpub_version": VERSION,
             "is_admin": is_admin,
-            "csrf_token": generate_csrf_token() if is_admin else None,
+            "csrf_token": generate_csrf_token(),
             "highlight_css": HIGHLIGHT_CSS,
             "visibility_enum": ap.VisibilityEnum,
             "notifications_count": await db_session.scalar(
