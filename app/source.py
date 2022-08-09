@@ -59,7 +59,7 @@ async def _mentionify(
             actor = await fetch_actor(db_session, actor_url)
 
         mentioned_actors.append(actor)
-        tags.append(dict(type="Mention", href=actor.url, name=mention))
+        tags.append(dict(type="Mention", href=actor.ap_id, name=mention))
 
         link = f'<span class="h-card"><a href="{actor.url}" class="u-url mention">@{username}</a></span>'  # noqa: E501
         content = content.replace(mention, link)
