@@ -129,10 +129,15 @@ def download_twemoji(ctx):
             f.write(tf.extractfile(member).read())  # type: ignore
 
 
-@task(download_twemoji, compile_scss, migrate_db)
+@task(download_twemoji, compile_scss)
 def configuration_wizard(ctx):
     # type: (Context) -> None
-    run("PYTHONPATH=. python scripts/config_wizard.py", pty=True, echo=True)
+    run("MICROBLOGPUB_CONFIG_FILE=tests.toml alembic upgrade head", echo=True)
+    run(
+        "MICROBLOGPUB_CONFIG_FILE=tests.toml PYTHONPATH=. python scripts/config_wizard.py",  # noqa: E501
+        pty=True,
+        echo=True,
+    )
 
 
 @task
