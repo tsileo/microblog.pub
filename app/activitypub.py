@@ -94,7 +94,7 @@ ME = {
         "sharedInbox": config.BASE_URL
         + "/inbox",
     },
-    "url": config.ID,
+    "url": config.ID + "/",  # XXX: the path is important for Mastodon compat
     "manuallyApprovesFollowers": config.CONFIG.manually_approves_followers,
     "attachment": [],
     "icon": {
