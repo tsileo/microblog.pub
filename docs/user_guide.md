@@ -39,21 +39,12 @@ or [Nitter](https://nitter.net/about).
 To do so, just add as these extra config items, this is a sample config that rewrite URLs for Twitter, Youtube, Reddit and Medium:
 
 ```toml
-[[privacy_replace]]
-domain = "youtube.com"
-replace_by  ="yewtu.be"
-[[privacy_replace]]
-domain = "youtu.be"
-replace_by = "yewtu.be"
-[[privacy_replace]]
-domain = "twitter.com"
-replace_by = "nitter.net"
-[[privacy_replace]]
-domain = "medium.com"
-replace_by = "scribe.rip"
-[[privacy_replace]]
-domain = "reddit.com"
-replace_by = "teddit.net"
+privacy_replace = [
+    {domain = "youtube.com", replace_by  = "yewtu.be"},
+    {domain = "twitter.com", replace_by = "nitter.fdn.fr"},
+    {domain = "medium.com", replace_by = "scribe.rip"},
+    {domain = "reddit.com", replace_by = "teddit.net"},
+]
 ```
 
 ### Customization
