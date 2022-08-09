@@ -67,6 +67,7 @@ async def external_urls(
         if tag.get("type") == "Mention" and tag["name"] != LOCAL_ACTOR.handle:
             mentioned_actor = await fetch_actor(db_session, tag["href"])
             tags_hrefs.add(mentioned_actor.url)
+            tags_hrefs.add(mentioned_actor.ap_id)
 
     urls = set()
     if ro.content:
