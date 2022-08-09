@@ -12,7 +12,6 @@ from app.actor import LOCAL_ACTOR
 from app.actor import Actor
 from app.actor import RemoteActor
 from app.media import proxied_media_url
-from app.utils import privacy_replace
 from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
 
@@ -178,7 +177,7 @@ class Object:
         if self.ap_object.get("mediaType") == "text/markdown":
             content = markdown(content, extensions=["mdx_linkify"])
 
-        return privacy_replace.replace_content(content)
+        return content
 
     @property
     def summary(self) -> str | None:

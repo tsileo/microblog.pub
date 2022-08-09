@@ -307,7 +307,9 @@ def _clean_html(html: str, note: Object) -> str:
         return _emojify(
             _replace_custom_emojis(
                 bleach.clean(
-                    _update_inline_imgs(highlight(html)),
+                    privacy_replace.replace_content(
+                        _update_inline_imgs(highlight(html))
+                    ),
                     tags=ALLOWED_TAGS,
                     attributes=ALLOWED_ATTRIBUTES,
                     strip=True,
