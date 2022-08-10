@@ -68,7 +68,7 @@ def process_outgoing_activities(ctx):
     # type: (Context) -> None
     from app.outgoing_activities import loop
 
-    loop()
+    asyncio.run(loop())
 
 
 @task

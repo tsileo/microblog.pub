@@ -12,6 +12,8 @@ from app import activitypub as ap
 from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import RemoteObject
+from app.database import AsyncSession
+from app.incoming_activities import fetch_next_incoming_activity
 from app.incoming_activities import process_next_incoming_activity
 from tests import factories
 from tests.utils import mock_httpsig_checker
@@ -19,6 +21,12 @@ from tests.utils import run_async
 from tests.utils import setup_inbox_delete
 from tests.utils import setup_remote_actor
 from tests.utils import setup_remote_actor_as_follower
+
+
+async def _process_next_incoming_activity(db_session: AsyncSession) -> None:
+    next_activity = await fetch_next_incoming_activity(db_session, set())
+    assert next_activity
+    await process_next_incoming_activity(db_session, next_activity)
 
 
 def test_inbox_requires_httpsig(
@@ -64,7 +72,7 @@ def test_inbox_incoming_follow_request(
     # Then the server returns a 204
     assert response.status_code == 202
 
-    run_async(process_next_incoming_activity)
+    run_async(_process_next_incoming_activity)
 
     # And the actor was saved in DB
     saved_actor = db.execute(select(models.Actor)).scalar_one()
@@ -122,7 +130,7 @@ def test_inbox_incoming_follow_request__manually_approves_followers(
     assert response.status_code == 202
 
     with mock.patch("app.boxes.MANUALLY_APPROVES_FOLLOWERS", True):
-        run_async(process_next_incoming_activity)
+        run_async(_process_next_incoming_activity)
 
     # And the actor was saved in DB
     saved_actor = db.execute(select(models.Actor)).scalar_one()
@@ -177,7 +185,7 @@ def test_inbox_accept_follow_request(
     # Then the server returns a 204
     assert response.status_code == 202
 
-    run_async(process_next_incoming_activity)
+    run_async(_process_next_incoming_activity)
 
     # And the Accept activity was saved in the inbox
     inbox_activity = db.execute(select(models.InboxObject)).scalar_one()
@@ -224,7 +232,7 @@ def test_inbox__create_from_follower(
     assert response.status_code == 202
 
     # And when processing the incoming activity
-    run_async(process_next_incoming_activity)
+    run_async(_process_next_incoming_activity)
 
     # Then the Create activity was saved
     create_activity_from_inbox: models.InboxObject | None = db.execute(
@@ -278,7 +286,7 @@ def test_inbox__create_already_deleted_object(
     assert response.status_code == 202
 
     # And when processing the incoming activity
-    run_async(process_next_incoming_activity)
+    run_async(_process_next_incoming_activity)
 
     # Then the Create activity was saved
     create_activity_from_inbox: models.InboxObject | None = db.execute(
@@ -334,7 +342,7 @@ def test_inbox__actor_is_blocked(
     assert response.status_code == 202
 
     # And when processing the incoming activity from a blocked actor
-    run_async(process_next_incoming_activity)
+    run_async(_process_next_incoming_activity)
 
     # Then the Create activity was discarded
     assert (

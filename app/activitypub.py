@@ -327,17 +327,18 @@ def remove_context(raw_object: RawObject) -> RawObject:
     return a
 
 
-def post(url: str, payload: dict[str, Any]) -> httpx.Response:
+async def post(url: str, payload: dict[str, Any]) -> httpx.Response:
     check_url(url)
 
-    resp = httpx.post(
-        url,
-        headers={
-            "User-Agent": config.USER_AGENT,
-            "Content-Type": config.AP_CONTENT_TYPE,
-        },
-        json=payload,
-        auth=auth,
-    )
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            url,
+            headers={
+                "User-Agent": config.USER_AGENT,
+                "Content-Type": config.AP_CONTENT_TYPE,
+            },
+            json=payload,
+            auth=auth,
+        )
     resp.raise_for_status()
     return resp

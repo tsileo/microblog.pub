@@ -157,7 +157,12 @@ async def save_actor(db_session: AsyncSession, ap_actor: ap.RawObject) -> "Actor
     return actor
 
 
-async def fetch_actor(db_session: AsyncSession, actor_id: str) -> "ActorModel":
+async def fetch_actor(
+    db_session: AsyncSession,
+    actor_id: str,
+) -> Union["ActorModel", RemoteActor]:
+    if actor_id == LOCAL_ACTOR.ap_id:
+        return LOCAL_ACTOR
     from app import models
 
     existing_actor = (

@@ -13,8 +13,8 @@ from app import ldsig
 from app import models
 from app.boxes import save_to_inbox
 from app.database import AsyncSession
-from app.database import async_session
 from app.utils.datetime import now
+from app.utils.workers import Worker
 
 _MAX_RETRIES = 8
 
@@ -67,11 +67,15 @@ def _set_next_try(
         outgoing_activity.next_try = next_try or _exp_backoff(outgoing_activity.tries)
 
 
-async def process_next_incoming_activity(db_session: AsyncSession) -> bool:
+async def fetch_next_incoming_activity(
+    db_session: AsyncSession,
+    in_flight: set[int],
+) -> models.IncomingActivity | None:
     where = [
         models.IncomingActivity.next_try <= now(),
         models.IncomingActivity.is_errored.is_(False),
         models.IncomingActivity.is_processed.is_(False),
+        models.IncomingActivity.id.not_in(in_flight),
     ]
     q_count = await db_session.scalar(
         select(func.count(models.IncomingActivity.id)).where(*where)
@@ -80,7 +84,7 @@ async def process_next_incoming_activity(db_session: AsyncSession) -> bool:
         logger.info(f"{q_count} incoming activities ready to process")
     if not q_count:
         # logger.debug("No activities to process")
-        return False
+        return None
 
     next_activity = (
         await db_session.execute(
@@ -91,6 +95,13 @@ async def process_next_incoming_activity(db_session: AsyncSession) -> bool:
         )
     ).scalar_one()
 
+    return next_activity
+
+
+async def process_next_incoming_activity(
+    db_session: AsyncSession,
+    next_activity: models.IncomingActivity,
+) -> None:
     logger.info(
         f"incoming_activity={next_activity.ap_object}/"
         f"{next_activity.sent_by_ap_actor_id}"
@@ -99,35 +110,45 @@ async def process_next_incoming_activity(db_session: AsyncSession) -> bool:
     next_activity.tries = next_activity.tries + 1
     next_activity.last_try = now()
 
-    try:
-        async with db_session.begin_nested():
-            await save_to_inbox(
-                db_session,
-                next_activity.ap_object,
-                next_activity.sent_by_ap_actor_id,
-            )
-    except Exception:
-        logger.exception("Failed")
-        next_activity.error = traceback.format_exc()
-        _set_next_try(next_activity)
-    else:
-        logger.info("Success")
-        next_activity.is_processed = True
+    if next_activity.ap_object and next_activity.sent_by_ap_actor_id:
+        try:
+            async with db_session.begin_nested():
+                await save_to_inbox(
+                    db_session,
+                    next_activity.ap_object,
+                    next_activity.sent_by_ap_actor_id,
+                )
+        except Exception:
+            logger.exception("Failed")
+            next_activity.error = traceback.format_exc()
+            _set_next_try(next_activity)
+        else:
+            logger.info("Success")
+            next_activity.is_processed = True
+
+    # FIXME: webmention support
 
     await db_session.commit()
-    return True
+    return None
+
+
+class IncomingActivityWorker(Worker[models.IncomingActivity]):
+    async def process_message(
+        self,
+        db_session: AsyncSession,
+        next_activity: models.IncomingActivity,
+    ) -> None:
+        await process_next_incoming_activity(db_session, next_activity)
+
+    async def get_next_message(
+        self,
+        db_session: AsyncSession,
+    ) -> models.IncomingActivity | None:
+        return await fetch_next_incoming_activity(db_session, self.in_flight_ids())
 
 
 async def loop() -> None:
-    async with async_session() as db_session:
-        while 1:
-            try:
-                await process_next_incoming_activity(db_session)
-            except Exception:
-                logger.exception("Failed to process next incoming activity")
-                raise
-
-            await asyncio.sleep(1)
+    await IncomingActivityWorker(workers_count=1).run_forever()
 
 
 if __name__ == "__main__":

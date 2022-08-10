@@ -5,13 +5,13 @@ import pytest
 import respx
 from fastapi.testclient import TestClient
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import RemoteObject
 from app.database import AsyncSession
 from app.outgoing_activities import _MAX_RETRIES
+from app.outgoing_activities import fetch_next_outgoing_activity
 from app.outgoing_activities import new_outgoing_activity
 from app.outgoing_activities import process_next_outgoing_activity
 from tests import factories
@@ -65,15 +65,18 @@ async def test_new_outgoing_activity(
     assert outgoing_activity.recipient == inbox_url
 
 
-def test_process_next_outgoing_activity__no_next_activity(
-    db: Session,
+@pytest.mark.asyncio
+async def test_process_next_outgoing_activity__no_next_activity(
     respx_mock: respx.MockRouter,
+    async_db_session: AsyncSession,
 ) -> None:
-    assert process_next_outgoing_activity(db) is False
+    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    assert next_activity is None
 
 
-def test_process_next_outgoing_activity__server_200(
-    db: Session,
+@pytest.mark.asyncio
+async def test_process_next_outgoing_activity__server_200(
+    async_db_session: AsyncSession,
     respx_mock: respx.MockRouter,
 ) -> None:
     # And an outgoing activity
@@ -91,19 +94,24 @@ def test_process_next_outgoing_activity__server_200(
 
     # When processing the next outgoing activity
     # Then it is processed
-    assert process_next_outgoing_activity(db) is True
+    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    assert next_activity
+    await process_next_outgoing_activity(async_db_session, next_activity)
 
     assert respx_mock.calls.call_count == 1
 
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = (
+        await async_db_session.execute(select(models.OutgoingActivity))
+    ).scalar_one()
     assert outgoing_activity.is_sent is True
     assert outgoing_activity.last_status_code == 204
     assert outgoing_activity.error is None
     assert outgoing_activity.is_errored is False
 
 
-def test_process_next_outgoing_activity__webmention(
-    db: Session,
+@pytest.mark.asyncio
+async def test_process_next_outgoing_activity__webmention(
+    async_db_session: AsyncSession,
     respx_mock: respx.MockRouter,
 ) -> None:
     # And an outgoing activity
@@ -121,19 +129,24 @@ def test_process_next_outgoing_activity__webmention(
 
     # When processing the next outgoing activity
     # Then it is processed
-    assert process_next_outgoing_activity(db) is True
+    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    assert next_activity
+    await process_next_outgoing_activity(async_db_session, next_activity)
 
     assert respx_mock.calls.call_count == 1
 
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = (
+        await async_db_session.execute(select(models.OutgoingActivity))
+    ).scalar_one()
     assert outgoing_activity.is_sent is True
     assert outgoing_activity.last_status_code == 204
     assert outgoing_activity.error is None
     assert outgoing_activity.is_errored is False
 
 
-def test_process_next_outgoing_activity__error_500(
-    db: Session,
+@pytest.mark.asyncio
+async def test_process_next_outgoing_activity__error_500(
+    async_db_session: AsyncSession,
     respx_mock: respx.MockRouter,
 ) -> None:
     outbox_object = _setup_outbox_object()
@@ -152,11 +165,15 @@ def test_process_next_outgoing_activity__error_500(
 
     # When processing the next outgoing activity
     # Then it is processed
-    assert process_next_outgoing_activity(db) is True
+    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    assert next_activity
+    await process_next_outgoing_activity(async_db_session, next_activity)
 
     assert respx_mock.calls.call_count == 1
 
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = (
+        await async_db_session.execute(select(models.OutgoingActivity))
+    ).scalar_one()
     assert outgoing_activity.is_sent is False
     assert outgoing_activity.last_status_code == 500
     assert outgoing_activity.last_response == "oops"
@@ -164,8 +181,9 @@ def test_process_next_outgoing_activity__error_500(
     assert outgoing_activity.tries == 1
 
 
-def test_process_next_outgoing_activity__errored(
-    db: Session,
+@pytest.mark.asyncio
+async def test_process_next_outgoing_activity__errored(
+    async_db_session: AsyncSession,
     respx_mock: respx.MockRouter,
 ) -> None:
     outbox_object = _setup_outbox_object()
@@ -185,22 +203,28 @@ def test_process_next_outgoing_activity__errored(
 
     # When processing the next outgoing activity
     # Then it is processed
-    assert process_next_outgoing_activity(db) is True
+    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    assert next_activity
+    await process_next_outgoing_activity(async_db_session, next_activity)
 
     assert respx_mock.calls.call_count == 1
 
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = (
+        await async_db_session.execute(select(models.OutgoingActivity))
+    ).scalar_one()
     assert outgoing_activity.is_sent is False
     assert outgoing_activity.last_status_code == 500
     assert outgoing_activity.last_response == "oops"
     assert outgoing_activity.is_errored is True
 
     # And it is skipped from processing
-    assert process_next_outgoing_activity(db) is False
+    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    assert next_activity is None
 
 
-def test_process_next_outgoing_activity__connect_error(
-    db: Session,
+@pytest.mark.asyncio
+async def test_process_next_outgoing_activity__connect_error(
+    async_db_session: AsyncSession,
     respx_mock: respx.MockRouter,
 ) -> None:
     outbox_object = _setup_outbox_object()
@@ -217,11 +241,15 @@ def test_process_next_outgoing_activity__connect_error(
 
     # When processing the next outgoing activity
     # Then it is processed
-    assert process_next_outgoing_activity(db) is True
+    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    assert next_activity
+    await process_next_outgoing_activity(async_db_session, next_activity)
 
     assert respx_mock.calls.call_count == 1
 
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = (
+        await async_db_session.execute(select(models.OutgoingActivity))
+    ).scalar_one()
     assert outgoing_activity.is_sent is False
     assert outgoing_activity.error is not None
     assert outgoing_activity.tries == 1

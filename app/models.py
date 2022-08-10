@@ -320,7 +320,7 @@ class IncomingActivity(Base):
     ap_id = Column(String, nullable=True, index=True)
     ap_object: Mapped[ap.RawObject] = Column(JSON, nullable=True)
 
-    tries = Column(Integer, nullable=False, default=0)
+    tries: Mapped[int] = Column(Integer, nullable=False, default=0)
     next_try = Column(DateTime(timezone=True), nullable=True, default=now)
 
     last_try = Column(DateTime(timezone=True), nullable=True)
