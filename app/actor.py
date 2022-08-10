@@ -160,9 +160,9 @@ async def save_actor(db_session: AsyncSession, ap_actor: ap.RawObject) -> "Actor
 async def fetch_actor(
     db_session: AsyncSession,
     actor_id: str,
-) -> Union["ActorModel", RemoteActor]:
+) -> "ActorModel":
     if actor_id == LOCAL_ACTOR.ap_id:
-        return LOCAL_ACTOR
+        raise ValueError("local actor should not be fetched")
     from app import models
 
     existing_actor = (
