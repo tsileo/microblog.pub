@@ -289,14 +289,14 @@
 
     {% if actor.attachments %}
     <div id="profile-props">
-        <dl>
-            {% for prop in actor.attachments %}
+        {% for prop in actor.attachments %}
+            <dl>
                 {% if prop.type == "PropertyValue" %}
-                    <dt>{{ prop.name }}</dt>
-                    <dd>{{ prop.value | clean_html(actor) | safe }}</dd>
+                <dt class="muted" title="{{ prop.name }}">{{ prop.name }}</dt>
+                <dd>{{ prop.value | clean_html(actor) | safe }}</dd>
                 {% endif %}
-            {% endfor %}
-        </dl>
+            </dl>
+        {% endfor %}
     </div>
     {% endif %}
 {% endif %}

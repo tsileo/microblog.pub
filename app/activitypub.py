@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import httpx
+from markdown import markdown
 
 from app import config
 from app.config import AP_CONTENT_TYPE  # noqa: F401
@@ -96,7 +97,16 @@ ME = {
     },
     "url": config.ID + "/",  # XXX: the path is important for Mastodon compat
     "manuallyApprovesFollowers": config.CONFIG.manually_approves_followers,
-    "attachment": [],
+    "attachment": [
+        {
+            "name": kv.key,
+            "type": "PropertyValue",
+            "value": markdown(kv.value, extensions=["mdx_linkify", "fenced_code"]),
+        }
+        for kv in config.CONFIG.metadata
+    ]
+    if config.CONFIG.metadata
+    else [],
     "icon": {
         "mediaType": mimetypes.guess_type(config.CONFIG.icon_url)[0],
         "type": "Image",

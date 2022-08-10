@@ -36,6 +36,11 @@ class _PrivacyReplace(pydantic.BaseModel):
     replace_by: str
 
 
+class _ProfileMetadata(pydantic.BaseModel):
+    key: str
+    value: str
+
+
 class Config(pydantic.BaseModel):
     domain: str
     username: str
@@ -49,6 +54,7 @@ class Config(pydantic.BaseModel):
     trusted_hosts: list[str] = ["127.0.0.1"]
     manually_approves_followers: bool = False
     privacy_replace: list[_PrivacyReplace] | None = None
+    metadata: list[_ProfileMetadata] | None = None
     code_highlighting_theme = "friendly_grayscale"
 
     # Config items to make tests easier

@@ -51,6 +51,26 @@ a {
     text-decoration: none;
 }
 
+dl {
+  display: flex;
+  dt {
+    width: 200px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  dd {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    p {
+      display: inline;
+    }
+  }
+}
+
 .shared-header {
     margin-left: 20px;
     margin-top: 30px;

@@ -257,6 +257,14 @@ def _actor_hash(actor: Actor) -> bytes:
     if actor.icon_url:
         h.update(actor.icon_url.encode())
 
+    if actor.attachments:
+        for a in actor.attachments:
+            if a.get("type") != "PropertyValue":
+                continue
+
+            h.update(a["name"].encode())
+            h.update(a["value"].encode())
+
     h.update(actor.public_key_id.encode())
     h.update(actor.public_key_as_pem.encode())
 

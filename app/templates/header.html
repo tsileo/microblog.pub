@@ -11,6 +11,17 @@
 {{ local_actor.summary | safe }}
 </div>
 
+<div id="profile-props">
+    {% for prop in local_actor.attachments %}
+        <dl>
+            {% if prop.type == "PropertyValue" %}
+            <dt class="muted" title="{{ prop.name }}">{{ prop.name }}</dt>
+            <dd>{{ prop.value | clean_html(local_actor) | safe }}</dd>
+            {% endif %}
+        </dl>
+    {% endfor %}
+</div>
+
 </div>
 
 {%- macro header_link(url, text) -%}
