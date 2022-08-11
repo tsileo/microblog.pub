@@ -177,6 +177,11 @@ ALLOWED_TAGS = [
 ]
 
 ALLOWED_CSS_CLASSES = [
+    # microformats
+    "h-card",
+    "u-url",
+    "mention",
+    # code highlighting
     "highlight",
     "codehilite",
     "hll",
