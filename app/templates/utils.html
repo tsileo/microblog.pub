@@ -174,6 +174,23 @@
 </form> 
 {% endmacro %}
 
+{% macro admin_dm_button(actor_handle) %}
+<form action="/admin/new"  method="GET">
+<input type="hidden" name="with_content" value="{{ actor_handle }}">
+<input type="hidden" name="with_visibility" value="DIRECT">
+<button type="submit">direct message</button>
+</form> 
+{% endmacro %}
+
+{% macro admin_mention_button(actor_handle) %}
+<form action="/admin/new"  method="GET">
+<input type="hidden" name="with_content" value="{{ actor_handle }}">
+<button type="submit">mention</button>
+</form> 
+{% endmacro %}
+
+
+
 {% macro admin_profile_button(ap_actor_id) %}
 <form action="{{ url_for("admin_profile") }}"  method="GET">
 <input type="hidden" name="actor_id" value="{{ ap_actor_id }}">
@@ -248,7 +265,7 @@
             {% endif %}
             {% if metadata.is_follower %}
                 <li>follows you</li>
-                {% if not metadata.is_following %}
+                {% if not metadata.is_following and not with_details %}
                     <li>{{ admin_profile_button(actor.ap_id) }}</li>
                 {% endif %}
                 </li>
@@ -261,6 +278,8 @@
                     <li>{{ admin_block_button(actor) }}</li>
                 {% endif %}
             {% endif %}
+                <li>{{ admin_dm_button(actor.handle) }}</li>
+                <li>{{ admin_mention_button(actor.handle) }}</li>
             {% if pending_incoming_follow_notif %}
                 {% if not pending_incoming_follow_notif.is_accepted and not pending_incoming_follow_notif.is_rejected %}
                     <li>

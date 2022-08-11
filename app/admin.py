@@ -133,6 +133,8 @@ async def admin_new(
     request: Request,
     query: str | None = None,
     in_reply_to: str | None = None,
+    with_content: str | None = None,
+    with_visibility: str | None = None,
     db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
     content = ""
@@ -156,6 +158,8 @@ async def admin_new(
         # Copy the content warning if any
         if in_reply_to_object.summary:
             content_warning = in_reply_to_object.summary
+    elif with_content:
+        content += f"{with_content} "
 
     return await templates.render_template(
         db_session,
@@ -169,6 +173,7 @@ async def admin_new(
                 (v.name, ap.VisibilityEnum.get_display_name(v))
                 for v in ap.VisibilityEnum
             ],
+            "visibility": with_visibility,
             "emojis": EMOJIS.split(" "),
             "custom_emojis": sorted(
                 [dat for name, dat in EMOJIS_BY_NAME.items()],
