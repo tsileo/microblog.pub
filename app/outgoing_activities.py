@@ -4,8 +4,10 @@ import time
 import traceback
 from datetime import datetime
 from datetime import timedelta
+from typing import MutableMapping
 
 import httpx
+from cachetools import TTLCache
 from loguru import logger
 from sqlalchemy import func
 from sqlalchemy import select
@@ -25,6 +27,9 @@ from app.utils.url import check_url
 from app.utils.workers import Worker
 
 _MAX_RETRIES = 16
+
+_LD_SIG_CACHE: MutableMapping[str, ap.RawObject] = TTLCache(maxsize=5, ttl=60 * 5)
+
 
 k = Key(config.ID, f"{config.ID}#main-key")
 k.load(KEY_PATH.read_text())
@@ -237,7 +242,11 @@ async def process_next_outgoing_activity(
             ]:
                 # But only if the object is public (to help with deniability/privacy)
                 if next_activity.outbox_object.visibility == ap.VisibilityEnum.PUBLIC:  # type: ignore  # noqa: E501
-                    ldsig.generate_signature(payload, k)
+                    if p := _LD_SIG_CACHE.get(payload["id"]):
+                        payload = p
+                    else:
+                        ldsig.generate_signature(payload, k)
+                        _LD_SIG_CACHE[payload["id"]] = payload
 
             logger.info(f"{payload=}")
 

@@ -76,7 +76,9 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - allow to manually approve follow requests
+# - Add a TTL cache for the LD sig (no need to re-compute)
+# - only show 10 most recent threads in DMs
+# - custom CSS for disabled button (e.g. sharing on a direct post)
 # - prevent double accept/double follow
 # - UI support for updating posts
 # - indieauth tweaks
