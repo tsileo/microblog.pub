@@ -70,7 +70,7 @@ async def test_process_next_outgoing_activity__no_next_activity(
     respx_mock: respx.MockRouter,
     async_db_session: AsyncSession,
 ) -> None:
-    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    next_activity = await fetch_next_outgoing_activity(async_db_session)
     assert next_activity is None
 
 
@@ -94,7 +94,7 @@ async def test_process_next_outgoing_activity__server_200(
 
     # When processing the next outgoing activity
     # Then it is processed
-    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    next_activity = await fetch_next_outgoing_activity(async_db_session)
     assert next_activity
     await process_next_outgoing_activity(async_db_session, next_activity)
 
@@ -129,7 +129,7 @@ async def test_process_next_outgoing_activity__webmention(
 
     # When processing the next outgoing activity
     # Then it is processed
-    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    next_activity = await fetch_next_outgoing_activity(async_db_session)
     assert next_activity
     await process_next_outgoing_activity(async_db_session, next_activity)
 
@@ -165,7 +165,7 @@ async def test_process_next_outgoing_activity__error_500(
 
     # When processing the next outgoing activity
     # Then it is processed
-    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    next_activity = await fetch_next_outgoing_activity(async_db_session)
     assert next_activity
     await process_next_outgoing_activity(async_db_session, next_activity)
 
@@ -203,7 +203,7 @@ async def test_process_next_outgoing_activity__errored(
 
     # When processing the next outgoing activity
     # Then it is processed
-    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    next_activity = await fetch_next_outgoing_activity(async_db_session)
     assert next_activity
     await process_next_outgoing_activity(async_db_session, next_activity)
 
@@ -218,7 +218,7 @@ async def test_process_next_outgoing_activity__errored(
     assert outgoing_activity.is_errored is True
 
     # And it is skipped from processing
-    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    next_activity = await fetch_next_outgoing_activity(async_db_session)
     assert next_activity is None
 
 
@@ -241,7 +241,7 @@ async def test_process_next_outgoing_activity__connect_error(
 
     # When processing the next outgoing activity
     # Then it is processed
-    next_activity = await fetch_next_outgoing_activity(async_db_session, set())
+    next_activity = await fetch_next_outgoing_activity(async_db_session)
     assert next_activity
     await process_next_outgoing_activity(async_db_session, next_activity)
 

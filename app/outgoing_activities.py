@@ -170,13 +170,11 @@ def _set_next_try(
 
 async def fetch_next_outgoing_activity(
     db_session: AsyncSession,
-    in_fligh: set[int],
 ) -> models.OutgoingActivity | None:
     where = [
         models.OutgoingActivity.next_try <= now(),
         models.OutgoingActivity.is_errored.is_(False),
         models.OutgoingActivity.is_sent.is_(False),
-        models.OutgoingActivity.id.not_in(in_fligh),
     ]
     q_count = await db_session.scalar(
         select(func.count(models.OutgoingActivity.id)).where(*where)
@@ -289,14 +287,14 @@ class OutgoingActivityWorker(Worker[models.OutgoingActivity]):
         self,
         db_session: AsyncSession,
     ) -> models.OutgoingActivity | None:
-        return await fetch_next_outgoing_activity(db_session, self.in_flight_ids())
+        return await fetch_next_outgoing_activity(db_session)
 
     async def startup(self, db_session: AsyncSession) -> None:
         await _send_actor_update_if_needed(db_session)
 
 
 async def loop() -> None:
-    await OutgoingActivityWorker(workers_count=3).run_forever()
+    await OutgoingActivityWorker().run_forever()
 
 
 if __name__ == "__main__":

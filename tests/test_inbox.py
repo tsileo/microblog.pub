@@ -24,7 +24,7 @@ from tests.utils import setup_remote_actor_as_follower
 
 
 async def _process_next_incoming_activity(db_session: AsyncSession) -> None:
-    next_activity = await fetch_next_incoming_activity(db_session, set())
+    next_activity = await fetch_next_incoming_activity(db_session)
     assert next_activity
     await process_next_incoming_activity(db_session, next_activity)
 
