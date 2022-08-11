@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup  # type: ignore
+from loguru import logger
 from pydantic import BaseModel
 
 from app import ap_object
@@ -32,6 +33,7 @@ def _scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
         og.attrs["property"]: og.attrs.get("content")
         for og in soup.html.head.findAll(property=re.compile(r"^og"))
     }
+    # FIXME some page have no <title>
     raw = {
         "url": url,
         "title": soup.find("title").text,
@@ -109,7 +111,11 @@ async def _og_meta_from_url(url: str) -> OpenGraphMeta | None:
     if not (ct := resp.headers.get("content-type")) or not ct.startswith("text/html"):
         return None
 
-    return _scrap_og_meta(url, resp.text)
+    try:
+        return _scrap_og_meta(url, resp.text)
+    except Exception:
+        logger.info(f"Failed to scrap OG meta for {url}")
+        return None
 
 
 async def og_meta_from_note(
