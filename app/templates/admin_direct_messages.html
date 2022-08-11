@@ -1,0 +1,18 @@
+{%- import "utils.html" as utils with context -%}
+{% extends "layout.html" %}
+
+{% block head %}
+<title>{{ local_actor.display_name }} - Direct messages</title>
+{% endblock %}
+
+{% block content %}
+
+{% for anybox_object, convo, actors in threads %}
+    <div class="actor-action">
+    With {% for actor in actors %}
+        <a href="">{{ actor.handle }}</a>
+    {% endfor %}
+    </div>
+    {{ utils.display_object(anybox_object) }}
+{% endfor %}
+{% endblock %}
