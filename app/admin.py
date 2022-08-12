@@ -393,6 +393,9 @@ async def admin_direct_messages(
     db_session: AsyncSession = Depends(get_db_session),
     cursor: str | None = None,
 ) -> templates.TemplateResponse:
+    # The process for building DMs thread is a bit compex in term of query
+    # but it does not require an extra tables to index/manage threads
+
     inbox_convos = (
         (
             await db_session.execute(
@@ -407,6 +410,8 @@ async def admin_direct_messages(
                 .where(
                     models.InboxObject.visibility == ap.VisibilityEnum.DIRECT,
                     models.InboxObject.ap_context.is_not(None),
+                    # Skip transient object like poll relies
+                    models.InboxObject.is_transient.is_(False),
                 )
                 .group_by(models.InboxObject.ap_context, models.InboxObject.actor_id)
             )
@@ -427,6 +432,8 @@ async def admin_direct_messages(
                 .where(
                     models.OutboxObject.visibility == ap.VisibilityEnum.DIRECT,
                     models.OutboxObject.ap_context.is_not(None),
+                    # Skip transient object like poll relies
+                    models.OutboxObject.is_transient.is_(False),
                 )
                 .group_by(models.OutboxObject.ap_context)
             )
@@ -435,6 +442,7 @@ async def admin_direct_messages(
         .all()
     )
 
+    # Build a "threads index" by combining objects from the inbox and outbox
     convos = {}
     for inbox_convo in inbox_convos:
         if inbox_convo.ap_context not in convos:
@@ -467,6 +475,7 @@ async def admin_direct_messages(
                 convos[outbox_convo.ap_context]["most_recent_from_outbox"],
             )
 
+    # Fetch the latest object for each threads
     convos_with_last_from_inbox = []
     convos_with_last_from_outbox = []
     for context, convo in convos.items():
@@ -514,6 +523,8 @@ async def admin_direct_messages(
         .unique()
         .all()
     )
+
+    # Build the template response
     threads = []
     for anybox_object in sorted(
         last_from_inbox + last_from_outbox,

@@ -105,12 +105,12 @@
 </form>
 {% endmacro %}
 
-{% macro admin_announce_button(ap_object_id, disabled=False, permalink_id=None) %}
+{% macro admin_announce_button(ap_object_id, permalink_id=None) %}
 <form action="{{ request.url_for("admin_actions_announce") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
-    <input type="submit" value="share" {% if disabled %}title="Cannot share non-public content" disabled{% endif %}>
+    <input type="submit" value="share">
 </form>
 {% endmacro %}
 
@@ -574,13 +574,15 @@
                 {% endif %}
             </li>
 
+            {% if object.visibility in [visibility_enum.PUBLIC, visibility_enum.UNLISTED] %}
             <li>
                 {% if object.announced_via_outbox_object_ap_id %}
                     {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unshare") }}
                 {% else %}
-                    {{ admin_announce_button(object.ap_id, disabled=object.visibility not in [visibility_enum.PUBLIC, visibility_enum.UNLISTED], permalink_id=object.permalink_id) }}
+                    {{ admin_announce_button(object.ap_id, permalink_id=object.permalink_id) }}
                 {% endif %}
             </li>
+            {% endif %}
 
             <li>
                 {{ admin_profile_button(object.actor.ap_id) }}

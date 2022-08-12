@@ -154,6 +154,12 @@ async def send_announce(db_session: AsyncSession, ap_object_id: str) -> None:
     if not inbox_object:
         raise ValueError(f"{ap_object_id} not found in the inbox")
 
+    if inbox_object.visibility not in [
+        ap.VisibilityEnum.PUBLIC,
+        ap.VisibilityEnum.UNLISTED,
+    ]:
+        raise ValueError("Cannot announce non-public object")
+
     announce_id = allocate_outbox_id()
     announce = {
         "@context": ap.AS_CTX,
