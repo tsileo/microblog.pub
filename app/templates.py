@@ -26,6 +26,7 @@ from app.actor import LOCAL_ACTOR
 from app.ap_object import Attachment
 from app.ap_object import Object
 from app.config import BASE_URL
+from app.config import CSS_HASH
 from app.config import DEBUG
 from app.config import VERSION
 from app.config import generate_csrf_token
@@ -102,6 +103,7 @@ async def render_template(
             "request": request,
             "debug": DEBUG,
             "microblogpub_version": VERSION,
+            "css_hash": CSS_HASH,
             "is_admin": is_admin,
             "csrf_token": generate_csrf_token(),
             "highlight_css": HIGHLIGHT_CSS,

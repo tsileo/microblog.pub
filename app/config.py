@@ -1,3 +1,4 @@
+import hashlib
 import os
 import secrets
 from pathlib import Path
@@ -23,6 +24,14 @@ VERSION_COMMIT = "dev"
 try:
     from app._version import VERSION_COMMIT  # type: ignore
 except ImportError:
+    pass
+
+# Force reloading cache when the CSS is updated
+CSS_HASH = "none"
+try:
+    css_data = (ROOT_DIR / "app" / "static" / "css" / "main.css").read_bytes()
+    CSS_HASH = hashlib.md5(css_data, usedforsecurity=False).hexdigest()
+except FileNotFoundError:
     pass
 
 
