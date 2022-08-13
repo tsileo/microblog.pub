@@ -497,31 +497,39 @@ async def admin_direct_messages(
             )
     last_from_inbox = (
         (
-            await db_session.scalars(
-                select(models.InboxObject)
-                .where(or_(*convos_with_last_from_inbox))
-                .options(
-                    joinedload(models.InboxObject.actor),
+            (
+                await db_session.scalars(
+                    select(models.InboxObject)
+                    .where(or_(*convos_with_last_from_inbox))
+                    .options(
+                        joinedload(models.InboxObject.actor),
+                    )
                 )
             )
+            .unique()
+            .all()
         )
-        .unique()
-        .all()
+        if convos_with_last_from_inbox
+        else []
     )
     last_from_outbox = (
         (
-            await db_session.scalars(
-                select(models.OutboxObject)
-                .where(or_(*convos_with_last_from_outbox))
-                .options(
-                    joinedload(models.OutboxObject.outbox_object_attachments).options(
-                        joinedload(models.OutboxObjectAttachment.upload)
-                    ),
+            (
+                await db_session.scalars(
+                    select(models.OutboxObject)
+                    .where(or_(*convos_with_last_from_outbox))
+                    .options(
+                        joinedload(
+                            models.OutboxObject.outbox_object_attachments
+                        ).options(joinedload(models.OutboxObjectAttachment.upload)),
+                    )
                 )
             )
+            .unique()
+            .all()
         )
-        .unique()
-        .all()
+        if convos_with_last_from_outbox
+        else []
     )
 
     # Build the template response
