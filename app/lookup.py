@@ -33,7 +33,7 @@ async def lookup(db_session: AsyncSession, query: str) -> Actor | RemoteObject:
         else:
             raise
 
-    if ap_obj["type"] in ap.ACTOR_TYPES:
+    if ap.as_list(ap_obj["type"])[0] in ap.ACTOR_TYPES:
         actor = await fetch_actor(db_session, ap_obj["id"])
         return actor
     else:

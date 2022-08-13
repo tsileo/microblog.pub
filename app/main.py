@@ -76,6 +76,7 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - allow to share old notes
 # - allow to interact with object not in anybox (i.e. like from a lookup)
 # - only show 10 most recent threads in DMs
 # - custom CSS for disabled button (e.g. sharing on a direct post)
@@ -469,6 +470,7 @@ async def outbox(
             .where(
                 models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
                 models.OutboxObject.is_deleted.is_(False),
+                models.OutboxObject.ap_type.in_(["Create", "Announce"]),
             )
             .order_by(models.OutboxObject.ap_published_at.desc())
             .limit(20)

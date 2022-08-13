@@ -31,7 +31,7 @@ class Object:
 
     @cached_property
     def ap_type(self) -> str:
-        return self.ap_object["type"]
+        return ap.as_list(self.ap_object["type"])[0]
 
     @property
     def ap_object(self) -> ap.RawObject:

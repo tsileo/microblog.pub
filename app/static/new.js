@@ -50,3 +50,7 @@ files.addEventListener("change", function(e) {
         alts.appendChild(p);
     }
 });
+// Focus at the end of the textarea
+const end = ta.value.length;
+ta.setSelectionRange(end, end);
+ta.focus();
