@@ -76,6 +76,7 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - allow to interact with object not in anybox (i.e. like from a lookup)
 # - only show 10 most recent threads in DMs
 # - custom CSS for disabled button (e.g. sharing on a direct post)
 # - prevent double accept/double follow

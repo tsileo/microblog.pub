@@ -123,50 +123,6 @@
 </form>
 {% endmacro %}
 
-{% macro sensitive_button(permalink_id) %}
-<form action="{{ request.url }}#{{ permalink_id }}"  method="GET">
-<input type="hidden" name="show_sensitive" value="{{ permalink_id }}">
-{% for k, v in request.query_params.items() %}
-<input type="hidden" name="{{k}}" value="{{v}}">
-{% endfor %}
-<button type="submit" class="show-sensitive-btn">display sensitive content</button>
-</form> 
-{% endmacro %}
-
-{% macro hide_sensitive_button(permalink_id) %}
-<form action="{{ request.url }}#{{ permalink_id }}"  method="GET">
-    {% for k, v in request.query_params.items() %}
-        {% if not (k == "show_sensitive" and v == permalink_id) %}
-            <input type="hidden" name="{{k}}" value="{{v}}">
-        {% endif %}
-    {% endfor %}
-    <button type="submit" class="show-sensitive-btn">hide sensitive content</button>
-</form> 
-{% endmacro %}
-
-{% macro show_more_button(permalink_id) %}
-<form action="{{ request.url }}#{{ permalink_id }}"  method="GET">
-<input type="hidden" name="show_more" value="{{ permalink_id }}">
-{% for k, v in request.query_params.items() %}
-<input type="hidden" name="{{k}}" value="{{v}}">
-{% endfor %}
-<button type="submit" class="show-more-btn">show more</button>
-</form> 
-{% endmacro %}
-
-{% macro show_less_button(permalink_id) %}
-<form action="{{ request.url }}#{{ permalink_id }}"  method="GET">
-    {% for k, v in request.query_params.items() %}
-        {% if not (k == "show_more" and v == permalink_id) %}
-            <input type="hidden" name="{{k}}" value="{{v}}">
-        {% endif %}
-    {% endfor %}
-    <button type="submit" class="show-more-btn">show less</button>
-</form> 
-{% endmacro %}
-
-
-
 {% macro admin_reply_button(ap_object_id) %}
 <form action="/admin/new"  method="GET">
 <input type="hidden" name="in_reply_to" value="{{ ap_object_id }}">
@@ -348,21 +304,26 @@
 
 
 {% macro display_attachments(object) %}
-  {% if object.attachments and object.sensitive and not object.permalink_id in request.query_params.getlist("show_sensitive") %}
-      {{ sensitive_button(object.permalink_id )}}
-  {% endif %}
 
-  {% if object.attachments and (not object.sensitive or (object.sensitive and object.permalink_id in request.query_params.getlist("show_sensitive"))) %}
-    {% if object.sensitive %}
-        {{ hide_sensitive_button(object.permalink_id) }}
-    {% endif %}
     {% for attachment in object.attachments %}
+    {% if object.sensitive and (attachment.type == "Image" or (attachment | has_media_type("image")) or attachment.type == "Video" or (attachment | has_media_type("video"))) %}
+    <div>
+        <label for="{{attachment.proxied_url}}" class="label-btn" style="display:inline-block;">show/hide sensitive content</label>
+        <div>
+        <div class="sensitive-attachment">
+        <input class="sensitive-attachment-state" type="checkbox" id="{{attachment.proxied_url}}" aria-hidden="true">
+        <div class="sensitive-attachment-box">
+            <div></div>
+    {% else %}
+            <div style="margin-top:20px;">
+    {% endif %}
+
     {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
         {% if attachment.url not in object.inlined_images %}
-            <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} title="{{ attachment.name }}" alt="{{ attachment.name }}"{% endif %} class="attachment">
+            <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} title="{{ attachment.name }}" alt="{{ attachment.name }}"{% endif %} class="attachment" style="margin:0;">
         {% endif %}
     {% elif attachment.type == "Video" or (attachment | has_media_type("video")) %}
-    <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment"></video>
+    <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %}></video>
     {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}
     <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} style="width:480px;" class="attachment"></audio>
     {% elif attachment.type == "Link" %}
@@ -370,8 +331,15 @@
     {% else %}
     <a href="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment">{{ attachment.url }}</a>
     {% endif %}
+    {% if object.sensitive %}
+            </div>
+        </div>
+        </div>
+    </div>
+    {% else %}
+        </div>
+    {% endif %}
     {% endfor %}
-  {% endif %}
 {% endmacro %}
 
 {% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}, is_object_page=False) %}
@@ -403,25 +371,20 @@
                 <time class="dt-published muted" datetime="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}" title="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}">{{ object.ap_published_at.strftime("%b %d, %Y") }}</time>
     {% endif %}
 
-
     {% if object.summary %}
-        <p class="p-summary">{{ object.summary | clean_html(object) | safe }}</p>
+    <div class="show-more-wrapper">
+        <div class="p-summary">
+            <p>{{ object.summary | clean_html(object) | safe }}</p>
+        </div>
+        <label for="show-more-{{ object.permalink_id }}" class="show-more-btn">show/hide more</label>
+        <input class="show-more-state" type="checkbox" aria-hidden="true" id="show-more-{{ object.permalink_id }}" checked>
     {% endif %}
-
-    {% if object.sensitive and object.permalink_id not in request.query_params.getlist("show_more") %}
-        {{ show_more_button(object.permalink_id) }} 
-    {% endif %}
-
-    {% if not object.sensitive or (object.sensitive and object.permalink_id in request.query_params.getlist("show_more")) %}
-        {% if object.sensitive %}
-            {{ show_less_button(object.permalink_id) }} 
-        {% endif %}
+        <div class="obj-content">
         <div class="e-content">
             {{ object.content | clean_html(object) | safe }}
         </div>
-    {% endif %}
 
-    {% if object.ap_type == "Question" and (not object.sensitive or (object.sensitive and object.permalink_id in request.query_params.getlist("show_more"))) %}
+    {% if object.ap_type == "Question" %}
         {% set can_vote = is_admin and object.is_from_inbox and not object.is_poll_ended and not object.voted_for_answers %}
         {% if can_vote %}
             <form action="{{ request.url_for("admin_actions_vote") }}" method="POST">
@@ -468,12 +431,16 @@
             </form>
         {% endif %}
 
+        {{ display_og_meta(object) }}
 
     {% endif %}
 
-    {{ display_og_meta(object) }}
+        </div>
+    {% if object.summary %}
+    </div>
+    {% endif %}
 
-    <div class="activity-attachment">
+    <div class="activity-attachment" style="margin-bottom:20px;">
     {{ display_attachments(object) }}
     </div>
 

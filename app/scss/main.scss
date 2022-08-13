@@ -13,6 +13,44 @@ $code-highlight-background: #f0f0f0;
 // Load custom theme
 @import "theme.scss";
 
+.show-more-wrapper {
+  .p-summary {
+    display: inline-block;
+  }
+  label {
+    margin-left: 5px;
+  }
+  .show-more-state {
+    display: none;
+  }
+  .show-more-state ~ .obj-content {
+    margin-top: 0;
+  }
+  .show-more-state:checked ~ .obj-content {
+    display: none;
+  }
+}
+.sensitive-attachment {
+  display: inline-block;
+  .sensitive-attachment-state {
+    display: none;
+  }
+  .sensitive-attachment-state:checked ~ .sensitive-attachment-box div {
+    display:none;
+  }
+  .sensitive-attachment-box {
+    position: relative;
+    div {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      backdrop-filter: blur(2em);
+    }
+  }
+}
+
+
 blockquote {
   border-left: 3px solid $secondary-color;
   margin-left: 0;
@@ -207,8 +245,9 @@ footer {
     }
 }
 
-.show-sensitive-btn, .show-more-btn {
+.show-sensitive-btn, .show-more-btn, .label-btn {
     @include admin-button;
+    padding: 10px 5px;
     margin: 20px 0;
 }
 
@@ -272,10 +311,10 @@ nav.flexbox {
         }
     }
     .activity-attachment {
+        margin: 30px 0;
         img, audio, video {
             width: 100%;
             max-width: 740px;
-            margin: 30px 0;
         }
     }
     img.inline-img {
