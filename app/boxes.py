@@ -317,8 +317,9 @@ async def send_create(
         if not in_reply_to_object:
             raise ValueError(f"Invalid in reply to {in_reply_to=}")
         if not in_reply_to_object.ap_context:
-            raise ValueError("Object has no context")
-        context = in_reply_to_object.ap_context
+            logger.warning(f"Replied object {in_reply_to} has no context")
+        else:
+            context = in_reply_to_object.ap_context
 
         if in_reply_to_object.is_from_outbox:
             await db_session.execute(
