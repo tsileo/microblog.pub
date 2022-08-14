@@ -30,8 +30,9 @@ class Worker(Generic[T]):
             next_message = await self.get_next_message(db_session)
             if next_message:
                 await self.process_message(db_session, next_message)
+                await asyncio.sleep(0.5)
             else:
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)
 
     async def _until_stopped(self) -> None:
         await self._stop_event.wait()

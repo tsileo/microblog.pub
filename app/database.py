@@ -12,12 +12,14 @@ from app.config import DB_PATH
 from app.config import SQLALCHEMY_DATABASE_URL
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False, "timeout": 15}
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
-async_engine = create_async_engine(DATABASE_URL, future=True, echo=False)
+async_engine = create_async_engine(
+    DATABASE_URL, future=True, echo=False, connect_args={"timeout": 15}
+)
 async_session = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 Base: Any = declarative_base()
