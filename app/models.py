@@ -83,6 +83,7 @@ class InboxObject(Base, BaseObject):
     activity_object_ap_id = Column(String, nullable=True, index=True)
 
     visibility = Column(Enum(ap.VisibilityEnum), nullable=False)
+    conversation = Column(String, nullable=True)
 
     # Used for Like, Announce and Undo activities
     relates_to_inbox_object_id = Column(
@@ -166,6 +167,7 @@ class OutboxObject(Base, BaseObject):
 
     ap_published_at = Column(DateTime(timezone=True), nullable=False, default=now)
     visibility = Column(Enum(ap.VisibilityEnum), nullable=False)
+    conversation = Column(String, nullable=True)
 
     likes_count = Column(Integer, nullable=False, default=0)
     announces_count = Column(Integer, nullable=False, default=0)
