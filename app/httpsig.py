@@ -9,6 +9,7 @@ from typing import Any
 from typing import Dict
 from typing import MutableMapping
 from typing import Optional
+from urllib.parse import urlparse
 
 import fastapi
 import httpx
@@ -21,6 +22,7 @@ from sqlalchemy import select
 
 from app import activitypub as ap
 from app import config
+from app.config import BLOCKED_SERVERS
 from app.config import KEY_PATH
 from app.database import AsyncSession
 from app.database import get_db_session
@@ -144,6 +146,7 @@ class HTTPSigInfo:
     is_ap_actor_gone: bool = False
     is_unsupported_algorithm: bool = False
     is_expired: bool = False
+    server: str | None = None
 
 
 async def httpsig_checker(
@@ -157,11 +160,22 @@ async def httpsig_checker(
         logger.info("No HTTP signature found")
         return HTTPSigInfo(has_valid_signature=False)
 
+    try:
+        key_id = hsig["keyId"]
+    except KeyError:
+        logger.info("Missing keyId")
+        return HTTPSigInfo(
+            has_valid_signature=False,
+        )
+
+    server = urlparse(key_id).hostname
+
     if alg := hsig.get("algorithm") not in ["rsa-sha256", "hs2019"]:
         logger.info(f"Unsupported HTTP sig algorithm: {alg}")
         return HTTPSigInfo(
             has_valid_signature=False,
             is_unsupported_algorithm=True,
+            server=server,
         )
 
     logger.debug(f"hsig={hsig}")
@@ -180,6 +194,7 @@ async def httpsig_checker(
         return HTTPSigInfo(
             has_valid_signature=False,
             is_expired=True,
+            server=server,
         )
 
     try:
@@ -196,6 +211,7 @@ async def httpsig_checker(
             signed_string, base64.b64decode(hsig["signature"]), k.pubkey
         ),
         signed_by_ap_actor_id=k.owner,
+        server=server,
     )
     logger.info(f"Valid HTTP signature for {httpsig_info.signed_by_ap_actor_id}")
     return httpsig_info
@@ -206,6 +222,10 @@ async def enforce_httpsig(
     httpsig_info: HTTPSigInfo = fastapi.Depends(httpsig_checker),
 ) -> HTTPSigInfo:
     """FastAPI Depends"""
+    if httpsig_info.server in BLOCKED_SERVERS:
+        logger.warning(f"{httpsig_info.server} is blocked")
+        raise fastapi.HTTPException(status_code=403, detail="Blocked")
+
     if not httpsig_info.has_valid_signature:
         logger.warning(f"Invalid HTTP sig {httpsig_info=}")
         body = await request.body()

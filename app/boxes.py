@@ -26,6 +26,7 @@ from app.actor import fetch_actor
 from app.actor import save_actor
 from app.ap_object import RemoteObject
 from app.config import BASE_URL
+from app.config import BLOCKED_SERVERS
 from app.config import ID
 from app.config import MANUALLY_APPROVES_FOLLOWERS
 from app.database import AsyncSession
@@ -1445,6 +1446,10 @@ async def save_to_inbox(
         actor = await fetch_actor(db_session, ap.get_id(raw_object["actor"]))
     except httpx.HTTPStatusError:
         logger.exception("Failed to fetch actor")
+        return
+
+    if actor.server in BLOCKED_SERVERS:
+        logger.warning(f"Server {actor.server} is blocked")
         return
 
     if "id" not in raw_object:

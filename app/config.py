@@ -50,6 +50,11 @@ class _ProfileMetadata(pydantic.BaseModel):
     value: str
 
 
+class _BlockedServer(pydantic.BaseModel):
+    hostname: str
+    reason: str | None = None
+
+
 class Config(pydantic.BaseModel):
     domain: str
     username: str
@@ -65,6 +70,7 @@ class Config(pydantic.BaseModel):
     privacy_replace: list[_PrivacyReplace] | None = None
     metadata: list[_ProfileMetadata] | None = None
     code_highlighting_theme = "friendly_grayscale"
+    blocked_servers: list[_BlockedServer] = []
 
     # Config items to make tests easier
     sqlalchemy_database: str | None = None
@@ -109,6 +115,9 @@ MANUALLY_APPROVES_FOLLOWERS = CONFIG.manually_approves_followers
 PRIVACY_REPLACE = None
 if CONFIG.privacy_replace:
     PRIVACY_REPLACE = {pr.domain: pr.replace_by for pr in CONFIG.privacy_replace}
+
+BLOCKED_SERVERS = {blocked_server.hostname for blocked_server in CONFIG.blocked_servers}
+
 BASE_URL = ID
 DEBUG = CONFIG.debug
 DB_PATH = CONFIG.sqlalchemy_database or ROOT_DIR / "data" / "microblogpub.db"

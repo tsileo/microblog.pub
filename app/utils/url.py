@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 from loguru import logger
 
+from app.config import BLOCKED_SERVERS
 from app.config import DEBUG
 
 
@@ -51,6 +52,10 @@ def is_url_valid(url: str) -> bool:
         return True
 
     if not parsed.hostname or parsed.hostname.lower() in ["localhost"]:
+        return False
+
+    if parsed.hostname in BLOCKED_SERVERS:
+        logger.warning(f"{parsed.hostname} is blocked")
         return False
 
     ip_address = _getaddrinfo(

@@ -114,6 +114,10 @@ class Actor:
     def attachments(self) -> list[ap.RawObject]:
         return ap.as_list(self.ap_actor.get("attachment", []))
 
+    @cached_property
+    def server(self) -> str:
+        return urlparse(self.ap_id).netloc
+
 
 class RemoteActor(Actor):
     def __init__(self, ap_actor: ap.RawObject) -> None:

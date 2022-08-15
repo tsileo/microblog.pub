@@ -59,6 +59,8 @@ class ObjectNotFoundError(Exception):
 class FetchErrorTypeEnum(str, enum.Enum):
     TIMEOUT = "TIMEOUT"
     NOT_FOUND = "NOT_FOUND"
+    UNAUHTORIZED = "UNAUTHORIZED"
+
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
