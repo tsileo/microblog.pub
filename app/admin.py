@@ -103,7 +103,7 @@ async def get_lookup(
                     await fetch_actor(
                         db_session, ap_object.ap_id, save_if_not_found=False
                     )
-                except ap.NotAnObjectError:
+                except ap.ObjectNotFoundError:
                     pass
                 else:
                     return RedirectResponse(

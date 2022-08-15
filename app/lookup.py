@@ -3,7 +3,7 @@ import mf2py  # type: ignore
 from app import activitypub as ap
 from app import webfinger
 from app.actor import Actor
-from app.actor import fetch_actor
+from app.actor import RemoteActor
 from app.ap_object import RemoteObject
 from app.database import AsyncSession
 
@@ -34,7 +34,6 @@ async def lookup(db_session: AsyncSession, query: str) -> Actor | RemoteObject:
             raise
 
     if ap.as_list(ap_obj["type"])[0] in ap.ACTOR_TYPES:
-        actor = await fetch_actor(db_session, ap_obj["id"])
-        return actor
+        return RemoteActor(ap_obj)
     else:
         return await RemoteObject.from_raw_object(ap_obj)
