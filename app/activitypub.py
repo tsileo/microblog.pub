@@ -166,6 +166,7 @@ async def parse_collection(  # noqa: C901
     url: str | None = None,
     payload: RawObject | None = None,
     level: int = 0,
+    limit: int = 0,
 ) -> list[RawObject]:
     """Resolve/fetch a `Collection`/`OrderedCollection`."""
     if level > 3:
@@ -193,7 +194,9 @@ async def parse_collection(  # noqa: C901
         if "first" in payload:
             if isinstance(payload["first"], str):
                 out.extend(
-                    await parse_collection(url=payload["first"], level=level + 1)
+                    await parse_collection(
+                        url=payload["first"], level=level + 1, limit=limit
+                    )
                 )
             else:
                 if "orderedItems" in payload["first"]:
@@ -202,7 +205,9 @@ async def parse_collection(  # noqa: C901
                     out.extend(payload["first"]["items"])
                 n = payload["first"].get("next")
                 if n:
-                    out.extend(await parse_collection(url=n, level=level + 1))
+                    out.extend(
+                        await parse_collection(url=n, level=level + 1, limit=limit)
+                    )
         return out
 
     while payload:
@@ -212,7 +217,7 @@ async def parse_collection(  # noqa: C901
             if "items" in payload:
                 out.extend(payload["items"])
             n = payload.get("next")
-            if n is None:
+            if n is None or (limit > 0 and len(out) >= limit):
                 break
             payload = await fetch(n)
         else:

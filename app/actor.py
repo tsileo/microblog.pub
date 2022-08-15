@@ -69,6 +69,10 @@ class Actor:
         return self.ap_actor["inbox"]
 
     @property
+    def outbox_url(self) -> str:
+        return self.ap_actor["outbox"]
+
+    @property
     def shared_inbox_url(self) -> str:
         return self.ap_actor.get("endpoints", {}).get("sharedInbox") or self.inbox_url
 

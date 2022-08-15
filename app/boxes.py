@@ -132,6 +132,8 @@ async def send_like(db_session: AsyncSession, ap_object_id: str) -> None:
         raw_object = await ap.fetch(ap.get_id(ap_object_id))
         await save_object_to_inbox(db_session, raw_object)
         await db_session.commit()
+        # XXX: we need to reload it as lazy-loading the actor will fail
+        # (asyncio SQLAlchemy issue)
         inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
         if not inbox_object:
             raise ValueError("Should never happen")
@@ -165,6 +167,8 @@ async def send_announce(db_session: AsyncSession, ap_object_id: str) -> None:
         raw_object = await ap.fetch(ap.get_id(ap_object_id))
         await save_object_to_inbox(db_session, raw_object)
         await db_session.commit()
+        # XXX: we need to reload it as lazy-loading the actor will fail
+        # (asyncio SQLAlchemy issue)
         inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
         if not inbox_object:
             raise ValueError("Should never happen")
@@ -1615,6 +1619,9 @@ async def save_to_inbox(
                     inbox_object_id=inbox_object.id,
                 )
                 db_session.add(notif)
+                if activity_ro.ap_type == "Accept":
+                    # Pre-fetch the latest activities
+                    await _prefetch_actor_outbox(db_session, actor)
             else:
                 logger.info(
                     "Received an Accept for an unsupported activity: "
@@ -1750,10 +1757,41 @@ async def save_to_inbox(
     await db_session.commit()
 
 
+async def _prefetch_actor_outbox(
+    db_session: AsyncSession,
+    actor: models.Actor,
+) -> None:
+    """Try to fetch some notes to fill the stream"""
+    saved = 0
+    outbox = await ap.parse_collection(actor.outbox_url, limit=20)
+    for activity in outbox:
+        activity_id = ap.get_id(activity)
+        raw_activity = await ap.fetch(activity_id)
+        if ap.as_list(raw_activity["type"])[0] == "Create":
+            obj = await ap.get_object(raw_activity)
+            saved_inbox_object = await get_inbox_object_by_ap_id(
+                db_session, ap.get_id(obj)
+            )
+            if not saved_inbox_object:
+                saved_inbox_object = await save_object_to_inbox(db_session, obj)
+
+            if not saved_inbox_object.in_reply_to:
+                saved_inbox_object.is_hidden_from_stream = False
+                saved += 1
+
+        if saved >= 5:
+            break
+
+    # commit is performed by the called
+
+
 async def save_object_to_inbox(
     db_session: AsyncSession,
     raw_object: ap.RawObject,
 ) -> models.InboxObject:
+    """Used to save unknown object before intetacting with them, i.e. to like
+    an object that was looked up, or prefill the inbox when an actor accepted
+    a follow request."""
     obj_actor = await fetch_actor(db_session, ap.get_actor_id(raw_object))
 
     ro = RemoteObject(raw_object, actor=obj_actor)

@@ -7,6 +7,7 @@ import fastapi
 import httpx
 import respx
 
+from app import activitypub as ap
 from app import actor
 from app import httpsig
 from app import models
@@ -44,6 +45,18 @@ def setup_remote_actor(respx_mock: respx.MockRouter) -> actor.RemoteActor:
         base_url="https://example.com",
         username="toto",
         public_key="pk",
+    )
+    respx_mock.get(ra.ap_id + "/outbox").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "@context": ap.AS_EXTENDED_CTX,
+                "id": f"{ra.ap_id}/outbox",
+                "type": "OrderedCollection",
+                "totalItems": 0,
+                "orderedItems": [],
+            },
+        )
     )
     respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra.ap_actor))
     return ra
