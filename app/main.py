@@ -585,7 +585,11 @@ async def outbox_by_public_id(
     if is_activitypub_requested(request):
         return ActivityPubResponse(maybe_object.ap_object)
 
-    replies_tree = await boxes.get_replies_tree(db_session, maybe_object)
+    replies_tree = await boxes.get_replies_tree(
+        db_session,
+        maybe_object,
+        is_current_user_admin=is_current_user_admin(request),
+    )
 
     likes = (
         (

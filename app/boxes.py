@@ -1865,13 +1865,17 @@ class ReplyTreeNode:
 async def get_replies_tree(
     db_session: AsyncSession,
     requested_object: AnyboxObject,
+    is_current_user_admin: bool,
 ) -> ReplyTreeNode:
     # XXX: PeerTube video don't use context
     tree_nodes: list[AnyboxObject] = []
     if requested_object.conversation is None:
         tree_nodes = [requested_object]
     else:
-        # TODO: handle visibility
+        allowed_visibility = [ap.VisibilityEnum.PUBLIC, ap.VisibilityEnum.UNLISTED]
+        if is_current_user_admin:
+            allowed_visibility = list(ap.VisibilityEnum)
+
         tree_nodes.extend(
             (
                 await db_session.scalars(
@@ -1881,6 +1885,7 @@ async def get_replies_tree(
                         == requested_object.conversation,
                         models.InboxObject.ap_type.in_(["Note", "Page", "Article"]),
                         models.InboxObject.is_deleted.is_(False),
+                        models.InboxObject.visibility.in_(allowed_visibility),
                     )
                     .options(joinedload(models.InboxObject.actor))
                 )
@@ -1897,6 +1902,7 @@ async def get_replies_tree(
                         == requested_object.conversation,
                         models.OutboxObject.is_deleted.is_(False),
                         models.OutboxObject.ap_type.in_(["Note", "Page", "Article"]),
+                        models.OutboxObject.visibility.in_(allowed_visibility),
                     )
                     .options(
                         joinedload(

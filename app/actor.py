@@ -168,6 +168,7 @@ async def save_actor(db_session: AsyncSession, ap_actor: ap.RawObject) -> "Actor
 async def fetch_actor(
     db_session: AsyncSession,
     actor_id: str,
+    save_if_not_found: bool = True,
 ) -> "ActorModel":
     if actor_id == LOCAL_ACTOR.ap_id:
         raise ValueError("local actor should not be fetched")
@@ -180,9 +181,12 @@ async def fetch_actor(
     ).one_or_none()
     if existing_actor:
         return existing_actor
-
-    ap_actor = await ap.fetch(actor_id)
-    return await save_actor(db_session, ap_actor)
+    else:
+        if save_if_not_found:
+            ap_actor = await ap.fetch(actor_id)
+            return await save_actor(db_session, ap_actor)
+        else:
+            raise ap.ObjectNotFoundError
 
 
 @dataclass

@@ -88,19 +88,6 @@ async def get_lookup(
     ap_object = None
     actors_metadata = {}
     if query:
-        requested_object = await boxes.get_anybox_object_by_ap_id(db_session, query)
-        if requested_object:
-            if (
-                requested_object.ap_type == "Create"
-                and requested_object.relates_to_anybox_object
-            ):
-                query = requested_object.relates_to_anybox_object.ap_id
-            return RedirectResponse(
-                request.url_for("admin_object") + f"?ap_id={query}",
-                status_code=302,
-            )
-        # TODO(ts): redirect to admin_profile if the actor is in DB
-
         try:
             ap_object = await lookup(db_session, query)
         except httpx.TimeoutException:
@@ -112,6 +99,19 @@ async def get_lookup(
             error = ap.FetchErrorTypeEnum.INTERNAL_ERROR
         else:
             if ap_object.ap_type in ap.ACTOR_TYPES:
+                try:
+                    await fetch_actor(
+                        db_session, ap_object.ap_id, save_if_not_found=False
+                    )
+                except ap.NotAnObjectError:
+                    pass
+                else:
+                    return RedirectResponse(
+                        request.url_for("admin_profile")
+                        + f"?actor_id={ap_object.ap_id}",
+                        status_code=302,
+                    )
+
                 actors_metadata = await get_actors_metadata(
                     db_session, [ap_object]  # type: ignore
                 )
@@ -129,6 +129,7 @@ async def get_lookup(
                 actors_metadata = await get_actors_metadata(
                     db_session, [ap_object.actor]  # type: ignore
                 )
+
     return await templates.render_template(
         db_session,
         request,
@@ -717,7 +718,11 @@ async def admin_object(
     if not requested_object:
         raise HTTPException(status_code=404)
 
-    replies_tree = await boxes.get_replies_tree(db_session, requested_object)
+    replies_tree = await boxes.get_replies_tree(
+        db_session,
+        requested_object,
+        is_current_user_admin=True,
+    )
 
     return await templates.render_template(
         db_session,
