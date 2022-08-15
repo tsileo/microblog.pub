@@ -1219,10 +1219,11 @@ async def _handle_read_activity(
     wrapped_object_actor = await fetch_actor(
         db_session, ap.get_actor_id(wrapped_object)
     )
-    ro = RemoteObject(wrapped_object, actor=wrapped_object_actor)
+    if not wrapped_object_actor.is_blocked:
+        ro = RemoteObject(wrapped_object, actor=wrapped_object_actor)
 
-    # Then process it likes it's coming from a forwarded activity
-    await _process_note_object(db_session, read_activity, wrapped_object_actor, ro)
+        # Then process it likes it's coming from a forwarded activity
+        await _process_note_object(db_session, read_activity, wrapped_object_actor, ro)
 
 
 async def _process_note_object(
@@ -1666,26 +1667,29 @@ async def save_to_inbox(
                 announced_actor = await fetch_actor(
                     db_session, ap.get_actor_id(announced_raw_object)
                 )
-                announced_object = RemoteObject(announced_raw_object, announced_actor)
-                announced_inbox_object = models.InboxObject(
-                    server=urlparse(announced_object.ap_id).hostname,
-                    actor_id=announced_actor.id,
-                    ap_actor_id=announced_actor.ap_id,
-                    ap_type=announced_object.ap_type,
-                    ap_id=announced_object.ap_id,
-                    ap_context=announced_object.ap_context,
-                    ap_published_at=announced_object.ap_published_at,
-                    ap_object=announced_object.ap_object,
-                    visibility=announced_object.visibility,
-                    og_meta=await opengraph.og_meta_from_note(
-                        db_session, announced_object
-                    ),
-                    is_hidden_from_stream=True,
-                )
-                db_session.add(announced_inbox_object)
-                await db_session.flush()
-                inbox_object.relates_to_inbox_object_id = announced_inbox_object.id
-                inbox_object.is_hidden_from_stream = not is_from_following
+                if not announced_actor.is_blocked:
+                    announced_object = RemoteObject(
+                        announced_raw_object, announced_actor
+                    )
+                    announced_inbox_object = models.InboxObject(
+                        server=urlparse(announced_object.ap_id).hostname,
+                        actor_id=announced_actor.id,
+                        ap_actor_id=announced_actor.ap_id,
+                        ap_type=announced_object.ap_type,
+                        ap_id=announced_object.ap_id,
+                        ap_context=announced_object.ap_context,
+                        ap_published_at=announced_object.ap_published_at,
+                        ap_object=announced_object.ap_object,
+                        visibility=announced_object.visibility,
+                        og_meta=await opengraph.og_meta_from_note(
+                            db_session, announced_object
+                        ),
+                        is_hidden_from_stream=True,
+                    )
+                    db_session.add(announced_inbox_object)
+                    await db_session.flush()
+                    inbox_object.relates_to_inbox_object_id = announced_inbox_object.id
+                    inbox_object.is_hidden_from_stream = not is_from_following
 
     elif activity_ro.ap_type in ["Like", "Announce"]:
         if not relates_to_outbox_object:

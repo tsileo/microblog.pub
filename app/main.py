@@ -76,6 +76,8 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - support Move
+# - support actor delete
 # - allow to share old notes
 # - allow to interact with object not in anybox (i.e. like from a lookup)
 # - only show 10 most recent threads in DMs
