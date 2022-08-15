@@ -220,7 +220,7 @@ class InboxObjectFactory(factory.alchemy.SQLAlchemyModelFactory):
         if "published" in ro.ap_object:
             ap_published_at = isoparse(ro.ap_object["published"])
         return cls(
-            server=urlparse(ro.ap_id).netloc,
+            server=urlparse(ro.ap_id).hostname,
             actor_id=actor.id,
             ap_actor_id=actor.ap_id,
             ap_type=ro.ap_type,

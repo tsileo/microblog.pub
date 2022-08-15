@@ -1255,7 +1255,7 @@ async def _process_note_object(
             is_mention = True
 
     inbox_object = models.InboxObject(
-        server=urlparse(ro.ap_id).netloc,
+        server=urlparse(ro.ap_id).hostname,
         actor_id=from_actor.id,
         ap_actor_id=from_actor.ap_id,
         ap_type=ro.ap_type,
@@ -1521,7 +1521,7 @@ async def save_to_inbox(
             )
 
     inbox_object = models.InboxObject(
-        server=urlparse(activity_ro.ap_id).netloc,
+        server=urlparse(activity_ro.ap_id).hostname,
         actor_id=actor.id,
         ap_actor_id=actor.ap_id,
         ap_type=activity_ro.ap_type,
@@ -1668,7 +1668,7 @@ async def save_to_inbox(
                 )
                 announced_object = RemoteObject(announced_raw_object, announced_actor)
                 announced_inbox_object = models.InboxObject(
-                    server=urlparse(announced_object.ap_id).netloc,
+                    server=urlparse(announced_object.ap_id).hostname,
                     actor_id=announced_actor.id,
                     ap_actor_id=announced_actor.ap_id,
                     ap_type=announced_object.ap_type,

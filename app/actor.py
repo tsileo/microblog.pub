@@ -116,7 +116,7 @@ class Actor:
 
     @cached_property
     def server(self) -> str:
-        return urlparse(self.ap_id).netloc
+        return urlparse(self.ap_id).hostname  # type: ignore
 
 
 class RemoteActor(Actor):

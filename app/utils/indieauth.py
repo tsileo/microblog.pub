@@ -24,7 +24,7 @@ def _get_prop(props: dict[str, Any], name: str, default=None) -> Any:
 
 async def get_client_id_data(url: str) -> IndieAuthClient | None:
     # Don't fetch localhost URL
-    if urlparse(url).netloc == "localhost":
+    if urlparse(url).hostname == "localhost":
         return IndieAuthClient(
             logo=None,
             name=url,

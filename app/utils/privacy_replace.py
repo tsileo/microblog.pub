@@ -27,11 +27,13 @@ def replace_url(u: str) -> str:
 
     try:
         parsed_href = urlparse(u)
+        if not parsed_href.hostname:
+            raise ValueError("Missing hostname")
     except Exception:
         logger.warning(f"Failed to parse url={u}")
         return u
 
-    if new_netloc := PRIVACY_REPLACE.get(parsed_href.netloc.removeprefix("www.")):
+    if new_netloc := PRIVACY_REPLACE.get(parsed_href.hostname.removeprefix("www.")):
         return parsed_href._replace(netloc=new_netloc).geturl()
 
     return u

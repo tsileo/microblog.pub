@@ -39,7 +39,7 @@ def _scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
         "title": soup.find("title").text,
         "image": None,
         "description": None,
-        "site_name": urlparse(url).netloc,
+        "site_name": urlparse(url).hostname,
     }
     for field in OpenGraphMeta.__fields__.keys():
         og_field = f"og:{field}"
@@ -60,7 +60,7 @@ async def external_urls(
     db_session: AsyncSession,
     ro: ap_object.RemoteObject | OutboxObject | InboxObject,
 ) -> set[str]:
-    note_host = urlparse(ro.ap_id).netloc
+    note_host = urlparse(ro.ap_id).hostname
 
     tags_hrefs = set()
     for tag in ro.tags:
@@ -84,7 +84,7 @@ async def external_urls(
             mimetype, _ = mimetypes.guess_type(h)
             if (
                 ph.scheme in {"http", "https"}
-                and ph.netloc != note_host
+                and ph.hostname != note_host
                 and is_url_valid(h)
                 and (
                     not mimetype
