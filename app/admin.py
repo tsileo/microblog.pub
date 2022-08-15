@@ -116,6 +116,16 @@ async def get_lookup(
                     db_session, [ap_object]  # type: ignore
                 )
             else:
+                # Check if the object is in the inbox
+                requested_object = await boxes.get_anybox_object_by_ap_id(
+                    db_session, ap_object.ap_id
+                )
+                if requested_object:
+                    return RedirectResponse(
+                        request.url_for("admin_object") + f"?ap_id={ap_object.ap_id}",
+                        status_code=302,
+                    )
+
                 actors_metadata = await get_actors_metadata(
                     db_session, [ap_object.actor]  # type: ignore
                 )
@@ -148,6 +158,14 @@ async def admin_new(
         in_reply_to_object = await boxes.get_anybox_object_by_ap_id(
             db_session, in_reply_to
         )
+        if not in_reply_to_object:
+            logger.info(f"Saving unknwown object {in_reply_to}")
+            raw_object = await ap.fetch(in_reply_to)
+            await boxes.save_object_to_inbox(db_session, raw_object)
+            await db_session.commit()
+            in_reply_to_object = await boxes.get_anybox_object_by_ap_id(
+                db_session, in_reply_to
+            )
 
         # Add mentions to the initial note content
         if not in_reply_to_object:
@@ -891,7 +909,9 @@ async def admin_actions_bookmark(
 ) -> RedirectResponse:
     inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
     if not inbox_object:
-        raise ValueError("Should never happen")
+        logger.info(f"Saving unknwown object {ap_object_id}")
+        raw_object = await ap.fetch(ap_object_id)
+        inbox_object = await boxes.save_object_to_inbox(db_session, raw_object)
     inbox_object.is_bookmarked = True
     await db_session.commit()
     return RedirectResponse(redirect_url, status_code=302)

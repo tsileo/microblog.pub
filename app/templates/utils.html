@@ -503,7 +503,7 @@
     </ul>
     </nav>
 
-    {% if is_admin and (object.is_from_outbox or object.is_from_inbox) %}
+    {% if is_admin %}
     <nav class="flexbox activity-bar">
     <ul>
         {% if object.is_from_outbox %}
@@ -524,7 +524,7 @@
             {{ admin_reply_button(object.ap_id) }}
         </li>
 
-        {% if object.is_from_inbox %}
+        {% if not object.is_from_outbox %}
             <li>
                 {% if object.liked_via_outbox_object_ap_id %}
                     {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unlike", object.permalink_id) }}
@@ -551,13 +551,17 @@
             </li>
             {% endif %}
 
+            {% if object.is_from_inbox %}
+                <li>
+                    {{ admin_profile_button(object.actor.ap_id) }}
+                </li>
+            {% endif %}
+        {% endif %}
+        {% if object.is_from_inbox or object.is_from_outbox %}
             <li>
-                {{ admin_profile_button(object.actor.ap_id) }}
+                {{ admin_expand_button(object.ap_id) }}
             </li>
         {% endif %}
-        <li>
-            {{ admin_expand_button(object.ap_id) }}
-        </li>
     </ul>
     </nav>
     {% endif %} 

@@ -128,7 +128,13 @@ async def send_delete(db_session: AsyncSession, ap_object_id: str) -> None:
 async def send_like(db_session: AsyncSession, ap_object_id: str) -> None:
     inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
     if not inbox_object:
-        raise ValueError(f"{ap_object_id} not found in the inbox")
+        logger.info(f"Saving unknwown object {ap_object_id}")
+        raw_object = await ap.fetch(ap.get_id(ap_object_id))
+        await save_object_to_inbox(db_session, raw_object)
+        await db_session.commit()
+        inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
+        if not inbox_object:
+            raise ValueError("Should never happen")
 
     like_id = allocate_outbox_id()
     like = {
@@ -155,7 +161,13 @@ async def send_like(db_session: AsyncSession, ap_object_id: str) -> None:
 async def send_announce(db_session: AsyncSession, ap_object_id: str) -> None:
     inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
     if not inbox_object:
-        raise ValueError(f"{ap_object_id} not found in the inbox")
+        logger.info(f"Saving unknwown object {ap_object_id}")
+        raw_object = await ap.fetch(ap.get_id(ap_object_id))
+        await save_object_to_inbox(db_session, raw_object)
+        await db_session.commit()
+        inbox_object = await get_inbox_object_by_ap_id(db_session, ap_object_id)
+        if not inbox_object:
+            raise ValueError("Should never happen")
 
     if inbox_object.visibility not in [
         ap.VisibilityEnum.PUBLIC,
@@ -183,11 +195,12 @@ async def send_announce(db_session: AsyncSession, ap_object_id: str) -> None:
         raise ValueError("Should never happen")
 
     inbox_object.announced_via_outbox_object_ap_id = outbox_object.ap_id
-    await db_session.commit()
 
     recipients = await _compute_recipients(db_session, announce)
     for rcp in recipients:
         await new_outgoing_activity(db_session, rcp, outbox_object.id)
+
+    await db_session.commit()
 
 
 async def send_follow(db_session: AsyncSession, ap_actor_id: str) -> None:
@@ -300,6 +313,12 @@ async def fetch_conversation_root(
     obj: AnyboxObject | RemoteObject,
     is_root: bool = False,
 ) -> str:
+    """Some softwares do not set the context/conversation field (like Misskey).
+    This means we have to track conversation ourselves. To do set, we fetch
+    the root of the conversation and either:
+     - use the context field if set
+     - or build a custom conversation ID
+    """
     if not obj.in_reply_to or is_root:
         if obj.ap_context:
             return obj.ap_context
@@ -1729,6 +1748,42 @@ async def save_to_inbox(
         logger.warning(f"Received an unknown {inbox_object.ap_type} object")
 
     await db_session.commit()
+
+
+async def save_object_to_inbox(
+    db_session: AsyncSession,
+    raw_object: ap.RawObject,
+) -> models.InboxObject:
+    obj_actor = await fetch_actor(db_session, ap.get_actor_id(raw_object))
+
+    ro = RemoteObject(raw_object, actor=obj_actor)
+
+    ap_published_at = now()
+    if "published" in ro.ap_object:
+        ap_published_at = parse_isoformat(ro.ap_object["published"])
+
+    inbox_object = models.InboxObject(
+        server=urlparse(ro.ap_id).hostname,
+        actor_id=obj_actor.id,
+        ap_actor_id=obj_actor.ap_id,
+        ap_type=ro.ap_type,
+        ap_id=ro.ap_id,
+        ap_context=ro.ap_context,
+        conversation=await fetch_conversation_root(db_session, ro),
+        ap_published_at=ap_published_at,
+        ap_object=ro.ap_object,
+        visibility=ro.visibility,
+        relates_to_inbox_object_id=None,
+        relates_to_outbox_object_id=None,
+        activity_object_ap_id=ro.activity_object_ap_id,
+        og_meta=await opengraph.og_meta_from_note(db_session, ro),
+        is_hidden_from_stream=True,
+    )
+
+    db_session.add(inbox_object)
+    await db_session.flush()
+    await db_session.refresh(inbox_object)
+    return inbox_object
 
 
 async def public_outbox_objects_count(db_session: AsyncSession) -> int:

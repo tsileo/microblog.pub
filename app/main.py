@@ -76,12 +76,12 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
+# - empty recipients for Share on "was not in the inbox" object
 # - support Move
 # - support actor delete
 # - allow to share old notes
 # - allow to interact with object not in anybox (i.e. like from a lookup)
 # - only show 10 most recent threads in DMs
-# - custom CSS for disabled button (e.g. sharing on a direct post)
 # - prevent double accept/double follow
 # - UI support for updating posts
 # - indieauth tweaks
