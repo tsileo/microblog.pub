@@ -21,6 +21,7 @@ from tests.utils import run_async
 from tests.utils import setup_inbox_delete
 from tests.utils import setup_remote_actor
 from tests.utils import setup_remote_actor_as_follower
+from tests.utils import setup_remote_actor_as_following
 
 
 async def _process_next_incoming_activity(db_session: AsyncSession) -> None:
@@ -352,4 +353,73 @@ def test_inbox__actor_is_blocked(
             )
         )
         == 0
+    )
+
+
+def test_inbox__move_activity(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # Given a remote actor
+    ra = setup_remote_actor(respx_mock)
+
+    # Which is followed by the local actor
+    following = setup_remote_actor_as_following(ra)
+    old_actor = following.actor
+    assert old_actor
+    assert following.outbox_object
+    follow_id = following.outbox_object.ap_id
+
+    # When receiving a Move activity
+    new_ra = setup_remote_actor(
+        respx_mock,
+        base_url="https://new-account.com",
+        also_known_as=[ra.ap_id],
+    )
+    move_activity = RemoteObject(
+        factories.build_move_activity(ra, new_ra),
+        ra,
+    )
+
+    with mock_httpsig_checker(ra):
+        response = client.post(
+            "/inbox",
+            headers={"Content-Type": ap.AS_CTX},
+            json=move_activity.ap_object,
+        )
+
+    # Then the server returns a 204
+    assert response.status_code == 202
+
+    run_async(_process_next_incoming_activity)
+
+    # And the Move activity was saved in the inbox
+    inbox_activity = db.execute(select(models.InboxObject)).scalar_one()
+    assert inbox_activity.ap_type == "Move"
+    assert inbox_activity.actor_id == old_actor.id
+
+    # And the following actor was deleted
+    assert db.scalar(select(func.count(models.Following.id))) == 0
+
+    # And the follow was undone
+    assert (
+        db.scalar(
+            select(func.count(models.OutboxObject.id)).where(
+                models.OutboxObject.ap_type == "Undo",
+                models.OutboxObject.activity_object_ap_id == follow_id,
+            )
+        )
+        == 1
+    )
+
+    # And the new account was followed
+    assert (
+        db.scalar(
+            select(func.count(models.OutboxObject.id)).where(
+                models.OutboxObject.ap_type == "Follow",
+                models.OutboxObject.activity_object_ap_id == new_ra.ap_id,
+            )
+        )
+        == 1
     )

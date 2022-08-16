@@ -40,11 +40,16 @@ def generate_admin_session_cookies() -> dict[str, Any]:
     return {"session": session_serializer.dumps({"is_logged_in": True})}
 
 
-def setup_remote_actor(respx_mock: respx.MockRouter) -> actor.RemoteActor:
+def setup_remote_actor(
+    respx_mock: respx.MockRouter,
+    base_url="https://example.com",
+    also_known_as=None,
+) -> actor.RemoteActor:
     ra = factories.RemoteActorFactory(
-        base_url="https://example.com",
+        base_url=base_url,
         username="toto",
         public_key="pk",
+        also_known_as=also_known_as if also_known_as else [],
     )
     respx_mock.get(ra.ap_id + "/outbox").mock(
         return_value=httpx.Response(
@@ -84,6 +89,30 @@ def setup_remote_actor_as_follower(ra: actor.RemoteActor) -> models.Follower:
         ap_actor_id=actor.ap_id,
     )
     return follower
+
+
+def setup_remote_actor_as_following(ra: actor.RemoteActor) -> models.Following:
+    actor = factories.ActorFactory.from_remote_actor(ra)
+
+    follow_id = uuid4().hex
+    follow_from_outbox = RemoteObject(
+        factories.build_follow_activity(
+            from_remote_actor=LOCAL_ACTOR,
+            for_remote_actor=ra,
+            outbox_public_id=follow_id,
+        ),
+        LOCAL_ACTOR,
+    )
+    outbox_object = factories.OutboxObjectFactory.from_remote_object(
+        follow_id, follow_from_outbox
+    )
+
+    following = factories.FollowingFactory(
+        outbox_object_id=outbox_object.id,
+        actor_id=actor.id,
+        ap_actor_id=actor.ap_id,
+    )
+    return following
 
 
 def setup_inbox_delete(

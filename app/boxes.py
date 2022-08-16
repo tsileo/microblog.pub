@@ -208,6 +208,11 @@ async def send_announce(db_session: AsyncSession, ap_object_id: str) -> None:
 
 
 async def send_follow(db_session: AsyncSession, ap_actor_id: str) -> None:
+    await _send_follow(db_session, ap_actor_id)
+    await db_session.commit()
+
+
+async def _send_follow(db_session: AsyncSession, ap_actor_id: str) -> None:
     actor = await fetch_actor(db_session, ap_actor_id)
 
     follow_id = allocate_outbox_id()
@@ -226,10 +231,16 @@ async def send_follow(db_session: AsyncSession, ap_actor_id: str) -> None:
         raise ValueError("Should never happen")
 
     await new_outgoing_activity(db_session, actor.inbox_url, outbox_object.id)
-    await db_session.commit()
+
+    # Caller should commit
 
 
 async def send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
+    await _send_undo(db_session, ap_object_id)
+    await db_session.commit()
+
+
+async def _send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
     outbox_object_to_undo = await get_outbox_object_by_ap_id(db_session, ap_object_id)
     if not outbox_object_to_undo:
         raise ValueError(f"{ap_object_id} not found in the outbox")
@@ -309,7 +320,7 @@ async def send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
     else:
         raise ValueError("Should never happen")
 
-    await db_session.commit()
+    # called should commit
 
 
 async def fetch_conversation_root(
@@ -1139,6 +1150,54 @@ async def _handle_undo_activity(
     # commit will be perfomed in save_to_inbox
 
 
+async def _handle_move_activity(
+    db_session: AsyncSession,
+    from_actor: models.Actor,
+    move_activity: models.InboxObject,
+) -> None:
+    logger.info("Processing Move activity")
+
+    # Ensure the object matches the actor
+    old_actor_id = ap.get_object_id(move_activity.ap_object)
+    if old_actor_id != from_actor.ap_id:
+        logger.warning(
+            f"Object does not match the actor: {old_actor_id}/{from_actor.ap_id}"
+        )
+        return None
+
+    # Fetch the target account
+    new_actor_id = move_activity.ap_object.get("target")
+    if not new_actor_id:
+        logger.warning("Missing target")
+        return None
+
+    new_actor = await fetch_actor(db_session, new_actor_id)
+
+    # Ensure the target account references the old account
+    if old_actor_id not in (aks := new_actor.ap_actor.get("alsoKnownAs", [])):
+        logger.warning(
+            f"New account does not have have an alias for the old account: {aks}"
+        )
+        return None
+
+    # Unfollow the old account
+    following = (
+        await db_session.execute(
+            select(models.Following)
+            .where(models.Following.ap_actor_id == old_actor_id)
+            .options(joinedload(models.Following.outbox_object))
+        )
+    ).scalar_one_or_none()
+    if not following:
+        logger.warning("Not following the Move actor")
+        return
+
+    await _send_undo(db_session, following.outbox_object.ap_id)
+
+    # Follow the new one
+    await _send_follow(db_session, new_actor_id)
+
+
 async def _handle_update_activity(
     db_session: AsyncSession,
     from_actor: models.Actor,
@@ -1576,6 +1635,8 @@ async def save_to_inbox(
         await _handle_read_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Update":
         await _handle_update_activity(db_session, actor, inbox_object)
+    elif activity_ro.ap_type == "Move":
+        await _handle_move_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Delete":
         await _handle_delete_activity(
             db_session,

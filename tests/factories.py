@@ -68,6 +68,21 @@ def build_accept_activity(
     }
 
 
+def build_move_activity(
+    from_remote_actor: actor.RemoteActor,
+    for_remote_object: actor.RemoteActor,
+    outbox_public_id: str | None = None,
+) -> ap.RawObject:
+    return {
+        "@context": ap.AS_CTX,
+        "type": "Move",
+        "id": from_remote_actor.ap_id + "/move/" + (outbox_public_id or uuid4().hex),
+        "actor": from_remote_actor.ap_id,
+        "object": from_remote_actor.ap_id,
+        "target": for_remote_object.ap_id,
+    }
+
+
 def build_note_object(
     from_remote_actor: actor.RemoteActor,
     outbox_public_id: str | None = None,
@@ -123,11 +138,13 @@ class RemoteActorFactory(factory.Factory):
             "base_url",
             "username",
             "public_key",
+            "also_known_as",
         )
 
     class Params:
         icon_url = None
         summary = "I like unit tests"
+        also_known_as: list[str] = []
 
     ap_actor = factory.LazyAttribute(
         lambda o: {
@@ -152,6 +169,7 @@ class RemoteActorFactory(factory.Factory):
                 "owner": o.base_url,
                 "publicKeyPem": o.public_key,
             },
+            "alsoKnownAs": o.also_known_as,
         }
     )
 
@@ -240,3 +258,8 @@ class InboxObjectFactory(factory.alchemy.SQLAlchemyModelFactory):
 class FollowerFactory(factory.alchemy.SQLAlchemyModelFactory):
     class Meta(BaseModelMeta):
         model = models.Follower
+
+
+class FollowingFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta(BaseModelMeta):
+        model = models.Following

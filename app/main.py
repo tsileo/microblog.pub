@@ -76,8 +76,8 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # TODO(ts):
 #
 # Next:
-# - empty recipients for Share on "was not in the inbox" object
-# - support Move
+# - fix issue with followers from a blocked server (skip it?)
+# - CORS webfinger endpoint
 # - support actor delete
 # - allow to share old notes
 # - allow to interact with object not in anybox (i.e. like from a lookup)

@@ -277,6 +277,13 @@ async def get_object(activity: RawObject) -> RawObject:
         raise ValueError(f"Unexpected object {raw_activity_object}")
 
 
+def get_object_id(activity: RawObject) -> str:
+    if "object" not in activity:
+        raise ValueError(f"No object in {activity}")
+
+    return get_id(activity["object"])
+
+
 def wrap_object(activity: RawObject) -> RawObject:
     # TODO(tsileo): improve Create VS Update with a `update=True` flag
     if "updated" in activity:
