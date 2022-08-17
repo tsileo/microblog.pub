@@ -176,7 +176,10 @@ async def fetch_actor(
 
     existing_actor = (
         await db_session.scalars(
-            select(models.Actor).where(models.Actor.ap_id == actor_id)
+            select(models.Actor).where(
+                models.Actor.ap_id == actor_id,
+                models.Actor.is_deleted.is_(False),
+            )
         )
     ).one_or_none()
     if existing_actor:

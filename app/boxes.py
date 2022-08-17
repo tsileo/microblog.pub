@@ -839,7 +839,7 @@ async def _handle_delete_activity(
     db_session: AsyncSession,
     from_actor: models.Actor,
     delete_activity: models.InboxObject,
-    ap_object_to_delete: models.InboxObject | None,
+    ap_object_to_delete: models.InboxObject | models.Actor | None,
     forwarded_by_actor: models.Actor | None,
 ) -> None:
     if ap_object_to_delete is None:
@@ -847,24 +847,77 @@ async def _handle_delete_activity(
             "Received Delete for an unknown object "
             f"{delete_activity.activity_object_ap_id}"
         )
-        # TODO(tsileo): support deleting actor
         return
 
-    if from_actor.ap_id != ap_object_to_delete.actor.ap_id:
-        logger.warning(
-            "Actor mismatch between the activity and the object: "
-            f"{from_actor.ap_id}/{ap_object_to_delete.actor.ap_id}"
+    if isinstance(ap_object_to_delete, models.InboxObject):
+        if from_actor.ap_id != ap_object_to_delete.actor.ap_id:
+            logger.warning(
+                "Actor mismatch between the activity and the object: "
+                f"{from_actor.ap_id}/{ap_object_to_delete.actor.ap_id}"
+            )
+            return
+
+        logger.info(
+            f"Deleting {ap_object_to_delete.ap_type}/{ap_object_to_delete.ap_id}"
         )
-        return
+        await _revert_side_effect_for_deleted_object(
+            db_session,
+            delete_activity,
+            ap_object_to_delete,
+            forwarded_by_actor,
+        )
+        ap_object_to_delete.is_deleted = True
+    elif isinstance(ap_object_to_delete, models.Actor):
+        if from_actor.ap_id != ap_object_to_delete.ap_id:
+            logger.warning(
+                "Actor mismatch between the activity and the object: "
+                f"{from_actor.ap_id}/{ap_object_to_delete.ap_id}"
+            )
+            return
 
-    logger.info(f"Deleting {ap_object_to_delete.ap_type}/{ap_object_to_delete.ap_id}")
-    await _revert_side_effect_for_deleted_object(
-        db_session,
-        delete_activity,
-        ap_object_to_delete,
-        forwarded_by_actor,
-    )
-    ap_object_to_delete.is_deleted = True
+        logger.info(f"Deleting actor {ap_object_to_delete.ap_id}")
+        follower = (
+            await db_session.scalars(
+                select(models.Follower).where(
+                    models.Follower.ap_actor_id == ap_object_to_delete.ap_id,
+                )
+            )
+        ).one_or_none()
+        if follower:
+            logger.info("Removing actor from follower")
+            await db_session.delete(follower)
+
+        following = (
+            await db_session.scalars(
+                select(models.Following).where(
+                    models.Following.ap_actor_id == ap_object_to_delete.ap_id,
+                )
+            )
+        ).one_or_none()
+        if following:
+            logger.info("Removing actor from following")
+            await db_session.delete(following)
+
+        # Mark the actor as deleted
+        ap_object_to_delete.is_deleted = True
+
+        inbox_objects = (
+            await db_session.scalars(
+                select(models.InboxObject).where(
+                    models.InboxObject.actor_id == ap_object_to_delete.id,
+                    models.InboxObject.is_deleted.is_(False),
+                )
+            )
+        ).all()
+        logger.info(f"Deleting {len(inbox_objects)} objects")
+        for inbox_object in inbox_objects:
+            await _revert_side_effect_for_deleted_object(
+                db_session,
+                delete_activity,
+                inbox_object,
+                forwarded_by_actor=None,
+            )
+            inbox_object.is_deleted = True
 
     await db_session.flush()
 
@@ -905,6 +958,38 @@ async def _revert_side_effect_for_deleted_object(
                     .values(replies_count=models.InboxObject.replies_count - 1)
                 )
 
+    if deleted_ap_object.ap_type == "Like" and deleted_ap_object.activity_object_ap_id:
+        related_object = await get_outbox_object_by_ap_id(
+            db_session,
+            deleted_ap_object.activity_object_ap_id,
+        )
+        if related_object:
+            if related_object.is_from_outbox:
+                await db_session.execute(
+                    update(models.OutboxObject)
+                    .where(
+                        models.OutboxObject.id == related_object.id,
+                    )
+                    .values(likes_count=models.OutboxObject.likes_count - 1)
+                )
+    elif (
+        deleted_ap_object.ap_type == "Annouce"
+        and deleted_ap_object.activity_object_ap_id
+    ):
+        related_object = await get_outbox_object_by_ap_id(
+            db_session,
+            deleted_ap_object.activity_object_ap_id,
+        )
+        if related_object:
+            if related_object.is_from_outbox:
+                await db_session.execute(
+                    update(models.OutboxObject)
+                    .where(
+                        models.OutboxObject.id == related_object.id,
+                    )
+                    .values(announces_count=models.OutboxObject.announces_count - 1)
+                )
+
     # Delete any Like/Announce
     await db_session.execute(
         update(models.OutboxObject)
@@ -916,7 +1001,11 @@ async def _revert_side_effect_for_deleted_object(
 
     # If it's a local replies, it was forwarded, so we also need to forward
     # the Delete activity if possible
-    if delete_activity.has_ld_signature and is_delete_needs_to_be_forwarded:
+    if (
+        delete_activity.activity_object_ap_id == deleted_ap_object.ap_id
+        and delete_activity.has_ld_signature
+        and is_delete_needs_to_be_forwarded
+    ):
         logger.info("Forwarding Delete activity as it's a local reply")
 
         # Don't forward to the forwarding actor and the original Delete actor
@@ -1638,11 +1727,26 @@ async def save_to_inbox(
     elif activity_ro.ap_type == "Move":
         await _handle_move_activity(db_session, actor, inbox_object)
     elif activity_ro.ap_type == "Delete":
+        object_to_delete: models.InboxObject | models.Actor | None
+        if relates_to_inbox_object:
+            object_to_delete = relates_to_inbox_object
+        elif inbox_object.activity_object_ap_id:
+            # If it's not a Delete for an inbox object, it may be related to
+            # an actor
+            try:
+                object_to_delete = await fetch_actor(
+                    db_session,
+                    inbox_object.activity_object_ap_id,
+                    save_if_not_found=False,
+                )
+            except ap.ObjectNotFoundError:
+                pass
+
         await _handle_delete_activity(
             db_session,
             actor,
             inbox_object,
-            relates_to_inbox_object,
+            object_to_delete,
             forwarded_by_actor=forwarded_by_actor,
         )
     elif activity_ro.ap_type == "Follow":
