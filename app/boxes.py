@@ -1766,13 +1766,6 @@ async def save_to_inbox(
             )
         else:
             if relates_to_outbox_object.ap_type == "Follow":
-                following = models.Following(
-                    actor_id=actor.id,
-                    outbox_object_id=relates_to_outbox_object.id,
-                    ap_actor_id=actor.ap_id,
-                )
-                db_session.add(following)
-
                 notif_type = (
                     models.NotificationType.FOLLOW_REQUEST_ACCEPTED
                     if activity_ro.ap_type == "Accept"
@@ -1784,9 +1777,29 @@ async def save_to_inbox(
                     inbox_object_id=inbox_object.id,
                 )
                 db_session.add(notif)
+
                 if activity_ro.ap_type == "Accept":
+                    following = models.Following(
+                        actor_id=actor.id,
+                        outbox_object_id=relates_to_outbox_object.id,
+                        ap_actor_id=actor.ap_id,
+                    )
+                    db_session.add(following)
+
                     # Pre-fetch the latest activities
                     await _prefetch_actor_outbox(db_session, actor)
+                elif activity_ro.ap_type == "Reject":
+                    maybe_following = (
+                        await db_session.scalars(
+                            select(models.Following).where(
+                                models.Following.ap_actor_id == actor.ap_id,
+                            )
+                        )
+                    ).one_or_none()
+                    if maybe_following:
+                        logger.info("Removing actor from following")
+                        await db_session.delete(maybe_following)
+
             else:
                 logger.info(
                     "Received an Accept for an unsupported activity: "
