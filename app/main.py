@@ -78,7 +78,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # Next:
 # - fix issue with followers from a blocked server (skip it?)
 # - CORS webfinger endpoint
-# - support actor delete
 # - allow to share old notes
 # - allow to interact with object not in anybox (i.e. like from a lookup)
 # - only show 10 most recent threads in DMs
