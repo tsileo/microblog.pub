@@ -842,7 +842,7 @@ async def _handle_delete_activity(
     relates_to_inbox_object: models.InboxObject | None,
     forwarded_by_actor: models.Actor | None,
 ) -> None:
-    ap_object_to_delete: models.InboxObject | models.Actor | None
+    ap_object_to_delete: models.InboxObject | models.Actor | None = None
     if relates_to_inbox_object:
         ap_object_to_delete = relates_to_inbox_object
     elif delete_activity.activity_object_ap_id:
