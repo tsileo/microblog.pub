@@ -79,13 +79,11 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # - fix issue with followers from a blocked server (skip it?)
 # - CORS webfinger endpoint
 # - allow to share old notes
-# - allow to interact with object not in anybox (i.e. like from a lookup)
 # - only show 10 most recent threads in DMs
 # - prevent double accept/double follow
 # - UI support for updating posts
 # - indieauth tweaks
 # - API for posting notes
-# - allow to block servers
 # - FT5 text search
 # - support update post with history?
 # - cleanup tasks
@@ -435,6 +433,7 @@ async def following(
                 select(models.Following)
                 .options(joinedload(models.Following.actor))
                 .order_by(models.Following.created_at.desc())
+                .limit(20)
             )
         )
         .unique()
@@ -815,7 +814,7 @@ async def wellknown_webfinger(resource: str) -> JSONResponse:
             {
                 "rel": "http://webfinger.net/rel/profile-page",
                 "type": "text/html",
-                "href": ID,
+                "href": ID + "/",
             },
             {"rel": "self", "type": "application/activity+json", "href": ID},
             {

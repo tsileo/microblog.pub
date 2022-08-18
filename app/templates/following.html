@@ -16,7 +16,9 @@
 
 {% set x_more = following_count - following | length %}
 {% if x_more > 0 %}
+<div class="box">
     <p>And {{ x_more }} more.</p>
+</div>
 {% endif %}
 
 {% if is_admin %}

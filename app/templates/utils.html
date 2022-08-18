@@ -577,6 +577,11 @@
                         <img src="{{ like.actor.resized_icon_url }}" alt="{{ like.actor.handle}}" style="max-width:50px;">
                     </a>
                 {% endfor %}
+                {% if object.likes_count > likes | length %}
+                    <div style="display:inline-block;align-self:center;">
+                        and {{ object.likes_count - likes | length }} more.
+                    </div>
+                {% endif %}
                 </div>
             </div>
         {% endif %}
@@ -589,6 +594,11 @@
                         <img src="{{ share.actor.resized_icon_url }}" alt="{{ share.actor.handle}}" style="max-width:50px;">
                     </a>
                 {% endfor %}
+                {% if object.announces_count > shares | length %}
+                    <div style="display:inline-block;align-self:center;">
+                        and {{ object.announces_count - shares | length }} more.
+                    </div>
+                {% endif %}
                 </div>
             </div>
         {% endif %}
