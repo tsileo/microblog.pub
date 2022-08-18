@@ -14,19 +14,27 @@ from app import models
 from app.actor import LOCAL_ACTOR
 from app.ap_object import RemoteObject
 from app.config import session_serializer
+from app.database import AsyncSession
 from app.database import async_session
+from app.incoming_activities import fetch_next_incoming_activity
+from app.incoming_activities import process_next_incoming_activity
 from app.main import app
 from tests import factories
 
 
 @contextmanager
-def mock_httpsig_checker(ra: actor.RemoteActor):
+def mock_httpsig_checker(
+    ra: actor.RemoteActor,
+    has_valid_signature: bool = True,
+    is_ap_actor_gone: bool = False,
+):
     async def httpsig_checker(
         request: fastapi.Request,
     ) -> httpsig.HTTPSigInfo:
         return httpsig.HTTPSigInfo(
-            has_valid_signature=True,
+            has_valid_signature=has_valid_signature,
             signed_by_ap_actor_id=ra.ap_id,
+            is_ap_actor_gone=is_ap_actor_gone,
         )
 
     app.dependency_overrides[httpsig.httpsig_checker] = httpsig_checker
@@ -115,6 +123,52 @@ def setup_remote_actor_as_following(ra: actor.RemoteActor) -> models.Following:
     return following
 
 
+def setup_remote_actor_as_following_and_follower(
+    ra: actor.RemoteActor,
+) -> tuple[models.Following, models.Follower]:
+    actor = factories.ActorFactory.from_remote_actor(ra)
+
+    follow_id = uuid4().hex
+    follow_from_outbox = RemoteObject(
+        factories.build_follow_activity(
+            from_remote_actor=LOCAL_ACTOR,
+            for_remote_actor=ra,
+            outbox_public_id=follow_id,
+        ),
+        LOCAL_ACTOR,
+    )
+    outbox_object = factories.OutboxObjectFactory.from_remote_object(
+        follow_id, follow_from_outbox
+    )
+
+    following = factories.FollowingFactory(
+        outbox_object_id=outbox_object.id,
+        actor_id=actor.id,
+        ap_actor_id=actor.ap_id,
+    )
+
+    follow_id = uuid4().hex
+    follow_from_inbox = RemoteObject(
+        factories.build_follow_activity(
+            from_remote_actor=ra,
+            for_remote_actor=LOCAL_ACTOR,
+            outbox_public_id=follow_id,
+        ),
+        ra,
+    )
+    inbox_object = factories.InboxObjectFactory.from_remote_object(
+        follow_from_inbox, actor
+    )
+
+    follower = factories.FollowerFactory(
+        inbox_object_id=inbox_object.id,
+        actor_id=actor.id,
+        ap_actor_id=actor.ap_id,
+    )
+
+    return following, follower
+
+
 def setup_inbox_delete(
     actor: models.Actor, deleted_object_ap_id: str
 ) -> models.InboxObject:
@@ -137,3 +191,13 @@ def run_async(func, *args, **kwargs):
             return await func(db, *args, **kwargs)
 
     asyncio.run(_func())
+
+
+async def _process_next_incoming_activity(db_session: AsyncSession) -> None:
+    next_activity = await fetch_next_incoming_activity(db_session)
+    assert next_activity
+    await process_next_incoming_activity(db_session, next_activity)
+
+
+def run_process_next_incoming_activity() -> None:
+    run_async(_process_next_incoming_activity)
