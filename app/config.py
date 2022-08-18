@@ -72,6 +72,8 @@ class Config(pydantic.BaseModel):
     code_highlighting_theme = "friendly_grayscale"
     blocked_servers: list[_BlockedServer] = []
 
+    inbox_retention_days: int = 15
+
     # Config items to make tests easier
     sqlalchemy_database: str | None = None
     key_path: str | None = None
@@ -117,6 +119,8 @@ if CONFIG.privacy_replace:
     PRIVACY_REPLACE = {pr.domain: pr.replace_by for pr in CONFIG.privacy_replace}
 
 BLOCKED_SERVERS = {blocked_server.hostname for blocked_server in CONFIG.blocked_servers}
+
+INBOX_RETENTION_DAYS = CONFIG.inbox_retention_days
 
 BASE_URL = ID
 DEBUG = CONFIG.debug

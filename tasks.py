@@ -181,3 +181,11 @@ def build_docker_image(ctx):
     # type: (Context) -> None
     with embed_version():
         run("docker build -t microblogpub/microblogpub .")
+
+
+@task
+def prune_old_data(ctx):
+    # type: (Context) -> None
+    from app.prune import run_prune_old_data
+
+    asyncio.run(run_prune_old_data())
