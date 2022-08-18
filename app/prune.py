@@ -4,6 +4,7 @@ from loguru import logger
 from sqlalchemy import and_
 from sqlalchemy import delete
 from sqlalchemy import not_
+from sqlalchemy import or_
 
 from app import activitypub as ap
 from app import models
@@ -55,7 +56,15 @@ async def _prune_old_inbox_objects(
             # Keep announced objects
             models.InboxObject.announced_via_outbox_object_ap_id.is_(None),
             # Keep objects related to local conversations
-            models.InboxObject.conversation.not_like(f"{BASE_URL}/%"),
+            or_(
+                models.InboxObject.conversation.not_like(f"{BASE_URL}/%"),
+                models.InboxObject.conversation.is_(None),
+            ),
+            # Keep activities related to the outbox (like Like/Announce/Follow...)
+            or_(
+                models.InboxObject.activity_object_ap_id.not_like(f"{BASE_URL}/*"),
+                models.InboxObject.activity_object_ap_id.is_(None),
+            ),
             # Keep direct messages
             not_(
                 and_(
