@@ -143,9 +143,12 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
 class HTTPSigInfo:
     has_valid_signature: bool
     signed_by_ap_actor_id: str | None = None
+
     is_ap_actor_gone: bool = False
     is_unsupported_algorithm: bool = False
     is_expired: bool = False
+    is_from_blocked_server: bool = False
+
     server: str | None = None
 
 
@@ -169,6 +172,12 @@ async def httpsig_checker(
         )
 
     server = urlparse(key_id).hostname
+    if server in BLOCKED_SERVERS:
+        return HTTPSigInfo(
+            has_valid_signature=False,
+            server=server,
+            is_from_blocked_server=True,
+        )
 
     if alg := hsig.get("algorithm") not in ["rsa-sha256", "hs2019"]:
         logger.info(f"Unsupported HTTP sig algorithm: {alg}")
@@ -222,7 +231,7 @@ async def enforce_httpsig(
     httpsig_info: HTTPSigInfo = fastapi.Depends(httpsig_checker),
 ) -> HTTPSigInfo:
     """FastAPI Depends"""
-    if httpsig_info.server in BLOCKED_SERVERS:
+    if httpsig_info.is_from_blocked_server:
         logger.warning(f"{httpsig_info.server} is blocked")
         raise fastapi.HTTPException(status_code=403, detail="Blocked")
 
