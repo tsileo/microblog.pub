@@ -25,6 +25,8 @@ async def prune_old_data(
     await _prune_old_outgoing_activities(db_session)
     await _prune_old_inbox_objects(db_session)
 
+    # TODO: delete actor with no remaining inbox objects
+
     await db_session.commit()
     # Reclaim disk space
     await db_session.execute("VACUUM")  # type: ignore
@@ -110,5 +112,6 @@ async def _prune_old_inbox_objects(
 
 
 async def run_prune_old_data() -> None:
+    """CLI entrypoint."""
     async with async_session() as db_session:
         await prune_old_data(db_session)
