@@ -55,14 +55,16 @@ async def _prune_old_inbox_objects(
             models.InboxObject.liked_via_outbox_object_ap_id.is_(None),
             # Keep announced objects
             models.InboxObject.announced_via_outbox_object_ap_id.is_(None),
-            # Keep objects related to local conversations
+            # Keep objects related to local conversations (i.e. don't break the
+            # public website)
             or_(
                 models.InboxObject.conversation.not_like(f"{BASE_URL}%"),
                 models.InboxObject.conversation.is_(None),
             ),
             # Keep activities related to the outbox (like Like/Announce/Follow...)
             or_(
-                models.InboxObject.activity_object_ap_id.not_like(f"{BASE_URL}*"),
+                # XXX: no `/` here because the local ID does not have one
+                models.InboxObject.activity_object_ap_id.not_like(f"{BASE_URL}%"),
                 models.InboxObject.activity_object_ap_id.is_(None),
             ),
             # Keep direct messages
