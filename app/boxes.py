@@ -1891,7 +1891,10 @@ async def save_to_inbox(
                     db_session.add(following)
 
                     # Pre-fetch the latest activities
-                    await _prefetch_actor_outbox(db_session, actor)
+                    try:
+                        await _prefetch_actor_outbox(db_session, actor)
+                    except Exception:
+                        logger.exception(f"Failed to prefetch outbox for {actor.ap_id}")
                 elif activity_ro.ap_type == "Reject":
                     maybe_following = (
                         await db_session.scalars(
