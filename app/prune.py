@@ -3,8 +3,10 @@ from datetime import timedelta
 from loguru import logger
 from sqlalchemy import and_
 from sqlalchemy import delete
+from sqlalchemy import func
 from sqlalchemy import not_
 from sqlalchemy import or_
+from sqlalchemy import select
 
 from app import activitypub as ap
 from app import models
@@ -20,6 +22,7 @@ async def prune_old_data(
 ) -> None:
     logger.info(f"Pruning old data with {INBOX_RETENTION_DAYS=}")
     await _prune_old_incoming_activities(db_session)
+    await _prune_old_outgoing_activities(db_session)
     await _prune_old_inbox_objects(db_session)
 
     await db_session.commit()
@@ -43,9 +46,29 @@ async def _prune_old_incoming_activities(
     logger.info(f"Deleted {result.rowcount} old incoming activities")  # type: ignore
 
 
+async def _prune_old_outgoing_activities(
+    db_session: AsyncSession,
+) -> None:
+    result = await db_session.execute(
+        delete(models.OutgoingActivity)
+        .where(
+            models.OutgoingActivity.created_at
+            < now() - timedelta(days=INBOX_RETENTION_DAYS),
+            # Keep failed activity for debug
+            models.OutgoingActivity.is_errored.is_(False),
+        )
+        .execution_options(synchronize_session=False)
+    )
+    logger.info(f"Deleted {result.rowcount} old outgoing activities")  # type: ignore
+
+
 async def _prune_old_inbox_objects(
     db_session: AsyncSession,
 ) -> None:
+    outbox_conversation = select(func.distinct(models.OutboxObject.conversation)).where(
+        models.OutboxObject.conversation.is_not(None),
+        models.OutboxObject.conversation.not_like(f"{BASE_URL}%"),
+    )
     result = await db_session.execute(
         delete(models.InboxObject)
         .where(
@@ -55,11 +78,14 @@ async def _prune_old_inbox_objects(
             models.InboxObject.liked_via_outbox_object_ap_id.is_(None),
             # Keep announced objects
             models.InboxObject.announced_via_outbox_object_ap_id.is_(None),
+            # Keep objects mentioning the local actor
+            models.InboxObject.has_local_mention.is_(False),
             # Keep objects related to local conversations (i.e. don't break the
             # public website)
             or_(
                 models.InboxObject.conversation.not_like(f"{BASE_URL}%"),
                 models.InboxObject.conversation.is_(None),
+                models.InboxObject.conversation.not_in(outbox_conversation),
             ),
             # Keep activities related to the outbox (like Like/Announce/Follow...)
             or_(

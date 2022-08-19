@@ -86,6 +86,10 @@ class InboxObject(Base, BaseObject):
     visibility = Column(Enum(ap.VisibilityEnum), nullable=False)
     conversation = Column(String, nullable=True)
 
+    has_local_mention = Column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+
     # Used for Like, Announce and Undo activities
     relates_to_inbox_object_id = Column(
         Integer,
