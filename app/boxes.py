@@ -1045,18 +1045,25 @@ async def _revert_side_effect_for_deleted_object(
 async def _handle_follow_follow_activity(
     db_session: AsyncSession,
     from_actor: models.Actor,
-    inbox_object: models.InboxObject,
+    follow_activity: models.InboxObject,
 ) -> None:
+    if follow_activity.activity_object_ap_id != LOCAL_ACTOR.ap_id:
+        logger.warning(
+            f"Dropping Follow activity for {follow_activity.activity_object_ap_id}"
+        )
+        await db_session.delete(follow_activity)
+        return
+
     if MANUALLY_APPROVES_FOLLOWERS:
         notif = models.Notification(
             notification_type=models.NotificationType.PENDING_INCOMING_FOLLOWER,
             actor_id=from_actor.id,
-            inbox_object_id=inbox_object.id,
+            inbox_object_id=follow_activity.id,
         )
         db_session.add(notif)
         return None
 
-    await _send_accept(db_session, from_actor, inbox_object)
+    await _send_accept(db_session, from_actor, follow_activity)
 
 
 async def _get_incoming_follow_from_notification_id(
