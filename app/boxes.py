@@ -1735,6 +1735,8 @@ async def save_to_inbox(
 ) -> None:
     try:
         actor = await fetch_actor(db_session, ap.get_id(raw_object["actor"]))
+    except ap.ObjectNotFoundError:
+        logger.warning("Actor not found")
     except httpx.HTTPStatusError:
         logger.exception("Failed to fetch actor")
         return

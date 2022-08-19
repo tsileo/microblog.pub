@@ -178,11 +178,12 @@ async def fetch_actor(
         await db_session.scalars(
             select(models.Actor).where(
                 models.Actor.ap_id == actor_id,
-                models.Actor.is_deleted.is_(False),
             )
         )
     ).one_or_none()
     if existing_actor:
+        if existing_actor.is_deleted:
+            raise ap.ObjectNotFoundError(f"{actor_id} was deleted")
         return existing_actor
     else:
         if save_if_not_found:
