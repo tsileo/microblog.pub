@@ -187,7 +187,7 @@ async def httpsig_checker(
             server=server,
         )
 
-    logger.debug(f"hsig={hsig}")
+    # logger.debug(f"hsig={hsig}")
     signed_string, signature_date = _build_signed_string(
         hsig["headers"],
         request.method,

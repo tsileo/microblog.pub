@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import httpx
+from loguru import logger
 from markdown import markdown
 
 from app import config
@@ -135,6 +136,7 @@ async def fetch(
     params: dict[str, Any] | None = None,
     disable_httpsig: bool = False,
 ) -> RawObject:
+    logger.info(f"Fetching {url} ({params=})")
     check_url(url)
 
     async with httpx.AsyncClient() as client:
@@ -342,6 +344,7 @@ def remove_context(raw_object: RawObject) -> RawObject:
 
 
 async def post(url: str, payload: dict[str, Any]) -> httpx.Response:
+    logger.info(f"Posting {url} ({payload=})")
     check_url(url)
 
     async with httpx.AsyncClient() as client:

@@ -760,7 +760,7 @@ async def inbox(
     db_session: AsyncSession = Depends(get_db_session),
     httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.enforce_httpsig),
 ) -> Response:
-    logger.info(f"headers={request.headers}")
+    # logger.info(f"headers={request.headers}")
     payload = await request.json()
     logger.info(f"{payload=}")
     await new_ap_incoming_activity(db_session, httpsig_info, payload)

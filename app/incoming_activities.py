@@ -3,6 +3,7 @@ import traceback
 from datetime import datetime
 from datetime import timedelta
 
+import httpx
 from loguru import logger
 from sqlalchemy import func
 from sqlalchemy import select
@@ -116,6 +117,11 @@ async def process_next_incoming_activity(
                     next_activity.ap_object,
                     next_activity.sent_by_ap_actor_id,
                 )
+        except httpx.TimeoutException as exc:
+            url = exc._request.url if exc._request else None
+            logger.error(f"HTTP timeout when fetching {url}")
+            next_activity.error = traceback.format_exc()
+            _set_next_try(next_activity)
         except Exception:
             logger.exception("Failed")
             next_activity.error = traceback.format_exc()
