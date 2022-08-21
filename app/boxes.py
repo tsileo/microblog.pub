@@ -1766,7 +1766,13 @@ async def save_to_inbox(
         )
         forwarded_by_actor = await fetch_actor(db_session, sent_by_ap_actor_id)
 
-        if not (await ldsig.verify_signature(db_session, raw_object)):
+        is_sig_verified = False
+        try:
+            is_sig_verified = await ldsig.verify_signature(db_session, raw_object)
+        except Exception:
+            logger.exception("Failed to verify LD sig")
+
+        if not is_sig_verified:
             logger.warning(
                 f"Failed to verify LD sig, fetching remote object {raw_object_id}"
             )
