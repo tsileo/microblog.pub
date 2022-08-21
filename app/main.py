@@ -193,7 +193,7 @@ logger_format = (
     "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
     "{extra[request_id]} - <level>{message}</level>"
 )
-logger.add(sys.stdout, format=logger_format)
+logger.add(sys.stdout, format=logger_format, level="DEBUG" if DEBUG else "INFO")
 
 
 class ActivityPubResponse(JSONResponse):
