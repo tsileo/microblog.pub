@@ -77,7 +77,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 #
 # Next:
 # - fix issue with followers from a blocked server (skip it?)
-# - CORS webfinger endpoint
 # - allow to share old notes
 # - only show 10 most recent threads in DMs
 # - prevent double accept/double follow
@@ -824,7 +823,11 @@ async def wellknown_webfinger(resource: str) -> JSONResponse:
         ],
     }
 
-    return JSONResponse(out, media_type="application/jrd+json; charset=utf-8")
+    return JSONResponse(
+        out,
+        media_type="application/jrd+json; charset=utf-8",
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
 
 
 @app.get("/.well-known/nodeinfo")
