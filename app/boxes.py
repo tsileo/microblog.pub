@@ -351,6 +351,8 @@ async def fetch_conversation_root(
                     db_session, ap.get_actor_id(raw_reply)
                 )
                 in_reply_to_object = RemoteObject(raw_reply, actor=raw_reply_actor)
+            except (ap.ObjectNotFoundError, ap.ObjectIsGoneError):
+                return await fetch_conversation_root(db_session, obj, is_root=True)
             except httpx.HTTPStatusError as http_status_error:
                 if 400 <= http_status_error.response.status_code < 500:
                     # We may not have access, in this case consider if root

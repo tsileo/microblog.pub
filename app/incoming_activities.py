@@ -119,7 +119,7 @@ async def process_next_incoming_activity(
                 )
         except httpx.TimeoutException as exc:
             url = exc._request.url if exc._request else None
-            logger.error(f"HTTP timeout when fetching {url}")
+            logger.error(f"Failed, HTTP timeout when fetching {url}")
             next_activity.error = traceback.format_exc()
             _set_next_try(next_activity)
         except Exception:
