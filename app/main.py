@@ -74,7 +74,6 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 
 
 # TODO(ts):
-#
 # Next:
 # - fix issue with followers from a blocked server (skip it?)
 # - allow to share old notes
@@ -82,10 +81,7 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 # - prevent double accept/double follow
 # - UI support for updating posts
 # - indieauth tweaks
-# - API for posting notes
-# - FT5 text search
 # - support update post with history?
-# - cleanup tasks
 
 
 class CustomMiddleware:

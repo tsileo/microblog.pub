@@ -191,3 +191,24 @@ def prune_old_data(ctx):
     from app.prune import run_prune_old_data
 
     asyncio.run(run_prune_old_data())
+
+
+@task
+def yunohost_config(
+    ctx,
+    domain,
+    username,
+    name,
+    summary,
+    password,
+):
+    # type: (Context, str, str, str, str, str) -> None
+    from app.utils import yunohost
+
+    yunohost.setup_config_file(
+        domain=domain,
+        username=username,
+        name=name,
+        summary=summary,
+        password=password,
+    )
