@@ -1072,9 +1072,21 @@ async def login_validation(
     password: str = Form(),
     redirect: str | None = Form(None),
     csrf_check: None = Depends(verify_csrf_token),
-) -> RedirectResponse:
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse | templates.TemplateResponse:
     if not verify_password(password):
-        raise HTTPException(status_code=401)
+        logger.warning("Invalid password")
+        return await templates.render_template(
+            db_session,
+            request,
+            "login.html",
+            {
+                "error": "Invalid password",
+                "csrf_token": generate_csrf_token(),
+                "redirect": request.query_params.get("redirect", ""),
+            },
+            status_code=403,
+        )
 
     resp = RedirectResponse(redirect or "/admin/stream", status_code=302)
     resp.set_cookie("session", session_serializer.dumps({"is_logged_in": True}))  # type: ignore  # noqa: E501

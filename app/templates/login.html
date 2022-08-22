@@ -3,6 +3,9 @@
 {% block content %}
 <div style="display:grid;height:80%;">
 <div style="margin:auto;">
+{% if error %}
+<p class="primary-color">Invalid password.</p>
+{% endif %}
 <form class="form" action="/admin/login" method="POST">
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 <input type="hidden" name="redirect" value="{{ redirect }}">

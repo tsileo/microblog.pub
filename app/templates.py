@@ -90,6 +90,7 @@ async def render_template(
     request: Request,
     template: str,
     template_args: dict[str, Any] | None = None,
+    status_code: int = 200,
 ) -> TemplateResponse:
     if template_args is None:
         template_args = {}
@@ -133,6 +134,7 @@ async def render_template(
             "actor_types": ap.ACTOR_TYPES,
             **template_args,
         },
+        status_code=status_code,
     )
 
 

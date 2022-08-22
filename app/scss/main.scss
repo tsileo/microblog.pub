@@ -13,6 +13,10 @@ $code-highlight-background: #f0f0f0;
 // Load custom theme
 @import "theme.scss";
 
+.primary-color {
+  color: $primary-color;
+}
+
 .show-more-wrapper {
   .p-summary {
     display: inline-block;
