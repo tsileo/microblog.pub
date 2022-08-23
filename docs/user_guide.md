@@ -66,6 +66,14 @@ $secondary-color: #32cd32;
 
 See `app/scss/main.scss` to see what variables can be overidden.
 
+#### Code highlighting theme
+
+You can switch to one of the [styles supported by Pygments](https://pygments.org/styles/) by adding a line in `profile.toml`:
+
+```toml
+code_highlighting_theme = "solarized-dark"
+```
+
 ## Public website
 
 Public notes will be visible on the homepage.
