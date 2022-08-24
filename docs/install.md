@@ -152,3 +152,7 @@ server {
     # [...]
 }
 ```
+
+## YunoHost edition
+
+[YunoHost](https://yunohost.org/) support is a work in progress.

@@ -31,6 +31,33 @@ You can tweak your profile by tweaking these items:
 
 Whenever one of these config items is updated, an `Update` activity will be sent to all know server to update your remote profile.
 
+The server will need to be restarted for taking changes into account.
+
+### Profile metadata
+
+You can add metadata to your profile with the `metadata` config item.
+
+Markdown is supported in the `value` field.
+
+Be aware that most other softwares like Mastodon will limit the number of key/value to 4.
+
+```toml
+metadata = [
+  {key = "Documentation", value = "[https://docs.microblog.pub](https://docs.microblog.pub)"},
+  {key = "Source code", value = "[https://sr.ht/~tsileo/microblog.pub/](https://sr.ht/~tsileo/microblog.pub/)"},
+]
+```
+
+### Manually approving followers
+
+If you wish to manually approve followers, add this config item to `profile.toml`:
+
+```toml
+manually_approves_followers = true
+```
+
+The default value is `false`.
+
 ### Privacy replace
 
 You can define domain to be rewrited to more "privacy friendly" alternatives, like [Invidious](https://invidious.io/)
@@ -41,6 +68,7 @@ To do so, just add as these extra config items, this is a sample config that rew
 ```toml
 privacy_replace = [
     {domain = "youtube.com", replace_by  = "yewtu.be"},
+    {domain = "youtu.be", replace_by  = "yewtu.be"},
     {domain = "twitter.com", replace_by = "nitter.fdn.fr"},
     {domain = "medium.com", replace_by = "scribe.rip"},
     {domain = "reddit.com", replace_by = "teddit.net"},
@@ -72,6 +100,22 @@ You can switch to one of the [styles supported by Pygments](https://pygments.org
 
 ```toml
 code_highlighting_theme = "solarized-dark"
+```
+
+### Blocking servers
+
+In addition to blocking "single actors" via the admin interface, you can also prevent any communications with whole servers.
+
+Add a `blocked_servers` config item into `profile.toml`.
+
+The `reason` field is just there to help you document/remember why a server was blocked.
+
+You should unfollow any account from a server before blocking it.
+
+```toml
+blocked_servers = [
+    {hostname = "bad.tld", reason = "Bot spam"},
+]
 ```
 
 ## Public website
@@ -137,21 +181,22 @@ microblog.pub supports the most common interactions supported by the Fediverse.
 
 ### Shares
 
-Sharing an object will relay it to your followers and notify the author.
+Sharing (or announcing) an object will relay it to your followers and notify the author.
 It will also be displayed on the homepage.
 
 Most receiving servers will increment the number of shares.
 
-TODO receiving
+Receiving a share will trigger a notification, increment the shares counter on the object and the actor avatar will be displayed on the object permalink.
 
 ### Likes
 
 Liking an object will notify the author.
-Unkike sharing, liked object are not displayed on the homepage.
+
+Unlike sharing, liked object are not displayed on the homepage.
 
 Most receiving servers will increment the number of likes.
 
-TODO receiving
+Receiving a like will trigger a notification, increment the likes counter on the object and the actor avatar will be displayed on the object permalink.
 
 ### Bookmarks
 
@@ -159,13 +204,13 @@ Bookmarks allow you to like objects without notifying the author.
 
 It is basically a "private like", and allow you to easily access them later.
 
-TODO receiving
+It will also prevent objects to be pruned.
 
 ### Webmentions
 
-Sending webmention to ping mentioned website is done automatically once a note is authored, see TODO.
+Sending webmention to ping mentioned websites is done automatically once a public note is authored.
 
-TODO side-effect of receiving a webmention.
+Receiving a webmention will trigger a notification, increment the webmentions counter on the object and the source page will be displayed on the object permalink.
 
 ## Backup and restore
 
