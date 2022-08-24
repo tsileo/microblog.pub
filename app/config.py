@@ -14,6 +14,7 @@ from itsdangerous import URLSafeTimedSerializer
 from loguru import logger
 
 from app.utils.emoji import _load_emojis
+from app.utils.version import get_version_commit
 
 ROOT_DIR = Path().parent.resolve()
 
@@ -24,7 +25,7 @@ VERSION_COMMIT = "dev"
 try:
     from app._version import VERSION_COMMIT  # type: ignore
 except ImportError:
-    pass
+    VERSION_COMMIT = get_version_commit()
 
 # Force reloading cache when the CSS is updated
 CSS_HASH = "none"

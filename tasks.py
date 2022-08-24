@@ -1,6 +1,5 @@
 import asyncio
 import io
-import subprocess
 import tarfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -164,14 +163,12 @@ def stats(ctx):
 
 @contextmanager
 def embed_version() -> Generator[None, None, None]:
+    from app.utils.version import get_version_commit
+
     version_file = Path("app/_version.py")
     version_file.unlink(missing_ok=True)
-    version = (
-        subprocess.check_output(["git", "rev-parse", "--short=8", "v2"])
-        .split()[0]
-        .decode()
-    )
-    version_file.write_text(f'VERSION_COMMIT = "{version}"')
+    version_commit = get_version_commit()
+    version_file.write_text(f'VERSION_COMMIT = "{version_commit}"')
     try:
         yield
     finally:
