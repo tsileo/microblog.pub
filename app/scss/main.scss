@@ -194,10 +194,13 @@ main {
     margin: 30px auto;
 }
 footer {
-    width: 100%;
-    max-width: 1000px;
-    margin: 20px auto;
-    color: $muted-color;
+  width: 100%;
+  max-width: 1000px;
+  margin: 20px auto;
+  color: $muted-color;
+  p {
+    margin: 0;    
+  }
 }
 .actor-box {
   display: flex;

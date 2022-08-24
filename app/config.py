@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from fastapi import Request
 from itsdangerous import URLSafeTimedSerializer
 from loguru import logger
+from markdown import markdown
 
 from app.utils.emoji import _load_emojis
 from app.utils.version import get_version_commit
@@ -72,6 +73,7 @@ class Config(pydantic.BaseModel):
     metadata: list[_ProfileMetadata] | None = None
     code_highlighting_theme = "friendly_grayscale"
     blocked_servers: list[_BlockedServer] = []
+    custom_footer: str | None = None
 
     inbox_retention_days: int = 15
 
@@ -122,6 +124,13 @@ if CONFIG.privacy_replace:
 BLOCKED_SERVERS = {blocked_server.hostname for blocked_server in CONFIG.blocked_servers}
 
 INBOX_RETENTION_DAYS = CONFIG.inbox_retention_days
+CUSTOM_FOOTER = (
+    markdown(
+        CONFIG.custom_footer.replace("{version}", VERSION), extensions=["mdx_linkify"]
+    )
+    if CONFIG.custom_footer
+    else None
+)
 
 BASE_URL = ID
 DEBUG = CONFIG.debug
