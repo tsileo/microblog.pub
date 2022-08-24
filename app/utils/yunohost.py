@@ -6,7 +6,6 @@ from typing import Any
 
 import bcrypt
 import tomli_w
-from markdown import markdown  # type: ignore
 
 from app.key import generate_key
 
@@ -44,7 +43,7 @@ def setup_config_file(
     dat["username"] = username
     dat["admin_password"] = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     dat["name"] = name
-    dat["summary"] = markdown(summary)
+    dat["summary"] = summary
     dat["https"] = True
     proto = "https"
     dat["icon_url"] = f'{proto}://{dat["domain"]}/static/nopic.png'

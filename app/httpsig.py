@@ -215,10 +215,13 @@ async def httpsig_checker(
         logger.exception(f'Failed to fetch HTTP sig key {hsig["keyId"]}')
         return HTTPSigInfo(has_valid_signature=False)
 
+    has_valid_signature = _verify_h(
+        signed_string, base64.b64decode(hsig["signature"]), k.pubkey
+    )
+    # FIXME: fetch/update the user if the signature is wrong
+
     httpsig_info = HTTPSigInfo(
-        has_valid_signature=_verify_h(
-            signed_string, base64.b64decode(hsig["signature"]), k.pubkey
-        ),
+        has_valid_signature=has_valid_signature,
         signed_by_ap_actor_id=k.owner,
         server=server,
     )

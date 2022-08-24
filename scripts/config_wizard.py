@@ -6,7 +6,6 @@ from typing import Any
 
 import bcrypt
 import tomli_w
-from markdown import markdown  # type: ignore
 from prompt_toolkit import prompt
 from prompt_toolkit.key_binding import KeyBindings
 
@@ -58,15 +57,13 @@ def main() -> None:
         prompt("admin password: ", is_password=True).encode(), bcrypt.gensalt()
     ).decode()
     dat["name"] = prompt("name (e.g. John Doe): ", default=dat["username"])
-    dat["summary"] = markdown(
-        prompt(
-            (
-                "summary (short description, in markdown, "
-                "press [CTRL] + [SPACE] to submit):\n"
-            ),
-            key_bindings=_kb,
-            multiline=True,
-        )
+    dat["summary"] = prompt(
+        (
+            "summary (short description, in markdown, "
+            "press [CTRL] + [SPACE] to submit):\n"
+        ),
+        key_bindings=_kb,
+        multiline=True,
     )
     dat["https"] = True
     proto = "https"

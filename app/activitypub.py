@@ -12,6 +12,7 @@ from app import config
 from app.config import AP_CONTENT_TYPE  # noqa: F401
 from app.httpsig import auth
 from app.key import get_pubkey_as_pem
+from app.source import hashtagify
 from app.utils.url import check_url
 
 if TYPE_CHECKING:
@@ -81,6 +82,8 @@ class VisibilityEnum(str, enum.Enum):
         }[key]
 
 
+_LOCAL_ACTOR_SUMMARY, _LOCAL_ACTOR_TAGS = hashtagify(config.CONFIG.summary)
+
 ME = {
     "@context": AS_EXTENDED_CTX,
     "type": "Person",
@@ -92,7 +95,7 @@ ME = {
     "outbox": config.BASE_URL + "/outbox",
     "preferredUsername": config.USERNAME,
     "name": config.CONFIG.name,
-    "summary": config.CONFIG.summary,
+    "summary": markdown(_LOCAL_ACTOR_SUMMARY, extensions=["mdx_linkify"]),
     "endpoints": {
         # For compat with servers expecting a sharedInbox...
         "sharedInbox": config.BASE_URL
@@ -120,6 +123,7 @@ ME = {
         "owner": config.ID,
         "publicKeyPem": get_pubkey_as_pem(config.KEY_PATH),
     },
+    "tag": _LOCAL_ACTOR_TAGS,
 }
 
 

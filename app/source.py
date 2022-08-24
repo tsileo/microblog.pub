@@ -1,15 +1,16 @@
 import re
+import typing
 
 from markdown import markdown
 from sqlalchemy import select
 
-from app import models
 from app import webfinger
-from app.actor import Actor
-from app.actor import fetch_actor
 from app.config import BASE_URL
 from app.database import AsyncSession
 from app.utils import emoji
+
+if typing.TYPE_CHECKING:
+    from app.actor import Actor
 
 
 def _set_a_attrs(attrs, new=False):
@@ -24,9 +25,7 @@ _HASHTAG_REGEX = re.compile(r"(#[\d\w]+)")
 _MENTION_REGEX = re.compile(r"@[\d\w_.+-]+@[\d\w-]+\.[\d\w\-.]+")
 
 
-async def _hashtagify(
-    db_session: AsyncSession, content: str
-) -> tuple[str, list[dict[str, str]]]:
+def hashtagify(content: str) -> tuple[str, list[dict[str, str]]]:
     tags = []
     hashtags = re.findall(_HASHTAG_REGEX, content)
     hashtags = sorted(set(hashtags), reverse=True)  # unique tags, longest first
@@ -41,7 +40,10 @@ async def _hashtagify(
 async def _mentionify(
     db_session: AsyncSession,
     content: str,
-) -> tuple[str, list[dict[str, str]], list[Actor]]:
+) -> tuple[str, list[dict[str, str]], list["Actor"]]:
+    from app import models
+    from app.actor import fetch_actor
+
     tags = []
     mentioned_actors = []
     for mention in re.findall(_MENTION_REGEX, content):
@@ -69,19 +71,19 @@ async def _mentionify(
 async def markdownify(
     db_session: AsyncSession,
     content: str,
-    mentionify: bool = True,
-    hashtagify: bool = True,
-) -> tuple[str, list[dict[str, str]], list[Actor]]:
+    enable_mentionify: bool = True,
+    enable_hashtagify: bool = True,
+) -> tuple[str, list[dict[str, str]], list["Actor"]]:
     """
     >>> content, tags = markdownify("Hello")
 
     """
     tags = []
-    mentioned_actors: list[Actor] = []
-    if hashtagify:
-        content, hashtag_tags = await _hashtagify(db_session, content)
+    mentioned_actors: list["Actor"] = []
+    if enable_hashtagify:
+        content, hashtag_tags = hashtagify(content)
         tags.extend(hashtag_tags)
-    if mentionify:
+    if enable_mentionify:
         content, mention_tags, mentioned_actors = await _mentionify(db_session, content)
         tags.extend(mention_tags)
 
