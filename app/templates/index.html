@@ -21,26 +21,34 @@
 {% block content %}
 {% include "header.html" %}
 
-<div class="h-feed">
-<data class="p-name" value="{{ local_actor.display_name}}'s notes"></data>
-{% for outbox_object in objects %}
-{% if outbox_object.ap_type in ["Note", "Article", "Video", "Question"] %}
-{{ utils.display_object(outbox_object) }}
-{% elif outbox_object.ap_type == "Announce" %}
-<div class="shared-header"><strong>{{ local_actor.display_name }}</strong> shared</div>
-{{ utils.display_object(outbox_object.relates_to_anybox_object) }}
+{% if objects %}
+
+    <div class="h-feed">
+    <data class="p-name" value="{{ local_actor.display_name}}'s notes"></data>
+    {% for outbox_object in objects %}
+    {% if outbox_object.ap_type in ["Note", "Article", "Video", "Question"] %}
+    {{ utils.display_object(outbox_object) }}
+    {% elif outbox_object.ap_type == "Announce" %}
+    <div class="shared-header"><strong>{{ local_actor.display_name }}</strong> shared</div>
+    {{ utils.display_object(outbox_object.relates_to_anybox_object) }}
+    {% endif %}
+    {% endfor %}
+    </div>
+
+    <div class="box">
+        {% if has_previous_page %}
+        <a href="{{ url_for("index") }}?page={{ current_page - 1 }}">Previous</a>
+        {% endif %}
+
+        {% if has_next_page %}
+        <a href="{{ url_for("index") }}?page={{ current_page + 1 }}">Next</a>
+        {% endif %}
+    </div>
+
+{% else %}
+    <div style="padding: 20px;">
+        <p>Nothing to see here yet!</p>
+    </div>
 {% endif %}
-{% endfor %}
-</div>
-
-<div class="box">
-    {% if has_previous_page %}
-    <a href="{{ url_for("index") }}?page={{ current_page - 1 }}">Previous</a>
-    {% endif %}
-
-    {% if has_next_page %}
-    <a href="{{ url_for("index") }}?page={{ current_page + 1 }}">Next</a>
-    {% endif %}
-</div>
 
 {% endblock %}

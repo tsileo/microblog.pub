@@ -685,10 +685,10 @@ async def tag_by_name(
         .join(models.TaggedOutboxObject)
         .where(*where)
     )
-    if not tagged_count:
-        raise HTTPException(status_code=404)
-
     if is_activitypub_requested(request):
+        if not tagged_count:
+            raise HTTPException(status_code=404)
+
         outbox_object_ids = await db_session.execute(
             select(models.OutboxObject.ap_id)
             .join(
@@ -736,6 +736,7 @@ async def tag_by_name(
             "request": request,
             "objects": outbox_objects,
         },
+        status_code=200 if len(outbox_objects) else 404,
     )
 
 
