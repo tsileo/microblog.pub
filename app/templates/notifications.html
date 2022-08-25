@@ -88,4 +88,15 @@
     </div>
     {%- endfor %}
     </div>
+
+{% if next_cursor %}
+<div class="box">
+    <p>
+        <a href="{{ request.url._path }}?cursor={{ next_cursor }}">
+            See more{% if more_unread_count %}({{ more_unread_count }} unread left){% endif %}
+        </a>
+    </p>
+</div>
+{% endif %}
+
 {% endblock %}

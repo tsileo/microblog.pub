@@ -211,6 +211,7 @@ async def admin_bookmarks(
     request: Request,
     db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
+    # TODO: support pagination
     stream = (
         (
             await db_session.scalars(
@@ -667,12 +668,25 @@ async def admin_outbox(
 
 @router.get("/notifications")
 async def get_notifications(
-    request: Request, db_session: AsyncSession = Depends(get_db_session)
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+    cursor: str | None = None,
 ) -> templates.TemplateResponse:
+    where = []
+    if cursor:
+        decoded_cursor = pagination.decode_cursor(cursor)
+        where.append(models.Notification.created_at < decoded_cursor)
+
+    page_size = 20
+    remaining_count = await db_session.scalar(
+        select(func.count(models.Notification.id)).where(*where)
+    )
+
     notifications = (
         (
             await db_session.scalars(
                 select(models.Notification)
+                .where(*where)
                 .options(
                     joinedload(models.Notification.actor),
                     joinedload(models.Notification.inbox_object),
@@ -684,6 +698,7 @@ async def get_notifications(
                     joinedload(models.Notification.webmention),
                 )
                 .order_by(models.Notification.created_at.desc())
+                .limit(page_size)
             )
         )
         .unique()
@@ -697,6 +712,27 @@ async def get_notifications(
         notif.is_new = False
     await db_session.commit()
 
+    next_cursor = (
+        pagination.encode_cursor(notifications[-1].created_at)
+        if notifications and remaining_count > page_size
+        else None
+    )
+
+    more_unread_count = 0
+    next_cursor = None
+    if notifications and remaining_count > page_size:
+        decoded_next_cursor = notifications[-1].created_at
+        next_cursor = pagination.encode_cursor(decoded_next_cursor)
+
+        # If on the "see more" page there's more unread notification, we want
+        # to display it next to the link
+        more_unread_count = await db_session.scalar(
+            select(func.count(models.Notification.id)).where(
+                models.Notification.is_new.is_(True),
+                models.Notification.created_at < decoded_next_cursor,
+            )
+        )
+
     return await templates.render_template(
         db_session,
         request,
@@ -704,6 +740,8 @@ async def get_notifications(
         {
             "notifications": notifications,
             "actors_metadata": actors_metadata,
+            "next_cursor": next_cursor,
+            "more_unread_count": more_unread_count,
         },
     )
 
