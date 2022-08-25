@@ -55,6 +55,12 @@ docker compose stop
 docker compose up -d
 ```
 
+As you probably already know, Docker can (and will) eat a lot of disk space, when updating you should [prune old images](https://docs.docker.com/config/pruning/#prune-images) from time to time:
+
+```bash
+docker image prune -a --filter "until=24h"
+```
+
 ## Python developer edition
 
 Assuming you have a working **Python 3.10+** environment. 
