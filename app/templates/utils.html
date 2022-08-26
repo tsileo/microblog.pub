@@ -184,10 +184,10 @@
     <img class="tiny-actor-icon" src="{{ actor.resized_icon_url }}" alt="{{ actor.display_name }}'s avatar">
 {% endmacro %}
 
-{% macro actor_action(inbox_object, text) %}
+{% macro actor_action(inbox_object, text, with_icon=False) %}
     <div class="actor-action">
         <a href="{{ url_for("admin_profile") }}?actor_id={{ inbox_object.actor.ap_id }}">
-            {{ display_tiny_actor_icon(inbox_object.actor) }} {{ inbox_object.actor.display_name | clean_html(inbox_object.actor) | safe }}
+            {% if with_icon %}{{ display_tiny_actor_icon(inbox_object.actor) }}{% endif %} {{ inbox_object.actor.display_name | clean_html(inbox_object.actor) | safe }}
         </a> {{ text }}
         <span title="{{ inbox_object.ap_published_at.isoformat() }}">{{ inbox_object.ap_published_at | timeago }}</span>
     </div>

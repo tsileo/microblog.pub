@@ -11,7 +11,7 @@
     <div class="actor-action">
     With {% for actor in actors %}
     <a href="{{ url_for("admin_profile") }}?actor_id={{ actor.ap_id }}">
-        {{ utils.display_tiny_actor_icon(actor) }} {{ actor.handle }}
+        {{ actor.handle }}
     </a>
     {% endfor %}
     </div>
