@@ -9,7 +9,6 @@ license = "AGPL-3.0"
 python = "^3.10"
 Jinja2 = "^3.1.2"
 fastapi = "^0.78.0"
-uvicorn = "^0.17.6"
 pycryptodome = "^3.14.1"
 bcrypt = "^3.2.2"
 itsdangerous = "^2.1.2"
@@ -43,6 +42,7 @@ asgiref = "^3.5.2"
 supervisor = "^4.2.4"
 invoke = "^1.7.1"
 boussole = "^2.0.0"
+uvicorn = {extras = ["standard"], version = "^0.18.3"}
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
