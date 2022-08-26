@@ -979,8 +979,13 @@ async def serve_proxy_media_resized(
         if getattr(i, "is_animated", False):
             raise ValueError
         i.thumbnail((size, size))
-        resized_buf = BytesIO()
-        i.save(resized_buf, format=i.format)
+        try:
+            resized_buf = BytesIO()
+            i.save(resized_buf, format="webp")
+        except Exception:
+            logger.exception("Failed to convert to webp")
+            resized_buf = BytesIO()
+            i.save(resized_buf, format=i.format)
         resized_buf.seek(0)
         resized_content = resized_buf.read()
         resized_mimetype = i.get_format_mimetype()  # type: ignore
