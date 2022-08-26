@@ -8,6 +8,7 @@ from typing import Any
 from typing import MutableMapping
 from typing import Type
 
+import fastapi
 import httpx
 import starlette
 from asgiref.typing import ASGI3Application
@@ -165,7 +166,15 @@ class CustomMiddleware:
         return None
 
 
-app = FastAPI(docs_url=None, redoc_url=None)
+def _check_0rtt_early_data(request: Request) -> None:
+    """Disable TLS1.3 0-RTT requests for non-GET."""
+    if request.headers.get("Early-Data", None) == "1" and request.method != "GET":
+        raise fastapi.HTTPException(status_code=425, detail="Too early")
+
+
+app = FastAPI(
+    docs_url=None, redoc_url=None, dependencies=[Depends(_check_0rtt_early_data)]
+)
 app.mount(
     "/custom_emoji",
     StaticFiles(directory="data/custom_emoji"),
