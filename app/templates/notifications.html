@@ -36,17 +36,17 @@
                 {{ notif_actor_action(notif, "rejected your follow request") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
             {% elif notif.notification_type.value == "like" %}
-                {{ notif_actor_action(notif, "liked a post") }}
+                {{ notif_actor_action(notif, "liked a post", with_icon=True) }}
                 {{ utils.display_object(notif.outbox_object) }}
            {% elif notif.notification_type.value == "undo_like" %}
-                {{ notif_actor_action(notif, "unliked a post") }}
+                {{ notif_actor_action(notif, "unliked a post", with_icon=True) }}
                 {{ utils.display_object(notif.outbox_object) }}
             {% elif notif.notification_type.value == "announce" %}
-                {{ notif_actor_action(notif, "shared a post") }}
+                {{ notif_actor_action(notif, "shared a post", with_icon=True) }}
                 {{ utils.display_object(notif.outbox_object) }}
            {% elif notif.notification_type.value == "undo_announce" %}
                 {{ notif_actor_action(notif, "unshared a post") }}
-                {{ utils.display_object(notif.outbox_object) }}
+                {{ utils.display_object(notif.outbox_object, with_icon=True) }}
             {% elif notif.notification_type.value == "mention" %}
                 {{ notif_actor_action(notif, "mentioned you") }}
                 {{ utils.display_object(notif.inbox_object) }}
