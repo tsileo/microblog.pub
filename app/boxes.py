@@ -1657,7 +1657,7 @@ async def _handle_announce_activity(
             skip_delta = timedelta(hours=1)
             if (
                 now() - as_utc(relates_to_inbox_object.ap_published_at)  # type: ignore
-            ) > skip_delta or (
+            ) < skip_delta or (
                 await db_session.scalar(
                     select(func.count(func.distinct(models.InboxObject.id))).where(
                         models.InboxObject.ap_type == "Announce",
@@ -1667,6 +1667,8 @@ async def _handle_announce_activity(
                     )
                 )
             ) > 0:
+                announce_activity.is_hidden_from_stream = True
+            else:
                 announce_activity.is_hidden_from_stream = not is_from_following
 
         else:
