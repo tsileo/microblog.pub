@@ -43,6 +43,7 @@ supervisor = "^4.2.4"
 invoke = "^1.7.1"
 boussole = "^2.0.0"
 uvicorn = {extras = ["standard"], version = "^0.18.3"}
+Brotli = "^1.0.9"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
