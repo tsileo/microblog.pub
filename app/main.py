@@ -915,12 +915,22 @@ def _add_cache_control(headers: dict[str, str]) -> dict[str, str]:
 
 
 @app.get("/proxy/media/{encoded_url}")
-async def serve_proxy_media(request: Request, encoded_url: str) -> StreamingResponse:
+async def serve_proxy_media(
+    request: Request,
+    encoded_url: str,
+) -> StreamingResponse | PlainTextResponse:
     # Decode the base64-encoded URL
     url = base64.urlsafe_b64decode(encoded_url).decode()
     check_url(url)
 
     proxy_resp = await _proxy_get(request, url, stream=True)
+
+    if proxy_resp.status_code >= 300:
+        logger.info(f"failed to proxy {url}, got {proxy_resp.status_code}")
+        return PlainTextResponse(
+            "proxy error",
+            status_code=proxy_resp.status_code,
+        )
 
     return StreamingResponse(
         proxy_resp.aiter_raw(),
@@ -966,9 +976,10 @@ async def serve_proxy_media_resized(
         )
 
     proxy_resp = await _proxy_get(request, url, stream=False)
-    if proxy_resp.status_code != 200:
+    if proxy_resp.status_code >= 300:
+        logger.info(f"failed to proxy {url}, got {proxy_resp.status_code}")
         return PlainTextResponse(
-            proxy_resp.content,
+            "proxy error",
             status_code=proxy_resp.status_code,
         )
 
