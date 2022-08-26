@@ -905,6 +905,10 @@ def _filter_proxy_resp_headers(
     }
 
 
+def _strip_content_type(headers: dict[str, str]) -> dict[str, str]:
+    return {k: v for k, v in headers.items() if k.lower() != "content-type"}
+
+
 @app.get("/proxy/media/{encoded_url}")
 async def serve_proxy_media(request: Request, encoded_url: str) -> StreamingResponse:
     # Decode the base64-encoded URL
@@ -979,28 +983,31 @@ async def serve_proxy_media_resized(
         if getattr(i, "is_animated", False):
             raise ValueError
         i.thumbnail((size, size))
+        is_webp = False
         try:
             resized_buf = BytesIO()
             i.save(resized_buf, format="webp")
+            is_webp = True
         except Exception:
             logger.exception("Failed to convert to webp")
             resized_buf = BytesIO()
             i.save(resized_buf, format=i.format)
         resized_buf.seek(0)
         resized_content = resized_buf.read()
-        resized_mimetype = i.get_format_mimetype()  # type: ignore
-
+        resized_mimetype = (
+            "image/webp" if is_webp else i.get_format_mimetype()  # type: ignore
+        )
         # Only cache images < 1MB
         if len(resized_content) < 2**20:
             _RESIZED_CACHE[(url, size)] = (
                 resized_content,
                 resized_mimetype,
-                proxy_resp_headers,
+                _strip_content_type(proxy_resp_headers),
             )
         return PlainTextResponse(
             resized_content,
             media_type=resized_mimetype,
-            headers=proxy_resp_headers,
+            headers=_strip_content_type(proxy_resp_headers),
         )
     except ValueError:
         return PlainTextResponse(
@@ -1055,7 +1062,7 @@ async def serve_attachment_thumbnail(
 
     return FileResponse(
         UPLOAD_DIR / (content_hash + "_resized"),
-        media_type=upload.content_type,
+        media_type="image/webp",
     )
 
 
