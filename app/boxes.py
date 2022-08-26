@@ -1721,6 +1721,7 @@ async def _process_transient_object(
     raw_object: ap.RawObject,
     from_actor: models.Actor,
 ) -> None:
+    # TODO: track featured/pinned objects for actors
     ap_type = raw_object["type"]
     if ap_type in ["Add", "Remove"]:
         logger.info(f"Dropping unsupported {ap_type} object")

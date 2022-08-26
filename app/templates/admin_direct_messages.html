@@ -10,7 +10,9 @@
 {% for anybox_object, convo, actors in threads %}
     <div class="actor-action">
     With {% for actor in actors %}
-        <a href="">{{ actor.handle }}</a>
+    <a href="{{ url_for("admin_profile") }}?actor_id={{ actor.ap_id }}">
+        {{ utils.display_tiny_actor_icon(actor) }} {{ actor.handle }}
+    </a>
     {% endfor %}
     </div>
     {{ utils.display_object(anybox_object) }}

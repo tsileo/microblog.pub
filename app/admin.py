@@ -776,6 +776,8 @@ async def admin_profile(
     actor_id: str,
     db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
+    # TODO: pagination + show featured/pinned
+
     actor = (
         await db_session.execute(
             select(models.Actor).where(models.Actor.ap_id == actor_id)
@@ -809,6 +811,7 @@ async def admin_profile(
                     joinedload(models.InboxObject.actor),
                 )
                 .order_by(models.InboxObject.ap_published_at.desc())
+                .limit(20)
             )
         )
         .unique()
