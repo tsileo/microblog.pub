@@ -159,6 +159,26 @@ server {
 }
 ```
 
+### NGINX config tips
+
+Enable HTTP2 (which is disabled by default):
+
+```nginx
+server {
+    # [...]
+    listen [::]:443 ssl http2;
+}
+```
+
+Tweak `/etc/nginx/nginx.conf` and add gzip compression for ActivityPub responses:
+
+```nginx
+http {
+    # [...]
+    gzip_types text/plain text/css application/json application/javascript application/activity+json application/octet-stream;
+}
+```
+
 ## YunoHost edition
 
 [YunoHost](https://yunohost.org/) support is a work in progress.
