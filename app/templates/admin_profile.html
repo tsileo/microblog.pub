@@ -9,10 +9,21 @@
     {{ utils.display_actor(actor, actors_metadata, with_details=True) }}
     {% for inbox_object in inbox_objects %}
         {% if inbox_object.ap_type == "Announce" %}
-            {{ utils.actor_action(inbox_object, "shared") }}
+            {{ utils.actor_action(inbox_object, "shared", with_icon=True) }}
             {{ utils.display_object(inbox_object.relates_to_anybox_object) }}
         {% else %}
                 {{ utils.display_object(inbox_object) }}
         {% endif %}
     {% endfor %}
+
+{% if next_cursor %}
+<div class="box">
+    <p>
+    <a href="{{ request.url._path }}?actor_id={{ request.query_params.actor_id }}&cursor={{ next_cursor }}">
+            See more
+        </a>
+    </p>
+</div>
+{% endif %}
+
 {% endblock %}

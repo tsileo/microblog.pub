@@ -712,12 +712,6 @@ async def get_notifications(
         notif.is_new = False
     await db_session.commit()
 
-    next_cursor = (
-        pagination.encode_cursor(notifications[-1].created_at)
-        if notifications and remaining_count > page_size
-        else None
-    )
-
     more_unread_count = 0
     next_cursor = None
     if notifications and remaining_count > page_size:
@@ -774,10 +768,10 @@ async def admin_object(
 async def admin_profile(
     request: Request,
     actor_id: str,
+    cursor: str | None = None,
     db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
-    # TODO: pagination + show featured/pinned
-
+    # TODO: show featured/pinned
     actor = (
         await db_session.execute(
             select(models.Actor).where(models.Actor.ap_id == actor_id)
@@ -788,17 +782,27 @@ async def admin_profile(
 
     actors_metadata = await get_actors_metadata(db_session, [actor])
 
+    where = [
+        models.InboxObject.is_deleted.is_(False),
+        models.InboxObject.actor_id == actor.id,
+        models.InboxObject.ap_type.in_(
+            ["Note", "Article", "Video", "Page", "Announce"]
+        ),
+    ]
+    if cursor:
+        decoded_cursor = pagination.decode_cursor(cursor)
+        where.append(models.InboxObject.ap_published_at < decoded_cursor)
+
+    page_size = 20
+    remaining_count = await db_session.scalar(
+        select(func.count(models.InboxObject.id)).where(*where)
+    )
+
     inbox_objects = (
         (
             await db_session.scalars(
                 select(models.InboxObject)
-                .where(
-                    models.InboxObject.is_deleted.is_(False),
-                    models.InboxObject.actor_id == actor.id,
-                    models.InboxObject.ap_type.in_(
-                        ["Note", "Article", "Video", "Page", "Announce"]
-                    ),
-                )
+                .where(*where)
                 .options(
                     joinedload(models.InboxObject.relates_to_inbox_object).options(
                         joinedload(models.InboxObject.actor)
@@ -811,11 +815,17 @@ async def admin_profile(
                     joinedload(models.InboxObject.actor),
                 )
                 .order_by(models.InboxObject.ap_published_at.desc())
-                .limit(20)
+                .limit(page_size)
             )
         )
         .unique()
         .all()
+    )
+
+    next_cursor = (
+        pagination.encode_cursor(inbox_objects[-1].created_at)
+        if inbox_objects and remaining_count > page_size
+        else None
     )
 
     return await templates.render_template(
@@ -826,6 +836,7 @@ async def admin_profile(
             "actors_metadata": actors_metadata,
             "actor": actor,
             "inbox_objects": inbox_objects,
+            "next_cursor": next_cursor,
         },
     )
 
