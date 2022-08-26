@@ -70,7 +70,8 @@ from app.utils.emoji import EMOJIS_BY_NAME
 from app.utils.url import check_url
 from app.webfinger import get_remote_follow_template
 
-_RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCache(32)
+# Only images <1MB will be cached, so 64MB of data will be cached
+_RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCache(64)
 
 
 # TODO(ts):
