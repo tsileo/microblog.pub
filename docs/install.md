@@ -153,6 +153,7 @@ server {
        # path for static files
        rewrite ^/static/(.*) /$1 break;
        root /path/to/your-domain.tld/app/static/;
+       expires 1y;
     }
 
     # [...]
