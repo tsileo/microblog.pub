@@ -1654,10 +1654,21 @@ async def _handle_announce_activity(
             # We already know about this object, show the announce in the
             # stream if it's not already there, from an followed actor
             # and if we haven't seen it recently
+            skip_delta = timedelta(hours=1)
             if (
                 now() - as_utc(relates_to_inbox_object.ap_published_at)  # type: ignore
-            ) > timedelta(hours=1):
+            ) > skip_delta or (
+                await db_session.scalar(
+                    select(func.count(func.distinct(models.InboxObject.id))).where(
+                        models.InboxObject.ap_type == "Announce",
+                        models.InboxObject.ap_published_at > now() - skip_delta,
+                        models.InboxObject.relates_to_inbox_object_id
+                        == relates_to_inbox_object.id,
+                    )
+                )
+            ) > 0:
                 announce_activity.is_hidden_from_stream = not is_from_following
+
         else:
             # Save it as an inbox object
             if not announce_activity.activity_object_ap_id:
