@@ -119,7 +119,7 @@ class CustomMiddleware:
                 # And add the security headers
                 headers = MutableHeaders(scope=message)
                 headers["X-Request-ID"] = request_id
-                headers["Server"] = "microblogpub"
+                headers["x-powered-by"] = "microblogpub"
                 headers[
                     "referrer-policy"
                 ] = "no-referrer, strict-origin-when-cross-origin"
@@ -910,6 +910,10 @@ def _strip_content_type(headers: dict[str, str]) -> dict[str, str]:
     return {k: v for k, v in headers.items() if k.lower() != "content-type"}
 
 
+def _add_cache_control(headers: dict[str, str]) -> dict[str, str]:
+    return {**headers, "Cache-Control": "max-age=31536000"}
+
+
 @app.get("/proxy/media/{encoded_url}")
 async def serve_proxy_media(request: Request, encoded_url: str) -> StreamingResponse:
     # Decode the base64-encoded URL
@@ -921,18 +925,20 @@ async def serve_proxy_media(request: Request, encoded_url: str) -> StreamingResp
     return StreamingResponse(
         proxy_resp.aiter_raw(),
         status_code=proxy_resp.status_code,
-        headers=_filter_proxy_resp_headers(
-            proxy_resp,
-            [
-                "content-length",
-                "content-type",
-                "content-range",
-                "accept-ranges" "etag",
-                "cache-control",
-                "expires",
-                "date",
-                "last-modified",
-            ],
+        headers=_add_cache_control(
+            _filter_proxy_resp_headers(
+                proxy_resp,
+                [
+                    "content-length",
+                    "content-type",
+                    "content-range",
+                    "accept-ranges",
+                    "etag",
+                    "expires",
+                    "date",
+                    "last-modified",
+                ],
+            )
         ),
         background=BackgroundTask(proxy_resp.aclose),
     )
@@ -967,15 +973,16 @@ async def serve_proxy_media_resized(
         )
 
     # Filter the headers
-    proxy_resp_headers = _filter_proxy_resp_headers(
-        proxy_resp,
-        [
-            "content-type",
-            "etag",
-            "cache-control",
-            "expires",
-            "last-modified",
-        ],
+    proxy_resp_headers = _add_cache_control(
+        _filter_proxy_resp_headers(
+            proxy_resp,
+            [
+                "content-type",
+                "etag",
+                "expires",
+                "last-modified",
+            ],
+        )
     )
 
     try:
@@ -1064,6 +1071,7 @@ async def serve_attachment_thumbnail(
     return FileResponse(
         UPLOAD_DIR / (content_hash + "_resized"),
         media_type="image/webp",
+        headers={"Cache-Control": "max-age=31536000"},
     )
 
 
