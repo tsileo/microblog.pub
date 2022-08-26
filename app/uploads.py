@@ -65,7 +65,7 @@ async def save_upload(db_session: AsyncSession, f: UploadFile) -> models.Upload:
                 original_image.thumbnail((740, 740))
                 original_image.save(
                     UPLOAD_DIR / f"{content_hash}_resized",
-                    format=original_image.format,
+                    format="webp",
                 )
             except Exception:
                 logger.exception(
