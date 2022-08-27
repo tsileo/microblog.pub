@@ -1658,6 +1658,7 @@ async def _handle_announce_activity(
             delta_from_original = now() - as_utc(
                 relates_to_inbox_object.ap_published_at  # type: ignore
             )
+            dup_count = 0
             if (delta_from_original) < skip_delta or (
                 dup_count := (
                     await db_session.scalar(
