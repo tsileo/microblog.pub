@@ -1655,18 +1655,23 @@ async def _handle_announce_activity(
             # stream if it's not already there, from an followed actor
             # and if we haven't seen it recently
             skip_delta = timedelta(hours=1)
-            if (
-                now() - as_utc(relates_to_inbox_object.ap_published_at)  # type: ignore
-            ) < skip_delta or (
-                await db_session.scalar(
-                    select(func.count(func.distinct(models.InboxObject.id))).where(
-                        models.InboxObject.ap_type == "Announce",
-                        models.InboxObject.ap_published_at > now() - skip_delta,
-                        models.InboxObject.relates_to_inbox_object_id
-                        == relates_to_inbox_object.id,
+            delta_from_original = now() - as_utc(
+                relates_to_inbox_object.ap_published_at  # type: ignore
+            )
+            if (delta_from_original) < skip_delta or (
+                dup_count := (
+                    await db_session.scalar(
+                        select(func.count(models.InboxObject.id)).where(
+                            models.InboxObject.ap_type == "Announce",
+                            models.InboxObject.ap_published_at > now() - skip_delta,
+                            models.InboxObject.relates_to_inbox_object_id
+                            == relates_to_inbox_object.id,
+                            models.InboxObject.is_hidden_from_stream.is_(False),
+                        )
                     )
                 )
             ) > 0:
+                logger.info(f"Deduping Announce {delta_from_original=}/{dup_count=}")
                 announce_activity.is_hidden_from_stream = True
             else:
                 announce_activity.is_hidden_from_stream = not is_from_following
