@@ -154,9 +154,9 @@ async def save_actor(db_session: AsyncSession, ap_actor: ap.RawObject) -> "Actor
         raise ValueError(f"Invalid type {ap_type} for actor {ap_actor}")
 
     actor = models.Actor(
-        ap_id=ap_actor["id"],
+        ap_id=ap.get_id(ap_actor["id"]),
         ap_actor=ap_actor,
-        ap_type=ap_actor["type"],
+        ap_type=ap.as_list(ap_actor["type"])[0],
         handle=_handle(ap_actor),
     )
     db_session.add(actor)
@@ -188,6 +188,19 @@ async def fetch_actor(
     else:
         if save_if_not_found:
             ap_actor = await ap.fetch(actor_id)
+            # Some softwares uses URL when we expect ID
+            if actor_id == ap_actor.get("url"):
+                # Which mean we may already have it in DB
+                existing_actor_by_url = (
+                    await db_session.scalars(
+                        select(models.Actor).where(
+                            models.Actor.ap_id == ap.get_id(ap_actor),
+                        )
+                    )
+                ).one_or_none()
+                if existing_actor_by_url:
+                    return existing_actor_by_url
+
             return await save_actor(db_session, ap_actor)
         else:
             raise ap.ObjectNotFoundError
