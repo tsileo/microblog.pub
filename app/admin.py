@@ -122,7 +122,9 @@ async def get_lookup(
                 )
                 if requested_object:
                     return RedirectResponse(
-                        request.url_for("admin_object") + f"?ap_id={ap_object.ap_id}",
+                        request.url_for("admin_object")
+                        + f"?ap_id={ap_object.ap_id}#"
+                        + requested_object.permalink_id,
                         status_code=302,
                     )
 
