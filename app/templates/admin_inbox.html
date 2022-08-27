@@ -27,7 +27,7 @@
     {{ utils.actor_action(inbox_object, "followed you") }}
     {{ utils.display_actor(inbox_object.actor, actors_metadata) }}
 {% elif inbox_object.ap_type == "Like" %}
-    {{ utils.actor_action(inbox_object, "liked one of your post") }}
+    {{ utils.actor_action(inbox_object, "liked one of your post", with_icon=True) }}
     {{ utils.display_object(inbox_object.relates_to_anybox_object) }}
 {% else %}
     <p>
