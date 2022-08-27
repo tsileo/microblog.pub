@@ -120,6 +120,9 @@ dl {
     strong {
         color: $primary-color;
     }
+    span {
+      color: $muted-color;
+    }
 }
 
 div.highlight {
