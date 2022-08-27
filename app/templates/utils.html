@@ -154,9 +154,10 @@
 </form> 
 {% endmacro %}
 
-{% macro admin_expand_button(ap_object_id) %}
+{% macro admin_expand_button(ap_object) %}
+{# TODO turn these into a regular link and append permalink ID if it's a reply #}
 <form action="{{ url_for("admin_object") }}"  method="GET">
-<input type="hidden" name="ap_id" value="{{ ap_object_id }}">
+<input type="hidden" name="ap_id" value="{{ ap_object.ap_id }}">
 <button type="submit">expand</button>
 </form> 
 {% endmacro %}
@@ -502,7 +503,7 @@
 
         {% if (object.is_from_outbox or is_admin) and object.replies_count %}
         <li>
-            <a href="{% if is_admin and not object.is_from_outbox %}{{ url_for("admin_object") }}?ap_id={{ object.ap_id }}{% else %}{{ object.url }}{% endif %}"><strong>{{ object.replies_count }}</strong> repl{{ object.replies_count | pluralize("y", "ies") }}</a>
+            <a href="{% if is_admin and not object.is_from_outbox %}{{ url_for("admin_object") }}?ap_id={{ object.ap_id }}{% if object.in_reply_to %}#{{ object.permalink_id }}{% endif %}{% else %}{{ object.url }}{% endif %}"><strong>{{ object.replies_count }}</strong> repl{{ object.replies_count | pluralize("y", "ies") }}</a>
         </li>
         {% endif %}
 
@@ -565,7 +566,7 @@
         {% endif %}
         {% if object.is_from_inbox or object.is_from_outbox %}
             <li>
-                {{ admin_expand_button(object.ap_id) }}
+                {{ admin_expand_button(object) }}
             </li>
         {% endif %}
     </ul>
