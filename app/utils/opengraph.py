@@ -1,3 +1,4 @@
+import asyncio
 import mimetypes
 import re
 from typing import Any
@@ -36,7 +37,7 @@ def _scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
     # FIXME some page have no <title>
     raw = {
         "url": url,
-        "title": soup.find("title").text,
+        "title": soup.find("title").text.strip(),
         "image": None,
         "description": None,
         "site_name": urlparse(url).hostname,
@@ -124,9 +125,21 @@ async def og_meta_from_note(
 ) -> list[dict[str, Any]]:
     og_meta = []
     urls = await external_urls(db_session, ro)
+    logger.debug(f"Lookig OG metadata in {urls=}")
     for url in urls:
+        logger.debug(f"Processing {url}")
         try:
-            maybe_og_meta = await _og_meta_from_url(url)
+            maybe_og_meta = None
+            try:
+                maybe_og_meta = await asyncio.wait_for(
+                    _og_meta_from_url(url),
+                    timeout=5,
+                )
+            except asyncio.TimeoutError:
+                logger.info(f"Timing out fetching {url}")
+            except Exception:
+                logger.exception(f"Failed scrap OG meta for {url}")
+
             if maybe_og_meta:
                 og_meta.append(maybe_og_meta.dict())
         except httpx.HTTPError:

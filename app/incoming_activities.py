@@ -112,10 +112,13 @@ async def process_next_incoming_activity(
     if next_activity.ap_object and next_activity.sent_by_ap_actor_id:
         try:
             async with db_session.begin_nested():
-                await save_to_inbox(
-                    db_session,
-                    next_activity.ap_object,
-                    next_activity.sent_by_ap_actor_id,
+                await asyncio.wait_for(
+                    save_to_inbox(
+                        db_session,
+                        next_activity.ap_object,
+                        next_activity.sent_by_ap_actor_id,
+                    ),
+                    timeout=60,
                 )
         except httpx.TimeoutException as exc:
             url = exc._request.url if exc._request else None
