@@ -196,6 +196,17 @@ main {
     max-width: 1000px;
     margin: 30px auto;
 }
+
+.centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+}
+
 footer {
   width: 100%;
   max-width: 1000px;

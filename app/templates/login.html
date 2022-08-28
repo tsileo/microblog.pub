@@ -1,8 +1,7 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
 {% block content %}
-<div style="display:grid;height:80%;">
-<div style="margin:auto;">
+<div class="centered">
 {% if error %}
 <p class="primary-color">Invalid password.</p>
 {% endif %}
@@ -12,6 +11,5 @@
 <input type="password" placeholder="password" name="password" autofocus>
 <input type="submit" value="login">
 </form>
-</div>
 </div>
 {% endblock %}

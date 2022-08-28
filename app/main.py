@@ -21,6 +21,7 @@ from fastapi import FastAPI
 from fastapi import Form
 from fastapi import Request
 from fastapi import Response
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.exceptions import HTTPException
 from fastapi.responses import FileResponse
 from fastapi.responses import PlainTextResponse
@@ -36,6 +37,7 @@ from sqlalchemy.orm import joinedload
 from starlette.background import BackgroundTask
 from starlette.datastructures import Headers
 from starlette.datastructures import MutableHeaders
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 from starlette.types import Message
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # type: ignore
@@ -62,6 +64,7 @@ from app.config import USERNAME
 from app.config import is_activitypub_requested
 from app.config import verify_csrf_token
 from app.database import AsyncSession
+from app.database import async_session
 from app.database import get_db_session
 from app.incoming_activities import new_ap_incoming_activity
 from app.templates import is_current_user_admin
@@ -200,6 +203,37 @@ logger_format = (
     "{extra[request_id]} - <level>{message}</level>"
 )
 logger.add(sys.stdout, format=logger_format, level="DEBUG" if DEBUG else "INFO")
+
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(
+    request: Request,
+    exc: StarletteHTTPException,
+) -> templates.TemplateResponse | JSONResponse:
+    accept_value = request.headers.get("accept")
+    if (
+        accept_value
+        and accept_value.startswith("text/html")
+        and 400 <= exc.status_code < 600
+    ):
+        async with async_session() as db_session:
+            title = (
+                {
+                    404: "Oops, nothing to see here",
+                    500: "Opps, somethine went wrong",
+                }
+            ).get(exc.status_code, exc.detail)
+            try:
+                return await templates.render_template(
+                    db_session,
+                    request,
+                    "error.html",
+                    {"title": title},
+                    status_code=exc.status_code,
+                )
+            finally:
+                await db_session.close()
+    return await http_exception_handler(request, exc)
 
 
 class ActivityPubResponse(JSONResponse):
