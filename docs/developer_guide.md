@@ -12,10 +12,11 @@ Microblog.pub is a "modern" Python application with "old-school" server-rendered
  - Most of the code is asynchronous, using [asyncio](https://docs.python.org/3/library/asyncio.html).
  - SQLite3 is the default database.
 
-The server has 2 components:
+The server has 3 components:
 
  - The web server (powered by [FastAPI](https://fastapi.tiangolo.com/) and [Jinja2](https://jinja.palletsprojects.com/en/3.1.x/) templates)
- - An additional process that takes care of sending "outgoing actities" 
+ - One process that takes care of sending "outgoing activities" 
+ - One process that takes care of processing "incoming activities" 
 
 ### Tasks
 
@@ -29,7 +30,7 @@ inv -l
 
 ### Media storage
 
-The uploads are stored in the `data/` directory, using a simple content-addressed storage (file contents hash is the name of the store BLOB).
+The uploads are stored in the `data/` directory, using a simple content-addressed storage (file contents hash is BLOB filename).
 Files metadata are stored in the database.
 
 ## Installation
