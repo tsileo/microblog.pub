@@ -9,6 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from app.config import DB_PATH
+from app.config import DEBUG
 from app.config import SQLALCHEMY_DATABASE_URL
 
 engine = create_engine(
@@ -18,7 +19,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 async_engine = create_async_engine(
-    DATABASE_URL, future=True, echo=False, connect_args={"timeout": 15}
+    DATABASE_URL, future=True, echo=DEBUG, connect_args={"timeout": 15}
 )
 async_session = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
