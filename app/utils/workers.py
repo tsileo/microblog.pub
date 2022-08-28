@@ -54,12 +54,17 @@ class Worker(Generic[T]):
                 {task, stop_task}, return_when=asyncio.FIRST_COMPLETED
             )
             logger.info(f"Waiting for tasks to finish {done=}/{pending=}")
-            await asyncio.sleep(5)
             tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
             logger.info(f"Cancelling {len(tasks)} tasks")
             [task.cancel() for task in tasks]
 
-        await asyncio.gather(*tasks, return_exceptions=True)
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True),
+                timeout=15,
+            )
+        except asyncio.TimeoutError:
+            logger.info("Tasks failed to cancel")
 
         logger.info("stopping loop")
 
