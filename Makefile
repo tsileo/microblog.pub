@@ -12,7 +12,7 @@ config:
 
 .PHONY: update
 update:
-	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv update
+	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv update --no-update-deps
 
 .PHONY: prune-old-data
 prune-old-data:
