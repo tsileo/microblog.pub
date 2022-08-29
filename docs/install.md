@@ -136,6 +136,11 @@ server {
     # [...]
 }
 
+# This should be oustside the `server` block
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  '' close;
+}
 ```
 
 Optionally, you can serve static files using NGINX directly, with an additional `location` block.

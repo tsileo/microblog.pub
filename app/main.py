@@ -80,6 +80,8 @@ _RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCac
 
 # TODO(ts):
 # Next:
+# - self-destruct + move support and actions/tasks for
+# - doc for prune/move/delete
 # - fix issue with followers from a blocked server (skip it?)
 # - allow to share old notes
 # - only show 10 most recent threads in DMs
