@@ -54,5 +54,8 @@
     {% endif %}
     </div>
 </footer>
+{% if is_admin %}
+<script src="/static/common-admin.js?v={{ JS_HASH }}"></script>
+{% endif %}
 </body>
 </html>

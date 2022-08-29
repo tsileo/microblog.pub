@@ -97,7 +97,7 @@
 {% endmacro %}
 
 {% macro admin_delete_button(ap_object_id) %}
-<form action="{{ request.url_for("admin_actions_delete") }}" method="POST" onsubmit="return confirm('Do you really want to delete this object?');">
+<form action="{{ request.url_for("admin_actions_delete") }}" class="object-delete-form" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">

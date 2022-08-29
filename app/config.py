@@ -36,6 +36,18 @@ try:
 except FileNotFoundError:
     pass
 
+# Force reloading cache when the JS is changed
+JS_HASH = "none"
+try:
+    # To keep things simple, we keep a single hash for the 2 files
+    js_data_common = (ROOT_DIR / "app" / "static" / "common-admin.js").read_bytes()
+    js_data_new = (ROOT_DIR / "app" / "static" / "new.js").read_bytes()
+    JS_HASH = hashlib.md5(
+        js_data_common + js_data_new, usedforsecurity=False
+    ).hexdigest()
+except FileNotFoundError:
+    pass
+
 
 VERSION = f"2.0.0+{VERSION_COMMIT}"
 USER_AGENT = f"microblogpub/{VERSION}"
