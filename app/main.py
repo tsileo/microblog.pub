@@ -135,9 +135,7 @@ class CustomMiddleware:
                     "content-security-policy"
                 ] = "default-src 'self'; style-src 'self' 'unsafe-inline';"
                 if not DEBUG:
-                    headers[
-                        "strict-transport-security"
-                    ] = "max-age=63072000; includeSubdomains"
+                    headers["strict-transport-security"] = "max-age=63072000;"
 
             await send(message)  # type: ignore
 
@@ -220,7 +218,7 @@ async def custom_http_exception_handler(
             title = (
                 {
                     404: "Oops, nothing to see here",
-                    500: "Opps, somethine went wrong",
+                    500: "Oops, something went wrong",
                 }
             ).get(exc.status_code, exc.detail)
             try:
@@ -1103,6 +1101,7 @@ async def serve_attachment(
     return FileResponse(
         UPLOAD_DIR / content_hash,
         media_type=upload.content_type,
+        headers={"Cache-Control": "max-age=31536000"},
     )
 
 
