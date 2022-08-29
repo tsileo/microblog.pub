@@ -71,6 +71,7 @@ from app.templates import is_current_user_admin
 from app.uploads import UPLOAD_DIR
 from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
+from app.utils.highlight import HIGHLIGHT_CSS_HASH
 from app.utils.url import check_url
 from app.webfinger import get_remote_follow_template
 
@@ -133,9 +134,10 @@ class CustomMiddleware:
                 headers["x-xss-protection"] = "1; mode=block"
                 headers["x-frame-options"] = "SAMEORIGIN"
                 # TODO(ts): disallow inline CSS?
-                headers[
-                    "content-security-policy"
-                ] = "default-src 'self'; style-src 'self' 'unsafe-inline';"
+                headers["content-security-policy"] = (
+                    f"default-src 'self'; "
+                    f"style-src 'self' 'sha256-{HIGHLIGHT_CSS_HASH}';"
+                )
                 if not DEBUG:
                     headers["strict-transport-security"] = "max-age=63072000;"
 

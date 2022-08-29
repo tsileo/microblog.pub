@@ -58,7 +58,7 @@
                     {% if facepile_item %}
                         <a href="{{ facepile_item.actor_url }}">{{ facepile_item.actor_name }}</a>
                     {% endif %}
-                    <a style="font-weight:bold;" href="{{ notif.webmention.source }}">{{ notif.webmention.source }}</a>
+                    <a class="bold" href="{{ notif.webmention.source }}">{{ notif.webmention.source }}</a>
                 </div>
                 {{ utils.display_object(notif.outbox_object) }}
             {% elif notif.notification_type.value == "updated_webmention" %}
@@ -68,7 +68,7 @@
                     {% if facepile_item %}
                         <a href="{{ facepile_item.actor_url }}">{{ facepile_item.actor_name }}</a>
                     {% endif %}
-                    <a style="font-weight:bold;" href="{{ notif.webmention.source }}">{{ notif.webmention.source }}</a>
+                    <a class="bold" href="{{ notif.webmention.source }}">{{ notif.webmention.source }}</a>
                 </div>
                 {{ utils.display_object(notif.outbox_object) }}
             {% elif notif.notification_type.value == "deleted_webmention" %}
@@ -78,7 +78,7 @@
                     {% if facepile_item %}
                         <a href="{{ facepile_item.actor_url }}">{{ facepile_item.actor_name }}</a>
                     {% endif %}
-                    <a style="font-weight:bold;" href="{{ notif.webmention.source }}">{{ notif.webmention.source }}</a>
+                    <a class="bold" href="{{ notif.webmention.source }}">{{ notif.webmention.source }}</a>
                 </div>
                 {{ utils.display_object(notif.outbox_object) }}
             {% else %}

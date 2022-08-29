@@ -25,7 +25,7 @@
 </nav>
 
 
-<form class="form" action="{{ request.url_for("admin_actions_new") }}" enctype="multipart/form-data" method="POST">
+<form class="form" action="{{ request.url_for("admin_actions_new") }}" enctype="multipart/form-data" method="POST" class="admin-new">
     {{ utils.embed_csrf_token() }}
     {{ utils.embed_redirect_url() }}
     <p>
@@ -38,7 +38,7 @@
 
     {% if request.query_params.type == "Article" %}
     <p>
-        <input type="text" style="width:95%" name="name" placeholder="Title">     
+        <input type="text" class="width-95" name="name" placeholder="Title">
     </p>
     {% endif %}
 
@@ -49,7 +49,7 @@
     <span class="ji"><img src="{{ emoji.icon.url }}" alt="{{ emoji.name }}" title="{{ emoji.name }}" class="custom-emoji"></span>
     {% endfor %}
 
-    <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" placeholder="Hey!" style="font-size:1.2em;width:95%;">{{ content }}</textarea>
+    <textarea name="content" rows="10" cols="50" autofocus="autofocus" designMode="on" placeholder="Hey!">{{ content }}</textarea>
 
     {% if request.query_params.type == "Question" %}
         <p>
@@ -69,20 +69,20 @@
         </p>
         {% for i in ["1", "2", "3", "4"] %}
             <p>
-            <input type="text" name="poll_answer_{{ i }}" style="width:95%;" placeholder="Option {{ i }}, leave empty to disable">
+            <input type="text" name="poll_answer_{{ i }}" class="width-95" placeholder="Option {{ i }}, leave empty to disable">
             </p>
         {% endfor %}
     {% endif %}
 
     <p>
-    <input type="text" name="content_warning" placeholder="content warning (will mark the post as sensitive)"{% if content_warning %} value="{{ content_warning }}"{% endif %} style="width:95%;">
+    <input type="text" name="content_warning" placeholder="content warning (will mark the post as sensitive)"{% if content_warning %} value="{{ content_warning }}"{% endif %} class="width-95">
     </p>
     <p>
         <input type="checkbox" name="is_sensitive" id="is_sensitive"> <label for="is_sensitive">Mark attachment(s) as sensitive</label>
     </p>
     <input type="hidden" name="in_reply_to" value="{{ request.query_params.in_reply_to }}">
     <p>
-        <input id="files" name="files" type="file" multiple style="width:95%;">
+        <input id="files" name="files" type="file" class="width-95" multiple>
     </p>
     <div id="alts"></div>
     <p>

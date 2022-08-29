@@ -2,15 +2,15 @@
 {% extends "layout.html" %}
 {% block content %}
 <div class="box">
-    <div style="display:flex;column-gap: 20px;">
+    <div class"indieauth-box">
         {% if client.logo %}
-        <div style="flex:initial;width:100px;">
-            <img src="{{client.logo | media_proxy_url }}" style="max-width:100px;" alt="{{ client.name }} logo">
+        <div class="indieauth-logo">
+            <img src="{{client.logo | media_proxy_url }}" alt="{{ client.name }} logo">
         </div>
         {% endif %}
-        <div style="flex:1;">
-            <div style="padding-left: 20px;">
-                <a class="lcolor" style="font-size:1.2em;font-weight:600;" href="{{ client.url }}">{{ client.name }}</a>
+        <div class="indieauth-details">
+            <div>
+                <a class="lcolor" href="{{ client.url }}">{{ client.name }}</a>
                 <p>wants you to login as <strong class="lcolor">{{ me }}</strong> with the following redirect URI: <code>{{ redirect_uri }}</code>.</p>
 
 

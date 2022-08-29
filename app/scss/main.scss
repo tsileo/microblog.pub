@@ -17,6 +17,36 @@ $code-highlight-background: #f0f0f0;
   color: $primary-color;
 }
 
+#admin {
+  .admin-menu {
+    margin-bottom: 30px;
+    padding: 0 20px;
+  }
+}
+
+.empty-state {
+  padding: 20px;
+}
+
+.public-top-menu {
+  margin: 30px 0 0 0;
+}
+
+.width-95 {
+  width: 95%;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.admin-new {
+  textarea {
+    font-size: 1.2em;
+    width: 95%;
+  }
+}
+
 .show-more-wrapper {
   .p-summary {
     display: inline-block;
@@ -63,13 +93,6 @@ blockquote {
 
 .muted {
     color: $muted-color;
-}
-
-.poll-bar {
-   width:100%;height:20px;
-   line {
-        stroke: $secondary-color;
-   }
 }
 
 .light-background {
@@ -240,6 +263,9 @@ footer {
     padding: 0 20px;
     li {
         display: block;
+        span {
+          padding-right:10px;
+        }
     }
 }
 
@@ -272,6 +298,57 @@ footer {
     @include admin-button;
     padding: 10px 5px;
     margin: 20px 0;
+}
+
+.show-hide-sensitive-btn {
+  display:inline-block;
+}
+
+.no-margin-top {
+  margin-top: 0;
+}
+
+.float-right {
+  float: right;
+}
+
+ul.poll-items {
+  list-style-type: none;
+  padding: 0;
+  li {
+    display: block;
+    p {
+      margin: 20px 0 10px 0;
+      .poll-vote {
+        padding-left: 20px;
+      }
+    }
+
+    .poll-bar {
+       width:100%;height:20px;
+       line {
+            stroke: $secondary-color;
+            stroke-width: 20px;
+       }
+    }
+
+  }
+}
+
+.attachment-wrapper {
+  .attachment-item {
+    margin-top: 20px;
+  }
+  img.attachment {
+    margin: 0;
+  }
+  a.attachment {
+    display: inline-block;
+    margin-bottom: 15px;
+  }
+  audio.attachment {
+    width: 480px;
+  }
 }
 
 nav {
@@ -334,7 +411,7 @@ nav.flexbox {
         }
     }
     .activity-attachment {
-        margin: 30px 0;
+        margin: 30px 0 20px 0;
         img, audio, video {
             width: 100%;
             max-width: 740px;
@@ -345,6 +422,20 @@ nav.flexbox {
         max-width: 740px;
     }
 }
+
+.activity-og-meta {
+  display: flex;
+  column-gap: 20px;
+  margin: 20px 0;
+  img {
+    max-width: 200px;
+    max-height: 100px;
+  }
+  small {
+    display: block;
+  }
+}
+
 .ap-object-expanded {
     border: 2px dashed $secondary-color;
 }
@@ -366,4 +457,55 @@ nav.flexbox {
 }
 .emoji, .custom-emoji {
   max-width: 25px;
+}
+
+.indieauth-box {
+  display: flex;
+  column-gap: 20px;
+
+  .indieauth-logo {
+    flex: initial;
+    width: 100px;
+    img {
+      max-width: 100px;
+    }
+  }
+  .indieauth-details {
+    flex: 1;
+    div {
+      padding-left: 20px;
+      a {
+        font-size: 1.2em;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.public-interactions {
+  display: flex;
+  column-gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  .interactions-block {
+    flex: 0 1 30%;
+    max-width: 50%;
+    .facepile-wrapper {
+      display: flex;
+      column-gap: 20px;
+      row-gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      a {
+        height: 50px;
+        img {
+          max-width: 50px;
+        }
+      }
+      .and-x-more {
+        display: inline-block;
+        align-self: center;
+      }
+    }
+  }
 }

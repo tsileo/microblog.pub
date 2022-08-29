@@ -1,3 +1,5 @@
+import base64
+import hashlib
 from functools import lru_cache
 
 from bs4 import BeautifulSoup  # type: ignore
@@ -11,6 +13,9 @@ from app.config import CODE_HIGHLIGHTING_THEME
 _FORMATTER = HtmlFormatter(style=CODE_HIGHLIGHTING_THEME)
 
 HIGHLIGHT_CSS = _FORMATTER.get_style_defs()
+HIGHLIGHT_CSS_HASH = base64.b64encode(
+    hashlib.sha256(HIGHLIGHT_CSS.encode()).digest()
+).decode()
 
 
 @lru_cache(256)
