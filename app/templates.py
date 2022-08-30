@@ -26,7 +26,6 @@ from app.actor import LOCAL_ACTOR
 from app.ap_object import Attachment
 from app.ap_object import Object
 from app.config import BASE_URL
-from app.config import CSS_HASH
 from app.config import CUSTOM_FOOTER
 from app.config import DEBUG
 from app.config import VERSION
@@ -105,7 +104,6 @@ async def render_template(
             "request": request,
             "debug": DEBUG,
             "microblogpub_version": VERSION,
-            "css_hash": CSS_HASH,
             "is_admin": is_admin,
             "csrf_token": generate_csrf_token(),
             "highlight_css": HIGHLIGHT_CSS,
@@ -419,3 +417,5 @@ _templates.env.filters["parse_datetime"] = _parse_datetime
 _templates.env.filters["poll_item_pct"] = _poll_item_pct
 _templates.env.filters["privacy_replace_url"] = privacy_replace.replace_url
 _templates.env.globals["JS_HASH"] = config.JS_HASH
+_templates.env.globals["CSS_HASH"] = config.CSS_HASH
+_templates.env.globals["BASE_URL"] = config.BASE_URL

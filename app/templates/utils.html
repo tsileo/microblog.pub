@@ -96,11 +96,11 @@
 </form>
 {% endmacro %}
 
-{% macro admin_delete_button(ap_object_id) %}
+{% macro admin_delete_button(ap_object) %}
 <form action="{{ request.url_for("admin_actions_delete") }}" class="object-delete-form" method="POST">
     {{ embed_csrf_token() }}
-    {{ embed_redirect_url() }}
-    <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
+    <input type="hidden" name="redirect_url" value="{% if request.url.path.endswith("/" + ap_object.public_id) %}{{ request.base_url}}{% else %}{{ request.url }}{% endif %}">
+    <input type="hidden" name="ap_object_id" value="{{ ap_object.ap_id }}">
     <input type="submit" value="delete">
 </form>
 {% endmacro %}
@@ -515,7 +515,7 @@
     <ul>
         {% if object.is_from_outbox %}
             <li>
-                {{ admin_delete_button(object.ap_id) }}
+                {{ admin_delete_button(object) }}
             </li>
 
             <li>
