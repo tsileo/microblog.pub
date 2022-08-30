@@ -10,6 +10,7 @@ from app.source import _MENTION_REGEX
 
 
 async def lookup(db_session: AsyncSession, query: str) -> Actor | RemoteObject:
+    query = query.strip()
     if query.startswith("@") or _MENTION_REGEX.match("@" + query):
         query = await webfinger.get_actor_url(query)  # type: ignore  # None check below
 
