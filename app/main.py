@@ -132,11 +132,12 @@ class CustomMiddleware:
                 ] = "no-referrer, strict-origin-when-cross-origin"
                 headers["x-content-type-options"] = "nosniff"
                 headers["x-xss-protection"] = "1; mode=block"
-                headers["x-frame-options"] = "SAMEORIGIN"
-                # TODO(ts): disallow inline CSS?
+                headers["x-frame-options"] = "DENY"
+                headers["permissions-policy"] = "interest-cohort=()"
                 headers["content-security-policy"] = (
                     f"default-src 'self'; "
-                    f"style-src 'self' 'sha256-{HIGHLIGHT_CSS_HASH}';"
+                    f"style-src 'self' 'sha256-{HIGHLIGHT_CSS_HASH}'; "
+                    f"frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
                 )
                 if not DEBUG:
                     headers["strict-transport-security"] = "max-age=63072000;"
