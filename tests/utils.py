@@ -169,6 +169,53 @@ def setup_remote_actor_as_following_and_follower(
     return following, follower
 
 
+def setup_outbox_note(
+    content: str = "Hello",
+    to: list[str] = None,
+    cc: list[str] = None,
+    tags: list[ap.RawObject] = None,
+    in_reply_to: str | None = None,
+) -> models.OutboxObject:
+    note_id = uuid4().hex
+    note_from_outbox = RemoteObject(
+        factories.build_note_object(
+            from_remote_actor=LOCAL_ACTOR,
+            outbox_public_id=note_id,
+            content=content,
+            to=to,
+            cc=cc,
+            tags=tags,
+            in_reply_to=in_reply_to,
+        ),
+        LOCAL_ACTOR,
+    )
+    return factories.OutboxObjectFactory.from_remote_object(note_id, note_from_outbox)
+
+
+def setup_inbox_note(
+    actor: models.Actor,
+    content: str = "Hello",
+    to: list[str] = None,
+    cc: list[str] = None,
+    tags: list[ap.RawObject] = None,
+    in_reply_to: str | None = None,
+) -> models.OutboxObject:
+    note_id = uuid4().hex
+    note_from_outbox = RemoteObject(
+        factories.build_note_object(
+            from_remote_actor=actor,
+            outbox_public_id=note_id,
+            content=content,
+            to=to,
+            cc=cc,
+            tags=tags,
+            in_reply_to=in_reply_to,
+        ),
+        actor,
+    )
+    return factories.InboxObjectFactory.from_remote_object(note_from_outbox, actor)
+
+
 def setup_inbox_delete(
     actor: models.Actor, deleted_object_ap_id: str
 ) -> models.InboxObject:

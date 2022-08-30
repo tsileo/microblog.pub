@@ -45,7 +45,7 @@ class Actor(Base, BaseActor):
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=now)
 
-    ap_id = Column(String, unique=True, nullable=False, index=True)
+    ap_id: Mapped[str] = Column(String, unique=True, nullable=False, index=True)
     ap_actor: Mapped[ap.RawObject] = Column(JSON, nullable=False)
     ap_type = Column(String, nullable=False)
 
@@ -126,7 +126,7 @@ class InboxObject(Base, BaseObject):
     is_deleted = Column(Boolean, nullable=False, default=False)
     is_transient = Column(Boolean, nullable=False, default=False, server_default="0")
 
-    replies_count = Column(Integer, nullable=False, default=0)
+    replies_count: Mapped[int] = Column(Integer, nullable=False, default=0)
 
     og_meta: Mapped[list[dict[str, Any]] | None] = Column(JSON, nullable=True)
 
@@ -176,7 +176,7 @@ class OutboxObject(Base, BaseObject):
 
     likes_count = Column(Integer, nullable=False, default=0)
     announces_count = Column(Integer, nullable=False, default=0)
-    replies_count = Column(Integer, nullable=False, default=0)
+    replies_count: Mapped[int] = Column(Integer, nullable=False, default=0)
     webmentions_count: Mapped[int] = Column(
         Integer, nullable=False, default=0, server_default="0"
     )

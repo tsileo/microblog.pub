@@ -122,6 +122,19 @@ async def send_delete(db_session: AsyncSession, ap_object_id: str) -> None:
     for rcp in recipients:
         await new_outgoing_activity(db_session, rcp, outbox_object.id)
 
+    # Revert side effects
+    if outbox_object_to_delete.in_reply_to:
+        replied_object = await get_anybox_object_by_ap_id(
+            db_session, outbox_object_to_delete.in_reply_to
+        )
+        if replied_object:
+            replied_object.replies_count = replied_object.replies_count - 1
+            if replied_object.replies_count < 0:
+                logger.warning("negative replies count for {replied_object.ap_id}")
+                replied_object.replies_count = 0
+        else:
+            logger.info(f"{outbox_object_to_delete.in_reply_to} not found")
+
     await db_session.commit()
 
 

@@ -2,13 +2,17 @@ from unittest import mock
 
 import respx
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import activitypub as ap
 from app import models
 from app import webfinger
+from app.actor import LOCAL_ACTOR
 from app.config import generate_csrf_token
 from tests.utils import generate_admin_session_cookies
+from tests.utils import setup_inbox_note
+from tests.utils import setup_outbox_note
 from tests.utils import setup_remote_actor
 from tests.utils import setup_remote_actor_as_follower
 
@@ -57,6 +61,63 @@ def test_send_follow_request(
     outgoing_activity = db.query(models.OutgoingActivity).one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == ra.inbox_url
+
+
+def test_send_delete__reverts_side_effects(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # given a remote actor
+    ra = setup_remote_actor(respx_mock)
+
+    # who is a follower
+    follower = setup_remote_actor_as_follower(ra)
+    actor = follower.actor
+
+    # with a note that has existing replies
+    inbox_note = setup_inbox_note(actor)
+    inbox_note.replies_count = 1
+    db.commit()
+
+    # and a local reply
+    outbox_note = setup_outbox_note(
+        to=[ap.AS_PUBLIC],
+        cc=[LOCAL_ACTOR.followers_collection_id],  # type: ignore
+        in_reply_to=inbox_note.ap_id,
+    )
+    inbox_note.replies_count = inbox_note.replies_count + 1
+    db.commit()
+
+    response = client.post(
+        "/admin/actions/delete",
+        data={
+            "redirect_url": "http://testserver/",
+            "ap_object_id": outbox_note.ap_id,
+            "csrf_token": generate_csrf_token(),
+        },
+        cookies=generate_admin_session_cookies(),
+    )
+
+    # Then the server returns a 302
+    assert response.status_code == 302
+    assert response.headers.get("Location") == "http://testserver/"
+
+    # And the Delete activity was created in the outbox
+    outbox_object = db.execute(
+        select(models.OutboxObject).where(models.OutboxObject.ap_type == "Delete")
+    ).scalar_one()
+    assert outbox_object.ap_type == "Delete"
+    assert outbox_object.activity_object_ap_id == outbox_note.ap_id
+
+    # And an outgoing activity was queued
+    outgoing_activity = db.query(models.OutgoingActivity).one()
+    assert outgoing_activity.outbox_object_id == outbox_object.id
+    assert outgoing_activity.recipient == ra.inbox_url
+
+    # And the replies count of the replied object was decremented
+    db.refresh(inbox_note)
+    assert inbox_note.replies_count == 1
 
 
 def test_send_create_activity__no_followers_and_with_mention(
