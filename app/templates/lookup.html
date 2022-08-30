@@ -19,7 +19,7 @@
     {% if error %}
     <div class="box error-box">
         {% if error.value == "NOT_FOUND" %}
-        <p>The remote object was deleted.</p>
+        <p>The remote object is unavailable.</p>
         {% elif error.value == "TIMEOUT" %}
         <p>Lookup timed out, please try refreshing the page.</p>
         {% else %}
