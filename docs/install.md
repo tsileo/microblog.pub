@@ -105,7 +105,7 @@ Setup a reverse proxy (see the next section).
 
 ### Updating 
 
-To update microblogpub locally, pull the remote changes and run the `update` task to regeneratee the CSS and run any DB migrations.
+To update microblogpub locally, pull the remote changes and run the `update` task to regenerate the CSS and run any DB migrations.
 
 ```bash
 git pull
@@ -136,7 +136,7 @@ server {
     # [...]
 }
 
-# This should be oustside the `server` block
+# This should be outside the `server` block
 map $http_upgrade $connection_upgrade {
   default upgrade;
   '' close;
