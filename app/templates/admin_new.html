@@ -25,7 +25,7 @@
 </nav>
 
 
-<form class="form" action="{{ request.url_for("admin_actions_new") }}" enctype="multipart/form-data" method="POST" class="admin-new">
+<form class="form admin-new" action="{{ request.url_for("admin_actions_new") }}" enctype="multipart/form-data" method="POST">
     {{ utils.embed_csrf_token() }}
     {{ utils.embed_redirect_url() }}
     <p>
