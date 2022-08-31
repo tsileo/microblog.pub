@@ -281,6 +281,7 @@ async def index(
                 ),
             ),
         )
+        .order_by(models.OutboxObject.is_pinned.desc())
         .order_by(models.OutboxObject.ap_published_at.desc())
         .offset(page_offset)
         .limit(page_size)
