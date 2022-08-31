@@ -10,7 +10,7 @@ Microblog.pub is a "modern" Python application with "old-school" server-rendered
 
  - [Poetry](https://python-poetry.org/) is used for dependency management.
  - Most of the code is asynchronous, using [asyncio](https://docs.python.org/3/library/asyncio.html).
- - SQLite3 is the default database.
+ - SQLite3 for data storage
 
 The server has 3 components:
 
@@ -30,7 +30,7 @@ inv -l
 
 ### Media storage
 
-The uploads are stored in the `data/` directory, using a simple content-addressed storage (file contents hash is BLOB filename).
+The uploads are stored in the `data/` directory, using a simple content-addressed storage system (file contents hash is BLOB filename).
 Files metadata are stored in the database.
 
 ## Installation
