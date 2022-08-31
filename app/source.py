@@ -50,7 +50,10 @@ async def _mentionify(
         _, username, domain = mention.split("@")
         actor = (
             await db_session.execute(
-                select(models.Actor).where(models.Actor.handle == mention)
+                select(models.Actor).where(
+                    models.Actor.handle == mention,
+                    models.Actor.is_deleted.is_(False),
+                )
             )
         ).scalar_one_or_none()
         if not actor:
