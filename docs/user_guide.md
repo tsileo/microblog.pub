@@ -77,6 +77,16 @@ privacy_replace = [
 
 ### Customization
 
+#### Default emoji
+
+If you don't like cats, or need more emoji, you can add your favorite emoji in `profile.toml` and it will replace the default ones:
+
+```
+emoji = "🙂🐹📌"
+```
+
+You can copy/paste them from [getemoji.com](https://getemoji.com/).
+
 #### Custom emoji
 
 You can add custom emoji in the `data/custom_emoji` directory and they will be picked automatically.

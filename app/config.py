@@ -86,6 +86,7 @@ class Config(pydantic.BaseModel):
     code_highlighting_theme = "friendly_grayscale"
     blocked_servers: list[_BlockedServer] = []
     custom_footer: str | None = None
+    emoji: str | None = None
 
     inbox_retention_days: int = 15
 
@@ -152,6 +153,9 @@ KEY_PATH = (
     (ROOT_DIR / CONFIG.key_path) if CONFIG.key_path else ROOT_DIR / "data" / "key.pem"
 )
 EMOJIS = "😺 😸 😹 😻 😼 😽 🙀 😿 😾"
+if CONFIG.emoji:
+    EMOJIS = CONFIG.emoji
+
 # Emoji template for the FE
 EMOJI_TPL = '<img src="/static/twemoji/{filename}.svg" alt="{raw}" class="emoji">'
 
