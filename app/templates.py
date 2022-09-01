@@ -379,7 +379,7 @@ def _html2text(content: str) -> str:
 
 
 def _replace_emoji(u: str, _) -> str:
-    filename = hex(ord(u))[2:]
+    filename = "-".join(hex(ord(c))[2:] for c in u)
     return config.EMOJI_TPL.format(filename=filename, raw=u)
 
 
