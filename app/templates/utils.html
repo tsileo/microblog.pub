@@ -365,7 +365,7 @@
     {% endif %}
 
     {% if object.in_reply_to %}
-    <a href="{% if is_admin and object.is_from_inbox %}{{ url_for("get_lookup") }}?query={% endif %}{{ object.in_reply_to }}" title="{{ object.in_reply_to }}" class="in-reply-to" rel="nofollow">
+    <a href="{% if is_admin and object.is_in_reply_to_from_inbox %}{{ url_for("get_lookup") }}?query={% endif %}{{ object.in_reply_to }}" title="{{ object.in_reply_to }}" class="in-reply-to" rel="nofollow">
             in reply to {{ object.in_reply_to|truncate(64, True) }}
         </a>
     {% endif %}

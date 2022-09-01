@@ -209,6 +209,13 @@ class Object:
         return self.ap_object.get("inReplyTo")
 
     @property
+    def is_in_reply_to_from_inbox(self) -> bool | None:
+        if not self.in_reply_to:
+            return None
+
+        return not self.in_reply_to.startswith(LOCAL_ACTOR.ap_id)
+
+    @property
     def has_ld_signature(self) -> bool:
         return bool(self.ap_object.get("signature"))
 
