@@ -251,6 +251,7 @@ async def index(
     page: int | None = None,
 ) -> templates.TemplateResponse | ActivityPubResponse:
     if is_activitypub_requested(request):
+
         return ActivityPubResponse(LOCAL_ACTOR.ap_actor)
 
     page = page or 1

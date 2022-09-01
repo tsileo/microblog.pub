@@ -29,6 +29,7 @@ async def webfinger(
 
     is_404 = False
 
+    resp: httpx.Response | None = None
     async with httpx.AsyncClient() as client:
         for i, proto in enumerate(protos):
             try:
@@ -59,7 +60,10 @@ async def webfinger(
     if is_404:
         return None
 
-    return resp.json()
+    if resp:
+        return resp.json()
+    else:
+        return None
 
 
 async def get_remote_follow_template(resource: str) -> str | None:

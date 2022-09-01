@@ -191,6 +191,35 @@ def prune_old_data(ctx):
 
 
 @task
+def webfinger(ctx, account):
+    # type: (Context, str) -> None
+    import traceback
+
+    from loguru import logger
+
+    from app.source import _MENTION_REGEX
+    from app.webfinger import get_actor_url
+
+    logger.disable("app")
+    if not account.startswith("@"):
+        account = f"@{account}"
+    if not _MENTION_REGEX.match(account):
+        print(f"Invalid acccount {account}")
+        return
+
+    print(f"Resolving {account}")
+    try:
+        maybe_actor_url = asyncio.run(get_actor_url(account))
+        if maybe_actor_url:
+            print(f"SUCCESS: {maybe_actor_url}")
+        else:
+            print(f"ERROR: Failed to resolve {account}")
+    except Exception as exc:
+        print(f"ERROR: Failed to resolve {account}")
+        print("".join(traceback.format_exception(exc)))
+
+
+@task
 def yunohost_config(
     ctx,
     domain,

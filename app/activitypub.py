@@ -9,6 +9,7 @@ from loguru import logger
 from markdown import markdown
 
 from app import config
+from app.config import ALSO_KNOWN_AS
 from app.config import AP_CONTENT_TYPE  # noqa: F401
 from app.httpsig import auth
 from app.key import get_pubkey_as_pem
@@ -125,6 +126,9 @@ ME = {
     },
     "tag": _LOCAL_ACTOR_TAGS,
 }
+
+if ALSO_KNOWN_AS:
+    ME["alsoKnownAs"] = [ALSO_KNOWN_AS]
 
 
 class NotAnObjectError(Exception):

@@ -17,3 +17,7 @@ update:
 .PHONY: prune-old-data
 prune-old-data:
 	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv prune-old-data
+
+.PHONY: webfinger
+webfinger:
+	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv webfinger $(account)

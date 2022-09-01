@@ -87,6 +87,7 @@ class Config(pydantic.BaseModel):
     blocked_servers: list[_BlockedServer] = []
     custom_footer: str | None = None
     emoji: str | None = None
+    also_known_as: str | None = None
 
     inbox_retention_days: int = 15
 
@@ -135,6 +136,7 @@ if CONFIG.privacy_replace:
     PRIVACY_REPLACE = {pr.domain: pr.replace_by for pr in CONFIG.privacy_replace}
 
 BLOCKED_SERVERS = {blocked_server.hostname for blocked_server in CONFIG.blocked_servers}
+ALSO_KNOWN_AS = CONFIG.also_known_as
 
 INBOX_RETENTION_DAYS = CONFIG.inbox_retention_days
 CUSTOM_FOOTER = (
