@@ -75,7 +75,7 @@ def test_inbox_incoming_follow_request(
     assert inbox_object.ap_object == follow_activity.ap_object
 
     # And a follower was internally created
-    follower = db.query(models.Follower).one()
+    follower = db.execute(select(models.Follower)).scalar_one()
     assert follower.ap_actor_id == ra.ap_id
     assert follower.actor_id == saved_actor.id
     assert follower.inbox_object_id == inbox_object.id

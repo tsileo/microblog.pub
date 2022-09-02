@@ -53,12 +53,12 @@ def test_send_follow_request(
     assert response.headers.get("Location") == "http://testserver/"
 
     # And the Follow activity was created in the outbox
-    outbox_object = db.query(models.OutboxObject).one()
+    outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
     assert outbox_object.ap_type == "Follow"
     assert outbox_object.activity_object_ap_id == ra.ap_id
 
     # And an outgoing activity was queued
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = db.execute(select(models.OutgoingActivity)).scalar_one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == ra.inbox_url
 
@@ -111,7 +111,7 @@ def test_send_delete__reverts_side_effects(
     assert outbox_object.activity_object_ap_id == outbox_note.ap_id
 
     # And an outgoing activity was queued
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = db.execute(select(models.OutgoingActivity)).scalar_one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == ra.inbox_url
 
@@ -144,11 +144,11 @@ def test_send_create_activity__no_followers_and_with_mention(
     assert response.status_code == 302
 
     # And the Follow activity was created in the outbox
-    outbox_object = db.query(models.OutboxObject).one()
+    outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
     assert outbox_object.ap_type == "Note"
 
     # And an outgoing activity was queued
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = db.execute(select(models.OutgoingActivity)).scalar_one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == ra.inbox_url
 
@@ -180,11 +180,11 @@ def test_send_create_activity__with_followers(
     assert response.status_code == 302
 
     # And the Follow activity was created in the outbox
-    outbox_object = db.query(models.OutboxObject).one()
+    outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
     assert outbox_object.ap_type == "Note"
 
     # And an outgoing activity was queued
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = db.execute(select(models.OutgoingActivity)).scalar_one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == follower.actor.inbox_url
 
@@ -220,7 +220,7 @@ def test_send_create_activity__question__one_of(
     assert response.status_code == 302
 
     # And the Follow activity was created in the outbox
-    outbox_object = db.query(models.OutboxObject).one()
+    outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
     assert outbox_object.ap_type == "Question"
     assert outbox_object.is_one_of_poll is True
     assert len(outbox_object.poll_items) == 2
@@ -228,7 +228,7 @@ def test_send_create_activity__question__one_of(
     assert outbox_object.is_poll_ended is False
 
     # And an outgoing activity was queued
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = db.execute(select(models.OutgoingActivity)).scalar_one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == follower.actor.inbox_url
 
@@ -266,7 +266,7 @@ def test_send_create_activity__question__any_of(
     assert response.status_code == 302
 
     # And the Follow activity was created in the outbox
-    outbox_object = db.query(models.OutboxObject).one()
+    outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
     assert outbox_object.ap_type == "Question"
     assert outbox_object.is_one_of_poll is False
     assert len(outbox_object.poll_items) == 4
@@ -274,7 +274,7 @@ def test_send_create_activity__question__any_of(
     assert outbox_object.is_poll_ended is False
 
     # And an outgoing activity was queued
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = db.execute(select(models.OutgoingActivity)).scalar_one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == follower.actor.inbox_url
 
@@ -307,11 +307,11 @@ def test_send_create_activity__article(
     assert response.status_code == 302
 
     # And the Follow activity was created in the outbox
-    outbox_object = db.query(models.OutboxObject).one()
+    outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
     assert outbox_object.ap_type == "Article"
     assert outbox_object.ap_object["name"] == "Article"
 
     # And an outgoing activity was queued
-    outgoing_activity = db.query(models.OutgoingActivity).one()
+    outgoing_activity = db.execute(select(models.OutgoingActivity)).scalar_one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == follower.actor.inbox_url

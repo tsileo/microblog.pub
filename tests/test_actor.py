@@ -52,4 +52,4 @@ def test_sqlalchemy_factory(db: Session) -> None:
         ap_actor=ra.ap_actor,
         ap_id=ra.ap_id,
     )
-    assert actor_in_db.id == db.query(models.Actor).one().id
+    assert actor_in_db.id == db.execute(select(models.Actor)).scalar_one().id
