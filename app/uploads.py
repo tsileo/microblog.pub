@@ -5,6 +5,7 @@ import blurhash  # type: ignore
 from fastapi import UploadFile
 from loguru import logger
 from PIL import Image
+from PIL import ImageOps
 from sqlalchemy import select
 
 from app import activitypub as ap
@@ -46,10 +47,12 @@ async def save_upload(db_session: AsyncSession, f: UploadFile) -> models.Upload:
     height = None
 
     if f.content_type.startswith("image"):
-        image_blurhash = blurhash.encode(f.file, x_components=4, y_components=3)
-        f.file.seek(0)
+        with Image.open(f.file) as _original_image:
+            # Fix image orientation (as we will remove the info from the EXIF
+            # metadata)
+            original_image = ImageOps.exif_transpose(_original_image)
 
-        with Image.open(f.file) as original_image:
+            # Re-creating the image drop the EXIF metadata
             destination_image = Image.new(
                 original_image.mode,
                 original_image.size,
@@ -57,13 +60,16 @@ async def save_upload(db_session: AsyncSession, f: UploadFile) -> models.Upload:
             destination_image.putdata(original_image.getdata())
             destination_image.save(
                 dest_filename,
-                format=original_image.format,
+                format=_original_image.format,
             )
 
+            with open(dest_filename, "rb") as dest_f:
+                image_blurhash = blurhash.encode(dest_f, x_components=4, y_components=3)
+
             try:
-                width, height = original_image.size
-                original_image.thumbnail((740, 740))
-                original_image.save(
+                width, height = destination_image.size
+                destination_image.thumbnail((740, 740))
+                destination_image.save(
                     UPLOAD_DIR / f"{content_hash}_resized",
                     format="webp",
                 )
