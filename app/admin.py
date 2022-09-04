@@ -34,6 +34,7 @@ from app.config import verify_password
 from app.database import AsyncSession
 from app.database import get_db_session
 from app.lookup import lookup
+from app.templates import is_current_user_admin
 from app.uploads import save_upload
 from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
@@ -66,16 +67,6 @@ router = APIRouter(
     dependencies=[Depends(user_session_or_redirect)],
 )
 unauthenticated_router = APIRouter()
-
-
-@router.get("/")
-async def admin_index(
-    request: Request,
-    db_session: AsyncSession = Depends(get_db_session),
-) -> templates.TemplateResponse:
-    return await templates.render_template(
-        db_session, request, "index.html", {"request": request}
-    )
 
 
 @router.get("/lookup")
@@ -1108,7 +1099,10 @@ async def admin_actions_vote(
 async def login(
     request: Request,
     db_session: AsyncSession = Depends(get_db_session),
-) -> templates.TemplateResponse:
+) -> templates.TemplateResponse | RedirectResponse:
+    if is_current_user_admin(request):
+        return RedirectResponse(request.url_for("admin_stream"), status_code=302)
+
     return await templates.render_template(
         db_session,
         request,
@@ -1142,7 +1136,9 @@ async def login_validation(
             status_code=403,
         )
 
-    resp = RedirectResponse(redirect or "/admin/stream", status_code=302)
+    resp = RedirectResponse(
+        redirect or request.url_for("admin_stream"), status_code=302
+    )
     resp.set_cookie("session", session_serializer.dumps({"is_logged_in": True}))  # type: ignore  # noqa: E501
 
     return resp
