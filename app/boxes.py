@@ -376,6 +376,31 @@ async def fetch_conversation_root(
         return await fetch_conversation_root(db_session, in_reply_to_object)
 
 
+async def send_move(
+    db_session: AsyncSession,
+    target: str,
+) -> None:
+    move_id = allocate_outbox_id()
+    obj = {
+        "@context": ap.AS_CTX,
+        "type": "Move",
+        "id": outbox_object_id(move_id),
+        "actor": LOCAL_ACTOR.ap_id,
+        "object": LOCAL_ACTOR.ap_id,
+        "target": target,
+    }
+
+    outbox_object = await save_outbox_object(db_session, move_id, obj)
+    if not outbox_object.id:
+        raise ValueError("Should never happen")
+
+    recipients = await compute_all_known_recipients(db_session)
+    for rcp in recipients:
+        await new_outgoing_activity(db_session, rcp, outbox_object.id)
+
+    await db_session.commit()
+
+
 async def send_create(
     db_session: AsyncSession,
     ap_type: str,
@@ -719,6 +744,17 @@ async def _compute_recipients(
                 recipients.add(actor.shared_inbox_url)
 
     return recipients
+
+
+async def compute_all_known_recipients(db_session: AsyncSession) -> set[str]:
+    return {
+        actor.shared_inbox_url or actor.inbox_url
+        for actor in (
+            await db_session.scalars(
+                select(models.Actor).where(models.Actor.is_deleted.is_(False))
+            )
+        ).all()
+    }
 
 
 async def _get_following(db_session: AsyncSession) -> list[models.Follower]:
@@ -1294,12 +1330,15 @@ async def _handle_move_activity(
         return None
 
     # Fetch the target account
-    new_actor_id = move_activity.ap_object.get("target")
-    if not new_actor_id:
+    target = move_activity.ap_object.get("target")
+    if not target:
         logger.warning("Missing target")
         return None
 
+    new_actor_id = ap.get_id(target)
     new_actor = await fetch_actor(db_session, new_actor_id)
+
+    logger.info(f"Moving {old_actor_id} to {new_actor_id}")
 
     # Ensure the target account references the old account
     if old_actor_id not in (aks := new_actor.ap_actor.get("alsoKnownAs", [])):
@@ -1323,7 +1362,14 @@ async def _handle_move_activity(
     await _send_undo(db_session, following.outbox_object.ap_id)
 
     # Follow the new one
-    await _send_follow(db_session, new_actor_id)
+    if not (
+        await db_session.execute(
+            select(models.Following).where(models.Following.ap_actor_id == new_actor_id)
+        )
+    ).scalar():
+        await _send_follow(db_session, new_actor_id)
+    else:
+        logger.info(f"Already following target {new_actor_id}")
 
 
 async def _handle_update_activity(
@@ -1998,7 +2044,7 @@ async def _prefetch_actor_outbox(
     """Try to fetch some notes to fill the stream"""
     saved = 0
     outbox = await ap.parse_collection(actor.outbox_url, limit=20)
-    for activity in outbox:
+    for activity in outbox[:20]:
         activity_id = ap.get_id(activity)
         raw_activity = await ap.fetch(activity_id)
         if ap.as_list(raw_activity["type"])[0] == "Create":
@@ -2011,7 +2057,8 @@ async def _prefetch_actor_outbox(
 
             if not saved_inbox_object.in_reply_to:
                 saved_inbox_object.is_hidden_from_stream = False
-                saved += 1
+
+            saved += 1
 
         if saved >= 5:
             break
