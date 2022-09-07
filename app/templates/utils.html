@@ -223,7 +223,7 @@
             {% elif metadata.is_follow_request_sent %}
                 <li>follow request sent</li>
                 <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "undo follow") }}</li>
-            {% else %}
+            {% elif not actor.moved_to %}
                 <li>{{ admin_follow_button(actor) }}</li>
             {% endif %}
             {% if metadata.is_follower %}
@@ -231,7 +231,11 @@
                 {% if not metadata.is_following and not with_details %}
                     <li>{{ admin_profile_button(actor.ap_id) }}</li>
                 {% endif %}
-                </li>
+            {$ elif actor.is_from_db and not with_details %}
+                <li>{{ admin_profile_button(actor.ap_id) }}</li>
+            {% endif %}
+            {% if actor.moved_to %}
+            <li>has moved to {% if metadata.moved_to %}<a href="{{ url_for("admin_profile") }}?actor_id={{ actor.moved_to }}">{{ metadata.moved_to.handle }}</a>{% else %}<a href="{{ url_for("get_lookup") }}?query={{ actor.moved_to }}">{{ actor.moved_to }}</a>{% endif %}</li>
             {% endif %}
             {% if actor.is_from_db %}
                 {% if actor.is_blocked %}

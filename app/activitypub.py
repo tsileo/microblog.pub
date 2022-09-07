@@ -34,6 +34,7 @@ AS_EXTENDED_CTX = [
         "sensitive": "as:sensitive",
         "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
         "alsoKnownAs": {"@id": "as:alsoKnownAs", "@type": "@id"},
+        "movedTo": {"@id": "as:movedTo", "@type": "@id"},
         # toot
         "toot": "http://joinmastodon.org/ns#",
         "featured": {"@id": "toot:featured", "@type": "@id"},

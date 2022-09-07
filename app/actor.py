@@ -5,6 +5,7 @@ from functools import cached_property
 from typing import Union
 from urllib.parse import urlparse
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
@@ -119,6 +120,10 @@ class Actor:
         return ap.as_list(self.ap_actor.get("attachment", []))
 
     @cached_property
+    def moved_to(self) -> str | None:
+        return self.ap_actor.get("movedTo")
+
+    @cached_property
     def server(self) -> str:
         return urlparse(self.ap_id).hostname  # type: ignore
 
@@ -214,6 +219,7 @@ class ActorMetadata:
     is_follow_request_sent: bool
     outbox_follow_ap_id: str | None
     inbox_follow_ap_id: str | None
+    moved_to: typing.Optional["ActorModel"]
 
 
 ActorsMetadata = dict[str, ActorMetadata]
@@ -260,6 +266,19 @@ async def get_actors_metadata(
     for actor in actors:
         if not actor.ap_id:
             raise ValueError("Should never happen")
+        moved_to = None
+        if actor.moved_to:
+            try:
+                moved_to = await fetch_actor(
+                    db_session,
+                    actor.moved_to,
+                    save_if_not_found=False,
+                )
+            except ap.ObjectNotFoundError:
+                pass
+            except Exception:
+                logger.exception(f"Failed to fetch {actor.moved_to=}")
+
         idx[actor.ap_id] = ActorMetadata(
             ap_actor_id=actor.ap_id,
             is_following=actor.ap_id in following,
@@ -267,6 +286,7 @@ async def get_actors_metadata(
             is_follow_request_sent=actor.ap_id in sent_follow_requests,
             outbox_follow_ap_id=sent_follow_requests.get(actor.ap_id),
             inbox_follow_ap_id=followers.get(actor.ap_id),
+            moved_to=moved_to,
         )
     return idx
 

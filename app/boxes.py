@@ -908,7 +908,7 @@ async def _handle_delete_activity(
         except ap.ObjectNotFoundError:
             pass
 
-    if ap_object_to_delete is None:
+    if ap_object_to_delete is None or not ap_object_to_delete.is_from_db:
         logger.info(
             "Received Delete for an unknown object "
             f"{delete_activity.activity_object_ap_id}"
