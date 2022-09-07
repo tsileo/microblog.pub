@@ -231,7 +231,7 @@
                 {% if not metadata.is_following and not with_details %}
                     <li>{{ admin_profile_button(actor.ap_id) }}</li>
                 {% endif %}
-            {$ elif actor.is_from_db and not with_details %}
+            {% elif actor.is_from_db and not with_details %}
                 <li>{{ admin_profile_button(actor.ap_id) }}</li>
             {% endif %}
             {% if actor.moved_to %}
