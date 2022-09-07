@@ -740,7 +740,7 @@ async def admin_object(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> templates.TemplateResponse:
     requested_object = await boxes.get_anybox_object_by_ap_id(db_session, ap_id)
-    if not requested_object:
+    if not requested_object or requested_object.is_deleted:
         raise HTTPException(status_code=404)
 
     replies_tree = await boxes.get_replies_tree(
