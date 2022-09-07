@@ -537,6 +537,8 @@ class NotificationType(str, enum.Enum):
     FOLLOW_REQUEST_ACCEPTED = "follow_request_accepted"
     FOLLOW_REQUEST_REJECTED = "follow_request_rejected"
 
+    MOVE = "move"
+
     LIKE = "like"
     UNDO_LIKE = "undo_like"
 

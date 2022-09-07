@@ -414,3 +414,12 @@ def test_inbox__move_activity(
         )
         == 1
     )
+
+    # And a notification was created
+    notif = db.execute(
+        select(models.Notification).where(
+            models.Notification.notification_type == models.NotificationType.MOVE
+        )
+    ).scalar_one()
+    assert notif.actor.ap_id == new_ra.ap_id
+    assert notif.inbox_object_id == inbox_activity.id

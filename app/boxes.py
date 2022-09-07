@@ -1371,6 +1371,13 @@ async def _handle_move_activity(
     else:
         logger.info(f"Already following target {new_actor_id}")
 
+    notif = models.Notification(
+        notification_type=models.NotificationType.MOVE,
+        actor_id=new_actor.id,
+        inbox_object_id=move_activity.id,
+    )
+    db_session.add(notif)
+
 
 async def _handle_update_activity(
     db_session: AsyncSession,

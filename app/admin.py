@@ -682,7 +682,9 @@ async def get_notifications(
                 .where(*where)
                 .options(
                     joinedload(models.Notification.actor),
-                    joinedload(models.Notification.inbox_object),
+                    joinedload(models.Notification.inbox_object).options(
+                        joinedload(models.InboxObject.actor)
+                    ),
                     joinedload(models.Notification.outbox_object).options(
                         joinedload(
                             models.OutboxObject.outbox_object_attachments

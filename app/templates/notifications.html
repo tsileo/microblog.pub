@@ -36,6 +36,14 @@
             {%- elif notif.notification_type.value == "follow_request_rejected" %}
                 {{ notif_actor_action(notif, "rejected your follow request") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {%- elif notif.notification_type.value == "move" %}
+                {# for move notif, the actor is the target and the inbox object the Move activity #}
+                <div class="actor-action">
+                    <a href="{{ url_for("admin_profile") }}?actor_id={{ notif.inbox_object.actor.ap_id }}">
+                        {{ utils.display_tiny_actor_icon(notif.inbox_object.actor) }} {{ notif.inbox_object.actor.display_name | clean_html(notif.inbox_object.actor) | safe }}</a> has moved to
+                    <span title="{{ notif.created_at.isoformat() }}">{{ notif.created_at | timeago }}</span>
+                </div>
+                {{ utils.display_actor(notif.actor) }}
             {% elif notif.notification_type.value == "like" %}
                 {{ notif_actor_action(notif, "liked a post", with_icon=True) }}
                 {{ utils.display_object(notif.outbox_object) }}
