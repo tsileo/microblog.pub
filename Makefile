@@ -21,3 +21,7 @@ prune-old-data:
 .PHONY: webfinger
 webfinger:
 	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv webfinger $(account)
+
+.PHONY: move-to
+move-to:
+	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv move-to $(account)

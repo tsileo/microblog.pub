@@ -220,6 +220,58 @@ def webfinger(ctx, account):
 
 
 @task
+def move_to(ctx, moved_to):
+    # type: (Context, str) -> None
+    import traceback
+
+    from loguru import logger
+
+    from app.actor import LOCAL_ACTOR
+    from app.actor import fetch_actor
+    from app.boxes import send_move
+    from app.database import async_session
+    from app.source import _MENTION_REGEX
+    from app.webfinger import get_actor_url
+
+    logger.disable("app")
+
+    if not moved_to.startswith("@"):
+        moved_to = f"@{moved_to}"
+    if not _MENTION_REGEX.match(moved_to):
+        print(f"Invalid acccount {moved_to}")
+        return
+
+    async def _send_move():
+        print(f"Initiating move to {moved_to}")
+        async with async_session() as db_session:
+            try:
+                moved_to_actor_id = await get_actor_url(moved_to)
+            except Exception as exc:
+                print(f"ERROR: Failed to resolve {moved_to}")
+                print("".join(traceback.format_exception(exc)))
+                return
+
+            if not moved_to_actor_id:
+                print("ERROR: Failed to resolve {moved_to}")
+                return
+
+            new_actor = await fetch_actor(db_session, moved_to_actor_id)
+
+            if LOCAL_ACTOR.ap_id not in new_actor.ap_actor.get("alsoKnownAs", []):
+                print(
+                    f"{new_actor.handle}/{moved_to_actor_id} is missing "
+                    f"{LOCAL_ACTOR.ap_id} in alsoKnownAs"
+                )
+                return
+
+            await send_move(db_session, moved_to)
+
+        print("Done")
+
+    asyncio.run(_send_move())
+
+
+@task
 def yunohost_config(
     ctx,
     domain,

@@ -319,8 +319,6 @@ rm data/microblogpub.db.bak
 
 ### Moving to another instance
 
-**This section is just a draft.**
-
 If you want to migrate to another instance, you have the ability to move your existing followers to your new account.
 
 Your new account should reference the existing one, refer to your software configuration (for example [Moving or leaving accounts from the Mastodon doc](https://docs.joinmastodon.org/user/moving/)).
@@ -331,14 +329,14 @@ Execute the Move task:
 
 ```bash
 # For a Python install
-poetry run inv move username@domain.tld
+poetry run inv move-to username@domain.tld
 ```
 
 #### Docker edition
 
 ```bash
 # For a Docker install
-make account=username@domain.tld move
+make account=username@domain.tld move-to
 ```
 
 ### Deleting the instance
