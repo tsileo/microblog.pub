@@ -1021,7 +1021,7 @@ async def admin_actions_unpin(
 async def admin_actions_new(
     request: Request,
     files: list[UploadFile] = [],
-    content: str = Form(),
+    content: str | None = Form(None),
     redirect_url: str = Form(),
     in_reply_to: str | None = Form(None),
     content_warning: str | None = Form(None),
@@ -1032,6 +1032,19 @@ async def admin_actions_new(
     csrf_check: None = Depends(verify_csrf_token),
     db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
+    if not content and not content_warning:
+        raise HTTPException(status_code=422, detail="Error: object must have a content")
+
+    # Do like Mastodon, if there's only a CW with no content and some attachments,
+    # swap the CW and the content
+    if not content and content_warning and len(files) >= 1:
+        content = content_warning
+        is_sensitive = True
+        content_warning = None
+
+    if not content:
+        raise HTTPException(status_code=422, detail="Error: objec must have a content")
+
     # XXX: for some reason, no files restuls in an empty single file
     uploads = []
     raw_form_data = await request.form()
