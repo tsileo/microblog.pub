@@ -67,6 +67,7 @@ async def _send_actor_update_if_needed(
     logger.info("Will send an Update for the local actor")
 
     from app.boxes import allocate_outbox_id
+    from app.boxes import compute_all_known_recipients
     from app.boxes import outbox_object_id
     from app.boxes import save_outbox_object
 
@@ -85,24 +86,8 @@ async def _send_actor_update_if_needed(
 
     # Send the update to the followers collection and all the actor we have ever
     # contacted
-    followers = (
-        (
-            await db_session.scalars(
-                select(models.Follower).options(joinedload(models.Follower.actor))
-            )
-        )
-        .unique()
-        .all()
-    )
-    for rcp in {
-        follower.actor.shared_inbox_url or follower.actor.inbox_url
-        for follower in followers
-    } | {
-        row.recipient
-        for row in await db_session.execute(
-            select(func.distinct(models.OutgoingActivity.recipient).label("recipient"))
-        )
-    }:  # type: ignore
+    recipients = await compute_all_known_recipients(db_session)
+    for rcp in recipients:
         await new_outgoing_activity(
             db_session,
             recipient=rcp,

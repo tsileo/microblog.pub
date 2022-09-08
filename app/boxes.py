@@ -29,6 +29,7 @@ from app.config import BASE_URL
 from app.config import BLOCKED_SERVERS
 from app.config import ID
 from app.config import MANUALLY_APPROVES_FOLLOWERS
+from app.config import set_moved_to
 from app.database import AsyncSession
 from app.outgoing_activities import new_outgoing_activity
 from app.source import markdownify
@@ -394,9 +395,12 @@ async def send_move(
     if not outbox_object.id:
         raise ValueError("Should never happen")
 
-    recipients = await compute_all_known_recipients(db_session)
+    recipients = await _get_followers_recipients(db_session)
     for rcp in recipients:
         await new_outgoing_activity(db_session, rcp, outbox_object.id)
+
+    # Store the moved to in order to update the profile
+    set_moved_to(target)
 
     await db_session.commit()
 

@@ -48,6 +48,19 @@ try:
 except FileNotFoundError:
     pass
 
+MOVED_TO_FILE = ROOT_DIR / "data" / "moved_to.dat"
+
+
+def _get_moved_to() -> str | None:
+    if not MOVED_TO_FILE.exists():
+        return None
+
+    return MOVED_TO_FILE.read_text()
+
+
+def set_moved_to(moved_to: str) -> None:
+    MOVED_TO_FILE.write_text(moved_to)
+
 
 VERSION = f"2.0.0+{VERSION_COMMIT}"
 USER_AGENT = f"microblogpub/{VERSION}"
@@ -164,6 +177,8 @@ EMOJI_TPL = '<img src="/static/twemoji/{filename}.svg" alt="{raw}" class="emoji"
 _load_emojis(ROOT_DIR, BASE_URL)
 
 CODE_HIGHLIGHTING_THEME = CONFIG.code_highlighting_theme
+
+MOVED_TO = _get_moved_to()
 
 
 session_serializer = URLSafeTimedSerializer(

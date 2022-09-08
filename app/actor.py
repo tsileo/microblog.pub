@@ -322,4 +322,7 @@ def _actor_hash(actor: Actor) -> bytes:
     h.update(actor.public_key_id.encode())
     h.update(actor.public_key_as_pem.encode())
 
+    if actor.moved_to:
+        h.update(actor.moved_to.encode())
+
     return h.digest()

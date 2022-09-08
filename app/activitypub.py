@@ -11,6 +11,7 @@ from markdown import markdown
 from app import config
 from app.config import ALSO_KNOWN_AS
 from app.config import AP_CONTENT_TYPE  # noqa: F401
+from app.config import MOVED_TO
 from app.httpsig import auth
 from app.key import get_pubkey_as_pem
 from app.source import hashtagify
@@ -130,6 +131,9 @@ ME = {
 
 if ALSO_KNOWN_AS:
     ME["alsoKnownAs"] = [ALSO_KNOWN_AS]
+
+if MOVED_TO:
+    ME["movedTo"] = MOVED_TO
 
 
 class NotAnObjectError(Exception):
