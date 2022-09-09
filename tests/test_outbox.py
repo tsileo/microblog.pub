@@ -120,6 +120,111 @@ def test_send_delete__reverts_side_effects(
     assert inbox_note.replies_count == 1
 
 
+def test_send_create_activity__no_content(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # given a remote actor
+    ra = setup_remote_actor(respx_mock)
+
+    with mock.patch.object(webfinger, "get_actor_url", return_value=ra.ap_id):
+        response = client.post(
+            "/admin/actions/new",
+            data={
+                "redirect_url": "http://testserver/",
+                "visibility": ap.VisibilityEnum.PUBLIC.name,
+                "csrf_token": generate_csrf_token(),
+            },
+            cookies=generate_admin_session_cookies(),
+        )
+
+    # Then the server returns a 422
+    assert response.status_code == 422
+
+
+def test_send_create_activity__with_attachment(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # given a remote actor
+    ra = setup_remote_actor(respx_mock)
+
+    with mock.patch.object(webfinger, "get_actor_url", return_value=ra.ap_id):
+        response = client.post(
+            "/admin/actions/new",
+            data={
+                "content": "hello",
+                "redirect_url": "http://testserver/",
+                "visibility": ap.VisibilityEnum.PUBLIC.name,
+                "csrf_token": generate_csrf_token(),
+            },
+            files=[
+                ("files", ("attachment.txt", "hello")),
+            ],
+            cookies=generate_admin_session_cookies(),
+        )
+
+    # Then the server returns a 302
+    assert response.status_code == 302
+
+    # And the Follow activity was created in the outbox
+    outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
+    assert outbox_object.ap_type == "Note"
+    assert outbox_object.summary is None
+    assert outbox_object.content == "<p>hello</p>"
+    assert len(outbox_object.attachments) == 1
+    attachment = outbox_object.attachments[0]
+    assert attachment.type == "Document"
+
+    attachment_response = client.get(attachment.url)
+    assert attachment_response.status_code == 200
+    assert attachment_response.content == b"hello"
+
+    upload = db.execute(select(models.Upload)).scalar_one()
+    assert upload.content_hash == (
+        "324dcf027dd4a30a932c441f365a25e86b173defa4b8e58948253471b81b72cf"
+    )
+
+    outbox_attachment = db.execute(select(models.OutboxObjectAttachment)).scalar_one()
+    assert outbox_attachment.upload_id == upload.id
+    assert outbox_attachment.outbox_object_id == outbox_object.id
+    assert outbox_attachment.filename == "attachment.txt"
+
+
+def test_send_create_activity__no_content_with_cw_and_attachments(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # given a remote actor
+    ra = setup_remote_actor(respx_mock)
+
+    with mock.patch.object(webfinger, "get_actor_url", return_value=ra.ap_id):
+        response = client.post(
+            "/admin/actions/new",
+            data={
+                "content_warning": "cw",
+                "redirect_url": "http://testserver/",
+                "visibility": ap.VisibilityEnum.PUBLIC.name,
+                "csrf_token": generate_csrf_token(),
+            },
+            files={"files": ("attachment.txt", "hello")},
+            cookies=generate_admin_session_cookies(),
+        )
+
+    # Then the server returns a 302
+    assert response.status_code == 302
+
+    # And the Follow activity was created in the outbox
+    outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
+    assert outbox_object.ap_type == "Note"
+    assert outbox_object.summary is None
+    assert outbox_object.content == "<p>cw</p>"
+    assert len(outbox_object.attachments) == 1
+
+
 def test_send_create_activity__no_followers_and_with_mention(
     db: Session,
     client: TestClient,
