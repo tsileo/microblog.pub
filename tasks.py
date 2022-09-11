@@ -272,6 +272,28 @@ def move_to(ctx, moved_to):
 
 
 @task
+def self_destruct(ctx):
+    # type: (Context) -> None
+    from loguru import logger
+
+    from app.boxes import send_self_destruct
+    from app.database import async_session
+
+    logger.disable("app")
+
+    async def _send_self_destruct():
+        if input("Initiating self destruct, type yes to confirm: ") != "yes":
+            print("Aborting")
+
+        async with async_session() as db_session:
+            await send_self_destruct(db_session)
+
+        print("Done")
+
+    asyncio.run(_send_self_destruct())
+
+
+@task
 def yunohost_config(
     ctx,
     domain,

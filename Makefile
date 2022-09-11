@@ -25,3 +25,7 @@ webfinger:
 .PHONY: move-to
 move-to:
 	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv move-to $(account)
+
+.PHONY: self-destruct
+move-to:
+	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv self-destruct

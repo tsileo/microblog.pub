@@ -341,10 +341,16 @@ make account=username@domain.tld move-to
 
 ### Deleting the instance
 
-**This section is just a draft.**
-
 You want to delete your instance, you can request other instances to delete your remote profile.
-Once deleted, you won't be able to use your instance anymore.
+
+Note that this is a best-effort delete as some instances may not delete your data.
+
+The command won't remove any local data, it just broadcast account deletion messages to all known servers.
+
+After executing the command, you should let the server run until all the outgoing delete tasks are sent.
+
+Once deleted, you won't be able to use your instance anymore, but you will be able to perform a fresh re-install of any ActivityPub software.
+
 
 #### Python edition
 

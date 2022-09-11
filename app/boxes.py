@@ -94,6 +94,7 @@ async def send_delete(db_session: AsyncSession, ap_object_id: str) -> None:
         raise ValueError(f"{ap_object_id} not found in the outbox")
 
     delete_id = allocate_outbox_id()
+    # FIXME addressing
     delete = {
         "@context": ap.AS_EXTENDED_CTX,
         "id": outbox_object_id(delete_id),
@@ -401,6 +402,31 @@ async def send_move(
 
     # Store the moved to in order to update the profile
     set_moved_to(target)
+
+    await db_session.commit()
+
+
+async def send_self_destruct(db_session: AsyncSession) -> None:
+    delete_id = allocate_outbox_id()
+    delete = {
+        "@context": ap.AS_EXTENDED_CTX,
+        "id": outbox_object_id(delete_id),
+        "type": "Delete",
+        "actor": ID,
+        "object": ID,
+        "to": [ap.AS_PUBLIC],
+    }
+    outbox_object = await save_outbox_object(
+        db_session,
+        delete_id,
+        delete,
+    )
+    if not outbox_object.id:
+        raise ValueError("Should never happen")
+
+    recipients = await compute_all_known_recipients(db_session)
+    for rcp in recipients:
+        await new_outgoing_activity(db_session, rcp, outbox_object.id)
 
     await db_session.commit()
 
