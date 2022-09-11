@@ -241,6 +241,8 @@ If you want to move followers from your existing account, ensure it is supported
 
 For [Mastodon you can look at Moving or leaving accounts](https://docs.joinmastodon.org/user/moving/).
 
+If you wish to move **to** another instance, see [Moving to another instance](/user_guide.html#moving-to-another-instance).
+
 First you need to grab the "ActivityPub actor URL" for your existing account:
 
 ### Python edition
@@ -322,6 +324,8 @@ rm data/microblogpub.db.bak
 If you want to migrate to another instance, you have the ability to move your existing followers to your new account.
 
 Your new account should reference the existing one, refer to your software configuration (for example [Moving or leaving accounts from the Mastodon doc](https://docs.joinmastodon.org/user/moving/)).
+
+If you wish to move **from** another instance, see [Moving from another instance](/user_guide.html#moving-from-another-instance).
 
 Execute the Move task:
 
