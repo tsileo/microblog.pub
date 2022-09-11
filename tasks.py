@@ -264,7 +264,7 @@ def move_to(ctx, moved_to):
                 )
                 return
 
-            await send_move(db_session, moved_to)
+            await send_move(db_session, new_actor.ap_id)
 
         print("Done")
 
