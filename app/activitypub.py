@@ -61,6 +61,10 @@ class ObjectNotFoundError(Exception):
     pass
 
 
+class ObjectUnavailableError(Exception):
+    pass
+
+
 class FetchErrorTypeEnum(str, enum.Enum):
     TIMEOUT = "TIMEOUT"
     NOT_FOUND = "NOT_FOUND"
@@ -167,6 +171,8 @@ async def fetch(
     # Special handling for deleted object
     if resp.status_code == 410:
         raise ObjectIsGoneError(f"{url} is gone")
+    elif resp.status_code in [401, 403]:
+        raise ObjectUnavailableError(f"not allowed to fetch {url}")
     elif resp.status_code == 404:
         raise ObjectNotFoundError(f"{url} not found")
 

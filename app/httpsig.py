@@ -115,11 +115,8 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
     # might race to fetch each other key
     try:
         actor = await ap.fetch(key_id, disable_httpsig=True)
-    except httpx.HTTPStatusError as http_err:
-        if http_err.response.status_code in [401, 403]:
-            actor = await ap.fetch(key_id, disable_httpsig=False)
-        else:
-            raise
+    except ap.ObjectUnavailableError:
+        actor = await ap.fetch(key_id, disable_httpsig=False)
 
     if actor["type"] == "Key":
         # The Key is not embedded in the Person

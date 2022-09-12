@@ -20,6 +20,8 @@
     <div class="box error-box">
         {% if error.value == "NOT_FOUND" %}
         <p>The remote object is unavailable.</p>
+        {% elif error.value == "UNAUTHORIZED" %}
+        <p>Missing permissions to fetch the remote object.</p>
         {% elif error.value == "TIMEOUT" %}
         <p>Lookup timed out, please try refreshing the page.</p>
         {% else %}
