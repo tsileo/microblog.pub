@@ -403,6 +403,20 @@ async def _build_followx_collection(
     return collection_page
 
 
+async def _empty_followx_collection(
+    db_session: AsyncSession,
+    model_cls: Type[models.Following | models.Follower],
+    path: str,
+) -> ap.RawObject:
+    total_items = await db_session.scalar(select(func.count(model_cls.id)))
+    return {
+        "@context": ap.AS_CTX,
+        "id": ID + path,
+        "type": "OrderedCollection",
+        "totalItems": total_items,
+    }
+
+
 @app.get("/followers")
 async def followers(
     request: Request,
@@ -413,15 +427,27 @@ async def followers(
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     if is_activitypub_requested(request):
-        return ActivityPubResponse(
-            await _build_followx_collection(
-                db_session=db_session,
-                model_cls=models.Follower,
-                path="/followers",
-                page=page,
-                next_cursor=next_cursor,
+        if config.HIDES_FOLLOWERS:
+            return ActivityPubResponse(
+                await _empty_followx_collection(
+                    db_session=db_session,
+                    model_cls=models.Follower,
+                    path="/followers",
+                )
             )
-        )
+        else:
+            return ActivityPubResponse(
+                await _build_followx_collection(
+                    db_session=db_session,
+                    model_cls=models.Follower,
+                    path="/followers",
+                    page=page,
+                    next_cursor=next_cursor,
+                )
+            )
+
+    if config.HIDES_FOLLOWERS:
+        raise HTTPException(status_code=404)
 
     # We only show the most recent 20 followers on the public website
     followers_result = await db_session.scalars(
@@ -460,15 +486,27 @@ async def following(
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     if is_activitypub_requested(request):
-        return ActivityPubResponse(
-            await _build_followx_collection(
-                db_session=db_session,
-                model_cls=models.Following,
-                path="/following",
-                page=page,
-                next_cursor=next_cursor,
+        if config.HIDES_FOLLOWING:
+            return ActivityPubResponse(
+                await _empty_followx_collection(
+                    db_session=db_session,
+                    model_cls=models.Following,
+                    path="/following",
+                )
             )
-        )
+        else:
+            return ActivityPubResponse(
+                await _build_followx_collection(
+                    db_session=db_session,
+                    model_cls=models.Following,
+                    path="/following",
+                    page=page,
+                    next_cursor=next_cursor,
+                )
+            )
+
+    if config.HIDES_FOLLOWING:
+        raise HTTPException(status_code=404)
 
     # We only show the most recent 20 follows on the public website
     following = (

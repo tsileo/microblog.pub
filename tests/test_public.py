@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -31,7 +33,19 @@ def test_followers__ap(client, db) -> None:
     response = client.get("/followers", headers={"Accept": ap.AP_CONTENT_TYPE})
     assert response.status_code == 200
     assert response.headers["content-type"] == ap.AP_CONTENT_TYPE
-    assert response.json()["id"].endswith("/followers")
+    json_resp = response.json()
+    assert json_resp["id"].endswith("/followers")
+    assert "first" in json_resp
+
+
+def test_followers__ap_hides_followers(client, db) -> None:
+    with mock.patch("app.main.config.HIDES_FOLLOWERS", True):
+        response = client.get("/followers", headers={"Accept": ap.AP_CONTENT_TYPE})
+    assert response.status_code == 200
+    assert response.headers["content-type"] == ap.AP_CONTENT_TYPE
+    json_resp = response.json()
+    assert json_resp["id"].endswith("/followers")
+    assert "first" not in json_resp
 
 
 def test_followers__html(client, db) -> None:
@@ -40,14 +54,40 @@ def test_followers__html(client, db) -> None:
     assert response.headers["content-type"].startswith("text/html")
 
 
+def test_followers__html_hides_followers(client, db) -> None:
+    with mock.patch("app.main.config.HIDES_FOLLOWERS", True):
+        response = client.get("/followers", headers={"Accept": "text/html"})
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("text/html")
+
+
 def test_following__ap(client, db) -> None:
     response = client.get("/following", headers={"Accept": ap.AP_CONTENT_TYPE})
     assert response.status_code == 200
     assert response.headers["content-type"] == ap.AP_CONTENT_TYPE
-    assert response.json()["id"].endswith("/following")
+    json_resp = response.json()
+    assert json_resp["id"].endswith("/following")
+    assert "first" in json_resp
+
+
+def test_following__ap_hides_following(client, db) -> None:
+    with mock.patch("app.main.config.HIDES_FOLLOWING", True):
+        response = client.get("/following", headers={"Accept": ap.AP_CONTENT_TYPE})
+    assert response.status_code == 200
+    assert response.headers["content-type"] == ap.AP_CONTENT_TYPE
+    json_resp = response.json()
+    assert json_resp["id"].endswith("/following")
+    assert "first" not in json_resp
 
 
 def test_following__html(client, db) -> None:
     response = client.get("/following")
     assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+
+
+def test_following__html_hides_following(client, db) -> None:
+    with mock.patch("app.main.config.HIDES_FOLLOWING", True):
+        response = client.get("/following", headers={"Accept": "text/html"})
+    assert response.status_code == 404
     assert response.headers["content-type"].startswith("text/html")

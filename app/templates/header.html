@@ -36,8 +36,12 @@
         {% if articles_count %}
             <li>{{ header_link("articles", "Articles") }}</li>
         {% endif %}
+        {% if not HIDES_FOLLOWERS %}
         <li>{{ header_link("followers", "Followers") }} <span class="counter">{{ followers_count }}</span></li>
+        {% endif %}
+        {% if not HIDES_FOLLOWING %}
         <li>{{ header_link("following", "Following") }} <span class="counter">{{ following_count }}</span></li>
+        {% endif %}
         <li>{{ header_link("get_remote_follow", "Remote follow") }}</li>
     </ul>
 </nav>

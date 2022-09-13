@@ -102,6 +102,9 @@ class Config(pydantic.BaseModel):
     emoji: str | None = None
     also_known_as: str | None = None
 
+    hides_followers: bool = False
+    hides_following: bool = False
+
     inbox_retention_days: int = 15
 
     # Config items to make tests easier
@@ -144,6 +147,8 @@ _SCHEME = "https" if CONFIG.https else "http"
 ID = f"{_SCHEME}://{DOMAIN}"
 USERNAME = CONFIG.username
 MANUALLY_APPROVES_FOLLOWERS = CONFIG.manually_approves_followers
+HIDES_FOLLOWERS = CONFIG.hides_followers
+HIDES_FOLLOWING = CONFIG.hides_following
 PRIVACY_REPLACE = None
 if CONFIG.privacy_replace:
     PRIVACY_REPLACE = {pr.domain: pr.replace_by for pr in CONFIG.privacy_replace}
