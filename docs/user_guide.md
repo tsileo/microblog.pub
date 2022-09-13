@@ -58,6 +58,26 @@ manually_approves_followers = true
 
 The default value is `false`.
 
+### Hiding followers
+
+If you wish to hide your followers, add this config item to `profile.toml`:
+
+```toml
+hides_followers = true
+```
+
+The default value is `false`.
+
+### Hiding following
+
+If you wish to hide your following, add this config item to `profile.toml`:
+
+```toml
+hides_following = true
+```
+
+The default value is `false`.
+
 ### Privacy replace
 
 You can define domain to be rewrited to more "privacy friendly" alternatives, like [Invidious](https://invidious.io/)
