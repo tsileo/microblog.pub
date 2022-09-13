@@ -1861,6 +1861,28 @@ async def save_to_inbox(
     raw_object: ap.RawObject,
     sent_by_ap_actor_id: str,
 ) -> None:
+    # Special case for server sending the actor as a payload (like python-federation)
+    if ap.as_list(raw_object["type"])[0] in ap.ACTOR_TYPES:
+        if ap.get_id(raw_object) == sent_by_ap_actor_id:
+            updated_actor = RemoteActor(raw_object)
+
+            try:
+                actor = await fetch_actor(db_session, sent_by_ap_actor_id)
+            except ap.ObjectNotFoundError:
+                logger.warning("Actor not found")
+                return
+
+            # Update the actor
+            actor.ap_actor = updated_actor.ap_actor
+            await db_session.commit()
+            return
+
+        else:
+            logger.warning(
+                f"Reveived an actor payload {raw_object} from " f"{sent_by_ap_actor_id}"
+            )
+            return
+
     try:
         actor = await fetch_actor(db_session, ap.get_id(raw_object["actor"]))
     except ap.ObjectNotFoundError:
