@@ -38,4 +38,9 @@ async def lookup(db_session: AsyncSession, query: str) -> Actor | RemoteObject:
     if ap.as_list(ap_obj["type"])[0] in ap.ACTOR_TYPES:
         return RemoteActor(ap_obj)
     else:
+        # Some software return objects wrapped in a Create activity (like
+        # python-federation)
+        if ap.as_list(ap_obj["type"])[0] == "Create":
+            ap_obj = await ap.get_object(ap_obj)
+
         return await RemoteObject.from_raw_object(ap_obj)

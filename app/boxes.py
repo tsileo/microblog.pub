@@ -1783,6 +1783,12 @@ async def _handle_announce_activity(
             announced_raw_object = await ap.fetch(
                 announce_activity.activity_object_ap_id
             )
+
+            # Some software return objects wrapped in a Create activity (like
+            # python-federation)
+            if ap.as_list(announced_raw_object["type"])[0] == "Create":
+                announced_raw_object = await ap.get_object(announced_raw_object)
+
             announced_actor = await fetch_actor(
                 db_session, ap.get_actor_id(announced_raw_object)
             )
@@ -1844,6 +1850,7 @@ async def _process_transient_object(
     if ap_type in ["Add", "Remove"]:
         logger.info(f"Dropping unsupported {ap_type} object")
     else:
+        # FIXME(ts): handle transient create
         logger.warning(f"Received unknown {ap_type} object")
 
     return None
@@ -1867,7 +1874,7 @@ async def save_to_inbox(
         logger.warning(f"Server {actor.server} is blocked")
         return
 
-    if "id" not in raw_object:
+    if "id" not in raw_object or not raw_object["id"]:
         await _process_transient_object(db_session, raw_object, actor)
         return None
 
