@@ -26,7 +26,7 @@ async def new_ap_incoming_activity(
     raw_object: ap.RawObject,
 ) -> models.IncomingActivity | None:
     ap_id: str
-    if "id" not in raw_object:
+    if "id" not in raw_object or ap.as_list(raw_object["type"])[0] in ap.ACTOR_TYPES:
         if "@context" not in raw_object:
             logger.warning(f"Dropping invalid object: {raw_object}")
             return None

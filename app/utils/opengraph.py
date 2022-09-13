@@ -81,6 +81,9 @@ async def external_urls(
         soup = BeautifulSoup(ro.content, "html5lib")
         for link in soup.find_all("a"):
             h = link.get("href")
+            if not h:
+                continue
+
             ph = urlparse(h)
             mimetype, _ = mimetypes.guess_type(h)
             if (
