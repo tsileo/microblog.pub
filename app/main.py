@@ -446,7 +446,7 @@ async def followers(
                 )
             )
 
-    if config.HIDES_FOLLOWERS:
+    if config.HIDES_FOLLOWERS and not is_current_user_admin(request):
         raise HTTPException(status_code=404)
 
     # We only show the most recent 20 followers on the public website
@@ -505,7 +505,7 @@ async def following(
                 )
             )
 
-    if config.HIDES_FOLLOWING:
+    if config.HIDES_FOLLOWING and not is_current_user_admin(request):
         raise HTTPException(status_code=404)
 
     # We only show the most recent 20 follows on the public website
