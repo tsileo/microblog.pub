@@ -46,7 +46,7 @@ async def save_upload(db_session: AsyncSession, f: UploadFile) -> models.Upload:
     width = None
     height = None
 
-    if f.content_type.startswith("image"):
+    if f.content_type.startswith("image") and not f.content_type == "image/gif":
         with Image.open(f.file) as _original_image:
             # Fix image orientation (as we will remove the info from the EXIF
             # metadata)
