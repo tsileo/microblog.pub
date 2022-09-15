@@ -11,7 +11,7 @@ For now, there's no image published on Docker Hub, this means you will have to b
 Clone the repository, replace `you-domain.tld` by your own domain.
 
 Note that if you want to serve static assets via your reverse proxy (like nginx), clone it in a place
-where accessible by your reverse proxy user.
+where it is accessible by your reverse proxy user.
 
 ```bash
 git clone https://git.sr.ht/~tsileo/microblog.pub your-domain.tld

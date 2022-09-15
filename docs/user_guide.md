@@ -29,7 +29,7 @@ You can tweak your profile by tweaking these items:
  - `summary` (using Markdown)
  - `icon_url`
 
-Whenever one of these config items is updated, an `Update` activity will be sent to all know server to update your remote profile.
+Whenever one of these config items is updated, an `Update` activity will be sent to all known servers to update your remote profile.
 
 The server will need to be restarted for taking changes into account.
 
@@ -39,7 +39,7 @@ You can add metadata to your profile with the `metadata` config item.
 
 Markdown is supported in the `value` field.
 
-Be aware that most other softwares like Mastodon will limit the number of key/value to 4.
+Be aware that most other software like Mastodon will limit the number of key/value to 4.
 
 ```toml
 metadata = [
@@ -68,9 +68,9 @@ hides_followers = true
 
 The default value is `false`.
 
-### Hiding following
+### Hiding who you are following
 
-If you wish to hide your following, add this config item to `profile.toml`:
+If you wish to hide who you are following, add this config item to `profile.toml`:
 
 ```toml
 hides_following = true
@@ -80,10 +80,10 @@ The default value is `false`.
 
 ### Privacy replace
 
-You can define domain to be rewrited to more "privacy friendly" alternatives, like [Invidious](https://invidious.io/)
+You can define domains to be rewritten to more "privacy friendly" alternatives, like [Invidious](https://invidious.io/)
 or [Nitter](https://nitter.net/about).
 
-To do so, just add as these extra config items, this is a sample config that rewrite URLs for Twitter, Youtube, Reddit and Medium:
+To do so, add these extra config items. This is a sample config that rewrite URLs for Twitter, Youtube, Reddit and Medium:
 
 ```toml
 privacy_replace = [
@@ -122,7 +122,7 @@ $primary-color: #e14eea;
 $secondary-color: #32cd32;
 ```
 
-See `app/scss/main.scss` to see what variables can be overidden.
+See `app/scss/main.scss` to see what variables can be overridden.
 
 #### Code highlighting theme
 
@@ -134,7 +134,7 @@ code_highlighting_theme = "solarized-dark"
 
 ### Blocking servers
 
-In addition to blocking "single actors" via the admin interface, you can also prevent any communications with whole servers.
+In addition to blocking "single actors" via the admin interface, you can also prevent any communication with entire servers.
 
 Add a `blocked_servers` config item into `profile.toml`.
 
@@ -152,7 +152,7 @@ blocked_servers = [
 
 Public notes will be visible on the homepage.
 
-Only the last 20 followers/follows you be showing on the public website.
+Only the last 20 followers/follows you have will be shown on the public website.
 
 And only the last 20 interactions (likes/shares/webmentions) will be displayed, to keep things simple/clean.
 
@@ -222,7 +222,7 @@ Receiving a share will trigger a notification, increment the shares counter on t
 
 Liking an object will notify the author.
 
-Unlike sharing, liked object are not displayed on the homepage.
+Unlike sharing, liked objects are not displayed on the homepage.
 
 Most receiving servers will increment the number of likes.
 
@@ -232,13 +232,13 @@ Receiving a like will trigger a notification, increment the likes counter on the
 
 Bookmarks allow you to like objects without notifying the author.
 
-It is basically a "private like", and allow you to easily access them later.
+It is basically a "private like", and allows you to easily access them later.
 
 It will also prevent objects to be pruned.
 
 ### Webmentions
 
-Sending webmention to ping mentioned websites is done automatically once a public note is authored.
+Sending webmentions to ping mentioned websites is done automatically once a public note is authored.
 
 Receiving a webmention will trigger a notification, increment the webmentions counter on the object and the source page will be displayed on the object permalink.
 

@@ -1,6 +1,6 @@
 # Developer's guide
 
-This guide assume you have some knoweldge of [ActivityPub](https://activitypub.rocks/).
+This guide assumes you have some knoweldge of [ActivityPub](https://activitypub.rocks/).
 
 [TOC]
 
