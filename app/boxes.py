@@ -1422,7 +1422,8 @@ async def _handle_update_activity(
         updated_actor = RemoteActor(wrapped_object)
         if (
             from_actor.ap_id != updated_actor.ap_id
-            or from_actor.ap_type != updated_actor.ap_type
+            or ap.as_list(from_actor.ap_type)[0] not in ap.ACTOR_TYPES
+            or ap.as_list(updated_actor.ap_type)[0] not in ap.ACTOR_TYPES
             or from_actor.handle != updated_actor.handle
         ):
             raise ValueError(
