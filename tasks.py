@@ -312,3 +312,18 @@ def yunohost_config(
         summary=summary,
         password=password,
     )
+
+
+@task
+def reset_password(ctx):
+    # type: (Context) -> None
+    import bcrypt
+    from prompt_toolkit import prompt
+
+    new_password = bcrypt.hashpw(
+        prompt("New admin password: ", is_password=True).encode(), bcrypt.gensalt()
+    ).decode()
+
+    print()
+    print("Update data/profile.toml with:")
+    print(f'admin_password = "{new_password}"')
