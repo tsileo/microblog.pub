@@ -213,6 +213,6 @@ def verify_csrf_token(
         logger.exception("Failed to verify CSRF token")
         raise HTTPException(
             status_code=403,
-            detail=f"The security token expired, {please_try_again}",
+            detail=f"The security token has expired, {please_try_again}",
         )
     return None

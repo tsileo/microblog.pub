@@ -276,7 +276,7 @@ async def _check_access_token(
     if now() > access_token_info.created_at.replace(tzinfo=timezone.utc) + timedelta(
         seconds=access_token_info.expires_in
     ):
-        logger.info("Access token is expired")
+        logger.info("Access token has expired")
         return False, None
 
     return True, access_token_info
