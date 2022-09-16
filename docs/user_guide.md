@@ -33,6 +33,9 @@ Whenever one of these config items is updated, an `Update` activity will be sent
 
 The server will need to be restarted for taking changes into account.
 
+Before restarting, you can ensure you haven't made any mistakes by running the [configuration checking task](/user_guide.html#configuration-checking).
+
+
 ### Profile metadata
 
 You can add metadata to your profile with the `metadata` config item.
@@ -283,7 +286,7 @@ make account=username@domain.tld webfinger
 
 Edit the config.
 
-#### Edit the config
+### Edit the config
 
 And add a reference to your old/existing account in `profile.toml`:
 
@@ -294,6 +297,61 @@ also_known_as = "my@old-account.com"
 Restart the server, and you should be able to complete the move from your existing account.
 
 ## Tasks
+
+### Configuration checking
+
+You can confirm that your configuration file (`data/profile.toml`) is valid using the `check-config`
+
+#### Python edition
+
+```bash
+poetry run inv check-config
+```
+
+#### Docker edition
+
+```bash
+make check-config
+```
+
+### Recompiling CSS files
+
+You can ensure your custom theme is valid by recompiling the CSS manually using the `compile-scss` task.
+
+#### Python edition
+
+```bash
+poetry run inv compile-scss
+```
+
+#### Docker edition
+
+```bash
+make compile-scss
+```
+
+
+### Password reset
+
+If have lost your password, you can generate a new one using the `password-reset` task.
+
+#### Python edition
+
+```bash
+# shutdown supervisord
+poetry run inv password-reset
+# edit data/profile.toml
+# restart supervisord
+```
+
+#### Docker edition
+
+```bash
+docker compose stop
+make password-reset
+# edit data/profile.toml
+docker compose up -d
+```
 
 ### Pruning old data
 
@@ -388,3 +446,11 @@ poetry run inv self-destruct
 # For a Docker install
 make self-destruct
 ```
+
+## Troubleshooting
+
+If the server is not (re)starting, you can:
+
+ - [Ensure that the configuration is valid](/user_guide.html#configuration-checking)
+ - [Verify if you haven't any syntax error in the custom theme by recompiling the CSS](/user_guide.html#recompiling-css-files)
+ - Look at the log files

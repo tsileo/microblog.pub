@@ -29,3 +29,15 @@ move-to:
 .PHONY: self-destruct
 move-to:
 	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv self-destruct
+
+.PHONY: reset-password
+reset-password:
+	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv reset-password
+
+.PHONY: check-config
+check-config:
+	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv check-config
+
+.PHONY: compile-scss
+compile-scss:
+	-docker run --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv compile-scss

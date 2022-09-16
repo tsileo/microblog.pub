@@ -327,3 +327,23 @@ def reset_password(ctx):
     print()
     print("Update data/profile.toml with:")
     print(f'admin_password = "{new_password}"')
+
+
+@task
+def check_config(ctx):
+    # type: (Context) -> None
+    import sys
+    import traceback
+
+    from loguru import logger
+
+    logger.disable("app")
+
+    try:
+        from app import config  # noqa: F401
+    except Exception as exc:
+        print("Config error, please fix data/profile.toml:\n")
+        print("".join(traceback.format_exception(exc)))
+        sys.exit(1)
+    else:
+        print("Config is OK")
