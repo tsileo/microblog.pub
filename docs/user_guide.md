@@ -33,7 +33,7 @@ Whenever one of these config items is updated, an `Update` activity will be sent
 
 The server will need to be restarted for taking changes into account.
 
-Before restarting, you can ensure you haven't made any mistakes by running the [configuration checking task](/user_guide.html#configuration-checking).
+Before restarting the server, you can ensure you haven't made any mistakes by running the [configuration checking task](/user_guide.html#configuration-checking).
 
 
 ### Profile metadata
@@ -161,7 +161,7 @@ And only the last 20 interactions (likes/shares/webmentions) will be displayed, 
 
 ## Admin section
 
-You can login to the admin section by clicking on the `Admin` link in the footer or by visiting `https://yourdomain.tld/admin`.
+You can login to the admin section by clicking on the `Admin` link in the footer or by visiting `https://yourdomain.tld/admin/login`.
 The password is the one set during the initial configuration.
 
 ### Lookup

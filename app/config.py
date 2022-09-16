@@ -200,10 +200,19 @@ def generate_csrf_token() -> str:
     return csrf_serializer.dumps(secrets.token_hex(16))  # type: ignore
 
 
-def verify_csrf_token(csrf_token: str = Form()) -> None:
+def verify_csrf_token(
+    csrf_token: str = Form(),
+    redirect_url: str | None = Form(None),
+) -> None:
+    please_try_again = "please try again"
+    if redirect_url:
+        please_try_again = f'<a href="{redirect_url}">please try again</a>'
     try:
         csrf_serializer.loads(csrf_token, max_age=1800)
     except (itsdangerous.BadData, itsdangerous.SignatureExpired):
         logger.exception("Failed to verify CSRF token")
-        raise HTTPException(status_code=403, detail="CSRF error")
+        raise HTTPException(
+            status_code=403,
+            detail=f"The security token expired, {please_try_again}",
+        )
     return None

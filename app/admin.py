@@ -40,13 +40,22 @@ from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
 
 
-def user_session_or_redirect(
+async def user_session_or_redirect(
     request: Request,
     session: str | None = Cookie(default=None),
 ) -> None:
+    if request.method == "POST":
+        form_data = await request.form()
+        if "redirect_url" in form_data:
+            redirect_url = form_data["redirect_url"]
+        else:
+            redirect_url = request.url_for("admin_stream")
+    else:
+        redirect_url = str(request.url)
+
     _RedirectToLoginPage = HTTPException(
         status_code=302,
-        headers={"Location": request.url_for("login") + f"?redirect={request.url}"},
+        headers={"Location": request.url_for("login") + f"?redirect={redirect_url}"},
     )
 
     if not session:
