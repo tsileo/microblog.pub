@@ -10,7 +10,7 @@ ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
 FROM python-base as builder-base
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends curl build-essential gcc libffi-dev libssl-dev libxml2-dev libxslt1-dev zlib1g-dev libxml2-dev libxslt-dev gcc libjpeg-dev zlib1g-dev libwebp-dev
+RUN apt-get install -y --no-install-recommends curl build-essential gcc libffi-dev libssl-dev libxml2-dev libxslt1-dev zlib1g-dev libxslt-dev gcc libjpeg-dev zlib1g-dev libwebp-dev
 # rustc is needed to compile Python packages
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
@@ -21,8 +21,7 @@ RUN poetry install --only main
 
 FROM python-base as production
 RUN apt-get update
-# libjped is needed by Pillow
-RUN apt-get install -y --no-install-recommends libjpeg-dev
+RUN apt-get install -y --no-install-recommends libjpeg-dev libxslt1-dev libxml2-dev libxslt-dev
 RUN groupadd --gid 1000 microblogpub \
   && useradd --uid 1000 --gid microblogpub --shell /bin/bash microblogpub
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
