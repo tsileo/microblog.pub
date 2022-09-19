@@ -130,7 +130,11 @@ async def send_delete(db_session: AsyncSession, ap_object_id: str) -> None:
             db_session, outbox_object_to_delete.in_reply_to
         )
         if replied_object:
-            replied_object.replies_count = replied_object.replies_count - 1
+            new_replies_count = await _get_replies_count(
+                db_session, replied_object.ap_id
+            )
+
+            replied_object.replies_count = new_replies_count
             if replied_object.replies_count < 0:
                 logger.warning("negative replies count for {replied_object.ap_id}")
                 replied_object.replies_count = 0
@@ -344,7 +348,7 @@ async def fetch_conversation_root(
     is_root: bool = False,
 ) -> str:
     """Some softwares do not set the context/conversation field (like Misskey).
-    This means we have to track conversation ourselves. To do set, we fetch
+    This means we have to track conversation ourselves. To do so, we fetch
     the root of the conversation and either:
      - use the context field if set
      - or build a custom conversation ID
@@ -366,7 +370,12 @@ async def fetch_conversation_root(
                     db_session, ap.get_actor_id(raw_reply)
                 )
                 in_reply_to_object = RemoteObject(raw_reply, actor=raw_reply_actor)
-            except (ap.ObjectNotFoundError, ap.ObjectIsGoneError, ap.NotAnObjectError):
+            except (
+                ap.ObjectNotFoundError,
+                ap.ObjectIsGoneError,
+                ap.NotAnObjectError,
+                ap.ObjectUnavailableError,
+            ):
                 return await fetch_conversation_root(db_session, obj, is_root=True)
             except httpx.HTTPStatusError as http_status_error:
                 if 400 <= http_status_error.response.status_code < 500:
@@ -1020,6 +1029,29 @@ async def _handle_delete_activity(
     await db_session.flush()
 
 
+async def _get_replies_count(
+    db_session: AsyncSession,
+    replied_object_ap_id: str,
+) -> int:
+    return (
+        await db_session.scalar(
+            select(func.count(models.InboxObject.id)).where(
+                func.json_extract(models.InboxObject.ap_object, "$.inReplyTo")
+                == replied_object_ap_id,
+                models.InboxObject.is_deleted.is_(False),
+            )
+        )
+    ) + (
+        await db_session.scalar(
+            select(func.count(models.OutboxObject.id)).where(
+                func.json_extract(models.OutboxObject.ap_object, "$.inReplyTo")
+                == replied_object_ap_id,
+                models.OutboxObject.is_deleted.is_(False),
+            )
+        )
+    )
+
+
 async def _revert_side_effect_for_deleted_object(
     db_session: AsyncSession,
     delete_activity: models.InboxObject,
@@ -1040,20 +1072,28 @@ async def _revert_side_effect_for_deleted_object(
                 # also needs to be forwarded
                 is_delete_needs_to_be_forwarded = True
 
+                new_replies_count = await _get_replies_count(
+                    db_session, replied_object.ap_id
+                )
+
                 await db_session.execute(
                     update(models.OutboxObject)
                     .where(
                         models.OutboxObject.id == replied_object.id,
                     )
-                    .values(replies_count=models.OutboxObject.replies_count - 1)
+                    .values(replies_count=new_replies_count)
                 )
             else:
+                new_replies_count = await _get_replies_count(
+                    db_session, replied_object.ap_id
+                )
+
                 await db_session.execute(
                     update(models.InboxObject)
                     .where(
                         models.InboxObject.id == replied_object.id,
                     )
-                    .values(replies_count=models.InboxObject.replies_count - 1)
+                    .values(replies_count=new_replies_count)
                 )
 
     if deleted_ap_object.ap_type == "Like" and deleted_ap_object.activity_object_ap_id:
@@ -1484,8 +1524,9 @@ async def _handle_create_activity(
             logger.warning(
                 f"Got a Delete for {ro.ap_id} from {delete_object.actor.ap_id}??"
             )
+            return None
         else:
-            logger.info("Got a Delete for this object, deleting activity")
+            logger.info("Already received a Delete for this object, deleting activity")
             create_activity.is_deleted = True
             await db_session.flush()
             return None
@@ -1591,20 +1632,28 @@ async def _process_note_object(
                         replied_object,  # type: ignore  # outbox check below
                     )
                 else:
+                    new_replies_count = await _get_replies_count(
+                        db_session, replied_object.ap_id
+                    )
+
                     await db_session.execute(
                         update(models.OutboxObject)
                         .where(
                             models.OutboxObject.id == replied_object.id,
                         )
-                        .values(replies_count=models.OutboxObject.replies_count + 1)
+                        .values(replies_count=new_replies_count)
                     )
             else:
+                new_replies_count = await _get_replies_count(
+                    db_session, replied_object.ap_id
+                )
+
                 await db_session.execute(
                     update(models.InboxObject)
                     .where(
                         models.InboxObject.id == replied_object.id,
                     )
-                    .values(replies_count=models.InboxObject.replies_count + 1)
+                    .values(replies_count=new_replies_count)
                 )
 
         # This object is a reply of a local object, we may need to forward it

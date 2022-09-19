@@ -77,23 +77,29 @@ def test_send_delete__reverts_side_effects(
 
     # with a note that has existing replies
     inbox_note = setup_inbox_note(actor)
-    inbox_note.replies_count = 1
+    # with a bogus counter
+    inbox_note.replies_count = 5
     db.commit()
 
-    # and a local reply
-    outbox_note = setup_outbox_note(
+    # and 2 local replies
+    setup_outbox_note(
         to=[ap.AS_PUBLIC],
         cc=[LOCAL_ACTOR.followers_collection_id],  # type: ignore
         in_reply_to=inbox_note.ap_id,
     )
-    inbox_note.replies_count = inbox_note.replies_count + 1
+    outbox_note2 = setup_outbox_note(
+        to=[ap.AS_PUBLIC],
+        cc=[LOCAL_ACTOR.followers_collection_id],  # type: ignore
+        in_reply_to=inbox_note.ap_id,
+    )
     db.commit()
 
+    # When deleting one of the replies
     response = client.post(
         "/admin/actions/delete",
         data={
             "redirect_url": "http://testserver/",
-            "ap_object_id": outbox_note.ap_id,
+            "ap_object_id": outbox_note2.ap_id,
             "csrf_token": generate_csrf_token(),
         },
         cookies=generate_admin_session_cookies(),
@@ -108,14 +114,14 @@ def test_send_delete__reverts_side_effects(
         select(models.OutboxObject).where(models.OutboxObject.ap_type == "Delete")
     ).scalar_one()
     assert outbox_object.ap_type == "Delete"
-    assert outbox_object.activity_object_ap_id == outbox_note.ap_id
+    assert outbox_object.activity_object_ap_id == outbox_note2.ap_id
 
     # And an outgoing activity was queued
     outgoing_activity = db.execute(select(models.OutgoingActivity)).scalar_one()
     assert outgoing_activity.outbox_object_id == outbox_object.id
     assert outgoing_activity.recipient == ra.inbox_url
 
-    # And the replies count of the replied object was decremented
+    # And the replies count of the replied object was refreshed correctly
     db.refresh(inbox_note)
     assert inbox_note.replies_count == 1
 
