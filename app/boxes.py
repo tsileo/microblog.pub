@@ -1618,6 +1618,8 @@ async def _process_note_object(
         is_hidden_from_stream=not (
             (not is_reply and is_from_following) or is_mention or is_local_reply
         ),
+        # We may already have some replies in DB
+        replies_count=await _get_replies_count(db_session, ro.ap_id),
     )
 
     db_session.add(inbox_object)
