@@ -461,6 +461,7 @@ async def send_create(
     content, tags, mentioned_actors = await markdownify(db_session, source)
     attachments = []
 
+    in_reply_to_object: AnyboxObject | None = None
     if in_reply_to:
         in_reply_to_object = await get_anybox_object_by_ap_id(db_session, in_reply_to)
         if not in_reply_to_object:
@@ -477,23 +478,6 @@ async def send_create(
         else:
             context = in_reply_to_object.ap_context
             conversation = in_reply_to_object.ap_context
-
-        if in_reply_to_object.is_from_outbox:
-            await db_session.execute(
-                update(models.OutboxObject)
-                .where(
-                    models.OutboxObject.ap_id == in_reply_to,
-                )
-                .values(replies_count=models.OutboxObject.replies_count + 1)
-            )
-        elif in_reply_to_object.is_from_inbox:
-            await db_session.execute(
-                update(models.InboxObject)
-                .where(
-                    models.InboxObject.ap_id == in_reply_to,
-                )
-                .values(replies_count=models.InboxObject.replies_count + 1)
-            )
 
     for (upload, filename, alt_text) in uploads:
         attachments.append(upload_to_attachment(upload, filename, alt_text))
@@ -613,6 +597,31 @@ async def send_create(
                 )
 
     await db_session.commit()
+
+    # Refresh the replies counter if needed
+    if in_reply_to_object:
+        new_replies_count = await _get_replies_count(
+            db_session, in_reply_to_object.ap_id
+        )
+        if in_reply_to_object.is_from_outbox:
+            await db_session.execute(
+                update(models.OutboxObject)
+                .where(
+                    models.OutboxObject.ap_id == in_reply_to_object.ap_id,
+                )
+                .values(replies_count=new_replies_count)
+            )
+        elif in_reply_to_object.is_from_inbox:
+            await db_session.execute(
+                update(models.InboxObject)
+                .where(
+                    models.InboxObject.ap_id == in_reply_to_object.ap_id,
+                )
+                .values(replies_count=new_replies_count)
+            )
+
+    await db_session.commit()
+
     return note_id
 
 
