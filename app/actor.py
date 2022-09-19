@@ -109,7 +109,7 @@ class Actor:
 
     @property
     def tags(self) -> list[ap.RawObject]:
-        return self.ap_actor.get("tag", [])
+        return ap.as_list(self.ap_actor.get("tag", []))
 
     @property
     def followers_collection_id(self) -> str | None:
