@@ -295,7 +295,7 @@
 
 {% macro display_og_meta(object) %}
 {% if object.og_meta %}
-{% for og_meta in object.og_meta %}
+{% for og_meta in object.og_meta[:1] %}
 <div class="activity-og-meta">
     {% if og_meta.image %}
     <div>
@@ -442,9 +442,10 @@
             </form>
         {% endif %}
 
-        {{ display_og_meta(object) }}
 
     {% endif %}
+
+        {{ display_og_meta(object) }}
 
         </div>
     {% if object.summary %}
