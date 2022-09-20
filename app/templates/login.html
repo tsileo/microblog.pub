@@ -1,15 +1,18 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
+{% block main_tag %} class="main-flex"{% endblock %}
 {% block content %}
 <div class="centered">
-{% if error %}
-<p class="primary-color">Invalid password.</p>
-{% endif %}
-<form class="form" action="/admin/login" method="POST">
-<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-<input type="hidden" name="redirect" value="{{ redirect }}">
-<input type="password" placeholder="password" name="password" autofocus>
-<input type="submit" value="login">
-</form>
+    <div>
+        {% if error %}
+            <p class="primary-color">Invalid password.</p>
+        {% endif %}
+        <form class="form" action="/admin/login" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="redirect" value="{{ redirect }}">
+            <input type="password" placeholder="password" name="password" autofocus>
+            <input type="submit" value="login">
+        </form>
+    </div>
 </div>
 {% endblock %}

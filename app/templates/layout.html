@@ -14,7 +14,7 @@
 </head>
 <body>
 <div id="main">
-<main>
+<main{%- block main_tag %}{%- endblock %}>
 {% if is_admin %}
 <div id="admin">
 {% macro admin_link(url, text) %}

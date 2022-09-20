@@ -212,6 +212,7 @@ a {
   }
 }
 #main {
+    display: flex;
     flex: 1; 
 }
 main {
@@ -220,10 +221,19 @@ main {
     margin: 30px auto;
 }
 
+.main-flex {
+    display: flex;
+    flex: 1;
+}
+
 .centered {
   display: flex;
+  flex: 1;
   justify-content: center;
   align-items: center;
+  div {
+    display: block;
+  }
 }
 
 footer {
