@@ -219,7 +219,9 @@
             {% if metadata.is_following %}
                 <li>already following</li>
                 <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "unfollow")}}</li>
-                <li>{{ admin_profile_button(actor.ap_id) }}</li>
+                {% if not with_details %}
+                    <li>{{ admin_profile_button(actor.ap_id) }}</li>
+                {% endif %}
             {% elif metadata.is_follow_request_sent %}
                 <li>follow request sent</li>
                 <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "undo follow") }}</li>
@@ -260,6 +262,9 @@
                 {% else %}
                     <li>rejected</li>
                 {% endif %}
+            {% endif %}
+            {% if with_details %}
+                <li><a href="{{ actor.url }}" class="label-btn">remote profile</a></li>
             {% endif %}
         </ul>
     </nav>

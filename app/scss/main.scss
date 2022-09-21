@@ -388,7 +388,7 @@ nav.flexbox {
             margin-right: 0px;
         }
     }
-    a {
+    a:not(.label-btn) {
         color: $primary-color;
         text-decoration: none;
         &:hover, &:active {
@@ -396,10 +396,19 @@ nav.flexbox {
             text-decoration: underline;
         }
     }
-    a.active {
+    a.active:not(.label-btn) {
         color: $secondary-color;
         font-weight: bold;
     }
+}
+
+// after nav.flexbox to override default behavior
+a.label-btn {
+  color: $form-text-color;
+  &:hover {
+    text-decoration: none;
+    color: $form-text-color;
+  }
 }
 
 .ap-object {
