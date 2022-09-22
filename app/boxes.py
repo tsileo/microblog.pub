@@ -1069,7 +1069,17 @@ async def _revert_side_effect_for_deleted_object(
 ) -> None:
     is_delete_needs_to_be_forwarded = False
 
-    # Decrement the replies counter if needed
+    # Delete related notifications
+    notif_deletion_result = await db_session.execute(
+        delete(models.Notification)
+        .where(models.Notification.inbox_object_id == deleted_ap_object.id)
+        .execution_options(synchronize_session=False)
+    )
+    logger.info(
+        f"Deleted {notif_deletion_result.rowcount} notifications"  # type: ignore
+    )
+
+    # Decrement/refresh the replies counter if needed
     if deleted_ap_object.in_reply_to:
         replied_object = await get_anybox_object_by_ap_id(
             db_session,
