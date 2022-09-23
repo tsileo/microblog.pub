@@ -1524,6 +1524,7 @@ async def _handle_create_activity(
     from_actor: models.Actor,
     create_activity: models.InboxObject,
     forwarded_by_actor: models.Actor | None = None,
+    relates_to_inbox_object: models.InboxObject | None = None,
 ) -> None:
     logger.info("Processing Create activity")
 
@@ -1533,6 +1534,10 @@ async def _handle_create_activity(
     ]:
         logger.info(f"Dropping Create activity for {ap_object_type} object")
         await db_session.delete(create_activity)
+        return None
+
+    if relates_to_inbox_object:
+        logger.warning(f"{relates_to_inbox_object.ap_id} is already in the inbox")
         return None
 
     wrapped_object = ap.unwrap_activity(create_activity.ap_object)
@@ -1584,6 +1589,14 @@ async def _handle_read_activity(
     )
     if not wrapped_object_actor.is_blocked:
         ro = RemoteObject(wrapped_object, actor=wrapped_object_actor)
+
+        # Check if we already know about this object
+        if await get_inbox_object_by_ap_id(
+            db_session,
+            ro.ap_id,
+        ):
+            logger.info(f"{ro.ap_id} is already in the inbox, skipping processing")
+            return None
 
         # Then process it likes it's coming from a forwarded activity
         await _process_note_object(db_session, read_activity, wrapped_object_actor, ro)
@@ -2076,7 +2089,11 @@ async def save_to_inbox(
 
     if activity_ro.ap_type == "Create":
         await _handle_create_activity(
-            db_session, actor, inbox_object, forwarded_by_actor=forwarded_by_actor
+            db_session,
+            actor,
+            inbox_object,
+            forwarded_by_actor=forwarded_by_actor,
+            relates_to_inbox_object=relates_to_inbox_object,
         )
     elif activity_ro.ap_type == "Read":
         await _handle_read_activity(db_session, actor, inbox_object)
