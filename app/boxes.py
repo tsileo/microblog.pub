@@ -1526,6 +1526,15 @@ async def _handle_create_activity(
     forwarded_by_actor: models.Actor | None = None,
 ) -> None:
     logger.info("Processing Create activity")
+
+    # Some PeerTube activities make no sense to process
+    if (ap_object_type := ap.as_list(create_activity.ap_object["type"])[0]) in [
+        "CacheFile"
+    ]:
+        logger.info(f"Dropping Create activity for {ap_object_type} object")
+        await db_session.delete(create_activity)
+        return None
+
     wrapped_object = ap.unwrap_activity(create_activity.ap_object)
     if create_activity.actor.ap_id != ap.get_actor_id(wrapped_object):
         raise ValueError("Object actor does not match activity")
