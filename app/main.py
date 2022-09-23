@@ -883,6 +883,48 @@ async def post_remote_follow(
     )
 
 
+@app.get("/remote_interaction")
+async def remote_interaction(
+    request: Request,
+    ap_id: str,
+    db_session: AsyncSession = Depends(get_db_session),
+) -> templates.TemplateResponse:
+    outbox_object = await boxes.get_outbox_object_by_ap_id(
+        db_session,
+        ap_id,
+    )
+    if not outbox_object:
+        raise HTTPException(status_code=404)
+
+    return await templates.render_template(
+        db_session,
+        request,
+        "remote_interact.html",
+        {"outbox_object": outbox_object},
+    )
+
+
+@app.post("/remote_interaction")
+async def post_remote_interaction(
+    request: Request,
+    csrf_check: None = Depends(verify_csrf_token),
+    profile: str = Form(),
+    ap_id: str = Form(),
+) -> RedirectResponse:
+    if not profile.startswith("@"):
+        profile = f"@{profile}"
+
+    remote_follow_template = await get_remote_follow_template(profile)
+    if not remote_follow_template:
+        # TODO(ts): error message to user
+        raise HTTPException(status_code=404)
+
+    return RedirectResponse(
+        remote_follow_template.format(uri=ap_id),
+        status_code=302,
+    )
+
+
 @app.get("/.well-known/webfinger")
 async def wellknown_webfinger(resource: str) -> JSONResponse:
     """Exposes/servers WebFinger data."""
@@ -1179,6 +1221,7 @@ async def robots_file():
 Disallow: /followers
 Disallow: /following
 Disallow: /admin
+Disallow: /remote_interaction
 Disallow: /remote_follow"""
 
 

@@ -466,6 +466,16 @@
         <li>
             <div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">permalink</a></div>
         </li>
+
+        {% if object.is_from_outbox and is_object_page and not is_admin and not request.url.path.startswith("/remote_interaction") %}
+            <li>
+                <a class="label-btn" href="{{ request.url_for("remote_interaction") }}?ap_id={{ object.ap_id }}">
+                    interact from your instance
+                </a>
+            </li>
+        {% endif %}
+
+
         {% if not is_article_mode %}
             <li>
                 <time class="dt-published" datetime="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}" title="{{ object.ap_published_at.replace(microsecond=0).isoformat() }}">{{ object.ap_published_at | timeago }}</time>

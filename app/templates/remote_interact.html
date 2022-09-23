@@ -1,0 +1,26 @@
+{%- import "utils.html" as utils with context -%}
+{% extends "layout.html" %}
+
+{% block head %}
+<title>Interact from your instance</title>
+{% endblock %}
+
+{% block content %}
+{% include "header.html" %}
+
+<div class="box">
+    <h2>Interact with this object</h2>
+</div>
+
+{{ utils.display_object(outbox_object) }}
+
+<div class="box">
+    <form class="form" action="{{ url_for("post_remote_interaction") }}" method="POST">
+        {{ utils.embed_csrf_token() }}
+        <input type="text" name="profile" placeholder="you@instance.tld" autofocus>
+        <input type="hidden" name="ap_id" value="{{ outbox_object.ap_id }}">
+        <input type="submit" value="interact from your instance">
+    </form>
+</div>
+
+{% endblock %}
