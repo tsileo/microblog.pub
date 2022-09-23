@@ -155,7 +155,7 @@ class Object:
     @cached_property
     def url(self) -> str | None:
         obj_url = self.ap_object.get("url")
-        if isinstance(obj_url, str):
+        if isinstance(obj_url, str) and obj_url:
             return obj_url
         elif obj_url:
             for u in ap.as_list(obj_url):
