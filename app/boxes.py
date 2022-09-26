@@ -371,10 +371,8 @@ async def fetch_conversation_root(
                 )
                 in_reply_to_object = RemoteObject(raw_reply, actor=raw_reply_actor)
             except (
-                ap.ObjectNotFoundError,
-                ap.ObjectIsGoneError,
+                ap.FetchError,
                 ap.NotAnObjectError,
-                ap.ObjectUnavailableError,
             ):
                 return await fetch_conversation_root(db_session, obj, is_root=True)
             except httpx.HTTPStatusError as http_status_error:
@@ -1529,9 +1527,11 @@ async def _handle_create_activity(
     logger.info("Processing Create activity")
 
     # Some PeerTube activities make no sense to process
-    if (ap_object_type := ap.as_list(create_activity.ap_object["type"])[0]) in [
-        "CacheFile"
-    ]:
+    if (
+        ap_object_type := ap.as_list(
+            (await ap.get_object(create_activity.ap_object))["type"]
+        )[0]
+    ) in ["CacheFile"]:
         logger.info(f"Dropping Create activity for {ap_object_type} object")
         await db_session.delete(create_activity)
         return None
@@ -1981,7 +1981,7 @@ async def save_to_inbox(
     except ap.ObjectNotFoundError:
         logger.warning("Actor not found")
         return
-    except httpx.HTTPStatusError:
+    except ap.FetchError:
         logger.exception("Failed to fetch actor")
         return
 

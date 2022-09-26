@@ -53,15 +53,26 @@ AS_EXTENDED_CTX = [
 ]
 
 
-class ObjectIsGoneError(Exception):
+class FetchError(Exception):
+    def __init__(self, url: str, resp: httpx.Response | None = None) -> None:
+        resp_part = ""
+        if resp:
+            resp_part = f", got HTTP {resp.status_code}: {resp.text}"
+        message = f"Failed to fetch {url}{resp_part}"
+        super().__init__(message)
+        self.resp = resp
+        self.url = url
+
+
+class ObjectIsGoneError(FetchError):
     pass
 
 
-class ObjectNotFoundError(Exception):
+class ObjectNotFoundError(FetchError):
     pass
 
 
-class ObjectUnavailableError(Exception):
+class ObjectUnavailableError(FetchError):
     pass
 
 
@@ -170,13 +181,17 @@ async def fetch(
 
     # Special handling for deleted object
     if resp.status_code == 410:
-        raise ObjectIsGoneError(f"{url} is gone")
+        raise ObjectIsGoneError(url, resp)
     elif resp.status_code in [401, 403]:
-        raise ObjectUnavailableError(f"not allowed to fetch {url}")
+        raise ObjectUnavailableError(url, resp)
     elif resp.status_code == 404:
-        raise ObjectNotFoundError(f"{url} not found")
+        raise ObjectNotFoundError(url, resp)
 
-    resp.raise_for_status()
+    try:
+        resp.raise_for_status()
+    except httpx.HTTPError as http_error:
+        raise FetchError(url, resp) from http_error
+
     try:
         return resp.json()
     except json.JSONDecodeError:

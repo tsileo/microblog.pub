@@ -208,7 +208,7 @@ async def fetch_actor(
 
             return await save_actor(db_session, ap_actor)
         else:
-            raise ap.ObjectNotFoundError
+            raise ap.ObjectNotFoundError(actor_id)
 
 
 @dataclass

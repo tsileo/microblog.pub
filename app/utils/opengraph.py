@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup  # type: ignore
 from loguru import logger
 from pydantic import BaseModel
 
+from app import activitypub as ap
 from app import ap_object
 from app import config
 from app.actor import LOCAL_ACTOR
@@ -69,7 +70,12 @@ async def external_urls(
             tags_hrefs.add(tag_href)
         if tag.get("type") == "Mention":
             if tag["href"] != LOCAL_ACTOR.ap_id:
-                mentioned_actor = await fetch_actor(db_session, tag["href"])
+                try:
+                    mentioned_actor = await fetch_actor(db_session, tag["href"])
+                except (ap.FetchError, ap.NotAnObjectError):
+                    tags_hrefs.add(tag["href"])
+                    continue
+
                 tags_hrefs.add(mentioned_actor.url)
                 tags_hrefs.add(mentioned_actor.ap_id)
             else:
