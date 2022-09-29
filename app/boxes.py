@@ -288,6 +288,7 @@ async def _send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
         raise ValueError("Should never happen")
 
     outbox_object_to_undo.undone_by_outbox_object_id = outbox_object.id
+    outbox_object_to_undo.is_deleted = True
 
     if outbox_object_to_undo.ap_type == "Follow":
         if not outbox_object_to_undo.activity_object_ap_id:

@@ -571,7 +571,7 @@
             {% if object.visibility in [visibility_enum.PUBLIC, visibility_enum.UNLISTED] %}
             <li>
                 {% if object.announced_via_outbox_object_ap_id %}
-                    {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unshare") }}
+                    {{ admin_undo_button(object.announced_via_outbox_object_ap_id, "unshare") }}
                 {% else %}
                     {{ admin_announce_button(object.ap_id, permalink_id=object.permalink_id) }}
                 {% endif %}
