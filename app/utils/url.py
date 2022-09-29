@@ -58,6 +58,10 @@ def is_url_valid(url: str) -> bool:
         logger.warning(f"{parsed.hostname} is blocked")
         return False
 
+    if parsed.hostname.endswith(".onion"):
+        logger.warning(f"{url} is an onion service")
+        return False
+
     ip_address = _getaddrinfo(
         parsed.hostname, parsed.port or (80 if parsed.scheme == "http" else 443)
     )
