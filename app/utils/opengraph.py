@@ -90,18 +90,22 @@ async def external_urls(
             if not h:
                 continue
 
-            ph = urlparse(h)
-            mimetype, _ = mimetypes.guess_type(h)
-            if (
-                ph.scheme in {"http", "https"}
-                and ph.hostname != note_host
-                and is_url_valid(h)
-                and (
-                    not mimetype
-                    or mimetype.split("/")[0] not in ["image", "video", "audio"]
-                )
-            ):
-                urls.add(h)
+            try:
+                ph = urlparse(h)
+                mimetype, _ = mimetypes.guess_type(h)
+                if (
+                    ph.scheme in {"http", "https"}
+                    and ph.hostname != note_host
+                    and is_url_valid(h)
+                    and (
+                        not mimetype
+                        or mimetype.split("/")[0] not in ["image", "video", "audio"]
+                    )
+                ):
+                    urls.add(h)
+            except Exception:
+                logger.exception(f"Failed to check {h}")
+                continue
 
     return urls - tags_hrefs
 
