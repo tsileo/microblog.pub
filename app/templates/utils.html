@@ -343,11 +343,13 @@
     {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}
     <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} class="attachment"></audio>
     {% elif attachment.type == "Link" %}
-        <a href="{{ attachment.url }}" class="attachment">{{ attachment.url }}</a>
+    <a href="{{ attachment.url }}" class="attachment">{{ attachment.url | truncate(64, True) }}</a> ({{ attachment.mimetype}})
     {% else %}
-    <a href="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="attachment">{{ attachment.url }}</a>
+    <a href="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.url }}"{% endif %} class="attachment">
+        {% if attachment.name %}{{ attachment.name }}{% else %}{{ attachment.url | truncate(64, True) }}{% endif %}
+    </a> ({{ attachment.mimetype }})
     {% endif %}
-    {% if object.sensitive %}
+    {% if object.sensitive and (attachment.type == "Image" or (attachment | has_media_type("image")) or attachment.type == "Video" or (attachment | has_media_type("video"))) %}
             </div>
         </div>
         </div>

@@ -1,4 +1,5 @@
 import hashlib
+import mimetypes
 from datetime import datetime
 from functools import cached_property
 from typing import Any
@@ -275,6 +276,17 @@ class Attachment(BaseModel):
     # Extra fields for the templates (and only for media)
     proxied_url: str | None = None
     resized_url: str | None = None
+
+    @property
+    def mimetype(self) -> str:
+        mimetype = self.media_type
+        if not mimetype:
+            mimetype, _ = mimetypes.guess_type(self.url)
+
+        if not mimetype:
+            return "unknown"
+
+        return mimetype.split("/")[-1]
 
 
 class RemoteObject(Object):
