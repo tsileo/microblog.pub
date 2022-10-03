@@ -417,6 +417,10 @@ a.label-btn {
     nav {
         color: $muted-color;
     }
+    .in-reply-to {
+        display: inline;
+        color: $muted-color;
+    }
     .e-content, .activity-og-meta {
         a:hover {
             text-decoration: underline;
