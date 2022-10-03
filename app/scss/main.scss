@@ -414,12 +414,6 @@ a.label-btn {
 .ap-object {
     margin: 15px 0;
     padding: 20px;
-    .in-reply-to {
-        &:hover {
-            color: $secondary-color;
-            text-decoration: underline;
-        }
-    }
     nav {
         color: $muted-color;
     }
