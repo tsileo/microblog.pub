@@ -179,7 +179,7 @@ def test_send_create_activity__with_attachment(
     outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
     assert outbox_object.ap_type == "Note"
     assert outbox_object.summary is None
-    assert outbox_object.content == "<p>hello</p>"
+    assert outbox_object.content == "<p>hello</p>\n"
     assert len(outbox_object.attachments) == 1
     attachment = outbox_object.attachments[0]
     assert attachment.type == "Document"
@@ -227,7 +227,7 @@ def test_send_create_activity__no_content_with_cw_and_attachments(
     outbox_object = db.execute(select(models.OutboxObject)).scalar_one()
     assert outbox_object.ap_type == "Note"
     assert outbox_object.summary is None
-    assert outbox_object.content == "<p>cw</p>"
+    assert outbox_object.content == "<p>cw</p>\n"
     assert len(outbox_object.attachments) == 1
 
 

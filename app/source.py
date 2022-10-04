@@ -1,52 +1,118 @@
 import re
 import typing
 
-from markdown import markdown
+from mistletoe import Document  # type: ignore
+from mistletoe.html_renderer import HTMLRenderer  # type: ignore
+from mistletoe.span_token import SpanToken  # type: ignore
+from pygments import highlight  # type: ignore
+from pygments.formatters import HtmlFormatter  # type: ignore
+from pygments.lexers import get_lexer_by_name as get_lexer  # type: ignore
+from pygments.lexers import guess_lexer  # type: ignore
 from sqlalchemy import select
 
 from app import webfinger
 from app.config import BASE_URL
+from app.config import CODE_HIGHLIGHTING_THEME
 from app.database import AsyncSession
 from app.utils import emoji
 
 if typing.TYPE_CHECKING:
     from app.actor import Actor
 
-
-def _set_a_attrs(attrs, new=False):
-    attrs[(None, "target")] = "_blank"
-    attrs[(None, "class")] = "external"
-    attrs[(None, "rel")] = "noopener"
-    attrs[(None, "title")] = attrs[(None, "href")]
-    return attrs
-
-
+_FORMATTER = HtmlFormatter(style=CODE_HIGHLIGHTING_THEME)
 _HASHTAG_REGEX = re.compile(r"(#[\d\w]+)")
 _MENTION_REGEX = re.compile(r"@[\d\w_.+-]+@[\d\w-]+\.[\d\w\-.]+")
 
 
-def hashtagify(content: str) -> tuple[str, list[dict[str, str]]]:
-    tags = []
-    hashtags = re.findall(_HASHTAG_REGEX, content)
-    hashtags = sorted(set(hashtags), reverse=True)  # unique tags, longest first
-    for hashtag in hashtags:
-        tag = hashtag[1:]
+class AutoLink(SpanToken):
+    parse_inner = False
+    precedence = 10
+    pattern = re.compile(
+        "(https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*))"  # noqa: E501
+    )
+
+    def __init__(self, match_obj: re.Match) -> None:
+        self.target = match_obj.group()
+
+
+class Mention(SpanToken):
+    parse_inner = False
+    precedence = 10
+    pattern = re.compile(r"(@[\d\w_.+-]+@[\d\w-]+\.[\d\w\-.]+)")
+
+    def __init__(self, match_obj: re.Match) -> None:
+        self.target = match_obj.group()
+
+
+class Hashtag(SpanToken):
+    parse_inner = False
+    precedence = 10
+    pattern = re.compile(r"(#[\d\w]+)")
+
+    def __init__(self, match_obj: re.Match) -> None:
+        self.target = match_obj.group()
+
+
+class CustomRenderer(HTMLRenderer):
+    def __init__(
+        self,
+        mentioned_actors: dict[str, "Actor"] = {},
+        enable_mentionify: bool = True,
+        enable_hashtagify: bool = True,
+    ) -> None:
+        extra_tokens = []
+        if enable_mentionify:
+            extra_tokens.append(Mention)
+        if enable_hashtagify:
+            extra_tokens.append(Hashtag)
+        super().__init__(AutoLink, *extra_tokens)
+
+        self.tags: list[dict[str, str]] = []
+        self.mentioned_actors = mentioned_actors
+
+    def render_auto_link(self, token: AutoLink) -> str:
+        template = '<a href="{target}" rel="noopener">{inner}</a>'
+        target = self.escape_url(token.target)
+        return template.format(target=target, inner=target)
+
+    def render_mention(self, token: Mention) -> str:
+        mention = token.target
+        actor = self.mentioned_actors.get(mention)
+        if not actor:
+            return mention
+
+        self.tags.append(dict(type="Mention", href=actor.ap_id, name=mention))
+
+        link = f'<span class="h-card"><a href="{actor.url}" class="u-url mention">{actor.handle}</a></span>'  # noqa: E501
+        return link
+
+    def render_hashtag(self, token: Hashtag) -> str:
+        tag = token.target[1:]
         link = f'<a href="{BASE_URL}/t/{tag}" class="mention hashtag" rel="tag">#<span>{tag}</span></a>'  # noqa: E501
-        tags.append(dict(href=f"{BASE_URL}/t/{tag}", name=hashtag, type="Hashtag"))
-        content = content.replace(hashtag, link)
-    return content, tags
+        self.tags.append(
+            dict(href=f"{BASE_URL}/t/{tag}", name=token.target, type="Hashtag")
+        )
+        return link
+
+    def render_block_code(self, token: typing.Any) -> str:
+        code = token.children[0].content
+        lexer = get_lexer(token.language) if token.language else guess_lexer(code)
+        return highlight(code, lexer, _FORMATTER)
 
 
-async def _mentionify(
+async def _prefetch_mentioned_actors(
     db_session: AsyncSession,
     content: str,
-) -> tuple[str, list[dict[str, str]], list["Actor"]]:
+) -> dict[str, "Actor"]:
     from app import models
     from app.actor import fetch_actor
 
-    tags = []
-    mentioned_actors = []
+    actors = {}
+
     for mention in re.findall(_MENTION_REGEX, content):
+        if mention in actors:
+            continue
+
         _, username, domain = mention.split("@")
         actor = (
             await db_session.execute(
@@ -63,12 +129,22 @@ async def _mentionify(
                 continue
             actor = await fetch_actor(db_session, actor_url)
 
-        mentioned_actors.append(actor)
-        tags.append(dict(type="Mention", href=actor.ap_id, name=mention))
+        actors[mention] = actor
 
-        link = f'<span class="h-card"><a href="{actor.url}" class="u-url mention">{actor.handle}</a></span>'  # noqa: E501
-        content = content.replace(mention, link)
-    return content, tags, mentioned_actors
+    return actors
+
+
+def hashtagify(content: str) -> tuple[str, list[dict[str, str]]]:
+    # TODO: fix this, switch to mistletoe?
+    tags = []
+    hashtags = re.findall(_HASHTAG_REGEX, content)
+    hashtags = sorted(set(hashtags), reverse=True)  # unique tags, longest first
+    for hashtag in hashtags:
+        tag = hashtag[1:]
+        link = f'<a href="{BASE_URL}/t/{tag}" class="mention hashtag" rel="tag">#<span>{tag}</span></a>'  # noqa: E501
+        tags.append(dict(href=f"{BASE_URL}/t/{tag}", name=hashtag, type="Hashtag"))
+        content = content.replace(hashtag, link)
+    return content, tags
 
 
 async def markdownify(
@@ -82,17 +158,19 @@ async def markdownify(
 
     """
     tags = []
-    mentioned_actors: list["Actor"] = []
-    if enable_hashtagify:
-        content, hashtag_tags = hashtagify(content)
-        tags.extend(hashtag_tags)
+    mentioned_actors: dict[str, "Actor"] = {}
     if enable_mentionify:
-        content, mention_tags, mentioned_actors = await _mentionify(db_session, content)
-        tags.extend(mention_tags)
+        mentioned_actors = await _prefetch_mentioned_actors(db_session, content)
+
+    with CustomRenderer(
+        mentioned_actors=mentioned_actors,
+        enable_mentionify=enable_mentionify,
+        enable_hashtagify=enable_hashtagify,
+    ) as renderer:
+        rendered_content = renderer.render(Document(content))
+        tags.extend(renderer.tags)
 
     # Handle custom emoji
     tags.extend(emoji.tags(content))
 
-    content = markdown(content, extensions=["mdx_linkify", "fenced_code"])
-
-    return content, tags, mentioned_actors
+    return rendered_content, tags, list(mentioned_actors.values())

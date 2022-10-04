@@ -649,6 +649,14 @@ html5lib = ">=1.0.1"
 requests = ">=2.18.4"
 
 [[package]]
+name = "mistletoe"
+version = "0.9.0"
+description = "A fast, extensible Markdown parser in pure Python."
+category = "main"
+optional = false
+python-versions = "~=3.5"
+
+[[package]]
 name = "mypy"
 version = "0.960"
 description = "Optional static typing for Python"
@@ -1275,7 +1283,7 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "84b3a6dcfc055fb0712c6abbf1bf94d9526eda940c4ddb0bd275664e68a4c3e3"
+content-hash = "bc8585a0da6f4d4e54afafde1da287ed75ed6544981d11bba561a7678bc31b8f"
 
 [metadata.files]
 aiosqlite = [
@@ -1831,6 +1839,10 @@ mdx-linkify = [
 ]
 mf2py = [
     {file = "mf2py-1.1.2.tar.gz", hash = "sha256:84f1f8f2ff3f1deb1c30be497e7ccd805452996a662fd4a77f09e0105bede2c9"},
+]
+mistletoe = [
+    {file = "mistletoe-0.9.0-py3-none-any.whl", hash = "sha256:11316e2fe0be422a8248293ad0efbee9ad0c6f3683b2f45bc6b989ea17a68c74"},
+    {file = "mistletoe-0.9.0.tar.gz", hash = "sha256:3cb96d78226d08f0d3bf09efcaf330d23902492006e18b2c06558e8b86bf7faf"},
 ]
 mypy = [
     {file = "mypy-0.960-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:3a3e525cd76c2c4f90f1449fd034ba21fcca68050ff7c8397bb7dd25dd8b8248"},
