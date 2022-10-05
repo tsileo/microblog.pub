@@ -21,15 +21,16 @@ if typing.TYPE_CHECKING:
 
 _FORMATTER = HtmlFormatter(style=CODE_HIGHLIGHTING_THEME)
 _HASHTAG_REGEX = re.compile(r"(#[\d\w]+)")
-_MENTION_REGEX = re.compile(r"@[\d\w_.+-]+@[\d\w-]+\.[\d\w\-.]+")
+_MENTION_REGEX = re.compile(r"(@[\d\w_.+-]+@[\d\w-]+\.[\d\w\-.]+)")
+_URL_REGEX = re.compile(
+    "(https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*))"  # noqa: E501
+)
 
 
 class AutoLink(SpanToken):
     parse_inner = False
     precedence = 10
-    pattern = re.compile(
-        "(https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*))"  # noqa: E501
-    )
+    pattern = _URL_REGEX
 
     def __init__(self, match_obj: re.Match) -> None:
         self.target = match_obj.group()
@@ -38,7 +39,7 @@ class AutoLink(SpanToken):
 class Mention(SpanToken):
     parse_inner = False
     precedence = 10
-    pattern = re.compile(r"(@[\d\w_.+-]+@[\d\w-]+\.[\d\w\-.]+)")
+    pattern = _MENTION_REGEX
 
     def __init__(self, match_obj: re.Match) -> None:
         self.target = match_obj.group()
@@ -47,7 +48,7 @@ class Mention(SpanToken):
 class Hashtag(SpanToken):
     parse_inner = False
     precedence = 10
-    pattern = re.compile(r"(#[\d\w]+)")
+    pattern = _HASHTAG_REGEX
 
     def __init__(self, match_obj: re.Match) -> None:
         self.target = match_obj.group()
@@ -88,9 +89,13 @@ class CustomRenderer(HTMLRenderer):
 
     def render_hashtag(self, token: Hashtag) -> str:
         tag = token.target[1:]
-        link = f'<a href="{BASE_URL}/t/{tag}" class="mention hashtag" rel="tag">#<span>{tag}</span></a>'  # noqa: E501
+        link = f'<a href="{BASE_URL}/t/{tag.lower()}" class="mention hashtag" rel="tag">#<span>{tag}</span></a>'  # noqa: E501
         self.tags.append(
-            dict(href=f"{BASE_URL}/t/{tag}", name=token.target, type="Hashtag")
+            dict(
+                href=f"{BASE_URL}/t/{tag.lower()}",
+                name=token.target.lower(),
+                type="Hashtag",
+            )
         )
         return link
 
@@ -134,17 +139,22 @@ async def _prefetch_mentioned_actors(
     return actors
 
 
-def hashtagify(content: str) -> tuple[str, list[dict[str, str]]]:
-    # TODO: fix this, switch to mistletoe?
+def hashtagify(
+    content: str,
+) -> tuple[str, list[dict[str, str]]]:
     tags = []
-    hashtags = re.findall(_HASHTAG_REGEX, content)
-    hashtags = sorted(set(hashtags), reverse=True)  # unique tags, longest first
-    for hashtag in hashtags:
-        tag = hashtag[1:]
-        link = f'<a href="{BASE_URL}/t/{tag}" class="mention hashtag" rel="tag">#<span>{tag}</span></a>'  # noqa: E501
-        tags.append(dict(href=f"{BASE_URL}/t/{tag}", name=hashtag, type="Hashtag"))
-        content = content.replace(hashtag, link)
-    return content, tags
+    with CustomRenderer(
+        mentioned_actors={},
+        enable_mentionify=False,
+        enable_hashtagify=True,
+    ) as renderer:
+        rendered_content = renderer.render(Document(content))
+        tags.extend(renderer.tags)
+
+    # Handle custom emoji
+    tags.extend(emoji.tags(content))
+
+    return rendered_content, tags
 
 
 async def markdownify(
@@ -174,3 +184,17 @@ async def markdownify(
     tags.extend(emoji.tags(content))
 
     return rendered_content, tags, list(mentioned_actors.values())
+
+
+def dedup_tags(tags: list[dict[str, str]]) -> list[dict[str, str]]:
+    idx = set()
+    deduped_tags = []
+    for tag in tags:
+        tag_idx = (tag["type"], tag["name"])
+        if tag_idx in idx:
+            continue
+
+        idx.add(tag_idx)
+        deduped_tags.append(tag)
+
+    return deduped_tags

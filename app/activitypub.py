@@ -6,7 +6,6 @@ from typing import Any
 
 import httpx
 from loguru import logger
-from markdown import markdown
 
 from app import config
 from app.config import ALSO_KNOWN_AS
@@ -14,6 +13,7 @@ from app.config import AP_CONTENT_TYPE  # noqa: F401
 from app.config import MOVED_TO
 from app.httpsig import auth
 from app.key import get_pubkey_as_pem
+from app.source import dedup_tags
 from app.source import hashtagify
 from app.utils.url import check_url
 
@@ -101,6 +101,19 @@ class VisibilityEnum(str, enum.Enum):
 
 
 _LOCAL_ACTOR_SUMMARY, _LOCAL_ACTOR_TAGS = hashtagify(config.CONFIG.summary)
+_LOCAL_ACTOR_METADATA = []
+if config.CONFIG.metadata:
+    for kv in config.CONFIG.metadata:
+        kv_value, kv_tags = hashtagify(kv.value)
+        _LOCAL_ACTOR_METADATA.append(
+            {
+                "name": kv.key,
+                "type": "PropertyValue",
+                "value": kv_value,
+            }
+        )
+        _LOCAL_ACTOR_TAGS.extend(kv_tags)
+
 
 ME = {
     "@context": AS_EXTENDED_CTX,
@@ -113,7 +126,7 @@ ME = {
     "outbox": config.BASE_URL + "/outbox",
     "preferredUsername": config.USERNAME,
     "name": config.CONFIG.name,
-    "summary": markdown(_LOCAL_ACTOR_SUMMARY, extensions=["mdx_linkify"]),
+    "summary": _LOCAL_ACTOR_SUMMARY,
     "endpoints": {
         # For compat with servers expecting a sharedInbox...
         "sharedInbox": config.BASE_URL
@@ -121,16 +134,7 @@ ME = {
     },
     "url": config.ID + "/",  # XXX: the path is important for Mastodon compat
     "manuallyApprovesFollowers": config.CONFIG.manually_approves_followers,
-    "attachment": [
-        {
-            "name": kv.key,
-            "type": "PropertyValue",
-            "value": markdown(kv.value, extensions=["mdx_linkify", "fenced_code"]),
-        }
-        for kv in config.CONFIG.metadata
-    ]
-    if config.CONFIG.metadata
-    else [],
+    "attachment": _LOCAL_ACTOR_METADATA,
     "icon": {
         "mediaType": mimetypes.guess_type(config.CONFIG.icon_url)[0],
         "type": "Image",
@@ -141,7 +145,7 @@ ME = {
         "owner": config.ID,
         "publicKeyPem": get_pubkey_as_pem(config.KEY_PATH),
     },
-    "tag": _LOCAL_ACTOR_TAGS,
+    "tag": dedup_tags(_LOCAL_ACTOR_TAGS),
 }
 
 if ALSO_KNOWN_AS:
