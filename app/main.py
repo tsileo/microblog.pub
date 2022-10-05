@@ -763,7 +763,7 @@ async def tag_by_name(
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     where = [
-        models.TaggedOutboxObject.tag == tag,
+        models.TaggedOutboxObject.tag == tag.lower(),
         models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
         models.OutboxObject.is_deleted.is_(False),
     ]
@@ -789,7 +789,7 @@ async def tag_by_name(
         return ActivityPubResponse(
             {
                 "@context": ap.AS_CTX,
-                "id": BASE_URL + f"/t/{tag}",
+                "id": BASE_URL + f"/t/{tag.lower()}",
                 "type": "OrderedCollection",
                 "totalItems": tagged_count,
                 "orderedItems": [

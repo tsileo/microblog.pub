@@ -32,6 +32,7 @@ from app.config import MANUALLY_APPROVES_FOLLOWERS
 from app.config import set_moved_to
 from app.database import AsyncSession
 from app.outgoing_activities import new_outgoing_activity
+from app.source import dedup_tags
 from app.source import markdownify
 from app.uploads import upload_to_attachment
 from app.utils import opengraph
@@ -542,7 +543,7 @@ async def send_create(
         "context": context,
         "conversation": context,
         "url": outbox_object_id(note_id),
-        "tag": tags,
+        "tag": dedup_tags(tags),
         "summary": content_warning,
         "inReplyTo": in_reply_to,
         "sensitive": is_sensitive,
@@ -562,7 +563,7 @@ async def send_create(
     for tag in tags:
         if tag["type"] == "Hashtag":
             tagged_object = models.TaggedOutboxObject(
-                tag=tag["name"][1:],
+                tag=tag["name"][1:].lower(),
                 outbox_object_id=outbox_object.id,
             )
             db_session.add(tagged_object)
