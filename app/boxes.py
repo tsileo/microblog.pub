@@ -348,6 +348,7 @@ async def fetch_conversation_root(
     db_session: AsyncSession,
     obj: AnyboxObject | RemoteObject,
     is_root: bool = False,
+    depth: int = 0,
 ) -> str:
     """Some softwares do not set the context/conversation field (like Misskey).
     This means we have to track conversation ourselves. To do so, we fetch
@@ -355,12 +356,13 @@ async def fetch_conversation_root(
      - use the context field if set
      - or build a custom conversation ID
     """
-    if not obj.in_reply_to or is_root:
-        if obj.ap_context:
-            return obj.ap_context
-        else:
-            # Use the root AP ID if there'no context
-            return f"microblogpub:root:{obj.ap_id}"
+    logger.info(f"Fetching convo root for ap_id={obj.ap_id}/{depth=}")
+    if obj.ap_context:
+        return obj.ap_context
+
+    if not obj.in_reply_to or is_root or depth > 10:
+        # Use the root AP ID if there'no context
+        return f"microblogpub:root:{obj.ap_id}"
     else:
         in_reply_to_object: AnyboxObject | RemoteObject | None = (
             await get_anybox_object_by_ap_id(db_session, obj.in_reply_to)
@@ -376,15 +378,21 @@ async def fetch_conversation_root(
                 ap.FetchError,
                 ap.NotAnObjectError,
             ):
-                return await fetch_conversation_root(db_session, obj, is_root=True)
+                return await fetch_conversation_root(
+                    db_session, obj, is_root=True, depth=depth + 1
+                )
             except httpx.HTTPStatusError as http_status_error:
                 if 400 <= http_status_error.response.status_code < 500:
                     # We may not have access, in this case consider if root
-                    return await fetch_conversation_root(db_session, obj, is_root=True)
+                    return await fetch_conversation_root(
+                        db_session, obj, is_root=True, depth=depth + 1
+                    )
                 else:
                     raise
 
-        return await fetch_conversation_root(db_session, in_reply_to_object)
+        return await fetch_conversation_root(
+            db_session, in_reply_to_object, depth=depth + 1
+        )
 
 
 async def send_move(
