@@ -1,6 +1,7 @@
 import hashlib
 import typing
 from dataclasses import dataclass
+from datetime import timedelta
 from functools import cached_property
 from typing import Union
 from urllib.parse import urlparse
@@ -12,6 +13,8 @@ from sqlalchemy.orm import joinedload
 from app import activitypub as ap
 from app import media
 from app.database import AsyncSession
+from app.utils.datetime import as_utc
+from app.utils.datetime import now
 
 if typing.TYPE_CHECKING:
     from app.models import Actor as ActorModel
@@ -189,26 +192,44 @@ async def fetch_actor(
     if existing_actor:
         if existing_actor.is_deleted:
             raise ap.ObjectNotFoundError(f"{actor_id} was deleted")
-        return existing_actor
-    else:
-        if save_if_not_found:
-            ap_actor = await ap.fetch(actor_id)
-            # Some softwares uses URL when we expect ID
-            if actor_id == ap_actor.get("url"):
-                # Which mean we may already have it in DB
-                existing_actor_by_url = (
-                    await db_session.scalars(
-                        select(models.Actor).where(
-                            models.Actor.ap_id == ap.get_id(ap_actor),
-                        )
-                    )
-                ).one_or_none()
-                if existing_actor_by_url:
-                    return existing_actor_by_url
 
-            return await save_actor(db_session, ap_actor)
+        if now() - as_utc(existing_actor.updated_at) > timedelta(hours=24):
+            logger.info(
+                f"Refreshing {actor_id=} last updated {existing_actor.updated_at}"
+            )
+            try:
+                ap_actor = await ap.fetch(actor_id)
+                existing_actor.ap_actor = ap_actor
+                existing_actor.updated_at = now()
+                return existing_actor
+            except Exception:
+                logger.exception(f"Failed to refresh {actor_id}")
+                # If we fail to refresh the actor, return the cached one
+                return existing_actor
         else:
-            raise ap.ObjectNotFoundError(actor_id)
+            return existing_actor
+
+    if save_if_not_found:
+        ap_actor = await ap.fetch(actor_id)
+        # Some softwares uses URL when we expect ID
+        if actor_id == ap_actor.get("url"):
+            # Which mean we may already have it in DB
+            existing_actor_by_url = (
+                await db_session.scalars(
+                    select(models.Actor).where(
+                        models.Actor.ap_id == ap.get_id(ap_actor),
+                    )
+                )
+            ).one_or_none()
+            if existing_actor_by_url:
+                # Update the actor as we had to fetch it anyway
+                existing_actor_by_url.ap_actor = ap_actor
+                existing_actor_by_url.updated_at = now()
+                return existing_actor_by_url
+
+        return await save_actor(db_session, ap_actor)
+    else:
+        raise ap.ObjectNotFoundError(actor_id)
 
 
 @dataclass

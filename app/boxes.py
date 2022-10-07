@@ -1492,6 +1492,7 @@ async def _handle_update_activity(
 
         # Update the actor
         from_actor.ap_actor = updated_actor.ap_actor
+        from_actor.updated_at = now()
     elif (ap_type := wrapped_object["type"]) in [
         "Question",
         "Note",
@@ -1514,6 +1515,7 @@ async def _handle_update_activity(
             # Everything looks correct, update the object in the inbox
             logger.info(f"Updating {existing_object.ap_id}")
             existing_object.ap_object = wrapped_object
+            existing_object.updated_at = now()
     else:
         # TODO(ts): support updating objects
         logger.info(f'Cannot update {wrapped_object["type"]}')
