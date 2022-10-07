@@ -88,8 +88,12 @@ def _body_digest(body: bytes) -> str:
     return "SHA-256=" + base64.b64encode(h.digest()).decode("utf-8")
 
 
-async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
-    if cached_key := _KEY_CACHE.get(key_id):
+async def _get_public_key(
+    db_session: AsyncSession,
+    key_id: str,
+    should_skip_cache: bool = False,
+) -> Key:
+    if not should_skip_cache and (cached_key := _KEY_CACHE.get(key_id)):
         logger.info(f"Key {key_id} found in cache")
         return cached_key
 
@@ -101,12 +105,13 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
             select(models.Actor).where(models.Actor.ap_id == key_id.split("#")[0])
         )
     ).one_or_none()
-    if existing_actor and existing_actor.public_key_id == key_id:
-        k = Key(existing_actor.ap_id, key_id)
-        k.load_pub(existing_actor.public_key_as_pem)
-        logger.info(f"Found {key_id} on an existing actor")
-        _KEY_CACHE[key_id] = k
-        return k
+    if not should_skip_cache:
+        if existing_actor and existing_actor.public_key_id == key_id:
+            k = Key(existing_actor.ap_id, key_id)
+            k.load_pub(existing_actor.public_key_as_pem)
+            logger.info(f"Found {key_id} on an existing actor")
+            _KEY_CACHE[key_id] = k
+            return k
 
     # Fetch it
     from app import activitypub as ap
@@ -132,6 +137,13 @@ async def _get_public_key(db_session: AsyncSession, key_id: str) -> Key:
         raise ValueError(
             f"failed to fetch requested key {key_id}: got {actor['publicKey']}"
         )
+
+    if should_skip_cache and actor["type"] != "Key" and existing_actor:
+        # We had to skip the cache, which means the actor key probably changed
+        # and we want to update our cached version
+        existing_actor.ap_actor = actor
+        existing_actor.updated_at = now()
+        await db_session.commit()
 
     _KEY_CACHE[key_id] = k
     return k
@@ -216,7 +228,17 @@ async def httpsig_checker(
     has_valid_signature = _verify_h(
         signed_string, base64.b64decode(hsig["signature"]), k.pubkey
     )
-    # FIXME: fetch/update the user if the signature is wrong
+
+    # If the signature is not valid, we may have to update the cached actor
+    if not has_valid_signature:
+        logger.info("Invalid signature, trying to refresh actor")
+        try:
+            k = await _get_public_key(db_session, hsig["keyId"], should_skip_cache=True)
+            has_valid_signature = _verify_h(
+                signed_string, base64.b64decode(hsig["signature"]), k.pubkey
+            )
+        except Exception:
+            logger.exception("Failed to refresh actor")
 
     httpsig_info = HTTPSigInfo(
         has_valid_signature=has_valid_signature,
