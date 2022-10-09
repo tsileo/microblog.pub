@@ -24,6 +24,7 @@ from app.actor import Actor
 from app.actor import RemoteActor
 from app.actor import fetch_actor
 from app.actor import save_actor
+from app.actor import update_actor_if_needed
 from app.ap_object import RemoteObject
 from app.config import BASE_URL
 from app.config import BLOCKED_SERVERS
@@ -1499,8 +1500,7 @@ async def _handle_update_activity(
             )
 
         # Update the actor
-        from_actor.ap_actor = updated_actor.ap_actor
-        from_actor.updated_at = now()
+        await update_actor_if_needed(db_session, from_actor, updated_actor)
     elif (ap_type := wrapped_object["type"]) in [
         "Question",
         "Note",

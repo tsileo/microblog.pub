@@ -199,8 +199,11 @@ async def fetch_actor(
             )
             try:
                 ap_actor = await ap.fetch(actor_id)
-                existing_actor.ap_actor = ap_actor
-                existing_actor.updated_at = now()
+                await update_actor_if_needed(
+                    db_session,
+                    existing_actor,
+                    RemoteActor(ap_actor),
+                )
                 return existing_actor
             except Exception:
                 logger.exception(f"Failed to refresh {actor_id}")
@@ -223,13 +226,30 @@ async def fetch_actor(
             ).one_or_none()
             if existing_actor_by_url:
                 # Update the actor as we had to fetch it anyway
-                existing_actor_by_url.ap_actor = ap_actor
-                existing_actor_by_url.updated_at = now()
+                await update_actor_if_needed(
+                    db_session,
+                    existing_actor_by_url,
+                    RemoteActor(ap_actor),
+                )
                 return existing_actor_by_url
 
         return await save_actor(db_session, ap_actor)
     else:
         raise ap.ObjectNotFoundError(actor_id)
+
+
+async def update_actor_if_needed(
+    db_session: AsyncSession,
+    actor_in_db: "ActorModel",
+    ra: RemoteActor,
+) -> None:
+    # Check if we actually need to udpte the actor in DB
+    if _actor_hash(ra) != _actor_hash(actor_in_db):
+        actor_in_db.ap_actor = ra.ap_actor
+        actor_in_db.handle = ra.handle
+        actor_in_db.ap_type = ra.ap_type
+        actor_in_db.updated_at = now()
+        await db_session.flush()
 
 
 @dataclass

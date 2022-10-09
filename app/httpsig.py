@@ -116,7 +116,7 @@ async def _get_public_key(
     # Fetch it
     from app import activitypub as ap
     from app.actor import RemoteActor
-    from app.actor import _actor_hash
+    from app.actor import update_actor_if_needed
 
     # Without signing the request as if it's the first contact, the 2 servers
     # might race to fetch each other key
@@ -140,16 +140,10 @@ async def _get_public_key(
             f"failed to fetch requested key {key_id}: got {actor['publicKey']}"
         )
 
-    if (
-        should_skip_cache
-        and actor["type"] != "Key"
-        and existing_actor
-        and _actor_hash(RemoteActor(actor)) != _actor_hash(existing_actor)
-    ):
+    if should_skip_cache and actor["type"] != "Key" and existing_actor:
         # We had to skip the cache, which means the actor key probably changed
         # and we want to update our cached version
-        existing_actor.ap_actor = actor
-        existing_actor.updated_at = now()
+        await update_actor_if_needed(db_session, existing_actor, RemoteActor(actor))
         await db_session.commit()
 
     _KEY_CACHE[key_id] = k
