@@ -22,7 +22,7 @@ There are still some rough edges, but the server is mostly functional.
     - Author notes in Markdown, with code highlighting support
     - Dedicated section for articles/blog posts (enabled when the first article is posted)
  - Lightweight
-    - Uses SQLite, and no external dependencies except Python 3.10+
+    - Uses SQLite, and Python 3.10+
     - Can be deployed on small VPS
  - Privacy-aware
     - EXIF metadata (like GPS location) are stripped before storage
