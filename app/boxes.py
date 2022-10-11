@@ -2209,6 +2209,8 @@ async def save_to_inbox(
     elif activity_ro.ap_type == "View":
         # View is used by Peertube, there's nothing useful we can do with it
         await db_session.delete(inbox_object)
+    elif activity_ro.ap_type == "Block":
+        pass
     else:
         logger.warning(f"Received an unknown {inbox_object.ap_type} object")
 

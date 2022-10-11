@@ -248,8 +248,9 @@ async def update_actor_if_needed(
         actor_in_db.ap_actor = ra.ap_actor
         actor_in_db.handle = ra.handle
         actor_in_db.ap_type = ra.ap_type
-        actor_in_db.updated_at = now()
-        await db_session.flush()
+
+    actor_in_db.updated_at = now()
+    await db_session.flush()
 
 
 @dataclass
