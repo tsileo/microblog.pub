@@ -259,9 +259,11 @@ class ActorMetadata:
     is_following: bool
     is_follower: bool
     is_follow_request_sent: bool
+    is_follow_request_rejected: bool
     outbox_follow_ap_id: str | None
     inbox_follow_ap_id: str | None
     moved_to: typing.Optional["ActorModel"]
+    has_blocked_local_actor: bool
 
 
 ActorsMetadata = dict[str, ActorMetadata]
@@ -304,6 +306,26 @@ async def get_actors_metadata(
             )
         )
     }
+    rejected_follow_requests = {
+        reject.activity_object_ap_id
+        for reject in await db_session.execute(
+            select(models.InboxObject.activity_object_ap_id).where(
+                models.InboxObject.ap_type == "Reject",
+                models.InboxObject.ap_actor_id.in_(ap_actor_ids),
+            )
+        )
+    }
+    blocks = {
+        block.ap_actor_id
+        for block in await db_session.execute(
+            select(models.InboxObject.ap_actor_id).where(
+                models.InboxObject.ap_type == "Block",
+                models.InboxObject.undone_by_inbox_object_id.is_(None),
+                models.InboxObject.ap_actor_id.in_(ap_actor_ids),
+            )
+        )
+    }
+
     idx: ActorsMetadata = {}
     for actor in actors:
         if not actor.ap_id:
@@ -326,9 +348,15 @@ async def get_actors_metadata(
             is_following=actor.ap_id in following,
             is_follower=actor.ap_id in followers,
             is_follow_request_sent=actor.ap_id in sent_follow_requests,
+            is_follow_request_rejected=bool(
+                sent_follow_requests[actor.ap_id] in rejected_follow_requests
+            )
+            if actor.ap_id in sent_follow_requests
+            else False,
             outbox_follow_ap_id=sent_follow_requests.get(actor.ap_id),
             inbox_follow_ap_id=followers.get(actor.ap_id),
             moved_to=moved_to,
+            has_blocked_local_actor=actor.ap_id in blocks,
         )
     return idx
 

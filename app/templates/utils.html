@@ -216,6 +216,9 @@
 <div>
     <nav class="flexbox actor-metadata">
         <ul>
+            {% if metadata.has_blocked_local_actor %}
+                <li>blocked you</li>
+            {% endif %}
             {% if metadata.is_following %}
                 <li>already following</li>
                 <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "unfollow")}}</li>
@@ -223,8 +226,15 @@
                     <li>{{ admin_profile_button(actor.ap_id) }}</li>
                 {% endif %}
             {% elif metadata.is_follow_request_sent %}
-                <li>follow request sent</li>
-                <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "undo follow") }}</li>
+                {% if metadata.is_follow_request_rejected %}
+                    <li>follow request rejected</li>
+                    {% if not metadata.has_blocked_local_actor %}
+                        <li>{{ admin_follow_button(actor) }}</li>
+                    {% endif %}
+                {% else %}
+                    <li>follow request sent</li>
+                    <li>{{ admin_undo_button(metadata.outbox_follow_ap_id, "undo follow") }}</li>
+                {% endif %}
             {% elif not actor.moved_to %}
                 <li>{{ admin_follow_button(actor) }}</li>
             {% endif %}

@@ -36,6 +36,12 @@
             {%- elif notif.notification_type.value == "follow_request_rejected" %}
                 {{ notif_actor_action(notif, "rejected your follow request") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {% elif notif.notification_type.value == "blocked" %}
+                {{ notif_actor_action(notif, "blocked you") }}
+                {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {% elif notif.notification_type.value == "unblocked" %}
+                {{ notif_actor_action(notif, "unblocked you") }}
+                {{ utils.display_actor(notif.actor, actors_metadata) }}
             {%- elif notif.notification_type.value == "move" %}
                 {# for move notif, the actor is the target and the inbox object the Move activity #}
                 <div class="actor-action">

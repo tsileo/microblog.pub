@@ -551,6 +551,9 @@ class NotificationType(str, enum.Enum):
     UPDATED_WEBMENTION = "updated_webmention"
     DELETED_WEBMENTION = "deleted_webmention"
 
+    BLOCKED = "blocked"
+    UNBLOCKED = "unblocked"
+
 
 class Notification(Base):
     __tablename__ = "notifications"

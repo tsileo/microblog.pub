@@ -68,6 +68,20 @@ def build_accept_activity(
     }
 
 
+def build_block_activity(
+    from_remote_actor: actor.RemoteActor,
+    for_remote_actor: actor.RemoteActor,
+    outbox_public_id: str | None = None,
+) -> ap.RawObject:
+    return {
+        "@context": ap.AS_CTX,
+        "type": "Block",
+        "id": from_remote_actor.ap_id + "/block/" + (outbox_public_id or uuid4().hex),
+        "actor": from_remote_actor.ap_id,
+        "object": for_remote_actor.ap_id,
+    }
+
+
 def build_move_activity(
     from_remote_actor: actor.RemoteActor,
     for_remote_object: actor.RemoteActor,

@@ -1406,6 +1406,13 @@ async def _handle_undo_activity(
                     inbox_object_id=ap_activity_to_undo.id,
                 )
                 db_session.add(notif)
+    elif ap_activity_to_undo.ap_type == "Block":
+        notif = models.Notification(
+            notification_type=models.NotificationType.UNBLOCKED,
+            actor_id=from_actor.id,
+            inbox_object_id=ap_activity_to_undo.id,
+        )
+        db_session.add(notif)
     else:
         logger.warning(f"Don't know how to undo {ap_activity_to_undo.ap_type} activity")
 
@@ -1945,6 +1952,28 @@ async def _handle_like_activity(
         db_session.add(notif)
 
 
+async def _handle_block_activity(
+    db_session: AsyncSession,
+    actor: models.Actor,
+    block_activity: models.InboxObject,
+):
+    if block_activity.activity_object_ap_id != LOCAL_ACTOR.ap_id:
+        logger.warning(
+            "Received invalid Block activity "
+            f"{block_activity.activity_object_ap_id=}"
+        )
+        await db_session.delete(block_activity)
+        return
+
+    # Create a notification
+    notif = models.Notification(
+        notification_type=models.NotificationType.BLOCKED,
+        actor_id=actor.id,
+        inbox_object_id=block_activity.id,
+    )
+    db_session.add(notif)
+
+
 async def _process_transient_object(
     db_session: AsyncSession,
     raw_object: ap.RawObject,
@@ -2210,7 +2239,11 @@ async def save_to_inbox(
         # View is used by Peertube, there's nothing useful we can do with it
         await db_session.delete(inbox_object)
     elif activity_ro.ap_type == "Block":
-        pass
+        await _handle_block_activity(
+            db_session,
+            actor,
+            inbox_object,
+        )
     else:
         logger.warning(f"Received an unknown {inbox_object.ap_type} object")
 

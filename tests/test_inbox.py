@@ -423,3 +423,53 @@ def test_inbox__move_activity(
     ).scalar_one()
     assert notif.actor.ap_id == new_ra.ap_id
     assert notif.inbox_object_id == inbox_activity.id
+
+
+def test_inbox__block_activity(
+    db: Session,
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    # Given a remote actor
+    ra = setup_remote_actor(respx_mock)
+
+    # Which is followed by the local actor
+    setup_remote_actor_as_following(ra)
+
+    # When receiving a Block activity
+    follow_activity = RemoteObject(
+        factories.build_block_activity(
+            from_remote_actor=ra,
+            for_remote_actor=LOCAL_ACTOR,
+        ),
+        ra,
+    )
+    with mock_httpsig_checker(ra):
+        response = client.post(
+            "/inbox",
+            headers={"Content-Type": ap.AS_CTX},
+            json=follow_activity.ap_object,
+        )
+
+    # Then the server returns a 202
+    assert response.status_code == 202
+
+    run_process_next_incoming_activity()
+
+    # And the actor was saved in DB
+    saved_actor = db.execute(select(models.Actor)).scalar_one()
+    assert saved_actor.ap_id == ra.ap_id
+
+    # And the Block activity was saved in the inbox
+    inbox_activity = db.execute(
+        select(models.InboxObject).where(models.InboxObject.ap_type == "Block")
+    ).scalar_one()
+
+    # And a notification was created
+    notif = db.execute(
+        select(models.Notification).where(
+            models.Notification.notification_type == models.NotificationType.BLOCKED
+        )
+    ).scalar_one()
+    assert notif.actor.ap_id == ra.ap_id
+    assert notif.inbox_object_id == inbox_activity.id
