@@ -89,6 +89,12 @@ Setup config.
 poetry run inv configuration-wizard
 ```
 
+Setup the database.
+
+```bash
+poetry run inv migrate-db
+```
+
 Grab your virtualenv path.
 
 ```bash
