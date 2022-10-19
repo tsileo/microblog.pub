@@ -29,7 +29,7 @@ _URL_REGEX = re.compile(
 
 class AutoLink(SpanToken):
     parse_inner = False
-    precedence = 10
+    precedence = 1
     pattern = _URL_REGEX
 
     def __init__(self, match_obj: re.Match) -> None:
