@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from fastapi import Request
 from itsdangerous import URLSafeTimedSerializer
 from loguru import logger
-from markdown import markdown
+from mistletoe import markdown  # type: ignore
 
 from app.utils.emoji import _load_emojis
 from app.utils.version import get_version_commit
@@ -158,9 +158,7 @@ ALSO_KNOWN_AS = CONFIG.also_known_as
 
 INBOX_RETENTION_DAYS = CONFIG.inbox_retention_days
 CUSTOM_FOOTER = (
-    markdown(
-        CONFIG.custom_footer.replace("{version}", VERSION), extensions=["mdx_linkify"]
-    )
+    markdown(CONFIG.custom_footer.replace("{version}", VERSION))
     if CONFIG.custom_footer
     else None
 )

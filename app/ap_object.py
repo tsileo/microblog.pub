@@ -6,7 +6,7 @@ from typing import Any
 
 import pydantic
 from bs4 import BeautifulSoup  # type: ignore
-from markdown import markdown
+from mistletoe import markdown  # type: ignore
 
 from app import activitypub as ap
 from app.actor import LOCAL_ACTOR
@@ -176,7 +176,7 @@ class Object:
 
         # PeerTube returns the content as markdown
         if self.ap_object.get("mediaType") == "text/markdown":
-            content = markdown(content, extensions=["mdx_linkify"])
+            content = markdown(content)
 
         return content
 
