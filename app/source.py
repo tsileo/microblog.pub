@@ -183,7 +183,7 @@ async def markdownify(
     # Handle custom emoji
     tags.extend(emoji.tags(content))
 
-    return rendered_content, tags, list(mentioned_actors.values())
+    return rendered_content, dedup_tags(tags), list(mentioned_actors.values())
 
 
 def dedup_tags(tags: list[dict[str, str]]) -> list[dict[str, str]]:
