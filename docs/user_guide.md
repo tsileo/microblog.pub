@@ -333,13 +333,13 @@ make compile-scss
 
 ### Password reset
 
-If have lost your password, you can generate a new one using the `password-reset` task.
+If have lost your password, you can generate a new one using the `reset-password` task.
 
 #### Python edition
 
 ```bash
 # shutdown supervisord
-poetry run inv password-reset
+poetry run inv reset-password
 # edit data/profile.toml
 # restart supervisord
 ```
@@ -348,7 +348,7 @@ poetry run inv password-reset
 
 ```bash
 docker compose stop
-make password-reset
+make reset-password
 # edit data/profile.toml
 docker compose up -d
 ```
