@@ -42,6 +42,12 @@
             {% elif notif.notification_type.value == "unblocked" %}
                 {{ notif_actor_action(notif, "unblocked you") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {% elif notif.notification_type.value == "block" %}
+                {{ notif_actor_action(notif, "was blocked") }}
+                {{ utils.display_actor(notif.actor, actors_metadata) }}
+            {% elif notif.notification_type.value == "unblock" %}
+                {{ notif_actor_action(notif, "was unblocked") }}
+                {{ utils.display_actor(notif.actor, actors_metadata) }}
             {%- elif notif.notification_type.value == "move" %}
                 {# for move notif, the actor is the target and the inbox object the Move activity #}
                 <div class="actor-action">

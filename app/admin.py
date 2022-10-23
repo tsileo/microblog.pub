@@ -25,7 +25,9 @@ from app.actor import fetch_actor
 from app.actor import get_actors_metadata
 from app.boxes import get_inbox_object_by_ap_id
 from app.boxes import get_outbox_object_by_ap_id
+from app.boxes import send_block
 from app.boxes import send_follow
+from app.boxes import send_unblock
 from app.config import EMOJIS
 from app.config import generate_csrf_token
 from app.config import session_serializer
@@ -340,6 +342,7 @@ async def admin_inbox(
                 "Update",
                 "Undo",
                 "Read",
+                "Reject",
                 "Add",
                 "Remove",
                 "EmojiReact",
@@ -868,10 +871,7 @@ async def admin_actions_block(
     csrf_check: None = Depends(verify_csrf_token),
     db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
-    logger.info(f"Blocking {ap_actor_id}")
-    actor = await fetch_actor(db_session, ap_actor_id)
-    actor.is_blocked = True
-    await db_session.commit()
+    await send_block(db_session, ap_actor_id)
     return RedirectResponse(redirect_url, status_code=302)
 
 
@@ -884,9 +884,7 @@ async def admin_actions_unblock(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
     logger.info(f"Unblocking {ap_actor_id}")
-    actor = await fetch_actor(db_session, ap_actor_id)
-    actor.is_blocked = False
-    await db_session.commit()
+    await send_unblock(db_session, ap_actor_id)
     return RedirectResponse(redirect_url, status_code=302)
 
 

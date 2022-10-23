@@ -90,6 +90,87 @@ async def save_outbox_object(
     return outbox_object
 
 
+async def send_unblock(db_session: AsyncSession, ap_actor_id: str) -> None:
+    actor = await fetch_actor(db_session, ap_actor_id)
+
+    block_activity = (
+        await db_session.scalars(
+            select(models.OutboxObject).where(
+                models.OutboxObject.activity_object_ap_id == actor.ap_id,
+                models.OutboxObject.is_deleted.is_(False),
+            )
+        )
+    ).one_or_none()
+    if not block_activity:
+        raise ValueError(f"No Block activity for {ap_actor_id}")
+
+    await _send_undo(db_session, block_activity.ap_id)
+
+    await db_session.commit()
+
+
+async def send_block(db_session: AsyncSession, ap_actor_id: str) -> None:
+    logger.info(f"Blocking {ap_actor_id}")
+    actor = await fetch_actor(db_session, ap_actor_id)
+    actor.is_blocked = True
+
+    # 1. Unfollow the actor
+    following = (
+        await db_session.scalars(
+            select(models.Following)
+            .options(joinedload(models.Following.outbox_object))
+            .where(
+                models.Following.ap_actor_id == actor.ap_id,
+            )
+        )
+    ).one_or_none()
+    if following:
+        await _send_undo(db_session, following.outbox_object.ap_id)
+
+    # 2. If the blocked actor is a follower, reject the follow request
+    follower = (
+        await db_session.scalars(
+            select(models.Follower)
+            .options(joinedload(models.Follower.inbox_object))
+            .where(
+                models.Follower.ap_actor_id == actor.ap_id,
+            )
+        )
+    ).one_or_none()
+    if follower:
+        await _send_reject(db_session, actor, follower.inbox_object)
+        await db_session.delete(follower)
+
+    # 3. Send a block
+    block_id = allocate_outbox_id()
+    block = {
+        "@context": ap.AS_EXTENDED_CTX,
+        "id": outbox_object_id(block_id),
+        "type": "Block",
+        "actor": LOCAL_ACTOR.ap_id,
+        "object": actor.ap_id,
+    }
+    outbox_object = await save_outbox_object(
+        db_session,
+        block_id,
+        block,
+    )
+    if not outbox_object.id:
+        raise ValueError("Should never happen")
+
+    await new_outgoing_activity(db_session, actor.inbox_url, outbox_object.id)
+
+    # 4. Create a notification
+    notif = models.Notification(
+        notification_type=models.NotificationType.BLOCK,
+        actor_id=actor.id,
+        outbox_object_id=outbox_object.id,
+    )
+    db_session.add(notif)
+
+    await db_session.commit()
+
+
 async def send_delete(db_session: AsyncSession, ap_object_id: str) -> None:
     outbox_object_to_delete = await get_outbox_object_by_ap_id(db_session, ap_object_id)
     if not outbox_object_to_delete:
@@ -266,7 +347,7 @@ async def _send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
     if not outbox_object_to_undo:
         raise ValueError(f"{ap_object_id} not found in the outbox")
 
-    if outbox_object_to_undo.ap_type not in ["Follow", "Like", "Announce"]:
+    if outbox_object_to_undo.ap_type not in ["Follow", "Like", "Announce", "Block"]:
         raise ValueError(
             f"Cannot build Undo for {outbox_object_to_undo.ap_type} activity"
         )
@@ -339,6 +420,30 @@ async def _send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
         recipients = await _compute_recipients(db_session, outbox_object.ap_object)
         for rcp in recipients:
             await new_outgoing_activity(db_session, rcp, outbox_object.id)
+    elif outbox_object_to_undo.ap_type == "Block":
+        if not outbox_object_to_undo.activity_object_ap_id:
+            raise ValueError(f"Invalid block activity {outbox_object_to_undo.ap_id}")
+
+        # Send the Undo to the blocked actor
+        blocked_actor = await fetch_actor(
+            db_session, outbox_object_to_undo.activity_object_ap_id
+        )
+
+        blocked_actor.is_blocked = False
+
+        await new_outgoing_activity(
+            db_session,
+            blocked_actor.inbox_url,  # type: ignore
+            outbox_object.id,
+        )
+
+        notif = models.Notification(
+            notification_type=models.NotificationType.UNBLOCK,
+            actor_id=blocked_actor.id,
+            outbox_object_id=outbox_object.id,
+        )
+        db_session.add(notif)
+
     else:
         raise ValueError("Should never happen")
 
@@ -2034,8 +2139,10 @@ async def save_to_inbox(
         await _process_transient_object(db_session, raw_object, actor)
         return None
 
-    if actor.is_blocked:
-        logger.warning("Actor {actor.ap_id} is blocked, ignoring object")
+    # If we just blocked an actor, we want to process any undo sent as side
+    # effects
+    if actor.is_blocked and ap.as_list(raw_object["type"])[0] != "Undo":
+        logger.warning(f"Actor {actor.ap_id} is blocked, ignoring object")
         return None
 
     raw_object_id = ap.get_id(raw_object)

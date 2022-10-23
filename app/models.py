@@ -551,8 +551,13 @@ class NotificationType(str, enum.Enum):
     UPDATED_WEBMENTION = "updated_webmention"
     DELETED_WEBMENTION = "deleted_webmention"
 
+    # incoming
     BLOCKED = "blocked"
     UNBLOCKED = "unblocked"
+
+    # outgoing
+    BLOCK = "block"
+    UNBLOCK = "unblock"
 
 
 class Notification(Base):
