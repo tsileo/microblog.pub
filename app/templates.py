@@ -291,6 +291,10 @@ ALLOWED_ATTRIBUTES: dict[str, list[str] | Callable[[str, str, str], bool]] = {
 }
 
 
+def _allow_all_attributes(tag: Any, name: Any, value: Any) -> bool:
+    return True
+
+
 @lru_cache(maxsize=256)
 def _update_inline_imgs(content):
     soup = BeautifulSoup(content, "html5lib")
@@ -320,7 +324,11 @@ def _clean_html(html: str, note: Object) -> str:
                         _update_inline_imgs(highlight(html))
                     ),
                     tags=ALLOWED_TAGS,
-                    attributes=ALLOWED_ATTRIBUTES,
+                    attributes=(
+                        _allow_all_attributes
+                        if note.ap_id.startswith(config.ID)
+                        else ALLOWED_ATTRIBUTES
+                    ),
                     strip=True,
                 ),
                 note,
