@@ -41,6 +41,7 @@ from app.utils import webmentions
 from app.utils.datetime import as_utc
 from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
+from app.utils.text import slugify
 
 AnyboxObject = models.InboxObject | models.OutboxObject
 
@@ -63,6 +64,7 @@ async def save_outbox_object(
     source: str | None = None,
     is_transient: bool = False,
     conversation: str | None = None,
+    slug: str | None = None,
 ) -> models.OutboxObject:
     ro = await RemoteObject.from_raw_object(raw_object)
 
@@ -82,6 +84,7 @@ async def save_outbox_object(
         source=source,
         is_transient=is_transient,
         conversation=conversation,
+        slug=slug,
     )
     db_session.add(outbox_object)
     await db_session.flush()
@@ -614,6 +617,9 @@ async def send_create(
     else:
         raise ValueError(f"Unhandled visibility {visibility}")
 
+    slug = None
+    url = outbox_object_id(note_id)
+
     extra_obj_attrs = {}
     if ap_type == "Question":
         if not poll_answers or len(poll_answers) < 2:
@@ -643,6 +649,8 @@ async def send_create(
         if not name:
             raise ValueError("Article must have a name")
 
+        slug = slugify(name)
+        url = f"{BASE_URL}/articles/{note_id[:7]}/{slug}"
         extra_obj_attrs = {"name": name}
 
     obj = {
@@ -656,7 +664,7 @@ async def send_create(
         "published": published,
         "context": context,
         "conversation": context,
-        "url": outbox_object_id(note_id),
+        "url": url,
         "tag": dedup_tags(tags),
         "summary": content_warning,
         "inReplyTo": in_reply_to,
@@ -670,6 +678,7 @@ async def send_create(
         obj,
         source=source,
         conversation=conversation,
+        slug=slug,
     )
     if not outbox_object.id:
         raise ValueError("Should never happen")

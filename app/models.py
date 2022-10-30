@@ -158,6 +158,7 @@ class OutboxObject(Base, BaseObject):
     is_hidden_from_homepage = Column(Boolean, nullable=False, default=False)
 
     public_id = Column(String, nullable=False, index=True)
+    slug = Column(String, nullable=True, index=True)
 
     ap_type = Column(String, nullable=False, index=True)
     ap_id: Mapped[str] = Column(String, nullable=False, unique=True, index=True)
@@ -280,6 +281,13 @@ class OutboxObject(Base, BaseObject):
     @property
     def is_from_outbox(self) -> bool:
         return True
+
+    @property
+    def url(self) -> str | None:
+        # XXX: rewrite old URL here for compat
+        if self.ap_type == "Article" and self.slug and self.public_id:
+            return f"{BASE_URL}/articles/{self.public_id[:7]}/{self.slug}"
+        return super().url
 
 
 class Follower(Base):

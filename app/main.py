@@ -632,13 +632,75 @@ async def _check_outbox_object_acl(
     raise HTTPException(status_code=404)
 
 
+async def _fetch_likes(
+    db_session: AsyncSession,
+    outbox_object: models.OutboxObject,
+) -> list[models.InboxObject]:
+    return (
+        (
+            await db_session.scalars(
+                select(models.InboxObject)
+                .where(
+                    models.InboxObject.ap_type == "Like",
+                    models.InboxObject.activity_object_ap_id == outbox_object.ap_id,
+                    models.InboxObject.is_deleted.is_(False),
+                )
+                .options(joinedload(models.InboxObject.actor))
+                .order_by(models.InboxObject.ap_published_at.desc())
+                .limit(10)
+            )
+        )
+        .unique()
+        .all()
+    )
+
+
+async def _fetch_shares(
+    db_session: AsyncSession,
+    outbox_object: models.OutboxObject,
+) -> list[models.InboxObject]:
+    return (
+        (
+            await db_session.scalars(
+                select(models.InboxObject)
+                .filter(
+                    models.InboxObject.ap_type == "Announce",
+                    models.InboxObject.activity_object_ap_id == outbox_object.ap_id,
+                    models.InboxObject.is_deleted.is_(False),
+                )
+                .options(joinedload(models.InboxObject.actor))
+                .order_by(models.InboxObject.ap_published_at.desc())
+                .limit(10)
+            )
+        )
+        .unique()
+        .all()
+    )
+
+
+async def _fetch_webmentions(
+    db_session: AsyncSession,
+    outbox_object: models.OutboxObject,
+) -> list[models.Webmention]:
+    return (
+        await db_session.scalars(
+            select(models.Webmention)
+            .filter(
+                models.Webmention.outbox_object_id == outbox_object.id,
+                models.Webmention.is_deleted.is_(False),
+            )
+            .limit(10)
+        )
+    ).all()
+
+
 @app.get("/o/{public_id}")
 async def outbox_by_public_id(
     public_id: str,
     request: Request,
     db_session: AsyncSession = Depends(get_db_session),
     httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
-) -> ActivityPubResponse | templates.TemplateResponse:
+) -> ActivityPubResponse | templates.TemplateResponse | RedirectResponse:
     maybe_object = (
         (
             await db_session.execute(
@@ -665,59 +727,79 @@ async def outbox_by_public_id(
     if is_activitypub_requested(request):
         return ActivityPubResponse(maybe_object.ap_object)
 
+    if maybe_object.ap_type == "Article":
+        return RedirectResponse(
+            f"/articles/{public_id[:7]}/{maybe_object.slug}",
+            status_code=301,
+        )
+
     replies_tree = await boxes.get_replies_tree(
         db_session,
         maybe_object,
         is_current_user_admin=is_current_user_admin(request),
     )
 
-    likes = (
+    likes = await _fetch_likes(db_session, maybe_object)
+    shares = await _fetch_shares(db_session, maybe_object)
+    webmentions = await _fetch_webmentions(db_session, maybe_object)
+    return await templates.render_template(
+        db_session,
+        request,
+        "object.html",
+        {
+            "replies_tree": replies_tree,
+            "outbox_object": maybe_object,
+            "likes": likes,
+            "shares": shares,
+            "webmentions": webmentions,
+        },
+    )
+
+
+@app.get("/articles/{short_id}/{slug}")
+async def article_by_slug(
+    short_id: str,
+    slug: str,
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+    httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
+) -> ActivityPubResponse | templates.TemplateResponse | RedirectResponse:
+    maybe_object = (
         (
-            await db_session.scalars(
-                select(models.InboxObject)
+            await db_session.execute(
+                select(models.OutboxObject)
+                .options(
+                    joinedload(models.OutboxObject.outbox_object_attachments).options(
+                        joinedload(models.OutboxObjectAttachment.upload)
+                    )
+                )
                 .where(
-                    models.InboxObject.ap_type == "Like",
-                    models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
-                    models.InboxObject.is_deleted.is_(False),
+                    models.OutboxObject.public_id.like(f"{short_id}%"),
+                    models.OutboxObject.slug == slug,
+                    models.OutboxObject.is_deleted.is_(False),
                 )
-                .options(joinedload(models.InboxObject.actor))
-                .order_by(models.InboxObject.ap_published_at.desc())
-                .limit(10)
             )
         )
         .unique()
-        .all()
+        .scalar_one_or_none()
+    )
+    if not maybe_object:
+        raise HTTPException(status_code=404)
+
+    await _check_outbox_object_acl(request, db_session, maybe_object, httpsig_info)
+
+    if is_activitypub_requested(request):
+        return ActivityPubResponse(maybe_object.ap_object)
+
+    replies_tree = await boxes.get_replies_tree(
+        db_session,
+        maybe_object,
+        is_current_user_admin=is_current_user_admin(request),
     )
 
-    shares = (
-        (
-            await db_session.scalars(
-                select(models.InboxObject)
-                .filter(
-                    models.InboxObject.ap_type == "Announce",
-                    models.InboxObject.activity_object_ap_id == maybe_object.ap_id,
-                    models.InboxObject.is_deleted.is_(False),
-                )
-                .options(joinedload(models.InboxObject.actor))
-                .order_by(models.InboxObject.ap_published_at.desc())
-                .limit(10)
-            )
-        )
-        .unique()
-        .all()
-    )
-
-    webmentions = (
-        await db_session.scalars(
-            select(models.Webmention)
-            .filter(
-                models.Webmention.outbox_object_id == maybe_object.id,
-                models.Webmention.is_deleted.is_(False),
-            )
-            .limit(10)
-        )
-    ).all()
-
+    likes = await _fetch_likes(db_session, maybe_object)
+    shares = await _fetch_shares(db_session, maybe_object)
+    webmentions = await _fetch_webmentions(db_session, maybe_object)
     return await templates.render_template(
         db_session,
         request,
