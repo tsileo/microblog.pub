@@ -14,6 +14,7 @@ from itsdangerous import URLSafeTimedSerializer
 from loguru import logger
 from mistletoe import markdown  # type: ignore
 
+from app.customization import _CUSTOM_ROUTES
 from app.utils.emoji import _load_emojis
 from app.utils.version import get_version_commit
 
@@ -182,6 +183,31 @@ _load_emojis(ROOT_DIR, BASE_URL)
 CODE_HIGHLIGHTING_THEME = CONFIG.code_highlighting_theme
 
 MOVED_TO = _get_moved_to()
+
+
+_NavBarItem = tuple[str, str]
+
+
+class NavBarItems:
+    EXTRA_NAVBAR_ITEMS: list[_NavBarItem] = []
+    INDEX_NAVBAR_ITEM: _NavBarItem | None = None
+    NOTES_PATH = "/"
+
+
+def load_custom_routes() -> None:
+    try:
+        from data import custom_routes  # type: ignore  # noqa: F401
+    except ImportError:
+        pass
+
+    for path, custom_handler in _CUSTOM_ROUTES.items():
+        # If a handler wants to replace the root, move the index to /notes
+        if path == "/":
+            NavBarItems.NOTES_PATH = "/notes"
+            NavBarItems.INDEX_NAVBAR_ITEM = (path, custom_handler.title)
+        else:
+            if custom_handler.show_in_navbar:
+                NavBarItems.EXTRA_NAVBAR_ITEMS.append((path, custom_handler.title))
 
 
 session_serializer = URLSafeTimedSerializer(

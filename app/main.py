@@ -63,6 +63,7 @@ from app.config import USER_AGENT
 from app.config import USERNAME
 from app.config import is_activitypub_requested
 from app.config import verify_csrf_token
+from app.customization import get_custom_router
 from app.database import AsyncSession
 from app.database import async_session
 from app.database import get_db_session
@@ -192,6 +193,9 @@ app.include_router(admin.unauthenticated_router, prefix="/admin")
 app.include_router(indieauth.router)
 app.include_router(micropub.router)
 app.include_router(webmentions.router)
+config.load_custom_routes()
+if custom_router := get_custom_router():
+    app.include_router(custom_router)
 
 # XXX: order matters, the proxy middleware needs to be last
 app.add_middleware(CustomMiddleware)
@@ -243,7 +247,7 @@ class ActivityPubResponse(JSONResponse):
     media_type = "application/activity+json"
 
 
-@app.get("/")
+@app.get(config.NavBarItems.NOTES_PATH)
 async def index(
     request: Request,
     db_session: AsyncSession = Depends(get_db_session),

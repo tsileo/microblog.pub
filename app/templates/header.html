@@ -29,9 +29,16 @@
 <a href="{{ url_for }}" {% if request.url.path == url_for %}class="active"{% endif %}>{{ text }}</a>
 {% endmacro %}
 
+{%- macro navbar_item_link(navbar_item) -%}
+<a href="{{ navbar_item[0] }}" {% if request.url.path == navbar_item[0] %}class="active"{% endif %}>{{ navbar_item[1] }}</a>
+{% endmacro %}
+
 <div class="public-top-menu">
 <nav class="flexbox">
     <ul>
+        {% if NAVBAR_ITEMS.INDEX_NAVBAR_ITEM %}
+        <li>{{ navbar_item_link(NAVBAR_ITEMS.INDEX_NAVBAR_ITEM) }}</li>
+        {% endif %}
         <li>{{ header_link("index", "Notes") }}</li>
         {% if articles_count %}
             <li>{{ header_link("articles", "Articles") }}</li>
@@ -43,6 +50,9 @@
         <li>{{ header_link("following", "Following") }} <span class="counter">{{ following_count }}</span></li>
         {% endif %}
         <li>{{ header_link("get_remote_follow", "Remote follow") }}</li>
+        {% for navbar_item in NAVBAR_ITEMS.EXTRA_NAVBAR_ITEMS %}
+            {{ navbar_item_link(navbar_item) }}
+        {% endfor %}
     </ul>
 </nav>
 </div>
