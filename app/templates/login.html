@@ -7,7 +7,7 @@
         {% if error %}
             <p class="primary-color">Invalid password.</p>
         {% endif %}
-        <form class="form" method="POST">
+        <form class="form" action="{{ BASE_URL }}/admin/login" method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="redirect" value="{{ redirect }}">
             <input type="password" placeholder="password" name="password" autofocus>

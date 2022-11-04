@@ -90,7 +90,6 @@ class Config(pydantic.BaseModel):
     name: str
     summary: str
     https: bool
-    id: str = None
     icon_url: str
     secret: str
     debug: bool = False
@@ -112,6 +111,9 @@ class Config(pydantic.BaseModel):
     # Config items to make tests easier
     sqlalchemy_database: str | None = None
     key_path: str | None = None
+
+    # Only set when the app is served on a non-root path
+    id: str | None = None
 
 
 def load_config() -> Config:
@@ -147,6 +149,9 @@ CONFIG = load_config()
 DOMAIN = CONFIG.domain
 _SCHEME = "https" if CONFIG.https else "http"
 ID = f"{_SCHEME}://{DOMAIN}"
+
+# When running the app on a path, the ID maybe set by the config, but in this
+# case, a valid webfinger must be served on the root domain
 if CONFIG.id:
     ID = CONFIG.id
 USERNAME = CONFIG.username
@@ -179,7 +184,9 @@ if CONFIG.emoji:
     EMOJIS = CONFIG.emoji
 
 # Emoji template for the FE
-EMOJI_TPL = '<img src="{base_url}/static/twemoji/{filename}.svg" alt="{raw}" class="emoji">'
+EMOJI_TPL = (
+    '<img src="{base_url}/static/twemoji/{filename}.svg" alt="{raw}" class="emoji">'
+)
 
 _load_emojis(ROOT_DIR, BASE_URL)
 

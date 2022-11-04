@@ -74,8 +74,6 @@ def main() -> None:
         dat["https"] = False
         proto = "http"
 
-    dat["id"] = f'{proto}://{dat["domain"]}'
-
     print("Note that you can put your icon/avatar in the static/ directory")
     dat["icon_url"] = prompt(
         "icon URL: ", default=f'{proto}://{dat["domain"]}/static/nopic.png'
