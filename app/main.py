@@ -733,7 +733,7 @@ async def outbox_by_public_id(
 
     if maybe_object.ap_type == "Article":
         return RedirectResponse(
-            f"/articles/{public_id[:7]}/{maybe_object.slug}",
+            f"{BASE_URL}/articles/{public_id[:7]}/{maybe_object.slug}",
             status_code=301,
         )
 
