@@ -48,6 +48,7 @@ from app import boxes
 from app import config
 from app import httpsig
 from app import indieauth
+from app import media
 from app import micropub
 from app import models
 from app import templates
@@ -1128,14 +1129,17 @@ def _add_cache_control(headers: dict[str, str]) -> dict[str, str]:
     return {**headers, "Cache-Control": "max-age=31536000"}
 
 
-@app.get("/proxy/media/{encoded_url}")
+@app.get("/proxy/media/{exp}/{sig}/{encoded_url}")
 async def serve_proxy_media(
     request: Request,
+    exp: int,
+    sig: str,
     encoded_url: str,
 ) -> StreamingResponse | PlainTextResponse:
     # Decode the base64-encoded URL
     url = base64.urlsafe_b64decode(encoded_url).decode()
     check_url(url)
+    media.verify_proxied_media_sig(exp, url, sig)
 
     proxy_resp = await _proxy_get(request, url, stream=True)
 
@@ -1168,9 +1172,11 @@ async def serve_proxy_media(
     )
 
 
-@app.get("/proxy/media/{encoded_url}/{size}")
+@app.get("/proxy/media/{exp}/{sig}/{encoded_url}/{size}")
 async def serve_proxy_media_resized(
     request: Request,
+    exp: int,
+    sig: str,
     encoded_url: str,
     size: int,
 ) -> PlainTextResponse:
@@ -1180,6 +1186,7 @@ async def serve_proxy_media_resized(
     # Decode the base64-encoded URL
     url = base64.urlsafe_b64decode(encoded_url).decode()
     check_url(url)
+    media.verify_proxied_media_sig(exp, url, sig)
 
     if cached_resp := _RESIZED_CACHE.get((url, size)):
         resized_content, resized_mimetype, resp_headers = cached_resp

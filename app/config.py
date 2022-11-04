@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import os
 import secrets
 from pathlib import Path
@@ -250,3 +251,7 @@ def verify_csrf_token(
             detail=f"The security token has expired, {please_try_again}",
         )
     return None
+
+
+def hmac_sha256():
+    return hmac.new(CONFIG.secret.encode(), digestmod=hashlib.sha256)
