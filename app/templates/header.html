@@ -25,7 +25,7 @@
 </div>
 
 {%- macro header_link(url, text) -%}
-{% set url_for = request.app.router.url_path_for(url) %}
+{% set url_for = BASE_URL + request.app.router.url_path_for(url) %}
 <a href="{{ url_for }}" {% if request.url.path == url_for %}class="active"{% endif %}>{{ text }}</a>
 {% endmacro %}
 

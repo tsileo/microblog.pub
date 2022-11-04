@@ -124,14 +124,14 @@
 {% endmacro %}
 
 {% macro admin_reply_button(ap_object_id) %}
-<form action="/admin/new"  method="GET">
+<form action="{{ BASE_URL }}/admin/new"  method="GET">
 <input type="hidden" name="in_reply_to" value="{{ ap_object_id }}">
 <button type="submit">reply</button>
 </form> 
 {% endmacro %}
 
 {% macro admin_dm_button(actor_handle) %}
-<form action="/admin/new"  method="GET">
+<form action="{{ BASE_URL }}/admin/new"  method="GET">
 <input type="hidden" name="with_content" value="{{ actor_handle }}">
 <input type="hidden" name="with_visibility" value="DIRECT">
 <button type="submit">direct message</button>
@@ -139,7 +139,7 @@
 {% endmacro %}
 
 {% macro admin_mention_button(actor_handle) %}
-<form action="/admin/new"  method="GET">
+<form action="{{ BASE_URL }}/admin/new"  method="GET">
 <input type="hidden" name="with_content" value="{{ actor_handle }}">
 <button type="submit">mention</button>
 </form> 

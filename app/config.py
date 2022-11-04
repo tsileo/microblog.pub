@@ -179,7 +179,7 @@ if CONFIG.emoji:
     EMOJIS = CONFIG.emoji
 
 # Emoji template for the FE
-EMOJI_TPL = '<img src="/static/twemoji/{filename}.svg" alt="{raw}" class="emoji">'
+EMOJI_TPL = '<img src="{base_url}/static/twemoji/{filename}.svg" alt="{raw}" class="emoji">'
 
 _load_emojis(ROOT_DIR, BASE_URL)
 

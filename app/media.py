@@ -9,7 +9,7 @@ def proxied_media_url(url: str) -> str:
     if url.startswith(BASE_URL):
         return url
 
-    return "/proxy/media/" + base64.urlsafe_b64encode(url.encode()).decode()
+    return BASE_URL + "/proxy/media/" + base64.urlsafe_b64encode(url.encode()).decode()
 
 
 def resized_media_url(url: str, size: int) -> str:

@@ -59,13 +59,13 @@ def _filter_domain(text: str) -> str:
 
 def _media_proxy_url(url: str | None) -> str:
     if not url:
-        return "/static/nopic.png"
+        return BASE_URL + "/static/nopic.png"
 
     if url.startswith(BASE_URL):
         return url
 
     encoded_url = base64.urlsafe_b64encode(url.encode()).decode()
-    return f"/proxy/media/{encoded_url}"
+    return BASE_URL + f"/proxy/media/{encoded_url}"
 
 
 def is_current_user_admin(request: Request) -> bool:
@@ -388,7 +388,7 @@ def _html2text(content: str) -> str:
 
 def _replace_emoji(u: str, _) -> str:
     filename = "-".join(hex(ord(c))[2:] for c in u)
-    return config.EMOJI_TPL.format(filename=filename, raw=u)
+    return config.EMOJI_TPL.format(base_url=BASE_URL, filename=filename, raw=u)
 
 
 def _emojify(text: str, is_local: bool) -> str:
