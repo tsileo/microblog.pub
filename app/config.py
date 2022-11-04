@@ -90,6 +90,7 @@ class Config(pydantic.BaseModel):
     name: str
     summary: str
     https: bool
+    id: str = None
     icon_url: str
     secret: str
     debug: bool = False
@@ -146,6 +147,8 @@ CONFIG = load_config()
 DOMAIN = CONFIG.domain
 _SCHEME = "https" if CONFIG.https else "http"
 ID = f"{_SCHEME}://{DOMAIN}"
+if CONFIG.id:
+    ID = CONFIG.id
 USERNAME = CONFIG.username
 MANUALLY_APPROVES_FOLLOWERS = CONFIG.manually_approves_followers
 HIDES_FOLLOWERS = CONFIG.hides_followers
