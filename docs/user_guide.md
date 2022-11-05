@@ -127,6 +127,10 @@ $secondary-color: #32cd32;
 
 See `app/scss/main.scss` to see what variables can be overridden.
 
+#### Custom templates
+
+If you'd like to customize your instance's theme beyond CSS, you can modify the app's HTML by placing templates in `data/templates` which overwrite the defaults in `app/templates`.
+
 #### Code highlighting theme
 
 You can switch to one of the [styles supported by Pygments](https://pygments.org/styles/) by adding a line in `profile.toml`:

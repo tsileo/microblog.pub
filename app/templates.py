@@ -38,7 +38,7 @@ from app.utils.highlight import HIGHLIGHT_CSS
 from app.utils.highlight import highlight
 
 _templates = Jinja2Templates(
-    directory="app/templates",
+    directory=["data/templates", "app/templates"],
     trim_blocks=True,
     lstrip_blocks=True,
 )

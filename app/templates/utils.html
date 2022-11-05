@@ -1,168 +1,209 @@
 {% macro embed_csrf_token() %}
+{% block embed_csrf_token scoped %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+{% endblock %}
 {% endmacro %}
 
 {% macro embed_redirect_url(permalink_id=None) %}
+{% block embed_redirect_url scoped %}
 <input type="hidden" name="redirect_url" value="{{ request.url }}{% if permalink_id %}#{{ permalink_id }}{% endif %}">
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_block_button(actor) %}
+{% block admin_block_button scoped %}
 <form action="{{ request.url_for("admin_actions_block") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_actor_id" value="{{ actor.ap_id }}">
     <input type="submit" value="block">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_unblock_button(actor) %}
+{% block admin_unblock_button scoped %}
 <form action="{{ request.url_for("admin_actions_unblock") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_actor_id" value="{{ actor.ap_id }}">
     <input type="submit" value="unblock">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_follow_button(actor) %}
+{% block admin_follow_button scoped %}
 <form action="{{ request.url_for("admin_actions_follow") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="ap_actor_id" value="{{ actor.ap_id }}">
     <input type="submit" value="follow">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_accept_incoming_follow_button(notif) %}
+{% block admin_accept_incoming_follow_button scoped %}
 <form action="{{ request.url_for("admin_actions_accept_incoming_follow") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="notification_id" value="{{ notif.id }}">
     <input type="submit" value="accept follow">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_reject_incoming_follow_button(notif) %}
+{% block admin_reject_incoming_follow_button scoped %}
 <form action="{{ request.url_for("admin_actions_reject_incoming_follow") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url() }}
     <input type="hidden" name="notification_id" value="{{ notif.id }}">
     <input type="submit" value="reject follow">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_like_button(ap_object_id, permalink_id) %}
+{% block admin_like_button scoped %}
 <form action="{{ request.url_for("admin_actions_like") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="like">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_bookmark_button(ap_object_id, permalink_id) %}
+{% block admin_bookmark_button scoped %}
 <form action="{{ request.url_for("admin_actions_bookmark") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="bookmark">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_unbookmark_button(ap_object_id, permalink_id) %}
+{% block admin_unbookmark_button scoped %}
 <form action="{{ request.url_for("admin_actions_unbookmark") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="unbookmark">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_pin_button(ap_object_id, permalink_id) %}
+{% block admin_pin_button scoped %}
 <form action="{{ request.url_for("admin_actions_pin") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="pin">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_unpin_button(ap_object_id, permalink_id) %}
+{% block admin_unpin_button scoped %}
 <form action="{{ request.url_for("admin_actions_unpin") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="unpin">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_delete_button(ap_object) %}
+{% block admin_delete_button scoped %}
 <form action="{{ request.url_for("admin_actions_delete") }}" class="object-delete-form" method="POST">
     {{ embed_csrf_token() }}
     <input type="hidden" name="redirect_url" value="{% if request.url.path.endswith("/" + ap_object.public_id) or (request.url.path == "/admin/object" and request.query_params.ap_id.endswith("/" + ap_object.public_id)) %}{{ request.base_url}}{% else %}{{ request.url }}{% endif %}">
     <input type="hidden" name="ap_object_id" value="{{ ap_object.ap_id }}">
     <input type="submit" value="delete">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_announce_button(ap_object_id, permalink_id=None) %}
+{% block admin_announce_button scoped %}
 <form action="{{ request.url_for("admin_actions_announce") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="share">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_undo_button(ap_object_id, action="undo", permalink_id=None) %}
+{% block admin_undo_button scoped %}
 <form action="{{ request.url_for("admin_actions_undo") }}" method="POST">
     {{ embed_csrf_token() }}
     {{ embed_redirect_url(permalink_id) }}
     <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
     <input type="submit" value="{{ action }}">
 </form>
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_reply_button(ap_object_id) %}
+{% block admin_reply_button scoped %}
 <form action="{{ BASE_URL }}/admin/new"  method="GET">
 <input type="hidden" name="in_reply_to" value="{{ ap_object_id }}">
 <button type="submit">reply</button>
 </form> 
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_dm_button(actor_handle) %}
+{% block admin_dm_button scoped %}
 <form action="{{ BASE_URL }}/admin/new"  method="GET">
 <input type="hidden" name="with_content" value="{{ actor_handle }}">
 <input type="hidden" name="with_visibility" value="DIRECT">
 <button type="submit">direct message</button>
 </form> 
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_mention_button(actor_handle) %}
+{% block admin_mention_button scoped %}
 <form action="{{ BASE_URL }}/admin/new"  method="GET">
 <input type="hidden" name="with_content" value="{{ actor_handle }}">
 <button type="submit">mention</button>
 </form> 
+{% endblock %}
 {% endmacro %}
 
 
 
 {% macro admin_profile_button(ap_actor_id) %}
+{% block admin_profile_button scoped %}
 <form action="{{ url_for("admin_profile") }}"  method="GET">
 <input type="hidden" name="actor_id" value="{{ ap_actor_id }}">
 <button type="submit">profile</button>
 </form> 
+{% endblock %}
 {% endmacro %}
 
 {% macro admin_expand_button(ap_object) %}
+{% block admin_expand_button scoped %}
 {# TODO turn these into a regular link and append permalink ID if it's a reply #}
 <form action="{{ url_for("admin_object") }}"  method="GET">
 <input type="hidden" name="ap_id" value="{{ ap_object.ap_id }}">
 <button type="submit">expand</button>
 </form> 
+{% endblock %}
 {% endmacro %}
 
 {% macro display_box_filters(route) %}
+{% block display_box_filters scoped %}
 <nav class="flexbox box">
 <ul>
     <li>Filter by</li>
@@ -179,13 +220,17 @@
 {% endif %}
 </ul>
 </nav>
+{% endblock %}
 {% endmacro %}
 
 {% macro display_tiny_actor_icon(actor) %}
+{% block display_tiny_actor_icon scoped %}
     <img class="tiny-actor-icon" src="{{ actor.resized_icon_url }}" alt="{{ actor.display_name }}'s avatar">
+{% endblock %}
 {% endmacro %}
 
 {% macro actor_action(inbox_object, text, with_icon=False) %}
+{% block actor_action scoped %}
     <div class="actor-action">
         <a href="{{ url_for("admin_profile") }}?actor_id={{ inbox_object.actor.ap_id }}">
             {% if with_icon %}{{ display_tiny_actor_icon(inbox_object.actor) }}{% endif %} {{ inbox_object.actor.display_name | clean_html(inbox_object.actor) | safe }}
@@ -193,9 +238,11 @@
         <span title="{{ inbox_object.ap_published_at.isoformat() }}">{{ inbox_object.ap_published_at | timeago }}</span>
     </div>
 
+{% endblock %}
 {% endmacro %}
 
 {% macro display_actor(actor, actors_metadata={}, embedded=False, with_details=False, pending_incoming_follow_notif=None) %}
+{% block display_actor scoped %}
 {% set metadata = actors_metadata.get(actor.ap_id) %}
 
 {% if not embedded %}
@@ -306,9 +353,11 @@
 </div>
 {% endif %}
 
+{% endblock %}
 {% endmacro %}
 
 {% macro display_og_meta(object) %}
+{% block display_og_meta scoped %}
 {% if object.og_meta %}
 {% for og_meta in object.og_meta[:1] %}
 <div class="activity-og-meta">
@@ -326,10 +375,12 @@
 </div>
 {% endfor %}
 {% endif %}
+{% endblock %}
 {% endmacro %}
 
 
 {% macro display_attachments(object) %}
+{% block display_attachments scoped %}
 
     {% for attachment in object.attachments %}
     {% if object.sensitive and (attachment.type == "Image" or (attachment | has_media_type("image")) or attachment.type == "Video" or (attachment | has_media_type("video"))) %}
@@ -368,9 +419,11 @@
         </div>
     {% endif %}
     {% endfor %}
+{% endblock %}
 {% endmacro %}
 
 {% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}, is_object_page=False) %}
+{% block display_object scoped %}
 {% set is_article_mode = object.is_from_outbox and object.ap_type == "Article" and is_object_page %}
 {% if object.ap_type in ["Note", "Article", "Video", "Page", "Question"] %}
 <div class="ap-object {% if expanded %}ap-object-expanded {% endif %}h-entry" id="{{ object.permalink_id }}">
@@ -663,4 +716,5 @@
 
 </div>
 {% endif %}
+{% endblock %}
 {% endmacro %}
