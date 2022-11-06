@@ -1,4 +1,3 @@
-import base64
 from datetime import datetime
 from datetime import timezone
 from functools import lru_cache

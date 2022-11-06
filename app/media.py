@@ -15,8 +15,8 @@ class InvalidProxySignatureError(Exception):
 
 def proxied_media_sig(expires: int, url: str) -> str:
     hm = hmac_sha256()
-    hm.update(f'{expires}'.encode())
-    hm.update(b'|')
+    hm.update(f"{expires}".encode())
+    hm.update(b"|")
     hm.update(url.encode())
     return base64.urlsafe_b64encode(hm.digest()).decode()
 
@@ -34,7 +34,11 @@ def proxied_media_url(url: str) -> str:
     expires = int(time.time() / EXPIRY_PERIOD) + EXPIRY_LENGTH
     sig = proxied_media_sig(expires, url)
 
-    return BASE_URL + f"/proxy/media/{expires}/{sig}/" + base64.urlsafe_b64encode(url.encode()).decode()
+    return (
+        BASE_URL
+        + f"/proxy/media/{expires}/{sig}/"
+        + base64.urlsafe_b64encode(url.encode()).decode()
+    )
 
 
 def resized_media_url(url: str, size: int) -> str:
