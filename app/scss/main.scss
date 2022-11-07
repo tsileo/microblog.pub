@@ -531,3 +531,13 @@ a.label-btn {
     text-decoration: underline;
   }
 }
+
+.ap-place {
+  h3 {
+    display: inline;
+    font-weight: normal;
+  }
+  h3::after {
+    content: ': ';
+  }
+}

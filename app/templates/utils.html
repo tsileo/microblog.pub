@@ -383,6 +383,7 @@
 {% block display_attachments scoped %}
 
     {% for attachment in object.attachments %}
+    {% if attachment.type != "PropertyValue" %}
     {% if object.sensitive and (attachment.type == "Image" or (attachment | has_media_type("image")) or attachment.type == "Video" or (attachment | has_media_type("video"))) %}
     <div class="attachment-wrapper">
         <label for="{{attachment.proxied_url}}" class="label-btn show-hide-sensitive-btn">show/hide sensitive content</label>
@@ -418,6 +419,7 @@
     {% else %}
         </div>
     {% endif %}
+    {% endif %}
     {% endfor %}
 {% endblock %}
 {% endmacro %}
@@ -425,7 +427,7 @@
 {% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}, is_object_page=False) %}
 {% block display_object scoped %}
 {% set is_article_mode = object.is_from_outbox and object.ap_type == "Article" and is_object_page %}
-{% if object.ap_type in ["Note", "Article", "Video", "Page", "Question"] %}
+{% if object.ap_type in ["Note", "Article", "Video", "Page", "Question", "Event"] %}
 <div class="ap-object {% if expanded %}ap-object-expanded {% endif %}h-entry" id="{{ object.permalink_id }}">
 
     {% if is_article_mode %}
@@ -444,8 +446,30 @@
         </a></p>
     {% endif %}
 
-    {% if object.ap_type == "Article" %}
+    {% if object.ap_type in ["Article", "Event"] %}
         <h2 class="p-name no-margin-top">{{ object.name }}</h2>
+    {% endif %}
+
+    {% if object.ap_type == "Event" %}
+        {% if object.ap_object.get("endTime") and object.ap_object.get("startTime") %}
+            <p>On {{ object.ap_object.startTime | parse_datetime | format_date }}
+            (ends {{ object.ap_object.endTime | parse_datetime | format_date }})</p>
+        {% endif %}
+    {% endif %}
+
+    {% if object.ap_object.get("location") %}
+        {% set loc = object.ap_object.get("location") %}
+        {% if loc.type == "Place" and loc.latitude and loc.longitude %}
+        <div class="ap-place">
+            <h3>Location</h3>
+            {% if loc.name %}{{ loc.name }}{% endif %}
+            <span class="h-geo">
+                <data class="p-latitude" value="{{ loc.latitude}}"></data>
+                <data class="p-longitude" value="{{ loc.longitude }}"></data>
+                <a href="https://www.openstreetmap.org/?mlat={{ loc.latitude }}&mlon={{ loc.longitude }}#map=16/{{loc.latitude}}/{{loc.longitude}}">{{loc.latitude}},{{loc.longitude}}</a>
+            </span>
+        </div>
+        {% endif %}
     {% endif %}
 
     {% if is_article_mode %}

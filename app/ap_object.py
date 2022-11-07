@@ -96,6 +96,9 @@ class Object:
     def attachments(self) -> list["Attachment"]:
         attachments = []
         for obj in ap.as_list(self.ap_object.get("attachment", [])):
+            if obj.get("type") == "PropertyValue":
+                continue
+
             if obj.get("type") == "Link":
                 attachments.append(
                     Attachment.parse_obj(
