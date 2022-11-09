@@ -19,7 +19,7 @@
 <div id="admin">
 {% macro admin_link(url, text) %}
 {% set url_for = BASE_URL + request.app.router.url_path_for(url) %}
-<a href="{{ url_for }}" {% if request.url.path == url_for %}class="active"{% endif %}>{{ text }}</a>
+<a href="{{ url_for }}" {% if BASE_URL + request.url.path == url_for %}class="active"{% endif %}>{{ text }}</a>
 {% endmacro %}
 <div class="admin-menu">
 <nav class="flexbox">

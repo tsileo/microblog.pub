@@ -26,11 +26,12 @@
 
 {%- macro header_link(url, text) -%}
 {% set url_for = BASE_URL + request.app.router.url_path_for(url) %}
-<a href="{{ url_for }}" {% if request.url.path == url_for %}class="active"{% endif %}>{{ text }}</a>
+<a href="{{ url_for }}" {% if BASE_URL + request.url.path == url_for %}class="active"{% endif %}>{{ text }}</a>
 {% endmacro %}
 
 {%- macro navbar_item_link(navbar_item) -%}
-<a href="{{ navbar_item[0] }}" {% if request.url.path == navbar_item[0] %}class="active"{% endif %}>{{ navbar_item[1] }}</a>
+{% set url_for = BASE_URL + navbar_item[0] %}
+<a href="{{ navbar_item[0] }}" {% if BASE_URL + request.url.path == url_for %}class="active"{% endif %}>{{ navbar_item[1] }}</a>
 {% endmacro %}
 
 <div class="public-top-menu">
