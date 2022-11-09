@@ -131,9 +131,19 @@ See `app/scss/main.scss` to see what variables can be overridden.
 
 If you'd like to customize your instance's theme beyond CSS, you can modify the app's HTML by placing templates in `data/templates` which overwrite the defaults in `app/templates`.
 
+#### Custom Content Security Policy (CSP)
+
+You can override the default Content Security Policy by adding a line in `data/profile.toml`:
+
+```toml
+custom_content_security_policy = "default-src 'self'; style-src 'self' 'sha256-{HIGHLIGHT_CSS_HASH}'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+```
+
+This example will output the default CSP, note that `{HIGHLIGHT_CSS_HASH}` will be dynamically replaced by the correct value (the hash of the CSS needed for syntax highlighting).
+
 #### Code highlighting theme
 
-You can switch to one of the [styles supported by Pygments](https://pygments.org/styles/) by adding a line in `profile.toml`:
+You can switch to one of the [styles supported by Pygments](https://pygments.org/styles/) by adding a line in `data/profile.toml`:
 
 ```toml
 code_highlighting_theme = "solarized-dark"

@@ -137,9 +137,15 @@ class CustomMiddleware:
                 headers["x-frame-options"] = "DENY"
                 headers["permissions-policy"] = "interest-cohort=()"
                 headers["content-security-policy"] = (
-                    f"default-src 'self'; "
-                    f"style-src 'self' 'sha256-{HIGHLIGHT_CSS_HASH}'; "
-                    f"frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+                    (
+                        f"default-src 'self'; "
+                        f"style-src 'self' 'sha256-{HIGHLIGHT_CSS_HASH}'; "
+                        f"frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+                    )
+                    if not config.CUSTOM_CONTENT_SECURITY_POLICY
+                    else config.CUSTOM_CONTENT_SECURITY_POLICY.format(
+                        HIGHLIGHT_CSS_HASH=HIGHLIGHT_CSS_HASH
+                    )
                 )
                 if not DEBUG:
                     headers["strict-transport-security"] = "max-age=63072000;"
