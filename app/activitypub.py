@@ -154,6 +154,12 @@ if ALSO_KNOWN_AS:
 if MOVED_TO:
     ME["movedTo"] = MOVED_TO
 
+if config.CONFIG.image_url:
+    ME["image"] = {
+        "mediaType": mimetypes.guess_type(config.CONFIG.image_url)[0],
+        "type": "Image",
+        "url": config.CONFIG.image_url,
+    }
 
 class NotAnObjectError(Exception):
     def __init__(self, url: str, resp: httpx.Response | None = None) -> None:

@@ -89,6 +89,10 @@ class Actor:
         return self.ap_actor.get("icon", {}).get("mediaType")
 
     @property
+    def image_url(self) -> str | None:
+        return self.ap_actor.get("image", {}).get("url")
+
+    @property
     def public_key_as_pem(self) -> str:
         return self.ap_actor["publicKey"]["publicKeyPem"]
 
@@ -380,6 +384,9 @@ def _actor_hash(actor: Actor) -> bytes:
 
     if actor.icon_url:
         h.update(actor.icon_url.encode())
+
+    if actor.image_url:
+        h.update(actor.image_url.encode())
 
     if actor.attachments:
         for a in actor.attachments:

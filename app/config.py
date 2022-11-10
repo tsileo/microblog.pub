@@ -92,6 +92,7 @@ class Config(pydantic.BaseModel):
     summary: str
     https: bool
     icon_url: str
+    image_url: str
     secret: str
     debug: bool = False
     trusted_hosts: list[str] = ["127.0.0.1"]
