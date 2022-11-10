@@ -384,16 +384,20 @@
 
     {% for attachment in object.attachments %}
     {% if attachment.type != "PropertyValue" %}
+    {% set orientation = "unknown" %}
+    {% if attachment.width > 0 %}
+        {% set orientation = "portrait" if attachment.width < attachment.height else "landscape" %}
+    {% endif %}
     {% if object.sensitive and (attachment.type == "Image" or (attachment | has_media_type("image")) or attachment.type == "Video" or (attachment | has_media_type("video"))) %}
     <div class="attachment-wrapper">
         <label for="{{attachment.proxied_url}}" class="label-btn show-hide-sensitive-btn">show/hide sensitive content</label>
         <div>
         <div class="sensitive-attachment">
         <input class="sensitive-attachment-state" type="checkbox" id="{{attachment.proxied_url}}" aria-hidden="true">
-        <div class="sensitive-attachment-box">
+        <div class="sensitive-attachment-box {{oritenation}}">
             <div></div>
     {% else %}
-            <div class="attachment-item">
+            <div class="attachment-item {{orientation}}">
     {% endif %}
 
     {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
