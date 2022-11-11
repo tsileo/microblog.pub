@@ -12,6 +12,7 @@ async def webfinger(
     resource: str,
 ) -> dict[str, Any] | None:  # noqa: C901
     """Mastodon-like WebFinger resolution to retrieve the activity stream Actor URL."""
+    resource = resource.strip()
     logger.info(f"performing webfinger resolution for {resource}")
     protos = ["https", "http"]
     if resource.startswith("http://"):
