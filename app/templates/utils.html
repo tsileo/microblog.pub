@@ -385,7 +385,7 @@
     {% for attachment in object.attachments %}
     {% if attachment.type != "PropertyValue" %}
     {% set orientation = "unknown" %}
-    {% if attachment.width > 0 %}
+    {% if attachment.width %}
         {% set orientation = "portrait" if attachment.width < attachment.height else "landscape" %}
     {% endif %}
     {% if object.sensitive and (attachment.type == "Image" or (attachment | has_media_type("image")) or attachment.type == "Video" or (attachment | has_media_type("video"))) %}
@@ -394,10 +394,10 @@
         <div>
         <div class="sensitive-attachment">
         <input class="sensitive-attachment-state" type="checkbox" id="{{attachment.proxied_url}}" aria-hidden="true">
-        <div class="sensitive-attachment-box {{oritenation}}">
+        <div class="sensitive-attachment-box attachment-orientation-{{orientation}}">
             <div></div>
     {% else %}
-            <div class="attachment-item {{orientation}}">
+            <div class="attachment-item attachment-orientation-{{orientation}}">
     {% endif %}
 
     {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}

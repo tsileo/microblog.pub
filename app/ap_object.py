@@ -275,12 +275,13 @@ class Attachment(BaseModel):
     media_type: str | None
     name: str | None
     url: str
-    width: int
-    height: int
 
     # Extra fields for the templates (and only for media)
     proxied_url: str | None = None
     resized_url: str | None = None
+
+    width: int | None = None
+    height: int | None = None
 
     @property
     def mimetype(self) -> str:
