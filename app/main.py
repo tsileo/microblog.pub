@@ -1,4 +1,5 @@
 import base64
+import html
 import os
 import sys
 import time
@@ -38,6 +39,7 @@ from starlette.background import BackgroundTask
 from starlette.datastructures import Headers
 from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import HTMLResponse
 from starlette.responses import JSONResponse
 from starlette.types import Message
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # type: ignore
@@ -252,6 +254,25 @@ async def custom_http_exception_handler(
 
 class ActivityPubResponse(JSONResponse):
     media_type = "application/activity+json"
+
+
+class HTMLRedirectResponse(HTMLResponse):
+    """
+    Similar to RedirectResponse, but uses a 200 response with HTML.
+
+    Needed for remote redirects on form submission endpoints,
+    since our CSP policy disallows remote form submission.
+    https://github.com/w3c/webappsec-csp/issues/8#issuecomment-810108984
+    """
+
+    def __init__(
+        self,
+        url: str,
+    ) -> None:
+        super().__init__(
+            content=f'<a href="{html.escape(url)}">Continue to remote resource</a>',
+            headers={"Refresh": "0;url=" + url},
+        )
 
 
 @app.get(config.NavBarItems.NOTES_PATH)
@@ -961,7 +982,7 @@ async def post_remote_follow(
     request: Request,
     csrf_check: None = Depends(verify_csrf_token),
     profile: str = Form(),
-) -> RedirectResponse:
+) -> HTMLRedirectResponse:
     if not profile.startswith("@"):
         profile = f"@{profile}"
 
@@ -970,9 +991,8 @@ async def post_remote_follow(
         # TODO(ts): error message to user
         raise HTTPException(status_code=404)
 
-    return RedirectResponse(
+    return HTMLRedirectResponse(
         remote_follow_template.format(uri=ID),
-        status_code=302,
     )
 
 
