@@ -161,6 +161,7 @@ if config.CONFIG.image_url:
         "url": config.CONFIG.image_url,
     }
 
+
 class NotAnObjectError(Exception):
     def __init__(self, url: str, resp: httpx.Response | None = None) -> None:
         message = f"{url} is not an AP activity"
