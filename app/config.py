@@ -109,6 +109,8 @@ class Config(pydantic.BaseModel):
 
     inbox_retention_days: int = 15
 
+    custom_content_security_policy: str | None = None
+
     # Config items to make tests easier
     sqlalchemy_database: str | None = None
     key_path: str | None = None
@@ -165,6 +167,7 @@ if CONFIG.privacy_replace:
 
 BLOCKED_SERVERS = {blocked_server.hostname for blocked_server in CONFIG.blocked_servers}
 ALSO_KNOWN_AS = CONFIG.also_known_as
+CUSTOM_CONTENT_SECURITY_POLICY = CONFIG.custom_content_security_policy
 
 INBOX_RETENTION_DAYS = CONFIG.inbox_retention_days
 CUSTOM_FOOTER = (
