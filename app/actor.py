@@ -82,15 +82,21 @@ class Actor:
 
     @property
     def icon_url(self) -> str | None:
-        return self.ap_actor.get("icon", {}).get("url")
+        if icon := self.ap_actor.get("icon"):
+            return icon.get("url")
+        return None
 
     @property
     def icon_media_type(self) -> str | None:
-        return self.ap_actor.get("icon", {}).get("mediaType")
+        if icon := self.ap_actor.get("icon"):
+            return icon.get("mediaType")
+        return None
 
     @property
     def image_url(self) -> str | None:
-        return self.ap_actor.get("image", {}).get("url")
+        if image := self.ap_actor.get("image"):
+            return image.get("url")
+        return None
 
     @property
     def public_key_as_pem(self) -> str:
