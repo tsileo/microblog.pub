@@ -1,6 +1,7 @@
 import re
 import typing
 
+from loguru import logger
 from mistletoe import Document  # type: ignore
 from mistletoe.html_renderer import HTMLRenderer  # type: ignore
 from mistletoe.span_token import SpanToken  # type: ignore
@@ -78,13 +79,17 @@ class CustomRenderer(HTMLRenderer):
 
     def render_mention(self, token: Mention) -> str:
         mention = token.target
+        suffix = ""
+        if mention.endswith("."):
+            mention = mention[:-1]
+            suffix = "."
         actor = self.mentioned_actors.get(mention)
         if not actor:
             return mention
 
         self.tags.append(dict(type="Mention", href=actor.ap_id, name=mention))
 
-        link = f'<span class="h-card"><a href="{actor.url}" class="u-url mention">{actor.handle}</a></span>'  # noqa: E501
+        link = f'<span class="h-card"><a href="{actor.url}" class="u-url mention">{actor.handle}</a></span>{suffix}'  # noqa: E501
         return link
 
     def render_hashtag(self, token: Hashtag) -> str:
@@ -118,23 +123,30 @@ async def _prefetch_mentioned_actors(
         if mention in actors:
             continue
 
-        _, username, domain = mention.split("@")
-        actor = (
-            await db_session.execute(
-                select(models.Actor).where(
-                    models.Actor.handle == mention,
-                    models.Actor.is_deleted.is_(False),
-                )
-            )
-        ).scalar_one_or_none()
-        if not actor:
-            actor_url = await webfinger.get_actor_url(mention)
-            if not actor_url:
-                # FIXME(ts): raise an error?
-                continue
-            actor = await fetch_actor(db_session, actor_url)
+        # XXX: the regex catches stuff like `@toto@example.com.`
+        if mention.endswith("."):
+            mention = mention[:-1]
 
-        actors[mention] = actor
+        try:
+            _, username, domain = mention.split("@")
+            actor = (
+                await db_session.execute(
+                    select(models.Actor).where(
+                        models.Actor.handle == mention,
+                        models.Actor.is_deleted.is_(False),
+                    )
+                )
+            ).scalar_one_or_none()
+            if not actor:
+                actor_url = await webfinger.get_actor_url(mention)
+                if not actor_url:
+                    # FIXME(ts): raise an error?
+                    continue
+                actor = await fetch_actor(db_session, actor_url)
+
+            actors[mention] = actor
+        except Exception:
+            logger.exception(f"Failed to prefetch {mention}")
 
     return actors
 
