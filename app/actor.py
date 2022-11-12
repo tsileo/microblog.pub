@@ -218,24 +218,23 @@ async def fetch_actor(
 
     if save_if_not_found:
         ap_actor = await ap.fetch(actor_id)
-        # Some softwares uses URL when we expect ID
-        if actor_id == ap_actor.get("url"):
-            # Which mean we may already have it in DB
-            existing_actor_by_url = (
-                await db_session.scalars(
-                    select(models.Actor).where(
-                        models.Actor.ap_id == ap.get_id(ap_actor),
-                    )
+        # Some softwares uses URL when we expect ID or uses a different casing
+        # (like Birdsite LIVE) , which mean we may already have it in DB
+        existing_actor_by_url = (
+            await db_session.scalars(
+                select(models.Actor).where(
+                    models.Actor.ap_id == ap.get_id(ap_actor),
                 )
-            ).one_or_none()
-            if existing_actor_by_url:
-                # Update the actor as we had to fetch it anyway
-                await update_actor_if_needed(
-                    db_session,
-                    existing_actor_by_url,
-                    RemoteActor(ap_actor),
-                )
-                return existing_actor_by_url
+            )
+        ).one_or_none()
+        if existing_actor_by_url:
+            # Update the actor as we had to fetch it anyway
+            await update_actor_if_needed(
+                db_session,
+                existing_actor_by_url,
+                RemoteActor(ap_actor),
+            )
+            return existing_actor_by_url
 
         return await save_actor(db_session, ap_actor)
     else:
