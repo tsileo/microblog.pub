@@ -690,6 +690,14 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "pebble"
+version = "5.0.2"
+description = "Threading and multiprocessing eye-candy."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "pillow"
 version = "9.3.0"
 description = "Python Imaging Library (Fork)"
@@ -1263,7 +1271,7 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "89df524a545a19a20440d1872c93151bbf3f68d3b3d20cc50bc9049dd0e6d25f"
+content-hash = "13a1f5fc3f65c56e753062dca6ab74a50f7270d78a08ebf6297f7b4fa26b5eac"
 
 [metadata.files]
 aiosqlite = [
@@ -1870,6 +1878,10 @@ packaging = [
 pathspec = [
     {file = "pathspec-0.10.1-py3-none-any.whl", hash = "sha256:46846318467efc4556ccfd27816e004270a9eeeeb4d062ce5e6fc7a87c573f93"},
     {file = "pathspec-0.10.1.tar.gz", hash = "sha256:7ace6161b621d31e7902eb6b5ae148d12cfd23f4a249b9ffb6b9fee12084323d"},
+]
+pebble = [
+    {file = "Pebble-5.0.2-py3-none-any.whl", hash = "sha256:61b2dfd52b1a8c083b4e6cf3e0f1ff2e8a430a6283c53969a7057a1c91bed3cd"},
+    {file = "Pebble-5.0.2.tar.gz", hash = "sha256:9c58c03eaf920c31287444c6fef39dc53baeac9de221ead104f5c9b48e8bd587"},
 ]
 pillow = [
     {file = "Pillow-9.3.0-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:0b7257127d646ff8676ec8a15520013a698d1fdc48bc2a79ba4e53df792526f2"},

@@ -1,12 +1,15 @@
 import asyncio
 import mimetypes
 import re
+import signal
+from concurrent.futures import TimeoutError
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup  # type: ignore
 from loguru import logger
+from pebble import concurrent  # type: ignore
 from pydantic import BaseModel
 
 from app import activitypub as ap
@@ -29,7 +32,11 @@ class OpenGraphMeta(BaseModel):
     site_name: str
 
 
+@concurrent.process(timeout=5)
 def _scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
+    # Prevent SIGTERM to bubble up to the worker
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
     soup = BeautifulSoup(html, "html5lib")
     ogs = {
         og.attrs["property"]: og.attrs.get("content")
@@ -56,6 +63,10 @@ def _scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
             raw[maybe_rel] = make_abs(u, url)
 
     return OpenGraphMeta.parse_obj(raw)
+
+
+def scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
+    return _scrap_og_meta(url, html).result()
 
 
 async def external_urls(
@@ -126,7 +137,10 @@ async def _og_meta_from_url(url: str) -> OpenGraphMeta | None:
         return None
 
     try:
-        return _scrap_og_meta(url, resp.text)
+        return scrap_og_meta(url, resp.text)
+    except TimeoutError:
+        logger.info(f"Timed out when scraping OG meta for {url}")
+        return None
     except Exception:
         logger.info(f"Failed to scrap OG meta for {url}")
         return None

@@ -69,5 +69,5 @@ class Worker(Generic[T]):
         logger.info("stopping loop")
 
     async def _shutdown(self, sig: signal.Signals) -> None:
-        logger.info(f"Caught {signal=}")
+        logger.info(f"Caught {sig=}")
         self._stop_event.set()

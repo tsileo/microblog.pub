@@ -3,7 +3,6 @@ import traceback
 from datetime import datetime
 from datetime import timedelta
 
-import httpx
 from loguru import logger
 from sqlalchemy import func
 from sqlalchemy import select
@@ -108,6 +107,7 @@ async def process_next_incoming_activity(
 
     next_activity.tries = next_activity.tries + 1
     next_activity.last_try = now()
+    await db_session.commit()
 
     if next_activity.ap_object and next_activity.sent_by_ap_actor_id:
         try:
@@ -120,13 +120,16 @@ async def process_next_incoming_activity(
                     ),
                     timeout=60,
                 )
-        except httpx.TimeoutException as exc:
-            url = exc._request.url if exc._request else None
-            logger.error(f"Failed, HTTP timeout when fetching {url}")
+        except asyncio.exceptions.TimeoutError:
+            logger.error("Activity took too long to process")
+            await db_session.rollback()
+            await db_session.refresh(next_activity)
             next_activity.error = traceback.format_exc()
             _set_next_try(next_activity)
         except Exception:
             logger.exception("Failed")
+            await db_session.rollback()
+            await db_session.refresh(next_activity)
             next_activity.error = traceback.format_exc()
             _set_next_try(next_activity)
         else:
