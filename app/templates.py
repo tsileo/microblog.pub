@@ -85,6 +85,7 @@ async def render_template(
     template: str,
     template_args: dict[str, Any] | None = None,
     status_code: int = 200,
+    headers: dict[str, str] | None = None,
 ) -> TemplateResponse:
     if template_args is None:
         template_args = {}
@@ -129,6 +130,7 @@ async def render_template(
             **template_args,
         },
         status_code=status_code,
+        headers=headers,
     )
 
 
