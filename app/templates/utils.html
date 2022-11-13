@@ -131,6 +131,17 @@
 {% endblock %}
 {% endmacro %}
 
+{% macro admin_force_delete_button(ap_object_id, permalink_id=None) %}
+{% block admin_force_delete_button scoped %}
+<form action="{{ request.url_for("admin_actions_force_delete") }}" class="object-delete-form" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url(permalink_id) }}
+    <input type="hidden" name="ap_object_id" value="{{ ap_object_id }}">
+    <input type="submit" value="local delete">
+</form>
+{% endblock %}
+{% endmacro %}
+
 {% macro admin_announce_button(ap_object_id, permalink_id=None) %}
 {% block admin_announce_button scoped %}
 <form action="{{ request.url_for("admin_actions_announce") }}" method="POST">
@@ -680,6 +691,11 @@
         {% if object.is_from_inbox or object.is_from_outbox %}
             <li>
                 {{ admin_expand_button(object) }}
+            </li>
+        {% endif %}
+        {% if object.is_from_inbox %}
+            <li>
+                {{ admin_force_delete_button(object.ap_id) }}
             </li>
         {% endif %}
     </ul>

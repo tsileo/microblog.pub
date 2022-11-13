@@ -850,6 +850,30 @@ async def admin_profile(
     )
 
 
+@router.post("/actions/force_delete")
+async def admin_actions_force_delete(
+    request: Request,
+    ap_object_id: str = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    ap_object_to_delete = await get_inbox_object_by_ap_id(db_session, ap_object_id)
+    if not ap_object_to_delete:
+        raise ValueError(f"Cannot find {ap_object_id}")
+
+    logger.info(f"Deleting {ap_object_to_delete.ap_type}/{ap_object_to_delete.ap_id}")
+    await boxes._revert_side_effect_for_deleted_object(
+        db_session,
+        None,
+        ap_object_to_delete,
+        None,
+    )
+    ap_object_to_delete.is_deleted = True
+    await db_session.commit()
+    return RedirectResponse(redirect_url, status_code=302)
+
+
 @router.post("/actions/follow")
 async def admin_actions_follow(
     request: Request,

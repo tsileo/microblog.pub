@@ -1186,7 +1186,7 @@ async def _get_replies_count(
 
 async def _revert_side_effect_for_deleted_object(
     db_session: AsyncSession,
-    delete_activity: models.InboxObject,
+    delete_activity: models.InboxObject | None,
     deleted_ap_object: models.InboxObject,
     forwarded_by_actor: models.Actor | None,
 ) -> None:
@@ -1223,7 +1223,7 @@ async def _revert_side_effect_for_deleted_object(
                     .where(
                         models.OutboxObject.id == replied_object.id,
                     )
-                    .values(replies_count=new_replies_count)
+                    .values(replies_count=new_replies_count - 1)
                 )
             else:
                 new_replies_count = await _get_replies_count(
@@ -1235,7 +1235,7 @@ async def _revert_side_effect_for_deleted_object(
                     .where(
                         models.InboxObject.id == replied_object.id,
                     )
-                    .values(replies_count=new_replies_count)
+                    .values(replies_count=new_replies_count - 1)
                 )
 
     if deleted_ap_object.ap_type == "Like" and deleted_ap_object.activity_object_ap_id:
@@ -1282,7 +1282,8 @@ async def _revert_side_effect_for_deleted_object(
     # If it's a local replies, it was forwarded, so we also need to forward
     # the Delete activity if possible
     if (
-        delete_activity.activity_object_ap_id == deleted_ap_object.ap_id
+        delete_activity
+        and delete_activity.activity_object_ap_id == deleted_ap_object.ap_id
         and delete_activity.has_ld_signature
         and is_delete_needs_to_be_forwarded
     ):
