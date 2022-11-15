@@ -58,7 +58,7 @@ All the development takes place on [sourcehut](https://sr.ht/~tsileo/microblog.p
  - [Issue tracker](https://todo.sr.ht/~tsileo/microblog.pub)
  - [Mailing list](https://sr.ht/~tsileo/microblog.pub/lists)
 
-Contributions are welcomed, check out the [documentation](https://docs.microblog.pub/developer_guide.html#documentation) for more details.
+Contributions are welcomed, check out the [contributing section of the documentation](https://docs.microblog.pub/developer_guide.html#contributing) for more details.
 
 
 ## License
