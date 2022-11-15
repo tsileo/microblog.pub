@@ -58,3 +58,24 @@ And check out the result by starting a static server using Python standard libra
 cd docs/dist
 python -m http.server 8001
 ```
+
+## Contributing
+
+Contributions/patches are welcome, but please start a discussion in a [ticket](https://todo.sr.ht/~tsileo/microblog.pub) or a [thread in the mailing list](https://lists.sr.ht/~tsileo/microblog.pub-devel) before working on anything consequent.
+
+### Patches
+
+Please ensure your code passes the code quality checks:
+
+```bash
+inv autoformat
+inv lint
+```
+
+And that the tests suite is passing:
+
+```bash
+inv tests
+```
+
+Please also consider adding new test cases if needed.

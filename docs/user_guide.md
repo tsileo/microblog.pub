@@ -465,6 +465,7 @@ make self-destruct
 
 If the server is not (re)starting, you can:
 
- - [Ensure that the configuration is valid](/user_guide.html#configuration-checking)
- - [Verify if you haven't any syntax error in the custom theme by recompiling the CSS](/user_guide.html#recompiling-css-files)
- - Look at the log files
+ - [Ensure that the configuration is valid](/user_guide.html#configuration-checking).
+ - [Verify if you haven't any syntax error in the custom theme by recompiling the CSS](/user_guide.html#recompiling-css-files).
+ - Look at the log files (in `data/uvicorn.log`, `data/incoming.log` and `data/outgoing.log`).
+ - If the CSS is not working, ensure your reverse proxy is serving the static file correctly.
