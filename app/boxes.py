@@ -1124,6 +1124,23 @@ async def _handle_delete_activity(
             logger.info("Removing actor from follower")
             await db_session.delete(follower)
 
+            # Also mark Follow activities for this actor as deleted
+            follow_activities = (
+                await db_session.scalars(
+                    select(models.OutboxObject).where(
+                        models.OutboxObject.ap_type == "Follow",
+                        models.OutboxObject.relates_to_actor_id
+                        == ap_object_to_delete.id,
+                        models.OutboxObject.is_deleted.is_(False),
+                    )
+                )
+            ).all()
+            for follow_activity in follow_activities:
+                logger.info(
+                    f"Marking Follow activity {follow_activity.ap_id} as deleted"
+                )
+                follow_activity.is_deleted = True
+
         following = (
             await db_session.scalars(
                 select(models.Following).where(
