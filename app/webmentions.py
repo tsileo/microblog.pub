@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 import httpx
 from bs4 import BeautifulSoup  # type: ignore
 from fastapi import APIRouter
@@ -9,7 +11,11 @@ from loguru import logger
 from sqlalchemy import select
 
 from app import models
+from app.boxes import _get_outbox_announces_count
+from app.boxes import _get_outbox_likes_count
+from app.boxes import _get_outbox_replies_count
 from app.boxes import get_outbox_object_by_ap_id
+from app.boxes import get_outbox_object_by_slug_and_short_id
 from app.database import AsyncSession
 from app.database import get_db_session
 from app.utils import microformats
@@ -47,6 +53,7 @@ async def webmention_endpoint(
 
         check_url(source)
         check_url(target)
+        parsed_target_url = urlparse(target)
     except Exception:
         logger.exception("Invalid webmention request")
         raise HTTPException(status_code=400, detail="Invalid payload")
@@ -65,6 +72,16 @@ async def webmention_endpoint(
         logger.info("Found existing Webmention, will try to update or delete")
 
     mentioned_object = await get_outbox_object_by_ap_id(db_session, target)
+
+    if not mentioned_object and parsed_target_url.path.startswith("/articles/"):
+        try:
+            _, _, short_id, slug = parsed_target_url.path.split("/")
+            mentioned_object = await get_outbox_object_by_slug_and_short_id(
+                db_session, slug, short_id
+            )
+        except Exception:
+            logger.exception(f"Failed to match {target}")
+
     if not mentioned_object:
         logger.info(f"Invalid target {target=}")
 
@@ -90,8 +107,13 @@ async def webmention_endpoint(
         logger.warning(f"target {target=} not found in source")
         if existing_webmention_in_db:
             logger.info("Deleting existing Webmention")
-            mentioned_object.webmentions_count = mentioned_object.webmentions_count - 1
             existing_webmention_in_db.is_deleted = True
+            await db_session.flush()
+
+            # Revert side effects
+            await _handle_webmention_side_effects(
+                db_session, existing_webmention_in_db, mentioned_object
+            )
 
             notif = models.Notification(
                 notification_type=models.NotificationType.DELETED_WEBMENTION,
@@ -110,10 +132,25 @@ async def webmention_endpoint(
         else:
             return JSONResponse(content={}, status_code=200)
 
+    webmention_type = models.WebmentionType.UNKNOWN
+    for item in data.get("items", []):
+        if target in item.get("properties", {}).get("in-reply-to", []):
+            webmention_type = models.WebmentionType.REPLY
+            break
+        elif target in item.get("properties", {}).get("like-of", []):
+            webmention_type = models.WebmentionType.LIKE
+            break
+        elif target in item.get("properties", {}).get("repost-of", []):
+            webmention_type = models.WebmentionType.REPOST
+            break
+
+    webmention: models.Webmention
     if existing_webmention_in_db:
         # Undelete if needed
         existing_webmention_in_db.is_deleted = False
         existing_webmention_in_db.source_microformats = data
+        await db_session.flush()
+        webmention = existing_webmention_in_db
 
         notif = models.Notification(
             notification_type=models.NotificationType.UPDATED_WEBMENTION,
@@ -127,9 +164,11 @@ async def webmention_endpoint(
             target=target,
             source_microformats=data,
             outbox_object_id=mentioned_object.id,
+            webmention_type=webmention_type,
         )
         db_session.add(new_webmention)
         await db_session.flush()
+        webmention = new_webmention
 
         notif = models.Notification(
             notification_type=models.NotificationType.NEW_WEBMENTION,
@@ -138,8 +177,32 @@ async def webmention_endpoint(
         )
         db_session.add(notif)
 
-        mentioned_object.webmentions_count = mentioned_object.webmentions_count + 1
-
+    # Handle side effect
+    await _handle_webmention_side_effects(db_session, webmention, mentioned_object)
     await db_session.commit()
 
     return JSONResponse(content={}, status_code=200)
+
+
+async def _handle_webmention_side_effects(
+    db_session: AsyncSession,
+    webmention: models.Webmention,
+    mentioned_object: models.OutboxObject,
+) -> None:
+    if webmention.webmention_type == models.WebmentionType.UNKNOWN:
+        # TODO: recount everything
+        mentioned_object.webmentions_count = mentioned_object.webmentions_count + 1
+    elif webmention.webmention_type == models.WebmentionType.LIKE:
+        mentioned_object.likes_count = await _get_outbox_likes_count(
+            db_session, mentioned_object
+        )
+    elif webmention.webmention_type == models.WebmentionType.REPOST:
+        mentioned_object.announces_count = await _get_outbox_announces_count(
+            db_session, mentioned_object
+        )
+    elif webmention.webmention_type == models.WebmentionType.REPLY:
+        mentioned_object.replies_count = await _get_outbox_replies_count(
+            db_session, mentioned_object
+        )
+    else:
+        raise ValueError(f"Unhandled {webmention.webmention_type} webmention")

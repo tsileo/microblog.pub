@@ -201,7 +201,7 @@ async def send_delete(db_session: AsyncSession, ap_object_id: str) -> None:
         raise ValueError("Should never happen")
 
     outbox_object_to_delete.is_deleted = True
-    await db_session.commit()
+    await db_session.flush()
 
     # Compute the original recipients
     recipients = await _compute_recipients(
@@ -216,14 +216,17 @@ async def send_delete(db_session: AsyncSession, ap_object_id: str) -> None:
             db_session, outbox_object_to_delete.in_reply_to
         )
         if replied_object:
-            new_replies_count = await _get_replies_count(
-                db_session, replied_object.ap_id
-            )
+            if replied_object.is_from_outbox:
+                # Different helper here because we also count webmentions
+                new_replies_count = await _get_outbox_replies_count(
+                    db_session, replied_object  # type: ignore
+                )
+            else:
+                new_replies_count = await _get_replies_count(
+                    db_session, replied_object.ap_id
+                )
 
             replied_object.replies_count = new_replies_count
-            if replied_object.replies_count < 0:
-                logger.warning("negative replies count for {replied_object.ap_id}")
-                replied_object.replies_count = 0
         else:
             logger.info(f"{outbox_object_to_delete.in_reply_to} not found")
 
@@ -1048,6 +1051,32 @@ async def get_outbox_object_by_ap_id(
     )  # type: ignore
 
 
+async def get_outbox_object_by_slug_and_short_id(
+    db_session: AsyncSession,
+    slug: str,
+    short_id: str,
+) -> models.OutboxObject | None:
+    return (
+        (
+            await db_session.execute(
+                select(models.OutboxObject)
+                .options(
+                    joinedload(models.OutboxObject.outbox_object_attachments).options(
+                        joinedload(models.OutboxObjectAttachment.upload)
+                    )
+                )
+                .where(
+                    models.OutboxObject.public_id.like(f"{short_id}%"),
+                    models.OutboxObject.slug == slug,
+                    models.OutboxObject.is_deleted.is_(False),
+                )
+            )
+        )
+        .unique()
+        .scalar_one_or_none()
+    )
+
+
 async def get_anybox_object_by_ap_id(
     db_session: AsyncSession, ap_id: str
 ) -> AnyboxObject | None:
@@ -1201,6 +1230,67 @@ async def _get_replies_count(
     )
 
 
+async def _get_outbox_replies_count(
+    db_session: AsyncSession,
+    outbox_object: models.OutboxObject,
+) -> int:
+    return (await _get_replies_count(db_session, outbox_object.ap_id)) + (
+        await db_session.scalar(
+            select(func.count(models.Webmention.id)).where(
+                models.Webmention.is_deleted.is_(False),
+                models.Webmention.outbox_object_id == outbox_object.id,
+                models.Webmention.webmention_type == models.WebmentionType.REPLY,
+            )
+        )
+    )
+
+
+async def _get_outbox_likes_count(
+    db_session: AsyncSession,
+    outbox_object: models.OutboxObject,
+) -> int:
+    return (
+        await db_session.scalar(
+            select(func.count(models.InboxObject.id)).where(
+                models.InboxObject.ap_type == "Like",
+                models.InboxObject.relates_to_outbox_object_id == outbox_object.id,
+                models.InboxObject.is_deleted.is_(False),
+            )
+        )
+    ) + (
+        await db_session.scalar(
+            select(func.count(models.Webmention.id)).where(
+                models.Webmention.is_deleted.is_(False),
+                models.Webmention.outbox_object_id == outbox_object.id,
+                models.Webmention.webmention_type == models.WebmentionType.LIKE,
+            )
+        )
+    )
+
+
+async def _get_outbox_announces_count(
+    db_session: AsyncSession,
+    outbox_object: models.OutboxObject,
+) -> int:
+    return (
+        await db_session.scalar(
+            select(func.count(models.InboxObject.id)).where(
+                models.InboxObject.ap_type == "Announce",
+                models.InboxObject.relates_to_outbox_object_id == outbox_object.id,
+                models.InboxObject.is_deleted.is_(False),
+            )
+        )
+    ) + (
+        await db_session.scalar(
+            select(func.count(models.Webmention.id)).where(
+                models.Webmention.is_deleted.is_(False),
+                models.Webmention.outbox_object_id == outbox_object.id,
+                models.Webmention.webmention_type == models.WebmentionType.REPOST,
+            )
+        )
+    )
+
+
 async def _revert_side_effect_for_deleted_object(
     db_session: AsyncSession,
     delete_activity: models.InboxObject | None,
@@ -1231,8 +1321,8 @@ async def _revert_side_effect_for_deleted_object(
                 # also needs to be forwarded
                 is_delete_needs_to_be_forwarded = True
 
-                new_replies_count = await _get_replies_count(
-                    db_session, replied_object.ap_id
+                new_replies_count = await _get_outbox_replies_count(
+                    db_session, replied_object  # type: ignore
                 )
 
                 await db_session.execute(
@@ -1262,12 +1352,13 @@ async def _revert_side_effect_for_deleted_object(
         )
         if related_object:
             if related_object.is_from_outbox:
+                likes_count = await _get_outbox_likes_count(db_session, related_object)
                 await db_session.execute(
                     update(models.OutboxObject)
                     .where(
                         models.OutboxObject.id == related_object.id,
                     )
-                    .values(likes_count=models.OutboxObject.likes_count - 1)
+                    .values(likes_count=likes_count - 1)
                 )
     elif (
         deleted_ap_object.ap_type == "Annouce"
@@ -1279,12 +1370,15 @@ async def _revert_side_effect_for_deleted_object(
         )
         if related_object:
             if related_object.is_from_outbox:
+                announces_count = await _get_outbox_announces_count(
+                    db_session, related_object
+                )
                 await db_session.execute(
                     update(models.OutboxObject)
                     .where(
                         models.OutboxObject.id == related_object.id,
                     )
-                    .values(announces_count=models.OutboxObject.announces_count - 1)
+                    .values(announces_count=announces_count - 1)
                 )
 
     # Delete any Like/Announce
@@ -1826,8 +1920,8 @@ async def _process_note_object(
                         replied_object,  # type: ignore  # outbox check below
                     )
                 else:
-                    new_replies_count = await _get_replies_count(
-                        db_session, replied_object.ap_id
+                    new_replies_count = await _get_outbox_replies_count(
+                        db_session, replied_object  # type: ignore
                     )
 
                     await db_session.execute(
@@ -2073,7 +2167,10 @@ async def _handle_like_activity(
         )
         await db_session.delete(like_activity)
     else:
-        relates_to_outbox_object.likes_count = models.OutboxObject.likes_count + 1
+        relates_to_outbox_object.likes_count = await _get_outbox_likes_count(
+            db_session,
+            relates_to_outbox_object,
+        )
 
         notif = models.Notification(
             notification_type=models.NotificationType.LIKE,

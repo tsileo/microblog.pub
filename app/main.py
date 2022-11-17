@@ -799,24 +799,8 @@ async def article_by_slug(
     db_session: AsyncSession = Depends(get_db_session),
     httpsig_info: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse | RedirectResponse:
-    maybe_object = (
-        (
-            await db_session.execute(
-                select(models.OutboxObject)
-                .options(
-                    joinedload(models.OutboxObject.outbox_object_attachments).options(
-                        joinedload(models.OutboxObjectAttachment.upload)
-                    )
-                )
-                .where(
-                    models.OutboxObject.public_id.like(f"{short_id}%"),
-                    models.OutboxObject.slug == slug,
-                    models.OutboxObject.is_deleted.is_(False),
-                )
-            )
-        )
-        .unique()
-        .scalar_one_or_none()
+    maybe_object = await boxes.get_outbox_object_by_slug_and_short_id(
+        db_session, slug, short_id
     )
     if not maybe_object:
         raise HTTPException(status_code=404)

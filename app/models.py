@@ -468,6 +468,14 @@ class IndieAuthAccessToken(Base):
     is_revoked = Column(Boolean, nullable=False, default=False)
 
 
+@enum.unique
+class WebmentionType(str, enum.Enum):
+    UNKNOWN = "unknown"
+    LIKE = "like"
+    REPLY = "reply"
+    REPOST = "repost"
+
+
 class Webmention(Base):
     __tablename__ = "webmention"
     __table_args__ = (UniqueConstraint("source", "target", name="uix_source_target"),)
@@ -484,6 +492,8 @@ class Webmention(Base):
     outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=False)
     outbox_object = relationship(OutboxObject, uselist=False)
 
+    webmention_type = Column(Enum(WebmentionType), nullable=True)
+
     @property
     def as_facepile_item(self) -> webmentions.Webmention | None:
         if not self.source_microformats:
@@ -493,6 +503,7 @@ class Webmention(Base):
                 self.source_microformats["items"], self.source
             )
         except Exception:
+            # TODO: return a facepile with the unknown image
             logger.warning(
                 f"Failed to generate facefile item for Webmention id={self.id}"
             )
