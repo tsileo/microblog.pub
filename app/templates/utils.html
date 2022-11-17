@@ -711,8 +711,8 @@
             <div class="interactions-block">Likes
                 <div class="facepile-wrapper">
                 {% for like in likes %}
-                    <a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ like.actor.ap_id }}{% else %}{{ like.actor.url }}{% endif %}" title="{{ like.actor.handle }}" rel="noreferrer">
-                        <img src="{{ like.actor.resized_icon_url }}" alt="{{ like.actor.handle}}">
+                    <a href="{% if is_admin and like.ap_actor_id %}{{ url_for("admin_profile") }}?actor_id={{ like.ap_actor_id }}{% else %}{{ like.url }}{% endif %}" title="{{ like.name }}" rel="noreferrer">
+                        <img src="{{ like.picture_url }}" alt="{{ like.name }}">
                     </a>
                 {% endfor %}
                 {% if object.likes_count > likes | length %}
@@ -728,8 +728,8 @@
             <div class="interactions-block">Shares
                 <div class="facepile-wrapper">
                 {% for share in shares %}
-                    <a href="{% if is_admin %}{{ url_for("admin_profile") }}?actor_id={{ share.actor.ap_id }}{% else %}{{ share.actor.url }}{% endif %}" title="{{ share.actor.handle }}" rel="noreferrer">
-                        <img src="{{ share.actor.resized_icon_url }}" alt="{{ share.actor.handle}}">
+                    <a href="{% if is_admin and share.ap_actor_id %}{{ url_for("admin_profile") }}?actor_id={{ share.actor.ap_actor_id }}{% else %}{{ share.url }}{% endif %}" title="{{ share.name }}" rel="noreferrer">
+                        <img src="{{ share.picture_url }}" alt="{{ share.name }}">
                     </a>
                 {% endfor %}
                 {% if object.announces_count > shares | length %}

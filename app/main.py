@@ -73,6 +73,8 @@ from app.templates import is_current_user_admin
 from app.uploads import UPLOAD_DIR
 from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
+from app.utils.facepile import Face
+from app.utils.facepile import merge_faces
 from app.utils.highlight import HIGHLIGHT_CSS_HASH
 from app.utils.url import check_url
 from app.webfinger import get_remote_follow_template
@@ -724,7 +726,7 @@ async def _fetch_webmentions(
                 models.Webmention.outbox_object_id == outbox_object.id,
                 models.Webmention.is_deleted.is_(False),
             )
-            .limit(10)
+            .limit(50)
         )
     ).all()
 
@@ -774,9 +776,9 @@ async def outbox_by_public_id(
         is_current_user_admin=is_current_user_admin(request),
     )
 
+    webmentions = await _fetch_webmentions(db_session, maybe_object)
     likes = await _fetch_likes(db_session, maybe_object)
     shares = await _fetch_shares(db_session, maybe_object)
-    webmentions = await _fetch_webmentions(db_session, maybe_object)
     return await templates.render_template(
         db_session,
         request,
@@ -784,10 +786,49 @@ async def outbox_by_public_id(
         {
             "replies_tree": replies_tree,
             "outbox_object": maybe_object,
-            "likes": likes,
-            "shares": shares,
-            "webmentions": webmentions,
+            "likes": _merge_faces_from_inbox_object_and_webmentions(
+                likes,
+                webmentions,
+                models.WebmentionType.LIKE,
+            ),
+            "shares": _merge_faces_from_inbox_object_and_webmentions(
+                shares,
+                webmentions,
+                models.WebmentionType.REPOST,
+            ),
+            "webmentions": _filter_webmentions(webmentions),
         },
+    )
+
+
+def _filter_webmentions(
+    webmentions: list[models.Webmention],
+) -> list[models.Webmention]:
+    return [
+        wm
+        for wm in webmentions
+        if wm.webmention_type
+        not in [
+            models.WebmentionType.LIKE,
+            models.WebmentionType.REPOST,
+        ]
+    ]
+
+
+def _merge_faces_from_inbox_object_and_webmentions(
+    inbox_objects: list[models.InboxObject],
+    webmentions: list[models.Webmention],
+    webmention_type: models.WebmentionType,
+) -> list[Face]:
+    wm_faces = []
+    for wm in webmentions:
+        if wm.webmention_type != webmention_type:
+            continue
+        if face := Face.from_webmention(wm):
+            wm_faces.append(face)
+
+    return merge_faces(
+        [Face.from_inbox_object(obj) for obj in inbox_objects] + wm_faces
     )
 
 
@@ -826,9 +867,17 @@ async def article_by_slug(
         {
             "replies_tree": replies_tree,
             "outbox_object": maybe_object,
-            "likes": likes,
-            "shares": shares,
-            "webmentions": webmentions,
+            "likes": _merge_faces_from_inbox_object_and_webmentions(
+                likes,
+                webmentions,
+                models.WebmentionType.LIKE,
+            ),
+            "shares": _merge_faces_from_inbox_object_and_webmentions(
+                shares,
+                webmentions,
+                models.WebmentionType.REPOST,
+            ),
+            "webmentions": _filter_webmentions(webmentions),
         },
     )
 
