@@ -728,7 +728,7 @@
             <div class="interactions-block">Shares
                 <div class="facepile-wrapper">
                 {% for share in shares %}
-                    <a href="{% if is_admin and share.ap_actor_id %}{{ url_for("admin_profile") }}?actor_id={{ share.actor.ap_actor_id }}{% else %}{{ share.url }}{% endif %}" title="{{ share.name }}" rel="noreferrer">
+                    <a href="{% if is_admin and share.ap_actor_id %}{{ url_for("admin_profile") }}?actor_id={{ share.ap_actor_id }}{% else %}{{ share.url }}{% endif %}" title="{{ share.name }}" rel="noreferrer">
                         <img src="{{ share.picture_url }}" alt="{{ share.name }}">
                     </a>
                 {% endfor %}
