@@ -12,6 +12,7 @@ from sqlalchemy.orm import joinedload
 
 from app import activitypub as ap
 from app import media
+from app.config import BASE_URL
 from app.database import AsyncSession
 from app.utils.datetime import as_utc
 from app.utils.datetime import now
@@ -111,14 +112,14 @@ class Actor:
         if self.icon_url:
             return media.proxied_media_url(self.icon_url)
         else:
-            return "/static/nopic.png"
+            return BASE_URL + "/static/nopic.png"
 
     @property
     def resized_icon_url(self) -> str:
         if self.icon_url:
             return media.resized_media_url(self.icon_url, 50)
         else:
-            return "/static/nopic.png"
+            return BASE_URL + "/static/nopic.png"
 
     @property
     def tags(self) -> list[ap.RawObject]:
