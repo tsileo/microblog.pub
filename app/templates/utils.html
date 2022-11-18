@@ -441,6 +441,12 @@
 {% endblock %}
 {% endmacro %}
 
+{% macro display_webmention_reply(wm_reply) %}
+{% block display_webmention_reply scoped %}
+{{ wm_reply }}
+{% endblock %}
+{% endmacro %}
+
 {% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}, is_object_page=False) %}
 {% block display_object scoped %}
 {% set is_article_mode = object.is_from_outbox and object.ap_type == "Article" and is_object_page %}

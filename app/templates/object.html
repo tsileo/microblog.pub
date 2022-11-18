@@ -33,7 +33,11 @@
 {% if replies_tree_node.is_requested %}
 {{ utils.display_object(replies_tree_node.ap_object, likes=likes, shares=shares, webmentions=webmentions, expanded=not replies_tree_node.is_root, is_object_page=True) }}
 {% else %}
-    {{ utils.display_object(replies_tree_node.ap_object) }}
+    {% if replies_tree_node.wm_reply %}
+        {{ utils.display_webmention_reply(replies_tree_node.wm_reply) }}
+    {% else %}
+        {{ utils.display_object(replies_tree_node.ap_object) }}
+    {% endif %}
 {% endif %}
 
 {% for child in replies_tree_node.children %}

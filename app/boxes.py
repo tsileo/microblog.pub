@@ -1,4 +1,5 @@
 """Actions related to the AP inbox/outbox."""
+import datetime
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
@@ -42,6 +43,7 @@ from app.utils.datetime import as_utc
 from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
 from app.utils.text import slugify
+from app.utils.facepile import WebmentionReply
 
 AnyboxObject = models.InboxObject | models.OutboxObject
 
@@ -2581,10 +2583,20 @@ async def fetch_actor_collection(db_session: AsyncSession, url: str) -> list[Act
 
 @dataclass
 class ReplyTreeNode:
-    ap_object: AnyboxObject
+    ap_object: AnyboxObject | None
+    wm_reply: WebmentionReply | None
     children: list["ReplyTreeNode"]
     is_requested: bool = False
     is_root: bool = False
+
+    @property
+    def published_at(self) -> datetime.datetime:
+        if self.ap_object:
+            return self.ap_object.ap_published_at
+        elif self.wm_reply:
+            return self.wm_reply.published_at
+        else:
+            raise ValueError(f"Should never happen: {self}")
 
 
 async def get_replies_tree(
@@ -2659,6 +2671,7 @@ async def get_replies_tree(
         for child in index.get(node.ap_object.ap_id, []):  # type: ignore
             child_node = ReplyTreeNode(
                 ap_object=child,
+                wm_reply=None,
                 is_requested=child.ap_id == requested_object.ap_id,  # type: ignore
                 children=[],
             )
@@ -2667,7 +2680,7 @@ async def get_replies_tree(
 
         return sorted(
             children,
-            key=lambda node: node.ap_object.ap_published_at,  # type: ignore
+            key=lambda node: node.published_at,
         )
 
     if None in nodes_by_in_reply_to:
@@ -2680,6 +2693,7 @@ async def get_replies_tree(
 
     root_node = ReplyTreeNode(
         ap_object=root_ap_object,
+        wm_reply=None,
         is_root=True,
         is_requested=root_ap_object.ap_id == requested_object.ap_id,
         children=[],

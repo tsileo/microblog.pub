@@ -75,6 +75,7 @@ from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
 from app.utils.facepile import Face
 from app.utils.facepile import merge_faces
+from app.utils.facepile import WebmentionReply
 from app.utils.highlight import HIGHLIGHT_CSS_HASH
 from app.utils.url import check_url
 from app.webfinger import get_remote_follow_template
@@ -784,7 +785,7 @@ async def outbox_by_public_id(
         request,
         "object.html",
         {
-            "replies_tree": replies_tree,
+            "replies_tree": _merge_replies(replies_tree, webmentions),
             "outbox_object": maybe_object,
             "likes": _merge_faces_from_inbox_object_and_webmentions(
                 likes,
@@ -811,6 +812,7 @@ def _filter_webmentions(
         not in [
             models.WebmentionType.LIKE,
             models.WebmentionType.REPOST,
+            models.WebmentionType.REPLY,
         ]
     ]
 
@@ -830,6 +832,30 @@ def _merge_faces_from_inbox_object_and_webmentions(
     return merge_faces(
         [Face.from_inbox_object(obj) for obj in inbox_objects] + wm_faces
     )
+
+
+def _merge_replies(
+    reply_tree_node: boxes.ReplyTreeNode,
+    webmentions: list[models.Webmention],
+) -> None:
+    webmention_replies = []
+    for wm in [
+        wm for wm in webmentions
+        if wm.webmention_type == models.WebmentionType.REPLY
+    ]:
+        if rep := WebmentionReply.from_webmention(wm):
+            webmention_replies.append(boxes.ReplyTreeNode(
+                ap_object=None,
+                wm_reply=rep,
+                is_requested=False,
+                children=[],
+            ))
+
+    reply_tree_node.children = sorted(
+        reply_tree_node.children + webmention_replies,
+        key=lambda node: node.published_at,
+    )
+    return reply_tree_node
 
 
 @app.get("/articles/{short_id}/{slug}")
@@ -865,7 +891,7 @@ async def article_by_slug(
         request,
         "object.html",
         {
-            "replies_tree": replies_tree,
+            "replies_tree": _merge_replies(replies_tree, webmentions),
             "outbox_object": maybe_object,
             "likes": _merge_faces_from_inbox_object_and_webmentions(
                 likes,
