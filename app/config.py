@@ -257,5 +257,5 @@ def verify_csrf_token(
     return None
 
 
-def hmac_sha256():
+def hmac_sha256() -> hmac.HMAC:
     return hmac.new(CONFIG.secret.encode(), digestmod=hashlib.sha256)
