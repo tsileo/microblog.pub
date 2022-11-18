@@ -1,5 +1,8 @@
 {%- import "utils.html" as utils with context -%}
 {% extends "layout.html" %}
+{% block head %}
+<meta name="robots" content="noindex, nofollow">
+{% endblock %}
 {% block main_tag %} class="main-flex"{% endblock %}
 {% block content %}
 <div class="centered">
