@@ -91,7 +91,7 @@ class Config(pydantic.BaseModel):
     name: str
     summary: str
     https: bool
-    icon_url: str
+    icon_url: str | None = None
     image_url: str | None = None
     secret: str
     debug: bool = False
