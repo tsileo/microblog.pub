@@ -66,8 +66,8 @@
                 {{ notif_actor_action(notif, "shared a post", with_icon=True) }}
                 {{ utils.display_object(notif.outbox_object) }}
            {% elif notif.notification_type.value == "undo_announce" %}
-                {{ notif_actor_action(notif, "unshared a post") }}
-                {{ utils.display_object(notif.outbox_object, with_icon=True) }}
+                {{ notif_actor_action(notif, "unshared a post", with_icon=True) }}
+                {{ utils.display_object(notif.outbox_object) }}
             {% elif notif.notification_type.value == "mention" %}
                 {{ notif_actor_action(notif, "mentioned you") }}
                 {{ utils.display_object(notif.inbox_object) }}
