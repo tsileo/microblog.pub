@@ -42,8 +42,8 @@ from app.utils import webmentions
 from app.utils.datetime import as_utc
 from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
-from app.utils.text import slugify
 from app.utils.facepile import WebmentionReply
+from app.utils.text import slugify
 
 AnyboxObject = models.InboxObject | models.OutboxObject
 
@@ -2592,7 +2592,7 @@ class ReplyTreeNode:
     @property
     def published_at(self) -> datetime.datetime:
         if self.ap_object:
-            return self.ap_object.ap_published_at
+            return self.ap_object.ap_published_at  # type: ignore
         elif self.wm_reply:
             return self.wm_reply.published_at
         else:

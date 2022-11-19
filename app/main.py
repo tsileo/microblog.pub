@@ -74,8 +74,8 @@ from app.uploads import UPLOAD_DIR
 from app.utils import pagination
 from app.utils.emoji import EMOJIS_BY_NAME
 from app.utils.facepile import Face
-from app.utils.facepile import merge_faces
 from app.utils.facepile import WebmentionReply
+from app.utils.facepile import merge_faces
 from app.utils.highlight import HIGHLIGHT_CSS_HASH
 from app.utils.url import check_url
 from app.webfinger import get_remote_follow_template
@@ -837,19 +837,21 @@ def _merge_faces_from_inbox_object_and_webmentions(
 def _merge_replies(
     reply_tree_node: boxes.ReplyTreeNode,
     webmentions: list[models.Webmention],
-) -> None:
+) -> boxes.ReplyTreeNode:
+    # TODO: return None as we update the object in place
     webmention_replies = []
     for wm in [
-        wm for wm in webmentions
-        if wm.webmention_type == models.WebmentionType.REPLY
+        wm for wm in webmentions if wm.webmention_type == models.WebmentionType.REPLY
     ]:
         if rep := WebmentionReply.from_webmention(wm):
-            webmention_replies.append(boxes.ReplyTreeNode(
-                ap_object=None,
-                wm_reply=rep,
-                is_requested=False,
-                children=[],
-            ))
+            webmention_replies.append(
+                boxes.ReplyTreeNode(
+                    ap_object=None,
+                    wm_reply=rep,
+                    is_requested=False,
+                    children=[],
+                )
+            )
 
     reply_tree_node.children = sorted(
         reply_tree_node.children + webmention_replies,

@@ -335,6 +335,14 @@ def _clean_html(html: str, note: Object) -> str:
         raise
 
 
+def _clean_html_wm(html: str) -> str:
+    return bleach.clean(
+        html,
+        attributes=ALLOWED_ATTRIBUTES,
+        strip=True,
+    )
+
+
 def _timeago(original_dt: datetime) -> str:
     dt = original_dt
     if dt.tzinfo:
@@ -411,6 +419,7 @@ def _poll_item_pct(item: ap.RawObject, voters_count: int) -> int:
 _templates.env.filters["domain"] = _filter_domain
 _templates.env.filters["media_proxy_url"] = _media_proxy_url
 _templates.env.filters["clean_html"] = _clean_html
+_templates.env.filters["clean_html_wm"] = _clean_html_wm
 _templates.env.filters["timeago"] = _timeago
 _templates.env.filters["format_date"] = _format_date
 _templates.env.filters["has_media_type"] = _has_media_type

@@ -443,7 +443,40 @@
 
 {% macro display_webmention_reply(wm_reply) %}
 {% block display_webmention_reply scoped %}
-{{ wm_reply }}
+
+<div class="ap-object">
+<div class="actor-box h-card p-author">
+    <div class="icon-box">
+        <img src="{{ wm_reply.face.picture_url }}" alt="{{ wm_reply.face.name }}'s avatar" class="actor-icon u-photo">
+    </div>
+    <a href="{{ wm_reply.face.url }}" class="u-url">
+        <div><strong class="p-name">{{ wm_reply.face.name | clean_html_wm | safe }}</strong></div>
+        <div class="actor-handle">{{ wm_reply.face.url | truncate(64, True) }}</div>
+    </a>
+</div>
+
+    <p class="in-reply-to">in reply to <a href="{{ wm_reply.in_reply_to }}" title="{{ wm_reply.in_reply_to }}" rel="nofollow">
+        this note
+    </a></p>
+
+    <div class="obj-content margin-top-20">
+    <div class="e-content">
+        {{ wm_reply.content | clean_html_wm | safe }}
+    </div>
+    </div>
+
+    <nav class="flexbox activity-bar margin-top-20">
+    <ul>
+        <li>
+            <div><a href="{{ wm_reply.url }}" rel="nofollow" class="object-permalink u-url u-uid">permalink</a></div>
+        </li>
+        <li>
+            <time class="dt-published" datetime="{{ wm_reply.published_at.replace(microsecond=0).isoformat() }}" title="{{ wm_reply.published_at.replace(microsecond=0).isoformat() }}">{{ wm_reply.published_at | timeago }}</time>
+        </li>
+    </ul>
+    </nav>
+</div>
+
 {% endblock %}
 {% endmacro %}
 
