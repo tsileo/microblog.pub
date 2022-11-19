@@ -64,7 +64,7 @@ async def user_session_or_redirect(
         raise _RedirectToLoginPage
 
     try:
-        loaded_session = session_serializer.loads(session, max_age=3600 * 12)
+        loaded_session = session_serializer.loads(session, max_age=3600 * 24 * 3)
     except Exception:
         raise _RedirectToLoginPage
 
