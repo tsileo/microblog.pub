@@ -193,4 +193,8 @@ http {
 
 ## YunoHost edition
 
-[YunoHost](https://yunohost.org/) support is a work in progress.
+[YunoHost](https://yunohost.org/) support is available (although it is not an official package for now): <https://git.sr.ht/~tsileo/microblog.pub_ynh>.
+
+## Available tutorial/guides
+
+ - [Opalstack](https://community.opalstack.com/d/1055-howto-install-and-run-microblogpub-on-opalstack), thanks to [@defulmere@mastodon.social](https://mastodon.online/@defulmere).
