@@ -1443,7 +1443,7 @@ async def json_feed(
         "items": data,
     }
     if LOCAL_ACTOR.icon_url:
-        result["author"]["avatar"] = LOCAL_ACTOR.icon_url
+        result["author"]["avatar"] = LOCAL_ACTOR.icon_url  # type: ignore
     return result
 
 
