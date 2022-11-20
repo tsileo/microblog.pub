@@ -11,6 +11,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.responses import RedirectResponse
 from loguru import logger
 from sqlalchemy import and_
+from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import or_
 from sqlalchemy import select
@@ -879,6 +880,42 @@ async def admin_actions_force_delete(
         None,
     )
     ap_object_to_delete.is_deleted = True
+    await db_session.commit()
+    return RedirectResponse(redirect_url, status_code=302)
+
+
+@router.post("/actions/force_delete_webmention")
+async def admin_actions_force_delete_webmention(
+    request: Request,
+    webmention_id: int = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    webmention = await boxes.get_webmention_by_id(db_session, webmention_id)
+    if not webmention:
+        raise ValueError(f"Cannot find {webmention_id}")
+    if not webmention.outbox_object:
+        raise ValueError(f"Missing related outbox object for {webmention_id}")
+
+    # TODO: move this
+    logger.info(f"Deleting {webmention_id}")
+    webmention.is_deleted = True
+    await db_session.flush()
+    from app.webmentions import _handle_webmention_side_effects
+
+    await _handle_webmention_side_effects(
+        db_session, webmention, webmention.outbox_object
+    )
+    # Delete related notifications
+    notif_deletion_result = await db_session.execute(
+        delete(models.Notification)
+        .where(models.Notification.webmention_id == webmention.id)
+        .execution_options(synchronize_session=False)
+    )
+    logger.info(
+        f"Deleted {notif_deletion_result.rowcount} notifications"  # type: ignore
+    )
     await db_session.commit()
     return RedirectResponse(redirect_url, status_code=302)
 

@@ -125,6 +125,7 @@ class WebmentionReply:
     url: str
     published_at: datetime.datetime
     in_reply_to: str
+    webmention_id: int
 
     @classmethod
     def from_webmention(cls, webmention: Webmention) -> Optional["WebmentionReply"]:
@@ -147,6 +148,7 @@ class WebmentionReply:
                             item["properties"]["published"][0]
                         ).replace(tzinfo=None),
                         in_reply_to=webmention.target,  # type: ignore
+                        webmention_id=webmention.id,  # type: ignore
                     )
                 except Exception:
                     logger.exception(

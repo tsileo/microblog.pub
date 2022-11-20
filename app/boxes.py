@@ -1088,6 +1088,20 @@ async def get_anybox_object_by_ap_id(
         return await get_inbox_object_by_ap_id(db_session, ap_id)
 
 
+async def get_webmention_by_id(
+    db_session: AsyncSession, webmention_id: int
+) -> models.Webmention | None:
+    return (
+        await db_session.execute(
+            select(models.Webmention)
+            .where(models.Webmention.id == webmention_id)
+            .options(
+                joinedload(models.Webmention.outbox_object),
+            )
+        )
+    ).scalar_one_or_none()  # type: ignore
+
+
 async def _handle_delete_activity(
     db_session: AsyncSession,
     from_actor: models.Actor,

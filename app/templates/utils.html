@@ -142,6 +142,17 @@
 {% endblock %}
 {% endmacro %}
 
+{% macro admin_force_delete_webmention_button(webmention_id, permalink_id=None) %}
+{% block admin_force_delete_webmention_button scoped %}
+<form action="{{ request.url_for("admin_actions_force_delete_webmention") }}" class="object-delete-form" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url(permalink_id) }}
+    <input type="hidden" name="webmention_id" value="{{ webmention_id }}">
+    <input type="submit" value="local delete">
+</form>
+{% endblock %}
+{% endmacro %}
+
 {% macro admin_announce_button(ap_object_id, permalink_id=None) %}
 {% block admin_announce_button scoped %}
 <form action="{{ request.url_for("admin_actions_announce") }}" method="POST">
@@ -473,6 +484,11 @@
         <li>
             <time class="dt-published" datetime="{{ wm_reply.published_at.replace(microsecond=0).isoformat() }}" title="{{ wm_reply.published_at.replace(microsecond=0).isoformat() }}">{{ wm_reply.published_at | timeago }}</time>
         </li>
+        {% if is_admin %}
+            <li>
+                {{ admin_force_delete_webmention_button(wm_reply.webmention_id) }}
+            </li>
+        {% endif %}
     </ul>
     </nav>
 </div>
