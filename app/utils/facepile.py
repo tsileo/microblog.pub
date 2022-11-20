@@ -8,7 +8,6 @@ from loguru import logger
 from app import media
 from app.models import InboxObject
 from app.models import Webmention
-from app.models import WebmentionType
 from app.utils.datetime import parse_isoformat
 from app.utils.url import make_abs
 
@@ -129,9 +128,6 @@ class WebmentionReply:
 
     @classmethod
     def from_webmention(cls, webmention: Webmention) -> Optional["WebmentionReply"]:
-        if webmention.webmention_type != WebmentionType.REPLY:
-            raise ValueError(f"Unexpected webmention {webmention.id}")
-
         items = webmention.source_microformats.get("items", [])  # type: ignore
         for item in items:
             if item["type"][0] == "h-entry":
