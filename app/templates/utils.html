@@ -444,7 +444,7 @@
 {% macro display_webmention_reply(wm_reply) %}
 {% block display_webmention_reply scoped %}
 
-<div class="ap-object">
+<div class="ap-object u-comment h-cite">
 <div class="actor-box h-card p-author">
     <div class="icon-box">
         <img src="{{ wm_reply.face.picture_url }}" alt="{{ wm_reply.face.name }}'s avatar" class="actor-icon u-photo">
@@ -480,11 +480,11 @@
 {% endblock %}
 {% endmacro %}
 
-{% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}, is_object_page=False) %}
+{% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}, is_object_page=False, is_h_entry=True) %}
 {% block display_object scoped %}
 {% set is_article_mode = object.is_from_outbox and object.ap_type == "Article" and is_object_page %}
 {% if object.ap_type in ["Note", "Article", "Video", "Page", "Question", "Event"] %}
-<div class="ap-object {% if expanded %}ap-object-expanded {% endif %}h-entry" id="{{ object.permalink_id }}">
+<div class="ap-object {% if expanded %}ap-object-expanded {% endif %}{% if is_h_entry %}h-entry{% endif %}" id="{{ object.permalink_id }}">
 
     {% if is_article_mode %}
     <data class="h-card">

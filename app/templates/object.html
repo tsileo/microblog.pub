@@ -31,12 +31,15 @@
 {% macro display_replies_tree(replies_tree_node) %}
 
 {% if replies_tree_node.is_requested %}
-{{ utils.display_object(replies_tree_node.ap_object, likes=likes, shares=shares, webmentions=webmentions, expanded=not replies_tree_node.is_root, is_object_page=True) }}
+{{ utils.display_object(replies_tree_node.ap_object, likes=likes, shares=shares, webmentions=webmentions, expanded=not replies_tree_node.is_root, is_object_page=True, is_h_entry=False) }}
 {% else %}
     {% if replies_tree_node.wm_reply %}
+        {# u-comment h-cite is displayed by default for webmention #}
         {{ utils.display_webmention_reply(replies_tree_node.wm_reply) }}
     {% else %}
-        {{ utils.display_object(replies_tree_node.ap_object) }}
+        <div class="u-comment h-cite">
+            {{ utils.display_object(replies_tree_node.ap_object, is_h_entry=False) }}
+        </div>
     {% endif %}
 {% endif %}
 
@@ -46,6 +49,8 @@
 
 {% endmacro %}
 
+<div class="h-entry">
 {{ display_replies_tree(replies_tree) }}
+</div>
 
 {% endblock %}

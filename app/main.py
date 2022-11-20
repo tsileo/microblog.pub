@@ -856,6 +856,7 @@ def _merge_replies(
     reply_tree_node.children = sorted(
         reply_tree_node.children + webmention_replies,
         key=lambda node: node.published_at,
+        reverse=True,
     )
     return reply_tree_node
 
