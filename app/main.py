@@ -1152,6 +1152,7 @@ async def nodeinfo(
 
 
 proxy_client = httpx.AsyncClient(
+    http2=True,
     follow_redirects=True,
     timeout=httpx.Timeout(timeout=10.0),
 )
