@@ -61,14 +61,17 @@ async def user_session_or_redirect(
     )
 
     if not session:
+        logger.info("No existing admin session")
         raise _RedirectToLoginPage
 
     try:
         loaded_session = session_serializer.loads(session, max_age=3600 * 24 * 3)
     except Exception:
+        logger.exception("Failed to validate admin session")
         raise _RedirectToLoginPage
 
     if not loaded_session.get("is_logged_in"):
+        logger.info(f"Admin session invalidated: {loaded_session}")
         raise _RedirectToLoginPage
 
     return None
