@@ -1179,7 +1179,11 @@ async def nodeinfo(
     )
 
 
-proxy_client = httpx.AsyncClient(follow_redirects=True, http2=True)
+proxy_client = httpx.AsyncClient(
+    http2=True,
+    follow_redirects=True,
+    timeout=httpx.Timeout(timeout=10.0),
+)
 
 
 async def _proxy_get(
@@ -1459,7 +1463,7 @@ async def json_feed(
                 ],
             }
         )
-    return {
+    result = {
         "version": "https://jsonfeed.org/version/1",
         "title": f"{LOCAL_ACTOR.display_name}'s microblog'",
         "home_page_url": LOCAL_ACTOR.url,
@@ -1467,10 +1471,12 @@ async def json_feed(
         "author": {
             "name": LOCAL_ACTOR.display_name,
             "url": LOCAL_ACTOR.url,
-            "avatar": LOCAL_ACTOR.icon_url,
         },
         "items": data,
     }
+    if LOCAL_ACTOR.icon_url:
+        result["author"]["avatar"] = LOCAL_ACTOR.icon_url  # type: ignore
+    return result
 
 
 async def _gen_rss_feed(
@@ -1482,7 +1488,8 @@ async def _gen_rss_feed(
     fg.description(f"{LOCAL_ACTOR.display_name}'s microblog")
     fg.author({"name": LOCAL_ACTOR.display_name})
     fg.link(href=LOCAL_ACTOR.url, rel="alternate")
-    fg.logo(LOCAL_ACTOR.icon_url)
+    if LOCAL_ACTOR.icon_url:
+        fg.logo(LOCAL_ACTOR.icon_url)
     fg.language("en")
 
     outbox_objects = await _get_outbox_for_feed(db_session)

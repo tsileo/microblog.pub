@@ -135,11 +135,6 @@ ME = {
     "url": config.ID + "/",  # XXX: the path is important for Mastodon compat
     "manuallyApprovesFollowers": config.CONFIG.manually_approves_followers,
     "attachment": _LOCAL_ACTOR_METADATA,
-    "icon": {
-        "mediaType": mimetypes.guess_type(config.CONFIG.icon_url)[0],
-        "type": "Image",
-        "url": config.CONFIG.icon_url,
-    },
     "publicKey": {
         "id": f"{config.ID}#main-key",
         "owner": config.ID,
@@ -147,6 +142,13 @@ ME = {
     },
     "tag": dedup_tags(_LOCAL_ACTOR_TAGS),
 }
+
+if config.CONFIG.icon_url:
+    ME["icon"] = {
+        "mediaType": mimetypes.guess_type(config.CONFIG.icon_url)[0],
+        "type": "Image",
+        "url": config.CONFIG.icon_url,
+    }
 
 if ALSO_KNOWN_AS:
     ME["alsoKnownAs"] = [ALSO_KNOWN_AS]

@@ -467,6 +467,9 @@ a.label-btn {
   span {
     color: $muted-color;
   }
+  span.new {
+    color: $secondary-color;
+  }
 }
 .actor-metadata {
     color: $muted-color;

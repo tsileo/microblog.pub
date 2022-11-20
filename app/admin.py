@@ -61,14 +61,17 @@ async def user_session_or_redirect(
     )
 
     if not session:
+        logger.info("No existing admin session")
         raise _RedirectToLoginPage
 
     try:
-        loaded_session = session_serializer.loads(session, max_age=3600 * 12)
+        loaded_session = session_serializer.loads(session, max_age=3600 * 24 * 3)
     except Exception:
+        logger.exception("Failed to validate admin session")
         raise _RedirectToLoginPage
 
     if not loaded_session.get("is_logged_in"):
+        logger.info(f"Admin session invalidated: {loaded_session}")
         raise _RedirectToLoginPage
 
     return None
@@ -718,13 +721,9 @@ async def get_notifications(
     actors_metadata = await get_actors_metadata(
         db_session, [notif.actor for notif in notifications if notif.actor]
     )
-
-    for notif in notifications:
-        notif.is_new = False
-    await db_session.commit()
-
     more_unread_count = 0
     next_cursor = None
+
     if notifications and remaining_count > page_size:
         decoded_next_cursor = notifications[-1].created_at
         next_cursor = pagination.encode_cursor(decoded_next_cursor)
@@ -738,7 +737,8 @@ async def get_notifications(
             )
         )
 
-    return await templates.render_template(
+    # Render the template before we change the new flag on notifications
+    tpl_resp = await templates.render_template(
         db_session,
         request,
         "notifications.html",
@@ -749,6 +749,13 @@ async def get_notifications(
             "more_unread_count": more_unread_count,
         },
     )
+
+    if len({notif.id for notif in notifications if notif.is_new}):
+        for notif in notifications:
+            notif.is_new = False
+        await db_session.commit()
+
+    return tpl_resp
 
 
 @router.get("/object")

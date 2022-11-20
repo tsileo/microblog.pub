@@ -10,6 +10,9 @@
         <a href="{{ url_for("admin_profile") }}?actor_id={{ notif.actor.ap_id }}">
             {% if with_icon %}{{ utils.display_tiny_actor_icon(notif.actor) }}{% endif %} {{ notif.actor.display_name | clean_html(notif.actor) | safe }}</a> {{ text }}
         <span title="{{ notif.created_at.isoformat() }}">{{ notif.created_at | timeago }}</span>
+        {% if notif.is_new %}
+            <span class="new">new</span>
+        {% endif %}
     </div>
 {% endmacro %}
 
@@ -66,8 +69,8 @@
                 {{ notif_actor_action(notif, "shared a post", with_icon=True) }}
                 {{ utils.display_object(notif.outbox_object) }}
            {% elif notif.notification_type.value == "undo_announce" %}
-                {{ notif_actor_action(notif, "unshared a post") }}
-                {{ utils.display_object(notif.outbox_object, with_icon=True) }}
+                {{ notif_actor_action(notif, "unshared a post", with_icon=True) }}
+                {{ utils.display_object(notif.outbox_object) }}
             {% elif notif.notification_type.value == "mention" %}
                 {{ notif_actor_action(notif, "mentioned you") }}
                 {{ utils.display_object(notif.inbox_object) }}

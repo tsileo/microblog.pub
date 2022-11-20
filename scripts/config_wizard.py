@@ -75,9 +75,10 @@ def main() -> None:
         proto = "http"
 
     print("Note that you can put your icon/avatar in the static/ directory")
-    dat["icon_url"] = prompt(
+    if icon_url := prompt(
         "icon URL: ", default=f'{proto}://{dat["domain"]}/static/nopic.png'
-    )
+    ):
+        dat["icon_url"] = icon_url
     dat["secret"] = os.urandom(16).hex()
 
     with config_file.open("w") as f:
