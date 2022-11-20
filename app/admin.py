@@ -721,13 +721,9 @@ async def get_notifications(
     actors_metadata = await get_actors_metadata(
         db_session, [notif.actor for notif in notifications if notif.actor]
     )
-
-    for notif in notifications:
-        notif.is_new = False
-    await db_session.commit()
-
     more_unread_count = 0
     next_cursor = None
+
     if notifications and remaining_count > page_size:
         decoded_next_cursor = notifications[-1].created_at
         next_cursor = pagination.encode_cursor(decoded_next_cursor)
@@ -741,7 +737,8 @@ async def get_notifications(
             )
         )
 
-    return await templates.render_template(
+    # Render the template before we change the new flag on notifications
+    tpl_resp = await templates.render_template(
         db_session,
         request,
         "notifications.html",
@@ -752,6 +749,13 @@ async def get_notifications(
             "more_unread_count": more_unread_count,
         },
     )
+
+    if len({notif.id for notif in notifications if notif.is_new}):
+        for notif in notifications:
+            notif.is_new = False
+        await db_session.commit()
+
+    return tpl_resp
 
 
 @router.get("/object")

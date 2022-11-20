@@ -10,6 +10,9 @@
         <a href="{{ url_for("admin_profile") }}?actor_id={{ notif.actor.ap_id }}">
             {% if with_icon %}{{ utils.display_tiny_actor_icon(notif.actor) }}{% endif %} {{ notif.actor.display_name | clean_html(notif.actor) | safe }}</a> {{ text }}
         <span title="{{ notif.created_at.isoformat() }}">{{ notif.created_at | timeago }}</span>
+        {% if notif.is_new %}
+            <span class="new">new</span>
+        {% endif %}
     </div>
 {% endmacro %}
 
