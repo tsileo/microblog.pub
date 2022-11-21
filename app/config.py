@@ -116,6 +116,8 @@ class Config(pydantic.BaseModel):
     sqlalchemy_database: str | None = None
     key_path: str | None = None
 
+    session_timeout: int = 3600 * 24 * 3  # in seconds, 3 days by default
+
     # Only set when the app is served on a non-root path
     id: str | None = None
 
@@ -171,6 +173,7 @@ ALSO_KNOWN_AS = CONFIG.also_known_as
 CUSTOM_CONTENT_SECURITY_POLICY = CONFIG.custom_content_security_policy
 
 INBOX_RETENTION_DAYS = CONFIG.inbox_retention_days
+SESSION_TIMEOUT = CONFIG.session_timeout
 CUSTOM_FOOTER = (
     markdown(CONFIG.custom_footer.replace("{version}", VERSION))
     if CONFIG.custom_footer

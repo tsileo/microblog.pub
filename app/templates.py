@@ -27,6 +27,7 @@ from app.ap_object import Object
 from app.config import BASE_URL
 from app.config import CUSTOM_FOOTER
 from app.config import DEBUG
+from app.config import SESSION_TIMEOUT
 from app.config import VERSION
 from app.config import generate_csrf_token
 from app.config import session_serializer
@@ -69,10 +70,10 @@ def is_current_user_admin(request: Request) -> bool:
         try:
             loaded_session = session_serializer.loads(
                 session_cookie,
-                max_age=3600 * 12,
+                max_age=SESSION_TIMEOUT,
             )
         except Exception:
-            pass
+            logger.exception("Failed to validate session timeout")
         else:
             is_admin = loaded_session.get("is_logged_in")
 

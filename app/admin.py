@@ -30,6 +30,7 @@ from app.boxes import send_block
 from app.boxes import send_follow
 from app.boxes import send_unblock
 from app.config import EMOJIS
+from app.config import SESSION_TIMEOUT
 from app.config import generate_csrf_token
 from app.config import session_serializer
 from app.config import verify_csrf_token
@@ -66,7 +67,7 @@ async def user_session_or_redirect(
         raise _RedirectToLoginPage
 
     try:
-        loaded_session = session_serializer.loads(session, max_age=3600 * 24 * 3)
+        loaded_session = session_serializer.loads(session, max_age=SESSION_TIMEOUT)
     except Exception:
         logger.exception("Failed to validate admin session")
         raise _RedirectToLoginPage
