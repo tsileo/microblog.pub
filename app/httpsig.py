@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 import typing
 from dataclasses import dataclass
 from datetime import datetime
@@ -197,6 +198,32 @@ async def httpsig_checker(
             is_unsupported_algorithm=True,
             server=server,
         )
+
+    # Try to drop Delete activity spams early on, this prevent making an extra
+    # HTTP requests trying to fetch an unavailable actor to verify the HTTP sig
+    try:
+        if request.method == "POST" and request.url.path.endswith("/inbox"):
+            from app import models  # TODO: solve this circular import
+
+            activity = json.loads(body)
+            actor_id = ap.get_id(activity["actor"])
+            if (
+                ap.as_list(activity["type"])[0] == "Delete"
+                and actor_id == ap.get_id(activity["object"])
+                and not (
+                    await db_session.scalars(
+                        select(models.Actor).where(
+                            models.Actor.ap_id == actor_id,
+                        )
+                    )
+                ).one_or_none()
+            ):
+                logger.info(f"Dropping Delete activity early for {body=}")
+                raise fastapi.HTTPException(status_code=202)
+    except fastapi.HTTPException as http_exc:
+        raise http_exc
+    except Exception:
+        logger.exception("Failed to check for Delete spam")
 
     # logger.debug(f"hsig={hsig}")
     signed_string, signature_date = _build_signed_string(
