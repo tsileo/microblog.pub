@@ -113,6 +113,7 @@ You can copy/paste them from [getemoji.com](https://getemoji.com/).
 #### Custom emoji
 
 You can add custom emoji in the `data/custom_emoji` directory and they will be picked automatically.
+Do not use exotic characters in filename - only letters, numbers, and underscore symbol `_` are allowed.
 
 #### Custom CSS
 

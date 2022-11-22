@@ -23,6 +23,8 @@ def _load_emojis(root_dir: Path, base_url: str) -> None:
             mt = mimetypes.guess_type(emoji.name)[0]
             if mt and mt.startswith("image/"):
                 name = emoji.name.split(".")[0]
+                if not re.match(EMOJI_REGEX, f':{name}:'):
+                    continue
                 ap_emoji: "RawObject" = {
                     "type": "Emoji",
                     "name": f":{name}:",
