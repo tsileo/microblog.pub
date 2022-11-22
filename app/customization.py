@@ -1,11 +1,18 @@
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import Request
+from loguru import logger
 from starlette.responses import JSONResponse
+
+if TYPE_CHECKING:
+    from app.ap_object import RemoteObject
+
 
 _DATA_DIR = Path().parent.resolve() / "data"
 _Handler = Callable[..., Any]
@@ -110,3 +117,38 @@ def get_custom_router() -> APIRouter | None:
             router.add_api_route(path, handler.handler)
 
     return router
+
+
+@dataclass
+class ObjectInfo:
+    # Is it a reply?
+    is_reply: bool
+
+    # Is it a reply to an outbox object
+    is_local_reply: bool
+
+    # Is the object mentioning the local actor
+    is_mention: bool
+
+    # Is it from someone the local actor is following
+    is_from_following: bool
+
+    # List of hashtags, e.g. #microblogpub
+    hashtags: list[str]
+
+    # @dev@microblog.pub
+    actor_handle: str
+
+    remote_object: "RemoteObject"
+
+
+_StreamVisibilityCallback = Callable[[ObjectInfo], bool]
+
+
+def default_stream_visibility_callback(object_info: ObjectInfo) -> bool:
+    logger.info(f"{object_info=}")
+    return (
+        (not object_info.is_reply and object_info.is_from_following)
+        or object_info.is_mention
+        or object_info.is_local_reply
+    )

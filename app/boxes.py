@@ -32,6 +32,8 @@ from app.config import BLOCKED_SERVERS
 from app.config import ID
 from app.config import MANUALLY_APPROVES_FOLLOWERS
 from app.config import set_moved_to
+from app.config import stream_visibility_callback
+from app.customization import ObjectInfo
 from app.database import AsyncSession
 from app.outgoing_activities import new_outgoing_activity
 from app.source import dedup_tags
@@ -1881,16 +1883,30 @@ async def _process_note_object(
 
     is_from_following = ro.actor.ap_id in {f.ap_actor_id for f in following}
     is_reply = bool(ro.in_reply_to)
-    is_local_reply = (
+    is_local_reply = bool(
         ro.in_reply_to
         and ro.in_reply_to.startswith(BASE_URL)
         and ro.content  # Hide votes from Question
     )
     is_mention = False
+    hashtags = []
     tags = ro.ap_object.get("tag", [])
     for tag in ap.as_list(tags):
         if tag.get("name") == LOCAL_ACTOR.handle or tag.get("href") == LOCAL_ACTOR.url:
             is_mention = True
+        if tag.get("type") == "Hashtag":
+            if tag_name := tag.get("name"):
+                hashtags.append(tag_name)
+
+    object_info = ObjectInfo(
+        is_reply=is_reply,
+        is_local_reply=is_local_reply,
+        is_mention=is_mention,
+        is_from_following=is_from_following,
+        hashtags=hashtags,
+        actor_handle=ro.actor.handle,
+        remote_object=ro,
+    )
 
     inbox_object = models.InboxObject(
         server=urlparse(ro.ap_id).hostname,
@@ -1908,9 +1924,7 @@ async def _process_note_object(
         activity_object_ap_id=ro.activity_object_ap_id,
         og_meta=await opengraph.og_meta_from_note(db_session, ro),
         # Hide replies from the stream
-        is_hidden_from_stream=not (
-            (not is_reply and is_from_following) or is_mention or is_local_reply
-        ),
+        is_hidden_from_stream=not stream_visibility_callback(object_info),
         # We may already have some replies in DB
         replies_count=await _get_replies_count(db_session, ro.ap_id),
     )
