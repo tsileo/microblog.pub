@@ -549,12 +549,13 @@
     {% endif %}
 
     {% if object.summary %}
-    <div class="show-more-wrapper">
-        <div class="p-summary">
-            <p>{{ object.summary | clean_html(object) | safe }}</p>
-        </div>
-        <label for="show-more-{{ object.permalink_id }}" class="show-more-btn">show/hide more</label>
-        <input class="show-more-state" type="checkbox" aria-hidden="true" id="show-more-{{ object.permalink_id }}" checked>
+    <details class="show-more-wrapper">
+        <summary>
+            <div class="p-summary">
+                <p>{{ object.summary | clean_html(object) | safe }}</p>
+            </div>
+            <span class="show-more-btn" aria-hidden="true"></span>
+        </summary>
     {% endif %}
         <div class="obj-content">
         <div class="e-content">
@@ -615,7 +616,7 @@
 
         </div>
     {% if object.summary %}
-    </div>
+    </details>
     {% endif %}
 
     <div class="activity-attachment">

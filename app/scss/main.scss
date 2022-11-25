@@ -51,17 +51,20 @@ $code-highlight-background: #f0f0f0;
   .p-summary {
     display: inline-block;
   }
-  label {
+  .show-more-btn {
     margin-left: 5px;
   }
-  .show-more-state {
-    display: none;
+  summary {
+    display: inline-block;
   }
-  .show-more-state ~ .obj-content {
-    margin-top: 0;
+  summary::-webkit-details-marker {
+    display: none
   }
-  .show-more-state:checked ~ .obj-content {
-    display: none;
+  &:not([open]) .show-more-btn::after {
+    content: 'show more';
+  }
+  &[open] .show-more-btn::after {
+    content: 'show less';
   }
 }
 .sensitive-attachment {
