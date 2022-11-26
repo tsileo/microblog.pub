@@ -427,7 +427,7 @@ async def _send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
         announced_object.announced_via_outbox_object_ap_id = None
 
         # Send the Undo to the original recipients
-        recipients = await _compute_recipients(db_session, outbox_object.ap_object)
+        recipients = await _compute_recipients(db_session, announced_object.ap_object)
         for rcp in recipients:
             await new_outgoing_activity(db_session, rcp, outbox_object.id)
     elif outbox_object_to_undo.ap_type == "Block":
