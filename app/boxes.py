@@ -1379,7 +1379,7 @@ async def _revert_side_effect_for_deleted_object(
                     .values(likes_count=likes_count - 1)
                 )
     elif (
-        deleted_ap_object.ap_type == "Annouce"
+        deleted_ap_object.ap_type == "Announce"
         and deleted_ap_object.activity_object_ap_id
     ):
         related_object = await get_outbox_object_by_ap_id(
