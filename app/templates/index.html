@@ -29,8 +29,12 @@
     {% if outbox_object.ap_type in ["Note", "Article", "Video", "Question"] %}
     {{ utils.display_object(outbox_object) }}
     {% elif outbox_object.ap_type == "Announce" %}
-    <div class="shared-header"><strong>{{ utils.display_tiny_actor_icon(local_actor) }} {{ local_actor.display_name | clean_html(local_actor) | safe  }}</strong> shared <span title="{{ outbox_object.ap_published_at.isoformat() }}">{{ outbox_object.ap_published_at | timeago }}</span></div>
-    {{ utils.display_object(outbox_object.relates_to_anybox_object) }}
+    <div class="h-entry" id="{{ outbox_object.permalink_id }}">
+        <div class="shared-header"><strong><a class="p-author h-card" href="{{ local_actor.url }}">{{ utils.display_tiny_actor_icon(local_actor) }}  {{ local_actor.display_name | clean_html(local_actor) | safe }}</a></strong> shared <span title="{{ outbox_object.ap_published_at.isoformat() }}">{{ outbox_object.ap_published_at | timeago }}</span></div>
+        <div class="h-cite u-repost-of">
+            {{ utils.display_object(outbox_object.relates_to_anybox_object, is_h_entry=False) }}
+        </div>
+    </div>
     {% endif %}
     {% endfor %}
     </div>

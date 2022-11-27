@@ -247,7 +247,7 @@
 
 {% macro display_tiny_actor_icon(actor) %}
 {% block display_tiny_actor_icon scoped %}
-    <img class="tiny-actor-icon" src="{{ actor.resized_icon_url }}" alt="{{ actor.display_name }}'s avatar">
+    <img class="tiny-actor-icon" src="{{ actor.resized_icon_url }}" alt="">
 {% endblock %}
 {% endmacro %}
 
@@ -425,13 +425,13 @@
     {% if attachment.type == "Image" or (attachment | has_media_type("image")) %}
         {% if attachment.url not in object.inlined_images %}
         <a class="media-link" href="{{ attachment.proxied_url }}" target="_blank">
-            <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} title="{{ attachment.name }}" alt="{{ attachment.name }}"{% endif %} class="attachment">
+            <img src="{{ attachment.resized_url or attachment.proxied_url }}"{% if attachment.name %} title="{{ attachment.name }}" alt="{{ attachment.name }}"{% endif %} class="attachment u-photo">
         </a>
         {% endif %}
     {% elif attachment.type == "Video" or (attachment | has_media_type("video")) %}
-    <video controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %}></video>
+    <video controls preload="metadata" src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="u-video"></video>
     {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}
-    <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} class="attachment"></audio>
+    <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} class="attachment u-audio"></audio>
     {% elif attachment.type == "Link" %}
     <a href="{{ attachment.url }}" class="attachment">{{ attachment.url | truncate(64, True) }}</a> ({{ attachment.mimetype}})
     {% else %}
