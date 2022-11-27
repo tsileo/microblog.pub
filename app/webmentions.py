@@ -17,6 +17,7 @@ from app.boxes import _get_outbox_likes_count
 from app.boxes import _get_outbox_replies_count
 from app.boxes import get_outbox_object_by_ap_id
 from app.boxes import get_outbox_object_by_slug_and_short_id
+from app.boxes import is_notification_enabled
 from app.database import AsyncSession
 from app.database import get_db_session
 from app.utils import microformats
@@ -118,12 +119,13 @@ async def webmention_endpoint(
                 db_session, existing_webmention_in_db, mentioned_object
             )
 
-            notif = models.Notification(
-                notification_type=models.NotificationType.DELETED_WEBMENTION,
-                outbox_object_id=mentioned_object.id,
-                webmention_id=existing_webmention_in_db.id,
-            )
-            db_session.add(notif)
+            if is_notification_enabled(models.NotificationType.DELETED_WEBMENTION):
+                notif = models.Notification(
+                    notification_type=models.NotificationType.DELETED_WEBMENTION,
+                    outbox_object_id=mentioned_object.id,
+                    webmention_id=existing_webmention_in_db.id,
+                )
+                db_session.add(notif)
 
             await db_session.commit()
 
@@ -144,12 +146,13 @@ async def webmention_endpoint(
         await db_session.flush()
         webmention = existing_webmention_in_db
 
-        notif = models.Notification(
-            notification_type=models.NotificationType.UPDATED_WEBMENTION,
-            outbox_object_id=mentioned_object.id,
-            webmention_id=existing_webmention_in_db.id,
-        )
-        db_session.add(notif)
+        if is_notification_enabled(models.NotificationType.UPDATED_WEBMENTION):
+            notif = models.Notification(
+                notification_type=models.NotificationType.UPDATED_WEBMENTION,
+                outbox_object_id=mentioned_object.id,
+                webmention_id=existing_webmention_in_db.id,
+            )
+            db_session.add(notif)
     else:
         new_webmention = models.Webmention(
             source=source,
@@ -162,12 +165,13 @@ async def webmention_endpoint(
         await db_session.flush()
         webmention = new_webmention
 
-        notif = models.Notification(
-            notification_type=models.NotificationType.NEW_WEBMENTION,
-            outbox_object_id=mentioned_object.id,
-            webmention_id=new_webmention.id,
-        )
-        db_session.add(notif)
+        if is_notification_enabled(models.NotificationType.NEW_WEBMENTION):
+            notif = models.Notification(
+                notification_type=models.NotificationType.NEW_WEBMENTION,
+                outbox_object_id=mentioned_object.id,
+                webmention_id=new_webmention.id,
+            )
+            db_session.add(notif)
 
     # Determine the webmention type
     for item in data.get("items", []):

@@ -120,6 +120,8 @@ class Config(pydantic.BaseModel):
 
     session_timeout: int = 3600 * 24 * 3  # in seconds, 3 days by default
 
+    disabled_notifications: list[str] = []
+
     # Only set when the app is served on a non-root path
     id: str | None = None
 

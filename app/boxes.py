@@ -50,6 +50,17 @@ from app.utils.text import slugify
 AnyboxObject = models.InboxObject | models.OutboxObject
 
 
+def is_notification_enabled(notification_type: models.NotificationType) -> bool:
+    """Checks if a given notification type is enabled."""
+    if notification_type.value == "pending_incoming_follower":
+        # This one cannot be disabled as it would prevent manually reviewing
+        # follow requests.
+        return True
+    if notification_type.value in config.CONFIG.disabled_notifications:
+        return False
+    return True
+
+
 def allocate_outbox_id() -> str:
     return uuid.uuid4().hex
 
@@ -168,12 +179,13 @@ async def send_block(db_session: AsyncSession, ap_actor_id: str) -> None:
     await new_outgoing_activity(db_session, actor.inbox_url, outbox_object.id)
 
     # 4. Create a notification
-    notif = models.Notification(
-        notification_type=models.NotificationType.BLOCK,
-        actor_id=actor.id,
-        outbox_object_id=outbox_object.id,
-    )
-    db_session.add(notif)
+    if is_notification_enabled(models.NotificationType.BLOCK):
+        notif = models.Notification(
+            notification_type=models.NotificationType.BLOCK,
+            actor_id=actor.id,
+            outbox_object_id=outbox_object.id,
+        )
+        db_session.add(notif)
 
     await db_session.commit()
 
@@ -447,12 +459,13 @@ async def _send_undo(db_session: AsyncSession, ap_object_id: str) -> None:
             outbox_object.id,
         )
 
-        notif = models.Notification(
-            notification_type=models.NotificationType.UNBLOCK,
-            actor_id=blocked_actor.id,
-            outbox_object_id=outbox_object.id,
-        )
-        db_session.add(notif)
+        if is_notification_enabled(models.NotificationType.UNBLOCK):
+            notif = models.Notification(
+                notification_type=models.NotificationType.UNBLOCK,
+                actor_id=blocked_actor.id,
+                outbox_object_id=outbox_object.id,
+            )
+            db_session.add(notif)
 
     else:
         raise ValueError("Should never happen")
@@ -1525,11 +1538,12 @@ async def _send_accept(
         raise ValueError("Should never happen")
     await new_outgoing_activity(db_session, from_actor.inbox_url, outbox_activity.id)
 
-    notif = models.Notification(
-        notification_type=models.NotificationType.NEW_FOLLOWER,
-        actor_id=from_actor.id,
-    )
-    db_session.add(notif)
+    if is_notification_enabled(models.NotificationType.NEW_FOLLOWER):
+        notif = models.Notification(
+            notification_type=models.NotificationType.NEW_FOLLOWER,
+            actor_id=from_actor.id,
+        )
+        db_session.add(notif)
 
 
 async def send_reject(
@@ -1568,11 +1582,12 @@ async def _send_reject(
         raise ValueError("Should never happen")
     await new_outgoing_activity(db_session, from_actor.inbox_url, outbox_activity.id)
 
-    notif = models.Notification(
-        notification_type=models.NotificationType.REJECTED_FOLLOWER,
-        actor_id=from_actor.id,
-    )
-    db_session.add(notif)
+    if is_notification_enabled(models.NotificationType.REJECTED_FOLLOWER):
+        notif = models.Notification(
+            notification_type=models.NotificationType.REJECTED_FOLLOWER,
+            actor_id=from_actor.id,
+        )
+        db_session.add(notif)
 
 
 async def _handle_undo_activity(
@@ -1598,11 +1613,12 @@ async def _handle_undo_activity(
                 models.Follower.inbox_object_id == ap_activity_to_undo.id
             )
         )
-        notif = models.Notification(
-            notification_type=models.NotificationType.UNFOLLOW,
-            actor_id=from_actor.id,
-        )
-        db_session.add(notif)
+        if is_notification_enabled(models.NotificationType.UNFOLLOW):
+            notif = models.Notification(
+                notification_type=models.NotificationType.UNFOLLOW,
+                actor_id=from_actor.id,
+            )
+            db_session.add(notif)
 
     elif ap_activity_to_undo.ap_type == "Like":
         if not ap_activity_to_undo.activity_object_ap_id:
@@ -1618,14 +1634,21 @@ async def _handle_undo_activity(
             )
             return
 
-        liked_obj.likes_count = models.OutboxObject.likes_count - 1
-        notif = models.Notification(
-            notification_type=models.NotificationType.UNDO_LIKE,
-            actor_id=from_actor.id,
-            outbox_object_id=liked_obj.id,
-            inbox_object_id=ap_activity_to_undo.id,
+        liked_obj.likes_count = (
+            await _get_outbox_likes_count(
+                db_session,
+                liked_obj,
+            )
+            - 1
         )
-        db_session.add(notif)
+        if is_notification_enabled(models.NotificationType.UNDO_LIKE):
+            notif = models.Notification(
+                notification_type=models.NotificationType.UNDO_LIKE,
+                actor_id=from_actor.id,
+                outbox_object_id=liked_obj.id,
+                inbox_object_id=ap_activity_to_undo.id,
+            )
+            db_session.add(notif)
 
     elif ap_activity_to_undo.ap_type == "Announce":
         if not ap_activity_to_undo.activity_object_ap_id:
@@ -1643,20 +1666,22 @@ async def _handle_undo_activity(
                 announced_obj_from_outbox.announces_count = (
                     models.OutboxObject.announces_count - 1
                 )
-                notif = models.Notification(
-                    notification_type=models.NotificationType.UNDO_ANNOUNCE,
-                    actor_id=from_actor.id,
-                    outbox_object_id=announced_obj_from_outbox.id,
-                    inbox_object_id=ap_activity_to_undo.id,
-                )
-                db_session.add(notif)
+                if is_notification_enabled(models.NotificationType.UNDO_ANNOUNCE):
+                    notif = models.Notification(
+                        notification_type=models.NotificationType.UNDO_ANNOUNCE,
+                        actor_id=from_actor.id,
+                        outbox_object_id=announced_obj_from_outbox.id,
+                        inbox_object_id=ap_activity_to_undo.id,
+                    )
+                    db_session.add(notif)
     elif ap_activity_to_undo.ap_type == "Block":
-        notif = models.Notification(
-            notification_type=models.NotificationType.UNBLOCKED,
-            actor_id=from_actor.id,
-            inbox_object_id=ap_activity_to_undo.id,
-        )
-        db_session.add(notif)
+        if is_notification_enabled(models.NotificationType.UNBLOCKED):
+            notif = models.Notification(
+                notification_type=models.NotificationType.UNBLOCKED,
+                actor_id=from_actor.id,
+                inbox_object_id=ap_activity_to_undo.id,
+            )
+            db_session.add(notif)
     else:
         logger.warning(f"Don't know how to undo {ap_activity_to_undo.ap_type} activity")
 
@@ -1720,12 +1745,13 @@ async def _handle_move_activity(
     else:
         logger.info(f"Already following target {new_actor_id}")
 
-    notif = models.Notification(
-        notification_type=models.NotificationType.MOVE,
-        actor_id=new_actor.id,
-        inbox_object_id=move_activity.id,
-    )
-    db_session.add(notif)
+    if is_notification_enabled(models.NotificationType.MOVE):
+        notif = models.Notification(
+            notification_type=models.NotificationType.MOVE,
+            actor_id=new_actor.id,
+            inbox_object_id=move_activity.id,
+        )
+        db_session.add(notif)
 
 
 async def _handle_update_activity(
@@ -1999,7 +2025,7 @@ async def _process_note_object(
                     inbox_object_id=parent_activity.id,
                 )
 
-    if is_mention:
+    if is_mention and is_notification_enabled(models.NotificationType.MENTION):
         notif = models.Notification(
             notification_type=models.NotificationType.MENTION,
             actor_id=from_actor.id,
@@ -2098,13 +2124,14 @@ async def _handle_announce_activity(
             models.OutboxObject.announces_count + 1
         )
 
-        notif = models.Notification(
-            notification_type=models.NotificationType.ANNOUNCE,
-            actor_id=actor.id,
-            outbox_object_id=relates_to_outbox_object.id,
-            inbox_object_id=announce_activity.id,
-        )
-        db_session.add(notif)
+        if is_notification_enabled(models.NotificationType.ANNOUNCE):
+            notif = models.Notification(
+                notification_type=models.NotificationType.ANNOUNCE,
+                actor_id=actor.id,
+                outbox_object_id=relates_to_outbox_object.id,
+                inbox_object_id=announce_activity.id,
+            )
+            db_session.add(notif)
     else:
         # Only show the announce in the stream if it comes from an actor
         # in the following collection
@@ -2202,13 +2229,14 @@ async def _handle_like_activity(
             relates_to_outbox_object,
         )
 
-        notif = models.Notification(
-            notification_type=models.NotificationType.LIKE,
-            actor_id=actor.id,
-            outbox_object_id=relates_to_outbox_object.id,
-            inbox_object_id=like_activity.id,
-        )
-        db_session.add(notif)
+        if is_notification_enabled(models.NotificationType.LIKE):
+            notif = models.Notification(
+                notification_type=models.NotificationType.LIKE,
+                actor_id=actor.id,
+                outbox_object_id=relates_to_outbox_object.id,
+                inbox_object_id=like_activity.id,
+            )
+            db_session.add(notif)
 
 
 async def _handle_block_activity(
@@ -2225,12 +2253,13 @@ async def _handle_block_activity(
         return
 
     # Create a notification
-    notif = models.Notification(
-        notification_type=models.NotificationType.BLOCKED,
-        actor_id=actor.id,
-        inbox_object_id=block_activity.id,
-    )
-    db_session.add(notif)
+    if is_notification_enabled(models.NotificationType.BLOCKED):
+        notif = models.Notification(
+            notification_type=models.NotificationType.BLOCKED,
+            actor_id=actor.id,
+            inbox_object_id=block_activity.id,
+        )
+        db_session.add(notif)
 
 
 async def _process_transient_object(
@@ -2433,12 +2462,13 @@ async def save_to_inbox(
                     if activity_ro.ap_type == "Accept"
                     else models.NotificationType.FOLLOW_REQUEST_REJECTED
                 )
-                notif = models.Notification(
-                    notification_type=notif_type,
-                    actor_id=actor.id,
-                    inbox_object_id=inbox_object.id,
-                )
-                db_session.add(notif)
+                if is_notification_enabled(notif_type):
+                    notif = models.Notification(
+                        notification_type=notif_type,
+                        actor_id=actor.id,
+                        inbox_object_id=inbox_object.id,
+                    )
+                    db_session.add(notif)
 
                 if activity_ro.ap_type == "Accept":
                     following = models.Following(
