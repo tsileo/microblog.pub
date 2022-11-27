@@ -191,6 +191,45 @@ http {
 }
 ```
 
+## (Advanced) Running from subpath
+
+It is possible to configure microblogpub to run from subpath.
+To achieve this, do the following configuration _between_ config and start steps.
+i.e. _after_ you run `make config` or `poetry run inv configuration-wizard`,
+but _before_ you run `docker compose up` or `poetry run supervisord`.
+Changing this settings on an instance which has some posts or was seen by other instances will likely break links to these posts or federation (i.e. links to your instance, posts and profile from other instances).
+
+The following steps will explain how to configure instance to be available at `https://example.com/subdir`.
+Change them to your actual domain and subdir.
+
+* Edit `data/profile.toml` file, add this line:
+
+		id = "https://example.com/subdir"
+
+* Edit `misc/*-supervisord.conf` file which is relevant to you (it depends on how you start microblogpub - if in doubt, do the same change in all of them) - in `[program:uvicorn]` section, in the line which starts with `command`, add this argument at the very end: ` --root-path /subdir`
+
+Above two steps are enough to configure microblogpub.
+Next, you also need to configure reverse proxy.
+It might slightly differ if you plan to have other services running on the same domain, but for [NGINX config shown above](#reverse-proxy), the following changes are enough:
+
+* Add subdir to location, so location block starts like this:
+
+		location /subdir {
+
+* Add `/` at the end of `proxy_pass` directive, like this:
+
+		proxy_pass http://localhost:8000/;
+
+These two changes will instruct NGINX that requests sent to `https://example.com/subdir/...` should be forwarded to `http://localhost:8000/...`.
+
+* Inside `server` block, add redirects for well-known URLs (add these lines after `client_max_body_size`, remember to replace `subdir` with your actual subdir!):
+
+		location /.well-known/webfinger { return 301 /subdir$request_uri; }
+		location /.well-known/nodeinfo  { return 301 /subdir$request_uri; }
+		location /.well-known/oauth-authorization-server  { return 301 /subdir$request_uri; }
+
+* Optionally, [check robots.txt from a running microblogpub instance](https://microblog.pub/robots.txt) and integrate it into robots.txt file in the root of your server - remember to prepend `subdir` to URLs, so for example `Disallow: /admin` becomes `Disallow: /subdir/admin`.
+
 ## YunoHost edition
 
 [YunoHost](https://yunohost.org/) support is available (although it is not an official package for now): <https://git.sr.ht/~tsileo/microblog.pub_ynh>.
