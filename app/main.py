@@ -285,7 +285,6 @@ async def redirect_to_remote_instance(
 async def index(
     request: Request,
     db_session: AsyncSession = Depends(get_db_session),
-    _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
     page: int | None = None,
 ) -> templates.TemplateResponse | ActivityPubResponse:
     if is_activitypub_requested(request):
