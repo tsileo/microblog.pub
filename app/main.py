@@ -1183,6 +1183,7 @@ proxy_client = httpx.AsyncClient(
     http2=True,
     follow_redirects=True,
     timeout=httpx.Timeout(timeout=10.0),
+    transport=httpx.AsyncHTTPTransport(retries=1),
 )
 
 
