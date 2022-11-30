@@ -146,9 +146,10 @@ _StreamVisibilityCallback = Callable[[ObjectInfo], bool]
 
 
 def default_stream_visibility_callback(object_info: ObjectInfo) -> bool:
-    logger.info(f"{object_info=}")
-    return (
+    result = (
         (not object_info.is_reply and object_info.is_from_following)
         or object_info.is_mention
         or object_info.is_local_reply
     )
+    logger.info(f"{object_info=}/{result=}")
+    return result
