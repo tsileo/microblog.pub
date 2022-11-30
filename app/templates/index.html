@@ -39,15 +39,17 @@
     {% endfor %}
     </div>
 
-    <div class="box">
-        {% if has_previous_page %}
-        <a href="{{ url_for("index") }}?page={{ current_page - 1 }}">Previous</a>
-        {% endif %}
+    {% if has_previous_page or has_next_page %}
+        <div class="box">
+            {% if has_previous_page %}
+            <a href="{{ url_for("index") }}?page={{ current_page - 1 }}">Previous</a>
+            {% endif %}
 
-        {% if has_next_page %}
-        <a href="{{ url_for("index") }}?page={{ current_page + 1 }}">Next</a>
-        {% endif %}
-    </div>
+            {% if has_next_page %}
+            <a href="{{ url_for("index") }}?page={{ current_page + 1 }}">Next</a>
+            {% endif %}
+        </div>
+    {% endif %}
 
 {% else %}
     <div class="empty-state">
