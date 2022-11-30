@@ -1909,11 +1909,7 @@ async def _process_note_object(
 
     is_from_following = ro.actor.ap_id in {f.ap_actor_id for f in following}
     is_reply = bool(ro.in_reply_to)
-    is_local_reply = bool(
-        ro.in_reply_to
-        and ro.in_reply_to.startswith(BASE_URL)
-        and ro.content  # Hide votes from Question
-    )
+    is_local_reply = ro.is_local_reply
     is_mention = False
     hashtags = []
     tags = ro.ap_object.get("tag", [])

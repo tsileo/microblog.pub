@@ -751,7 +751,7 @@
                 {{ admin_expand_button(object) }}
             </li>
         {% endif %}
-        {% if object.is_from_inbox and not object.announced_via_outbox_object_ap_id %}
+        {% if object.is_from_inbox and not object.announced_via_outbox_object_ap_id and object.is_local_reply %}
             <li>
                 {{ admin_force_delete_button(object.ap_id) }}
             </li>

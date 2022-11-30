@@ -12,6 +12,7 @@ from app import activitypub as ap
 from app.actor import LOCAL_ACTOR
 from app.actor import Actor
 from app.actor import RemoteActor
+from app.config import ID
 from app.media import proxied_media_url
 from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
@@ -211,6 +212,15 @@ class Object:
     @property
     def in_reply_to(self) -> str | None:
         return self.ap_object.get("inReplyTo")
+
+    @property
+    def is_local_reply(self) -> bool:
+        if not self.in_reply_to:
+            return False
+
+        return bool(
+            self.in_reply_to.startswith(ID) and self.content  # Hide votes from Question
+        )
 
     @property
     def is_in_reply_to_from_inbox(self) -> bool | None:
