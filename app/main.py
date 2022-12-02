@@ -1179,36 +1179,34 @@ async def nodeinfo(
     )
 
 
-proxy_client = httpx.AsyncClient(
-    follow_redirects=True,
-    timeout=httpx.Timeout(timeout=10.0),
-    transport=httpx.AsyncHTTPTransport(retries=1),
-)
-
-
 async def _proxy_get(
     request: starlette.requests.Request, url: str, stream: bool
 ) -> httpx.Response:
-    # Request the URL (and filter request headers)
-    proxy_req = proxy_client.build_request(
-        request.method,
-        url,
-        headers=[
-            (k, v)
-            for (k, v) in request.headers.raw
-            if k.lower()
-            not in [
-                b"host",
-                b"cookie",
-                b"x-forwarded-for",
-                b"x-forwarded-proto",
-                b"x-real-ip",
-                b"user-agent",
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=httpx.Timeout(timeout=10.0),
+        transport=httpx.AsyncHTTPTransport(retries=1),
+    ) as proxy_client:
+        # Request the URL (and filter request headers)
+        proxy_req = proxy_client.build_request(
+            request.method,
+            url,
+            headers=[
+                (k, v)
+                for (k, v) in request.headers.raw
+                if k.lower()
+                not in [
+                    b"host",
+                    b"cookie",
+                    b"x-forwarded-for",
+                    b"x-forwarded-proto",
+                    b"x-real-ip",
+                    b"user-agent",
+                ]
             ]
-        ]
-        + [(b"user-agent", USER_AGENT.encode())],
-    )
-    return await proxy_client.send(proxy_req, stream=stream)
+            + [(b"user-agent", USER_AGENT.encode())],
+        )
+        return await proxy_client.send(proxy_req, stream=stream)
 
 
 def _filter_proxy_resp_headers(
