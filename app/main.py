@@ -1318,7 +1318,6 @@ async def serve_proxy_media_resized(
         logger.info(f"failed to proxy {url}, got {proxy_resp.status_code}")
         await proxy_resp.aclose()
         return PlainTextResponse(
-            "proxy error",
             status_code=proxy_resp.status_code,
         )
 
