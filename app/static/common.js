@@ -6,7 +6,7 @@ function hasAudio (video) {
 
 function setVideoInGIFMode(video) {
     if (!hasAudio(video)) {
-        if (typeof video.loop == 'boolean' && video.duration < 3.0) {
+        if (typeof video.loop == 'boolean' && video.duration <= 10.0) {
             video.classList.add("video-gif-mode");
             video.loop = true;
             video.controls = false;
