@@ -429,7 +429,10 @@
         </a>
         {% endif %}
     {% elif attachment.type == "Video" or (attachment | has_media_type("video")) %}
+    <div class="video-wrapper">
     <video controls preload="metadata" src="{{ attachment.url | media_proxy_url }}"{% if attachment.name %} title="{{ attachment.name }}"{% endif %} class="u-video"></video>
+    <div class="video-gif-overlay">GIF</div>
+    </div>
     {% elif attachment.type == "Audio" or (attachment | has_media_type("audio")) %}
     <audio controls preload="metadata"  src="{{ attachment.url | media_proxy_url }}"{% if attachment.name%} title="{{ attachment.name }}"{% endif %} class="attachment u-audio"></audio>
     {% elif attachment.type == "Link" %}

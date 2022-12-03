@@ -551,3 +551,22 @@ a.label-btn {
 .margin-top-20 {
   margin-top: 20px;
 }
+
+.video-wrapper {
+    position: relative;
+}
+
+.video-gif-overlay {
+    display: none;
+}
+
+.video-gif-mode + .video-gif-overlay {
+    display: block;
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    padding: 0 3px;
+    font-size: 0.8em;
+    background: rgba(0,0,0,.5);
+    color: #fff;
+}

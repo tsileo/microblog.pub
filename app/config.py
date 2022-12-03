@@ -44,11 +44,14 @@ except FileNotFoundError:
 JS_HASH = "none"
 try:
     # To keep things simple, we keep a single hash for the 2 files
-    js_data_common = (ROOT_DIR / "app" / "static" / "common-admin.js").read_bytes()
-    js_data_new = (ROOT_DIR / "app" / "static" / "new.js").read_bytes()
-    JS_HASH = hashlib.md5(
-        js_data_common + js_data_new, usedforsecurity=False
-    ).hexdigest()
+    dat = b""
+    for j in [
+        ROOT_DIR / "app" / "static" / "common.js",
+        ROOT_DIR / "app" / "static" / "common-admin.js",
+        ROOT_DIR / "app" / "static" / "new.js",
+    ]:
+        dat += j.read_bytes()
+    JS_HASH = hashlib.md5(dat, usedforsecurity=False).hexdigest()
 except FileNotFoundError:
     pass
 
