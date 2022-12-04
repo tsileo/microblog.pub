@@ -23,12 +23,12 @@ from sqlalchemy import select
 
 from app import activitypub as ap
 from app import config
-from app.config import BLOCKED_SERVERS
 from app.config import KEY_PATH
 from app.database import AsyncSession
 from app.database import get_db_session
 from app.key import Key
 from app.utils.datetime import now
+from app.utils.url import is_hostname_blocked
 
 _KEY_CACHE: MutableMapping[str, Key] = LFUCache(256)
 
@@ -184,7 +184,7 @@ async def httpsig_checker(
         )
 
     server = urlparse(key_id).hostname
-    if server in BLOCKED_SERVERS:
+    if is_hostname_blocked(server):
         return HTTPSigInfo(
             has_valid_signature=False,
             server=server,

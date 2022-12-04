@@ -28,7 +28,6 @@ from app.actor import save_actor
 from app.actor import update_actor_if_needed
 from app.ap_object import RemoteObject
 from app.config import BASE_URL
-from app.config import BLOCKED_SERVERS
 from app.config import ID
 from app.config import MANUALLY_APPROVES_FOLLOWERS
 from app.config import set_moved_to
@@ -46,6 +45,7 @@ from app.utils.datetime import now
 from app.utils.datetime import parse_isoformat
 from app.utils.facepile import WebmentionReply
 from app.utils.text import slugify
+from app.utils.url import is_hostname_blocked
 
 AnyboxObject = models.InboxObject | models.OutboxObject
 
@@ -2312,7 +2312,7 @@ async def save_to_inbox(
         logger.exception("Failed to fetch actor")
         return
 
-    if actor.server in BLOCKED_SERVERS:
+    if is_hostname_blocked(actor.server):
         logger.warning(f"Server {actor.server} is blocked")
         return
 
