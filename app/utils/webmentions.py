@@ -24,7 +24,7 @@ async def _discover_webmention_endoint(url: str) -> str | None:
                 follow_redirects=True,
             )
             resp.raise_for_status()
-        except (httpx.HTTPError, httpx.HTTPStatusError):
+        except Exception:
             logger.exception(f"Failed to discover webmention endpoint for {url}")
             return None
 
