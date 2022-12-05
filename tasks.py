@@ -353,3 +353,40 @@ def check_config(ctx):
         sys.exit(1)
     else:
         print("Config is OK")
+
+
+@task
+def import_mastodon_following_accounts(ctx, path):
+    # type: (Context, str) -> None
+    from loguru import logger
+
+    from app.boxes import _get_following
+    from app.boxes import _send_follow
+    from app.database import async_session
+    from app.utils.mastodon import get_actor_urls_from_following_accounts_csv_file
+
+    async def _import_following() -> int:
+        count = 0
+        async with async_session() as db_session:
+            followings = {
+                following.ap_actor_id for following in await _get_following(db_session)
+            }
+            for (
+                handle,
+                actor_url,
+            ) in await get_actor_urls_from_following_accounts_csv_file(path):
+                if actor_url in followings:
+                    logger.info(f"Already following {handle}")
+                    continue
+
+                logger.info(f"Importing {actor_url=}")
+
+                await _send_follow(db_session, actor_url)
+                count += 1
+
+            await db_session.commit()
+
+        return count
+
+    count = asyncio.run(_import_following())
+    logger.info(f"Import done, {count} follow requests sent")

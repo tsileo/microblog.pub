@@ -950,7 +950,7 @@ async def compute_all_known_recipients(db_session: AsyncSession) -> set[str]:
     }
 
 
-async def _get_following(db_session: AsyncSession) -> list[models.Follower]:
+async def _get_following(db_session: AsyncSession) -> list[models.Following]:
     return (
         (
             await db_session.scalars(
