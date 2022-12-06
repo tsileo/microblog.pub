@@ -344,6 +344,28 @@ also_known_as = "my@old-account.com"
 
 Restart the server, and you should be able to complete the move from your existing account.
 
+## Import follows from Mastodon
+
+You can import the list of follows/following accounts from Mastodon.
+
+It requires downloading the "Follows" CSV file from your Mastodon instance via "Settings" / "Import and export" / "Data export".
+
+Then you need to run the import task:
+
+### Python edition
+
+```bash
+# For a Python install
+poetry run inv import-mastodon-following-accounts following_accounts.csv
+```
+
+### Docker edition
+
+```bash
+# For a Docker install
+make path=following_accounts.csv import-mastodon-following-accounts
+```
+
 ## Tasks
 
 ### Configuration checking

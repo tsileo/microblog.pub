@@ -41,3 +41,7 @@ check-config:
 .PHONY: compile-scss
 compile-scss:
 	-docker run --rm --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv compile-scss
+
+.PHONY: import-mastodon-following-accounts 
+import-mastodon-following-accounts:
+	-docker run --rm --volume `pwd`/data:/app/data --volume `pwd`/app/static:/app/app/static microblogpub/microblogpub inv import-mastodon-following-accounts $(path)
