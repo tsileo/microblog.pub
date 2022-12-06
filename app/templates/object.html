@@ -15,7 +15,7 @@
 <meta content="article" property="og:type" />
 <meta content="{{ outbox_object.url }}" property="og:url" />
 <meta content="{{ local_actor.display_name }}'s microblog" property="og:site_name" />
-<meta content="{% if outbox_object.name %}{{ name }}{% else %}Note{% endif %}" property="og:title" />
+<meta content="{% if outbox_object.name %}{{ outbox_object.name }}{% else %}Note{% endif %}" property="og:title" />
 <meta content="{{ excerpt }}" property="og:description" />
 <meta content="{{ local_actor.icon_url }}" property="og:image" />
 <meta content="summary" property="twitter:card" />
