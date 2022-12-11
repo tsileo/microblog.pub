@@ -80,8 +80,8 @@ from app.utils.highlight import HIGHLIGHT_CSS_HASH
 from app.utils.url import check_url
 from app.webfinger import get_remote_follow_template
 
-# Only images <1MB will be cached, so 64MB of data will be cached
-_RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCache(64)
+# Only images <1MB will be cached, so 32MB of data will be cached
+_RESIZED_CACHE: MutableMapping[tuple[str, int], tuple[bytes, str, Any]] = LFUCache(32)
 
 
 # TODO(ts):
@@ -1290,12 +1290,14 @@ async def serve_proxy_media_resized(
     if size not in {50, 740}:
         raise ValueError("Unsupported size")
 
+    is_webp_supported = "image/webp" in request.headers.get("accept")
+
     # Decode the base64-encoded URL
     url = base64.urlsafe_b64decode(encoded_url).decode()
     check_url(url)
     media.verify_proxied_media_sig(exp, url, sig)
 
-    if cached_resp := _RESIZED_CACHE.get((url, size)):
+    if (cached_resp := _RESIZED_CACHE.get((url, size))) and is_webp_supported:
         resized_content, resized_mimetype, resp_headers = cached_resp
         return PlainTextResponse(
             resized_content,
@@ -1343,10 +1345,10 @@ async def serve_proxy_media_resized(
         is_webp = False
         try:
             resized_buf = BytesIO()
-            i.save(resized_buf, format="webp")
-            is_webp = True
+            i.save(resized_buf, format="webp" if is_webp_supported else i.format)
+            is_webp = is_webp_supported
         except Exception:
-            logger.exception("Failed to convert to webp")
+            logger.exception("Failed to create thumbnail")
             resized_buf = BytesIO()
             i.save(resized_buf, format=i.format)
         resized_buf.seek(0)
@@ -1404,6 +1406,7 @@ async def serve_attachment(
 
 @app.get("/attachments/thumbnails/{content_hash}/{filename}")
 async def serve_attachment_thumbnail(
+    request: Request,
     content_hash: str,
     filename: str,
     db_session: AsyncSession = Depends(get_db_session),
@@ -1418,11 +1421,20 @@ async def serve_attachment_thumbnail(
     if not upload or not upload.has_thumbnail:
         raise HTTPException(status_code=404)
 
-    return FileResponse(
-        UPLOAD_DIR / (content_hash + "_resized"),
-        media_type="image/webp",
-        headers={"Cache-Control": "max-age=31536000"},
-    )
+    is_webp_supported = "image/webp" in request.headers.get("accept")
+
+    if is_webp_supported:
+        return FileResponse(
+            UPLOAD_DIR / (content_hash + "_resized"),
+            media_type="image/webp",
+            headers={"Cache-Control": "max-age=31536000"},
+        )
+    else:
+        return FileResponse(
+            UPLOAD_DIR / content_hash,
+            media_type=upload.content_type,
+            headers={"Cache-Control": "max-age=31536000"},
+        )
 
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
