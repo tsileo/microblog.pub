@@ -62,6 +62,13 @@ def _scrap_og_meta(url: str, html: str) -> OpenGraphMeta | None:
         if u := raw.get(maybe_rel):
             raw[maybe_rel] = make_abs(u, url)
 
+            if not is_url_valid(raw[maybe_rel]):
+                logger.info(f"Invalid url {raw[maybe_rel]}")
+                if maybe_rel == "url":
+                    raw["url"] = url
+                elif maybe_rel == "image":
+                    raw["image"] = None
+
     return OpenGraphMeta.parse_obj(raw)
 
 
