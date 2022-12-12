@@ -959,6 +959,34 @@ async def admin_actions_unblock(
     return RedirectResponse(redirect_url, status_code=302)
 
 
+@router.post("/actions/hide_announces")
+async def admin_actions_hide_announces(
+    request: Request,
+    ap_actor_id: str = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    actor = await fetch_actor(db_session, ap_actor_id)
+    actor.are_announces_hidden_from_stream = True
+    await db_session.commit()
+    return RedirectResponse(redirect_url, status_code=302)
+
+
+@router.post("/actions/show_announces")
+async def admin_actions_show_announces(
+    request: Request,
+    ap_actor_id: str = Form(),
+    redirect_url: str = Form(),
+    csrf_check: None = Depends(verify_csrf_token),
+    db_session: AsyncSession = Depends(get_db_session),
+) -> RedirectResponse:
+    actor = await fetch_actor(db_session, ap_actor_id)
+    actor.are_announces_hidden_from_stream = False
+    await db_session.commit()
+    return RedirectResponse(redirect_url, status_code=302)
+
+
 @router.post("/actions/delete")
 async def admin_actions_delete(
     request: Request,

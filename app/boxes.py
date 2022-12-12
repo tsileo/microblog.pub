@@ -2205,7 +2205,10 @@ async def _handle_announce_activity(
                 db_session.add(announced_inbox_object)
                 await db_session.flush()
                 announce_activity.relates_to_inbox_object_id = announced_inbox_object.id
-                announce_activity.is_hidden_from_stream = not is_from_following
+                announce_activity.is_hidden_from_stream = (
+                    not is_from_following
+                    or announce_activity.actor.are_announces_hidden_from_stream
+                )
 
 
 async def _handle_like_activity(

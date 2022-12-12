@@ -54,6 +54,10 @@ class Actor(Base, BaseActor):
     is_blocked = Column(Boolean, nullable=False, default=False, server_default="0")
     is_deleted = Column(Boolean, nullable=False, default=False, server_default="0")
 
+    are_announces_hidden_from_stream = Column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+
     @property
     def is_from_db(self) -> bool:
         return True

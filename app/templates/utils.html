@@ -32,6 +32,29 @@
 {% endblock %}
 {% endmacro %}
 
+{% macro admin_hide_shares_button(actor) %}
+{% block admin_hide_shares_button scoped %}
+<form action="{{ request.url_for("admin_actions_hide_announces") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_actor_id" value="{{ actor.ap_id }}">
+    <input type="submit" value="hide shares">
+</form>
+{% endblock %}
+{% endmacro %}
+
+{% macro admin_show_shares_button(actor) %}
+{% block admin_show_shares_button scoped %}
+<form action="{{ request.url_for("admin_actions_show_announces") }}" method="POST">
+    {{ embed_csrf_token() }}
+    {{ embed_redirect_url() }}
+    <input type="hidden" name="ap_actor_id" value="{{ actor.ap_id }}">
+    <input type="submit" value="show shares">
+</form>
+{% endblock %}
+{% endmacro %}
+
+
 {% macro admin_follow_button(actor) %}
 {% block admin_follow_button scoped %}
 <form action="{{ request.url_for("admin_actions_follow") }}" method="POST">
@@ -341,6 +364,11 @@
                 {% else %}
                     <li>rejected</li>
                 {% endif %}
+            {% endif %}
+            {% if actor.are_announces_hidden_from_stream %}
+                <li>{{ admin_show_shares_button(actor) }}</li>
+            {% else %}
+                <li>{{ admin_hide_shares_button(actor) }}</li>
             {% endif %}
             {% if with_details %}
                 <li><a href="{{ actor.url }}" class="label-btn">remote profile</a></li>
