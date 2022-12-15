@@ -1,4 +1,5 @@
 from datetime import datetime
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter
@@ -59,7 +60,9 @@ async def user_session_or_redirect(
 
     _RedirectToLoginPage = HTTPException(
         status_code=302,
-        headers={"Location": request.url_for("login") + f"?redirect={redirect_url}"},
+        headers={
+            "Location": request.url_for("login") + f"?redirect={quote(redirect_url)}"
+        },
     )
 
     if not session:
