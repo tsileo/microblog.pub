@@ -14,7 +14,7 @@ bcrypt = "^3.2.2"
 itsdangerous = "^2.1.2"
 python-multipart = "^0.0.5"
 tomli = "^2.0.1"
-httpx = {extras = ["http2"], version = "^0.23.0"}
+httpx = {version = "0.23.0", extras = ["http2"]}
 SQLAlchemy = {extras = ["asyncio"], version = "^1.4.39"}
 alembic = "^1.8.0"
 bleach = "^5.0.0"
