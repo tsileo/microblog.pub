@@ -10,7 +10,6 @@ from fastapi import Form
 from fastapi import HTTPException
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from fastapi.responses import RedirectResponse
 from loguru import logger
 from sqlalchemy import select
 
@@ -21,6 +20,7 @@ from app.admin import user_session_or_redirect
 from app.config import verify_csrf_token
 from app.database import AsyncSession
 from app.database import get_db_session
+from app.redirect import redirect
 from app.utils import indieauth
 from app.utils.datetime import now
 
@@ -80,7 +80,7 @@ async def indieauth_flow(
     db_session: AsyncSession = Depends(get_db_session),
     csrf_check: None = Depends(verify_csrf_token),
     _: None = Depends(user_session_or_redirect),
-) -> RedirectResponse:
+) -> templates.TemplateResponse:
     form_data = await request.form()
     logger.info(f"{form_data=}")
 
@@ -114,9 +114,8 @@ async def indieauth_flow(
     db_session.add(auth_request)
     await db_session.commit()
 
-    return RedirectResponse(
-        redirect_uri + f"?code={code}&state={state}&iss={iss}",
-        status_code=302,
+    return await redirect(
+        request, db_session, redirect_uri + f"?code={code}&state={state}&iss={iss}"
     )
 
 

@@ -1,0 +1,15 @@
+{%- import "utils.html" as utils with context -%}
+{% extends "layout.html" %}
+
+{% block head %}
+<title>{{ local_actor.display_name }}'s microblog - Redirect</title>
+{% endblock %}
+
+{% block content %}
+{% include "header.html" %}
+
+<div class="box">
+    <p>You are being redirected to: <a href="{{ url }}">{{ url }}</a></p>
+</div>
+
+{% endblock %}
