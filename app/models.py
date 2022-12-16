@@ -472,6 +472,26 @@ class IndieAuthAccessToken(Base):
     is_revoked = Column(Boolean, nullable=False, default=False)
 
 
+class OAuthClient(Base):
+    __tablename__ = "oauth_client"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+
+    # Request
+    client_name = Column(String, nullable=False)
+    redirect_uris: Mapped[list[str]] = Column(JSON, nullable=True)
+
+    # Optional from request
+    client_uri = Column(String, nullable=True)
+    logo_uri = Column(String, nullable=True)
+    scope = Column(String, nullable=True)
+
+    # Response
+    client_id = Column(String, nullable=False, unique=True, index=True)
+    client_secret = Column(String, nullable=False, unique=True)
+
+
 @enum.unique
 class WebmentionType(str, enum.Enum):
     UNKNOWN = "unknown"

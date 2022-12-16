@@ -10,7 +10,7 @@ from app.utils.url import make_abs
 class IndieAuthClient:
     logo: str | None
     name: str
-    url: str
+    url: str | None
 
 
 def _get_prop(props: dict[str, Any], name: str, default=None) -> Any:

@@ -10,8 +10,12 @@
         {% endif %}
         <div class="indieauth-details">
             <div>
-                <a class="lcolor" href="{{ client.url }}">{{ client.name }}</a>
-                <p>wants you to login as <strong class="lcolor">{{ me }}</strong> with the following redirect URI: <code>{{ redirect_uri }}</code>.</p>
+                {% if client.url %}
+                    <a class="scolor" href="{{ client.url }}">{{ client.name }}</a>
+                {% else %}
+                    <span class="scolor">{{ client.name }}</span>
+                {% endif %}
+                <p>wants you to login{% if me %} as <strong class="lcolor">{{ me }}</strong>{% endif %} with the following redirect URI: <code>{{ redirect_uri }}</code>.</p>
 
 
                 <form method="POST" action="{{ url_for('indieauth_flow') }}" class="form">

@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from loguru import logger
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from app import config
@@ -38,7 +39,50 @@ async def well_known_authorization_server(
         "code_challenge_methods_supported": ["S256"],
         "revocation_endpoint": request.url_for("indieauth_revocation_endpoint"),
         "revocation_endpoint_auth_methods_supported": ["none"],
+        "registration_endpoint": request.url_for("oauth_registration_endpoint"),
     }
+
+
+class OAuthRegisterClientRequest(BaseModel):
+    client_name: str
+    redirect_uris: list[str]
+
+    client_uri: str | None = None
+    logo_uri: str | None = None
+    scope: str | None = None
+
+
+@router.post("/oauth/register")
+async def oauth_registration_endpoint(
+    register_client_request: OAuthRegisterClientRequest,
+    db_session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Implements OAuth 2.0 Dynamic Registration."""
+
+    client = models.OAuthClient(
+        client_name=register_client_request.client_name,
+        redirect_uris=register_client_request.redirect_uris,
+        client_uri=register_client_request.client_uri,
+        logo_uri=register_client_request.logo_uri,
+        scope=register_client_request.scope,
+        client_id=secrets.token_hex(16),
+        client_secret=secrets.token_hex(32),
+    )
+
+    db_session.add(client)
+    await db_session.commit()
+
+    return JSONResponse(
+        content={
+            **register_client_request.dict(),
+            "client_id_issued_at": int(client.created_at.timestamp()),  # type: ignore
+            "grant_types": ["authorization_code", "refresh_token"],
+            "client_secret_expires_at": 0,
+            "client_id": client.client_id,
+            "client_secret": client.client_secret,
+        },
+        status_code=201,
+    )
 
 
 @router.get("/auth")
@@ -56,12 +100,29 @@ async def indieauth_authorization_endpoint(
     code_challenge = request.query_params.get("code_challenge", "")
     code_challenge_method = request.query_params.get("code_challenge_method", "")
 
+    # Check if the authorization request is coming from an OAuth client
+    registered_client = (
+        await db_session.scalars(
+            select(models.OAuthClient).where(
+                models.OAuthClient.client_id == client_id,
+            )
+        )
+    ).one_or_none()
+    if registered_client:
+        client = {
+            "name": registered_client.client_name,
+            "logo": registered_client.logo_uri,
+            "url": registered_client.client_uri,
+        }
+    else:
+        client = await indieauth.get_client_id_data(client_id)
+
     return await templates.render_template(
         db_session,
         request,
         "indieauth_flow.html",
         dict(
-            client=await indieauth.get_client_id_data(client_id),
+            client=client,
             scopes=scope,
             redirect_uri=redirect_uri,
             state=state,
