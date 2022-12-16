@@ -46,7 +46,7 @@ async def well_known_authorization_server(
 
 class OAuthRegisterClientRequest(BaseModel):
     client_name: str
-    redirect_uris: list[str]
+    redirect_uris: list[str] | str
 
     client_uri: str | None = None
     logo_uri: str | None = None
@@ -62,7 +62,9 @@ async def oauth_registration_endpoint(
 
     client = models.OAuthClient(
         client_name=register_client_request.client_name,
-        redirect_uris=register_client_request.redirect_uris,
+        redirect_uris=[register_client_request.redirect_uris]
+        if isinstance(register_client_request.redirect_uris, str)
+        else register_client_request.redirect_uris,
         client_uri=register_client_request.client_uri,
         logo_uri=register_client_request.logo_uri,
         scope=register_client_request.scope,
