@@ -465,6 +465,10 @@ class IndieAuthAccessToken(Base):
     indieauth_authorization_request_id = Column(
         Integer, ForeignKey("indieauth_authorization_request.id"), nullable=True
     )
+    indieauth_authorization_request = relationship(
+        IndieAuthAuthorizationRequest,
+        uselist=False,
+    )
 
     access_token = Column(String, nullable=False, unique=True, index=True)
     expires_in = Column(Integer, nullable=False)

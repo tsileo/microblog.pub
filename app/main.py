@@ -464,7 +464,12 @@ async def followers(
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     if is_activitypub_requested(request):
-        if config.HIDES_FOLLOWERS:
+        maybe_access_token_info = await indieauth.check_access_token(
+            request,
+            db_session,
+        )
+
+        if config.HIDES_FOLLOWERS and not maybe_access_token_info:
             return ActivityPubResponse(
                 await _empty_followx_collection(
                     db_session=db_session,
@@ -523,7 +528,12 @@ async def following(
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse | templates.TemplateResponse:
     if is_activitypub_requested(request):
-        if config.HIDES_FOLLOWING:
+        maybe_access_token_info = await indieauth.check_access_token(
+            request,
+            db_session,
+        )
+
+        if config.HIDES_FOLLOWING and not maybe_access_token_info:
             return ActivityPubResponse(
                 await _empty_followx_collection(
                     db_session=db_session,
@@ -579,22 +589,34 @@ async def following(
 
 @app.get("/outbox")
 async def outbox(
+    request: Request,
     db_session: AsyncSession = Depends(get_db_session),
     _: httpsig.HTTPSigInfo = Depends(httpsig.httpsig_checker),
 ) -> ActivityPubResponse:
+    maybe_access_token_info = await indieauth.check_access_token(
+        request,
+        db_session,
+    )
+
+    # Default restrictions unless the request is authenticated with an access token
+    restricted_where = [
+        models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
+        models.OutboxObject.ap_type.in_(["Create", "Note", "Article", "Announce"]),
+    ]
+
     # By design, we only show the last 20 public activities in the oubox
     outbox_objects = (
         await db_session.scalars(
             select(models.OutboxObject)
             .where(
-                models.OutboxObject.visibility == ap.VisibilityEnum.PUBLIC,
                 models.OutboxObject.is_deleted.is_(False),
-                models.OutboxObject.ap_type.in_(["Create", "Announce"]),
+                *([] if maybe_access_token_info else restricted_where),
             )
             .order_by(models.OutboxObject.ap_published_at.desc())
             .limit(20)
         )
     ).all()
+
     return ActivityPubResponse(
         {
             "@context": ap.AS_EXTENDED_CTX,
@@ -644,6 +666,14 @@ async def _check_outbox_object_acl(
     httpsig_info: httpsig.HTTPSigInfo,
 ) -> None:
     if templates.is_current_user_admin(request):
+        return None
+
+    maybe_access_token_info = await indieauth.check_access_token(
+        request,
+        db_session,
+    )
+    if maybe_access_token_info:
+        # TODO: check scopes
         return None
 
     if ap_object.visibility in [
