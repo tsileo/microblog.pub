@@ -1045,6 +1045,79 @@ def emoji_by_name(name: str) -> ActivityPubResponse:
     return ActivityPubResponse({"@context": ap.AS_EXTENDED_CTX, **emoji})
 
 
+@app.get("/inbox")
+async def get_inbox(
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+    access_token_info: indieauth.AccessTokenInfo = Depends(
+        indieauth.enforce_access_token
+    ),
+    page: bool | None = None,
+    next_cursor: str | None = None,
+) -> ActivityPubResponse:
+    logger.info(f"{page=}/{next_cursor=}")
+    where = [
+        models.InboxObject.ap_type.in_(
+            ["Create", "Follow", "Like", "Announce", "Undo", "Update"]
+        )
+    ]
+    total_items = await db_session.scalar(
+        select(func.count(models.InboxObject.id)).where(*where)
+    )
+
+    if not page and not next_cursor:
+        return ActivityPubResponse(
+            {
+                "@context": ap.AS_CTX,
+                "id": ID + "/inbox",
+                "first": ID + "/inbox?page=true",
+                "type": "OrderedCollection",
+                "totalItems": total_items,
+            }
+        )
+
+    q = (
+        select(models.InboxObject)
+        .where(*where)
+        .order_by(models.InboxObject.created_at.desc())
+    )  # type: ignore
+    if next_cursor:
+        q = q.where(
+            models.InboxObject.created_at
+            < pagination.decode_cursor(next_cursor)  # type: ignore
+        )
+    q = q.limit(20)
+
+    items = [item for item in (await db_session.scalars(q)).all()]
+    next_cursor = None
+    if (
+        items
+        and await db_session.scalar(
+            select(func.count(models.InboxObject.id)).where(
+                *where, models.InboxObject.created_at < items[-1].created_at
+            )
+        )
+        > 0
+    ):
+        next_cursor = pagination.encode_cursor(items[-1].created_at)
+
+    collection_page = {
+        "@context": ap.AS_CTX,
+        "id": (
+            ID + "/inbox?page=true"
+            if not next_cursor
+            else ID + f"/inbox?next_cursor={next_cursor}"
+        ),
+        "partOf": ID + "/inbox",
+        "type": "OrderedCollectionPage",
+        "orderedItems": [item.ap_object for item in items],
+    }
+    if next_cursor:
+        collection_page["next"] = ID + f"/inbox?next_cursor={next_cursor}"
+
+    return ActivityPubResponse(collection_page)
+
+
 @app.post("/inbox")
 async def inbox(
     request: Request,
