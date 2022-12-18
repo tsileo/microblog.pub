@@ -632,7 +632,7 @@ async def outbox(
 
 
 @app.post("/outbox")
-async def post_inbox(
+async def post_outbox(
     request: Request,
     db_session: AsyncSession = Depends(get_db_session),
     access_token_info: indieauth.AccessTokenInfo = Depends(
@@ -641,7 +641,37 @@ async def post_inbox(
 ) -> ActivityPubResponse:
     payload = await request.json()
     logger.info(f"{payload=}")
-    raise ValueError("TODO")
+
+    if payload.get("type") == "Create":
+        assert payload["actor"] == ID
+        obj = payload["object"]
+
+        to_and_cc = obj.get("to", []) + obj.get("cc", [])
+        if ap.AS_PUBLIC in obj.get("to", []) and ID + "/followers" in to_and_cc:
+            visibility = ap.VisibilityEnum.PUBLIC
+        elif ap.AS_PUBLIC in to_and_cc and ID + "/followers" in to_and_cc:
+            visibility = ap.VisibilityEnum.UNLISTED
+        else:
+            visibility = ap.VisibilityEnum.DIRECT
+
+        object_id, outbox_object = await boxes.send_create(
+            db_session,
+            ap_type=obj["type"],
+            source=obj["content"],
+            uploads=[],
+            in_reply_to=obj.get("inReplyTo"),
+            visibility=visibility,
+            content_warning=obj.get("summary"),
+            is_sensitive=obj.get("sensitive", False),
+        )
+    else:
+        raise ValueError("TODO")
+
+    return ActivityPubResponse(
+        outbox_object.ap_object,
+        status_code=201,
+        headers={"Location": boxes.outbox_object_id(object_id)},
+    )
 
 
 @app.get("/featured")

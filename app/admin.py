@@ -1182,7 +1182,7 @@ async def admin_actions_new(
     elif name:
         ap_type = "Article"
 
-    public_id = await boxes.send_create(
+    public_id, _ = await boxes.send_create(
         db_session,
         ap_type=ap_type,
         source=content,

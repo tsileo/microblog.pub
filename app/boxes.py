@@ -592,7 +592,7 @@ async def send_create(
     poll_answers: list[str] | None = None,
     poll_duration_in_minutes: int | None = None,
     name: str | None = None,
-) -> str:
+) -> tuple[str, models.OutboxObject]:
     note_id = allocate_outbox_id()
     published = now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     context = f"{ID}/contexts/" + uuid.uuid4().hex
@@ -767,7 +767,7 @@ async def send_create(
 
     await db_session.commit()
 
-    return note_id
+    return note_id, outbox_object
 
 
 async def send_vote(
