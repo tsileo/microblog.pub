@@ -471,9 +471,11 @@ class IndieAuthAccessToken(Base):
     )
 
     access_token = Column(String, nullable=False, unique=True, index=True)
+    refresh_token = Column(String, nullable=True, unique=True, index=True)
     expires_in = Column(Integer, nullable=False)
     scope = Column(String, nullable=False)
     is_revoked = Column(Boolean, nullable=False, default=False)
+    was_refreshed = Column(Boolean, nullable=False, default=False, server_default="0")
 
 
 class OAuthClient(Base):

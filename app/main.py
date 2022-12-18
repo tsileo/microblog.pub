@@ -631,6 +631,19 @@ async def outbox(
     )
 
 
+@app.post("/outbox")
+async def post_inbox(
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+    access_token_info: indieauth.AccessTokenInfo = Depends(
+        indieauth.enforce_access_token
+    ),
+) -> ActivityPubResponse:
+    payload = await request.json()
+    logger.info(f"{payload=}")
+    raise ValueError("TODO")
+
+
 @app.get("/featured")
 async def featured(
     db_session: AsyncSession = Depends(get_db_session),
@@ -1055,7 +1068,6 @@ async def get_inbox(
     page: bool | None = None,
     next_cursor: str | None = None,
 ) -> ActivityPubResponse:
-    logger.info(f"{page=}/{next_cursor=}")
     where = [
         models.InboxObject.ap_type.in_(
             ["Create", "Follow", "Like", "Announce", "Undo", "Update"]

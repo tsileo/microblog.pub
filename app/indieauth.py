@@ -270,29 +270,54 @@ async def indieauth_token_endpoint(
     form_data = await request.form()
     logger.info(f"{form_data=}")
     grant_type = form_data.get("grant_type", "authorization_code")
-    if grant_type != "authorization_code":
+    if grant_type not in ["authorization_code", "refresh_token"]:
         raise ValueError(f"Invalid grant_type {grant_type}")
-
-    code = form_data["code"]
 
     # These must match the params from the first request
     client_id = form_data["client_id"]
-    redirect_uri = form_data["redirect_uri"]
-    # code_verifier is optional for backward compat
     code_verifier = form_data.get("code_verifier")
 
-    is_code_valid, auth_code_request = await _check_auth_code(
-        db_session,
-        code=code,
-        client_id=client_id,
-        redirect_uri=redirect_uri,
-        code_verifier=code_verifier,
-    )
-    if not is_code_valid or (auth_code_request and not auth_code_request.scope):
-        return JSONResponse(
-            content={"error": "invalid_grant"},
-            status_code=400,
+    if grant_type == "authorization_code":
+        code = form_data["code"]
+        redirect_uri = form_data["redirect_uri"]
+        # code_verifier is optional for backward compat
+        is_code_valid, auth_code_request = await _check_auth_code(
+            db_session,
+            code=code,
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            code_verifier=code_verifier,
         )
+        if not is_code_valid or (auth_code_request and not auth_code_request.scope):
+            return JSONResponse(
+                content={"error": "invalid_grant"},
+                status_code=400,
+            )
+
+    elif grant_type == "refresh_token":
+        refresh_token = form_data["refresh_token"]
+        access_token = (
+            await db_session.scalars(
+                select(models.IndieAuthAccessToken)
+                .where(
+                    models.IndieAuthAccessToken.refresh_token == refresh_token,
+                    models.IndieAuthAccessToken.was_refreshed.is_(False),
+                )
+                .options(
+                    joinedload(
+                        models.IndieAuthAccessToken.indieauth_authorization_request
+                    )
+                )
+            )
+        ).one_or_none()
+        if not access_token:
+            raise ValueError("invalid refresh token")
+
+        if access_token.indieauth_authorization_request.client_id != client_id:
+            raise ValueError("invalid client ID")
+
+        auth_code_request = access_token.indieauth_authorization_request
+        access_token.was_refreshed = True
 
     if not auth_code_request:
         raise ValueError("Should never happen")
@@ -300,6 +325,7 @@ async def indieauth_token_endpoint(
     access_token = models.IndieAuthAccessToken(
         indieauth_authorization_request_id=auth_code_request.id,
         access_token=secrets.token_urlsafe(32),
+        refresh_token=secrets.token_urlsafe(32),
         expires_in=3600,
         scope=auth_code_request.scope,
     )
@@ -309,6 +335,7 @@ async def indieauth_token_endpoint(
     return JSONResponse(
         content={
             "access_token": access_token.access_token,
+            "refresh_token": access_token.refresh_token,
             "token_type": "Bearer",
             "scope": auth_code_request.scope,
             "me": config.ID + "/",
