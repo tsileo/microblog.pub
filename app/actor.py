@@ -38,7 +38,7 @@ def _handle(raw_actor: ap.RawObject) -> str:
     resp: httpx.Response | None = None
     for url in {
         f"https://{domain.hostname}/.well-known/webfinger",
-        f"https://{domain.hostname}/.well-known/webfinger",
+        f"http://{domain.hostname}/.well-known/webfinger",
     }:
         try:
             logger.info(f"Webfinger {handle} at {url}")
