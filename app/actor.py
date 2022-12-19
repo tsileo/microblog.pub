@@ -6,6 +6,7 @@ from functools import cached_property
 from typing import Union
 from urllib.parse import urlparse
 
+import httpx
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
@@ -13,6 +14,9 @@ from sqlalchemy.orm import joinedload
 from app import activitypub as ap
 from app import media
 from app.config import BASE_URL
+from app.config import USER_AGENT
+from app.config import USERNAME
+from app.config import WEBFINGER_DOMAIN
 from app.database import AsyncSession
 from app.utils.datetime import as_utc
 from app.utils.datetime import now
@@ -27,7 +31,38 @@ def _handle(raw_actor: ap.RawObject) -> str:
     if not domain.hostname:
         raise ValueError(f"Invalid actor ID {ap_id}")
 
-    return f'@{raw_actor["preferredUsername"]}@{domain.hostname}'  # type: ignore
+    handle = f'@{raw_actor["preferredUsername"]}@{domain.hostname}'  # type: ignore
+
+    # TODO: cleanup this
+    # Next, check for custom webfinger domains
+    resp: httpx.Response | None = None
+    for url in {
+        f"https://{domain.hostname}/.well-known/webfinger",
+        f"https://{domain.hostname}/.well-known/webfinger",
+    }:
+        try:
+            logger.info(f"Webfinger {handle} at {url}")
+            resp = httpx.get(
+                url,
+                params={"resource": f"acct:{handle[1:]}"},
+                headers={
+                    "User-Agent": USER_AGENT,
+                },
+                follow_redirects=True,
+            )
+            resp.raise_for_status()
+            break
+        except Exception:
+            logger.exception(f"Failed to webfinger {handle}")
+
+    if resp:
+        try:
+            json_resp = resp.json()
+            if json_resp.get("subject", "").startswith("acct:"):
+                return json_resp["subject"].removeprefix("acct:")
+        except Exception:
+            logger.exception(f"Failed to parse webfinger response for {handle}")
+    return handle
 
 
 class Actor:
@@ -61,7 +96,7 @@ class Actor:
             return self.name
         return self.preferred_username
 
-    @property
+    @cached_property
     def handle(self) -> str:
         return _handle(self.ap_actor)
 
@@ -143,12 +178,17 @@ class Actor:
 
 
 class RemoteActor(Actor):
-    def __init__(self, ap_actor: ap.RawObject) -> None:
+    def __init__(self, ap_actor: ap.RawObject, handle: str | None = None) -> None:
         if (ap_type := ap_actor.get("type")) not in ap.ACTOR_TYPES:
             raise ValueError(f"Unexpected actor type: {ap_type}")
 
         self._ap_actor = ap_actor
         self._ap_type = ap_type
+
+        if handle is None:
+            handle = _handle(ap_actor)
+
+        self._handle = handle
 
     @property
     def ap_actor(self) -> ap.RawObject:
@@ -162,8 +202,12 @@ class RemoteActor(Actor):
     def is_from_db(self) -> bool:
         return False
 
+    @property
+    def handle(self) -> str:
+        return self._handle
 
-LOCAL_ACTOR = RemoteActor(ap_actor=ap.ME)
+
+LOCAL_ACTOR = RemoteActor(ap_actor=ap.ME, handle=f"@{USERNAME}@{WEBFINGER_DOMAIN}")
 
 
 async def save_actor(db_session: AsyncSession, ap_actor: ap.RawObject) -> "ActorModel":

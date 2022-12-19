@@ -20,12 +20,16 @@ async def test_fetch_actor(async_db_session: AsyncSession, respx_mock) -> None:
         public_key="pk",
     )
     respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra.ap_actor))
+    respx_mock.get(
+        "https://example.com/.well-known/webfinger",
+        params={"resource": "acct%3Atoto%40example.com"},
+    ).mock(return_value=httpx.Response(200, json={"subject": "acct:toto@example.com"}))
 
     # When fetching this actor for the first time
     saved_actor = await fetch_actor(async_db_session, ra.ap_id)
 
     # Then it has been fetched and saved in DB
-    assert respx.calls.call_count == 1
+    assert respx.calls.call_count == 2
     assert (
         await async_db_session.execute(select(models.Actor))
     ).scalar_one().ap_id == saved_actor.ap_id
@@ -38,7 +42,7 @@ async def test_fetch_actor(async_db_session: AsyncSession, respx_mock) -> None:
     assert (
         await async_db_session.execute(select(func.count(models.Actor.id)))
     ).scalar_one() == 1
-    assert respx.calls.call_count == 1
+    assert respx.calls.call_count == 2
 
 
 def test_sqlalchemy_factory(db: Session) -> None:

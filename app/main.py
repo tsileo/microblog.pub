@@ -62,6 +62,7 @@ from app.config import DOMAIN
 from app.config import ID
 from app.config import USER_AGENT
 from app.config import USERNAME
+from app.config import WEBFINGER_DOMAIN
 from app.config import is_activitypub_requested
 from app.config import verify_csrf_token
 from app.customization import get_custom_router
@@ -1260,7 +1261,7 @@ async def wellknown_webfinger(resource: str) -> JSONResponse:
         raise HTTPException(status_code=404)
 
     out = {
-        "subject": f"acct:{USERNAME}@{DOMAIN}",
+        "subject": f"acct:{USERNAME}@{WEBFINGER_DOMAIN}",
         "aliases": [ID],
         "links": [
             {

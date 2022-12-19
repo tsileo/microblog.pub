@@ -117,6 +117,8 @@ class Config(pydantic.BaseModel):
 
     custom_content_security_policy: str | None = None
 
+    webfinger_domain: str | None = None
+
     # Config items to make tests easier
     sqlalchemy_database: str | None = None
     key_path: str | None = None
@@ -168,6 +170,10 @@ ID = f"{_SCHEME}://{DOMAIN}"
 if CONFIG.id:
     ID = CONFIG.id
 USERNAME = CONFIG.username
+
+# Allow to use @handle@webfinger-domain.tld while hosting the server at domain.tld
+WEBFINGER_DOMAIN = CONFIG.webfinger_domain or DOMAIN
+
 MANUALLY_APPROVES_FOLLOWERS = CONFIG.manually_approves_followers
 HIDES_FOLLOWERS = CONFIG.hides_followers
 HIDES_FOLLOWING = CONFIG.hides_following
