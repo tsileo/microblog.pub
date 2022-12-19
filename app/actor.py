@@ -59,7 +59,7 @@ def _handle(raw_actor: ap.RawObject) -> str:
         try:
             json_resp = resp.json()
             if json_resp.get("subject", "").startswith("acct:"):
-                return json_resp["subject"].removeprefix("acct:")
+                return "@" + json_resp["subject"].removeprefix("acct:")
         except Exception:
             logger.exception(f"Failed to parse webfinger response for {handle}")
     return handle
