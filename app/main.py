@@ -1640,23 +1640,26 @@ async def json_feed(
             }
         )
     result = {
-        "version": "https://jsonfeed.org/version/1",
+        "version": "https://jsonfeed.org/version/1.1",
         "title": f"{LOCAL_ACTOR.display_name}'s microblog'",
         "home_page_url": LOCAL_ACTOR.url,
         "feed_url": BASE_URL + "/feed.json",
-        "author": {
-            "name": LOCAL_ACTOR.display_name,
-            "url": LOCAL_ACTOR.url,
-        },
+        "authors": [
+            {
+                "name": LOCAL_ACTOR.display_name,
+                "url": LOCAL_ACTOR.url,
+            }
+        ],
         "items": data,
     }
     if LOCAL_ACTOR.icon_url:
-        result["author"]["avatar"] = LOCAL_ACTOR.icon_url  # type: ignore
+        result["authors"][0]["avatar"] = LOCAL_ACTOR.icon_url  # type: ignore
     return result
 
 
 async def _gen_rss_feed(
     db_session: AsyncSession,
+    is_rss: bool,
 ):
     fg = FeedGenerator()
     fg.id(BASE_URL + "/feed.rss")
@@ -1687,8 +1690,12 @@ async def _gen_rss_feed(
 
         fe = fg.add_entry()
         fe.id(outbox_object.url)
+
+        # Atom feeds require a title
+        if not is_rss:
+            fe.title(outbox_object.url)
+
         fe.link(href=outbox_object.url)
-        fe.title(outbox_object.url)
         fe.description(content)
         fe.content(content)
         fe.published(outbox_object.ap_published_at.replace(tzinfo=timezone.utc))
@@ -1701,7 +1708,7 @@ async def rss_feed(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> PlainTextResponse:
     return PlainTextResponse(
-        (await _gen_rss_feed(db_session)).rss_str(),
+        (await _gen_rss_feed(db_session, is_rss=True)).rss_str(),
         headers={"Content-Type": "application/rss+xml"},
     )
 
@@ -1711,6 +1718,6 @@ async def atom_feed(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> PlainTextResponse:
     return PlainTextResponse(
-        (await _gen_rss_feed(db_session)).atom_str(),
+        (await _gen_rss_feed(db_session, is_rss=False)).atom_str(),
         headers={"Content-Type": "application/atom+xml"},
     )
