@@ -2,15 +2,47 @@ import asyncio
 import io
 import shutil
 import tarfile
+from collections import namedtuple
 from contextlib import contextmanager
+from inspect import getfullargspec
 from pathlib import Path
 from typing import Generator
 from typing import Optional
+from unittest.mock import patch
 
 import httpx
+import invoke  # type: ignore
 from invoke import Context  # type: ignore
 from invoke import run  # type: ignore
 from invoke import task  # type: ignore
+
+
+def fix_annotations():
+    """
+    Pyinvoke doesn't accept annotations by default, this fix that
+    Based on: @zelo's fix in https://github.com/pyinvoke/invoke/pull/606
+    Context in: https://github.com/pyinvoke/invoke/issues/357
+        Python 3.11 https://github.com/pyinvoke/invoke/issues/833
+    """
+
+    ArgSpec = namedtuple("ArgSpec", ["args", "defaults"])
+
+    def patched_inspect_getargspec(func):
+        spec = getfullargspec(func)
+        return ArgSpec(spec.args, spec.defaults)
+
+    org_task_argspec = invoke.tasks.Task.argspec
+
+    def patched_task_argspec(*args, **kwargs):
+        with patch(
+            target="inspect.getargspec", new=patched_inspect_getargspec, create=True
+        ):
+            return org_task_argspec(*args, **kwargs)
+
+    invoke.tasks.Task.argspec = patched_task_argspec
+
+
+fix_annotations()
 
 
 @task
