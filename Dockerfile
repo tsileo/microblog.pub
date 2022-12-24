@@ -1,4 +1,4 @@
-FROM python:3.10-slim as python-base
+FROM python:3.11-slim as python-base
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     POETRY_HOME="/opt/poetry" \
