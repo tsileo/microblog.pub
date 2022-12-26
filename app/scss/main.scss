@@ -432,7 +432,7 @@ a.label-btn {
     .activity-attachment {
         margin: 30px 0 20px 0;
         img, audio, video {
-            max-width: 740px;
+            max-width: calc(min(740px, 100%));
         }
     }
     img.inline-img {
