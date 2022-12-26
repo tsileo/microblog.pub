@@ -191,6 +191,29 @@ http {
 }
 ```
 
+
+## (Advanced) Running on a subdomain
+
+It is possible to run microblogpub on a subdomain (`sub.domain.tld`) while being reachable from the root root domain (`domain.tld`) using the `name@domain.tld` handle.
+
+This requires forwarding/proxying requests from the root domain to the subdomain, for example using NGINX:
+
+```nginx
+location /.well-known/webfinger {
+  add_header Access-Control-Allow-Origin '*';
+  return 301 https://sub.domain.tld$request_uri;
+}
+```
+
+And updating `data/profile.toml` to specify the root domain as the webfinger domain:
+
+```toml
+webfinger_domain = "domain.tld"
+```
+
+Once configured correctly, people will be able to follow you using `name@domain.tld`, while using `sub.domain.tld` for the web interface.
+
+
 ## (Advanced) Running from subpath
 
 It is possible to configure microblogpub to run from subpath.
