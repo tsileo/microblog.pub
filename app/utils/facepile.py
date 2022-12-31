@@ -1,5 +1,6 @@
 import datetime
 from dataclasses import dataclass
+from datetime import timezone
 from typing import Any
 from typing import Optional
 
@@ -9,7 +10,7 @@ from app import media
 from app.models import InboxObject
 from app.models import Webmention
 from app.utils.datetime import parse_isoformat
-from app.utils.url import make_abs
+from app.utils.url import must_make_abs
 
 
 @dataclass
@@ -39,13 +40,15 @@ class Face:
                     return cls(
                         ap_actor_id=None,
                         url=(
-                            item["properties"]["url"][0]
+                            must_make_abs(
+                                item["properties"]["url"][0], webmention.source
+                            )
                             if item["properties"].get("url")
                             else webmention.source
                         ),
                         name=item["properties"]["name"][0],
                         picture_url=media.resized_media_url(
-                            make_abs(
+                            must_make_abs(
                                 item["properties"]["photo"][0], webmention.source
                             ),  # type: ignore
                             50,
@@ -65,7 +68,7 @@ class Face:
                         url=webmention.source,
                         name=author["properties"]["name"][0],
                         picture_url=media.resized_media_url(
-                            make_abs(
+                            must_make_abs(
                                 author["properties"]["photo"][0], webmention.source
                             ),  # type: ignore
                             50,
@@ -96,13 +99,13 @@ def _parse_face(webmention: Webmention, items: list[dict[str, Any]]) -> Face | N
                 return Face(
                     ap_actor_id=None,
                     url=(
-                        item["properties"]["url"][0]
+                        must_make_abs(item["properties"]["url"][0], webmention.source)
                         if item["properties"].get("url")
                         else webmention.source
                     ),
                     name=item["properties"]["name"][0],
                     picture_url=media.resized_media_url(
-                        make_abs(
+                        must_make_abs(
                             item["properties"]["photo"][0], webmention.source
                         ),  # type: ignore
                         50,
@@ -140,13 +143,23 @@ class WebmentionReply:
                             f"webmention id={webmention.id}"
                         )
                         break
+
+                    if "published" in item["properties"]:
+                        published_at = (
+                            parse_isoformat(item["properties"]["published"][0])
+                            .astimezone(timezone.utc)
+                            .replace(tzinfo=None)
+                        )
+                    else:
+                        published_at = webmention.created_at  # type: ignore
+
                     return cls(
                         face=face,
                         content=item["properties"]["content"][0]["html"],
-                        url=item["properties"]["url"][0],
-                        published_at=parse_isoformat(
-                            item["properties"]["published"][0]
-                        ).replace(tzinfo=None),
+                        url=must_make_abs(
+                            item["properties"]["url"][0], webmention.source
+                        ),
+                        published_at=published_at,
                         in_reply_to=webmention.target,  # type: ignore
                         webmention_id=webmention.id,  # type: ignore
                     )

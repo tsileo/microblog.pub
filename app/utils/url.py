@@ -21,6 +21,13 @@ def make_abs(url: str | None, parent: str) -> str | None:
     )
 
 
+def must_make_abs(url: str | None, parent: str) -> str:
+    abs_url = make_abs(url, parent)
+    if not abs_url:
+        raise ValueError("missing URL")
+    return abs_url
+
+
 class InvalidURLError(Exception):
     pass
 
