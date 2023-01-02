@@ -189,8 +189,11 @@ async def admin_new(
             content += f"{in_reply_to_object.actor.handle} "
         for tag in in_reply_to_object.tags:
             if tag.get("type") == "Mention" and tag["name"] != LOCAL_ACTOR.handle:
-                mentioned_actor = await fetch_actor(db_session, tag["href"])
-                content += f"{mentioned_actor.handle} "
+                try:
+                    mentioned_actor = await fetch_actor(db_session, tag["href"])
+                    content += f"{mentioned_actor.handle} "
+                except Exception:
+                    logger.exception(f"Failed to lookup {mentioned_actor}")
 
         # Copy the content warning if any
         if in_reply_to_object.summary:
