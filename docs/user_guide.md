@@ -320,7 +320,7 @@ First you need to grab the "ActivityPub actor URL" for your existing account:
 
 ```bash
 # For a Python install
-poetry run inv webfinger username@domain.tld
+poetry run inv webfinger username@instance-you-want-to-move-from.tld
 ```
 
 Edit the config.
@@ -329,7 +329,7 @@ Edit the config.
 
 ```bash
 # For a Docker install
-make account=username@domain.tld webfinger
+make account=username@instance-you-want-to-move-from.tld webfinger
 ```
 
 Edit the config.
@@ -339,7 +339,7 @@ Edit the config.
 And add a reference to your old/existing account in `profile.toml`:
 
 ```toml
-also_known_as = "my@old-account.com"
+also_known_as = "https://instance-you-want-to-move-form.tld/users/username"
 ```
 
 Restart the server, and you should be able to complete the move from your existing account.
