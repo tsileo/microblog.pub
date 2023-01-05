@@ -344,6 +344,8 @@ also_known_as = "https://instance-you-want-to-move-form.tld/users/username"
 
 Restart the server, and you should be able to complete the move from your existing account.
 
+Note that if you already have a redirect in place on Mastodon, you may have to remove it before initiating the migration.
+
 ## Import follows from Mastodon
 
 You can import the list of follows/following accounts from Mastodon.
