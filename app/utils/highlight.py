@@ -32,23 +32,22 @@ def highlight(html: str) -> str:
 
         # If this comes from a microblog.pub instance we may have the language
         # in the class name
-        if "class" in code.attrs and code.attrs["class"][0].startswith("language-"):
+        if "data-microblogpub-lexer" in code.attrs:
             try:
-                lexer = get_lexer_by_name(
-                    code.attrs["class"][0].removeprefix("language-")
-                )
+                lexer = get_lexer_by_name(code.attrs["data-microblogpub-lexer"])
             except Exception:
                 lexer = guess_lexer(code_content)
-        else:
-            lexer = guess_lexer(code_content)
 
-        # Replace the code with Pygment output
-        # XXX: the HTML escaping causes issue with Python type annotations
-        code_content = code_content.replace(") -&gt; ", ") -> ")
-        code.parent.replaceWith(
-            BeautifulSoup(
-                phighlight(code_content, lexer, _FORMATTER), "html5lib"
-            ).body.next
-        )
+            # Replace the code with Pygment output
+            # XXX: the HTML escaping causes issue with Python type annotations
+            code_content = code_content.replace(") -&gt; ", ") -> ")
+            code.parent.replaceWith(
+                BeautifulSoup(
+                    phighlight(code_content, lexer, _FORMATTER), "html5lib"
+                ).body.next
+            )
+        else:
+            code.name = "div"
+            code["class"] = code.get("class", []) + ["highlight"]
 
     return soup.body.encode_contents().decode()

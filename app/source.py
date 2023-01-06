@@ -3,12 +3,12 @@ import typing
 
 from loguru import logger
 from mistletoe import Document  # type: ignore
+from mistletoe.block_token import CodeFence  # type: ignore
 from mistletoe.html_renderer import HTMLRenderer  # type: ignore
 from mistletoe.span_token import SpanToken  # type: ignore
-from pygments import highlight  # type: ignore
 from pygments.formatters import HtmlFormatter  # type: ignore
 from pygments.lexers import get_lexer_by_name as get_lexer  # type: ignore
-from pygments.lexers import guess_lexer  # type: ignore
+from pygments.util import ClassNotFound  # type: ignore
 from sqlalchemy import select
 
 from app import webfinger
@@ -104,10 +104,16 @@ class CustomRenderer(HTMLRenderer):
         )
         return link
 
-    def render_block_code(self, token: typing.Any) -> str:
+    def render_block_code(self, token: CodeFence) -> str:
+        lexer_attr = ""
+        try:
+            lexer = get_lexer(token.language)
+            lexer_attr = f' data-microblogpub-lexer="{lexer.aliases[0]}"'
+        except ClassNotFound:
+            pass
+
         code = token.children[0].content
-        lexer = get_lexer(token.language) if token.language else guess_lexer(code)
-        return highlight(code, lexer, _FORMATTER)
+        return f"<pre><code{lexer_attr}>\n{code}\n</code></pre>"
 
 
 async def _prefetch_mentioned_actors(
