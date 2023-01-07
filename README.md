@@ -10,6 +10,7 @@ Instances in the wild:
  - [microblog.pub](https://microblog.pub/) (follow to get updated about the project)
  - [hexa.ninja](https://hexa.ninja) (theme customization example)
  - [testing.microblog.pub](https://testing.microblog.pub/)
+ - [Irish Left Archive](https://posts.leftarchive.ie/) (another theme customization example)
 
 There are still some rough edges, but the server is mostly functional.
 
