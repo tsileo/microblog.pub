@@ -1694,9 +1694,9 @@ async def _gen_rss_feed(
 
         fe = fg.add_entry()
         fe.id(outbox_object.url)
-
-        # Atom feeds require a title
-        if not is_rss:
+        if outbox_object.name is not None:
+            fe.title(outbox_object.name)
+        elif not is_rss: # Atom feeds require a title
             fe.title(outbox_object.url)
 
         fe.link(href=outbox_object.url)
