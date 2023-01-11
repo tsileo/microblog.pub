@@ -34,7 +34,7 @@ def _options_hash(doc: ap.RawObject) -> str:
     for k in ["type", "id", "signatureValue"]:
         if k in doc:
             del doc[k]
-    doc["@context"] = "https://w3id.org/identity/v1"
+    doc["@context"] = "https://raw.githubusercontent.com/web-payments/web-payments.org/master/contexts/identity-v1.jsonld"
     normalized = jsonld.normalize(
         doc, {"algorithm": "URDNA2015", "format": "application/nquads"}
     )
