@@ -25,10 +25,10 @@ As these two config items define your ActivityPub handle `@handle@domain`.
 
 You can tweak your profile by tweaking these items:
 
- - `name`
- - `summary` (using Markdown)
- - `icon_url`
- - `image_url`
+ - `name`: The name shown with your profile.
+ - `summary`: The summary or 'bio' part of your profile, written in Markdown.
+ - `icon_url`: Your profile image or avatar.
+ - `image_url`: This provides a 'header' or 'banner' image. Note that it is not shown by the default Microblog.pub templates. It will be used by Mastodon (which uses a 3:1 ratio image) and Pleroma. Pixelfed and Peertube, for example, don't show these images by default.
 
 Whenever one of these config items is updated, an `Update` activity will be sent to all known servers to update your remote profile.
 
