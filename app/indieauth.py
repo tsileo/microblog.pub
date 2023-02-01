@@ -41,6 +41,7 @@ async def well_known_authorization_server(
         "revocation_endpoint": request.url_for("indieauth_revocation_endpoint"),
         "revocation_endpoint_auth_methods_supported": ["none"],
         "registration_endpoint": request.url_for("oauth_registration_endpoint"),
+        "introspection_endpoint": request.url_for("oauth_introspection_endpoint"),
     }
 
 
@@ -378,6 +379,8 @@ async def _check_access_token(
 class AccessTokenInfo:
     scopes: list[str]
     client_id: str | None
+    access_token: str
+    exp: int
 
 
 async def verify_access_token(
@@ -409,6 +412,13 @@ async def verify_access_token(
             if access_token.indieauth_authorization_request
             else None
         ),
+        access_token=access_token.access_token,
+        exp=int(
+            (
+                access_token.created_at.replace(tzinfo=timezone.utc)
+                + timedelta(seconds=access_token.expires_in)
+            ).timestamp()
+        ),
     )
 
 
@@ -433,6 +443,13 @@ async def check_access_token(
             access_token.indieauth_authorization_request.client_id
             if access_token.indieauth_authorization_request
             else None
+        ),
+        access_token=access_token.access_token,
+        exp=int(
+            (
+                access_token.created_at.replace(tzinfo=timezone.utc)
+                + timedelta(seconds=access_token.expires_in)
+            ).timestamp()
         ),
     )
 
@@ -472,5 +489,26 @@ async def indieauth_revocation_endpoint(
 
     return JSONResponse(
         content={},
+        status_code=200,
+    )
+
+
+@router.post("/token_introspection")
+async def oauth_introspection_endpoint(
+    request: Request,
+    access_token_info: AccessTokenInfo = Depends(enforce_access_token),
+    token: str = Form(),
+) -> JSONResponse:
+    # Ensure the requested token is the same as bearer token
+    if token != access_token_info.access_token:
+        raise HTTPException(status_code=401, detail="access token required")
+
+    return JSONResponse(
+        content={
+            "active": True,
+            "client_id": access_token_info.client_id,
+            "scope": " ".join(access_token_info.scopes),
+            "exp": access_token_info.exp,
+        },
         status_code=200,
     )

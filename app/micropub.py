@@ -132,7 +132,7 @@ async def post_micropub_endpoint(
             h = form_data["h"]
         entry_type = f"h-{h}"
 
-    logger.info(f"Creating {entry_type}")
+    logger.info(f"Creating {entry_type=} with {access_token_info=}")
 
     if entry_type != "h-entry":
         return JSONResponse(
@@ -150,7 +150,7 @@ async def post_micropub_endpoint(
     else:
         content = form_data["content"]
 
-    public_id = await send_create(
+    public_id, _ = await send_create(
         db_session,
         "Note",
         content,
