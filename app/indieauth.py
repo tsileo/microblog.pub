@@ -532,6 +532,10 @@ async def oauth_introspection_endpoint(
     if not access_token:
         return JSONResponse(content={"active": False})
 
+    is_token_valid, _ = await _check_access_token(db_session, token)
+    if not is_token_valid:
+        return JSONResponse(content={"active": False})
+
     return JSONResponse(
         content={
             "active": True,
