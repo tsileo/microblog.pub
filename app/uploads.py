@@ -60,7 +60,7 @@ async def save_upload(db_session: AsyncSession, f: UploadFile) -> models.Upload:
             destination_image.putdata(original_image.getdata())
             destination_image.save(
                 dest_filename,
-                format=_original_image.format,
+                format=_original_image.format,  # type: ignore
             )
 
             with open(dest_filename, "rb") as dest_f:

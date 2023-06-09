@@ -1,4 +1,5 @@
 import enum
+from datetime import datetime
 from typing import Any
 from typing import Optional
 from typing import Union
@@ -436,7 +437,7 @@ class OutboxObjectAttachment(Base):
     outbox_object_id = Column(Integer, ForeignKey("outbox.id"), nullable=False)
 
     upload_id = Column(Integer, ForeignKey("upload.id"), nullable=False)
-    upload = relationship(Upload, uselist=False)
+    upload: Mapped["Upload"] = relationship(Upload, uselist=False)
 
 
 class IndieAuthAuthorizationRequest(Base):
@@ -459,7 +460,9 @@ class IndieAuthAccessToken(Base):
     __tablename__ = "indieauth_access_token"
 
     id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, default=now
+    )
 
     # Will be null for personal access tokens
     indieauth_authorization_request_id = Column(
@@ -470,9 +473,9 @@ class IndieAuthAccessToken(Base):
         uselist=False,
     )
 
-    access_token = Column(String, nullable=False, unique=True, index=True)
+    access_token: Mapped[str] = Column(String, nullable=False, unique=True, index=True)
     refresh_token = Column(String, nullable=True, unique=True, index=True)
-    expires_in = Column(Integer, nullable=False)
+    expires_in: Mapped[int] = Column(Integer, nullable=False)
     scope = Column(String, nullable=False)
     is_revoked = Column(Boolean, nullable=False, default=False)
     was_refreshed = Column(Boolean, nullable=False, default=False, server_default="0")
