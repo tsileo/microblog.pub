@@ -124,6 +124,7 @@ class Config(pydantic.BaseModel):
     key_path: str | None = None
 
     session_timeout: int = 3600 * 24 * 3  # in seconds, 3 days by default
+    csrf_token_exp: int = 3600
 
     disabled_notifications: list[str] = []
 
@@ -263,7 +264,7 @@ def verify_csrf_token(
     if redirect_url:
         please_try_again = f'<a href="{redirect_url}">please try again</a>'
     try:
-        csrf_serializer.loads(csrf_token, max_age=1800)
+        csrf_serializer.loads(csrf_token, max_age=CONFIG.csrf_token_exp)
     except (itsdangerous.BadData, itsdangerous.SignatureExpired):
         logger.exception("Failed to verify CSRF token")
         raise HTTPException(
