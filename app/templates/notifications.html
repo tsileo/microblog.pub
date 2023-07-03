@@ -51,7 +51,7 @@
             {% elif notif.notification_type.value == "unblock" %}
                 {{ notif_actor_action(notif, "was unblocked") }}
                 {{ utils.display_actor(notif.actor, actors_metadata) }}
-            {%- elif notif.notification_type.value == "move" %}
+            {%- elif notif.notification_type.value == "move" and notif.inbox_object %}
                 {# for move notif, the actor is the target and the inbox object the Move activity #}
                 <div class="actor-action">
                     <a href="{{ url_for("admin_profile") }}?actor_id={{ notif.inbox_object.actor.ap_id }}">

@@ -102,6 +102,8 @@ async def _prune_old_inbox_objects(
                     models.InboxObject.ap_type.in_(["Note"]),
                 )
             ),
+            # Keep Move object as they are linked to notifications
+            models.InboxObject.ap_type.not_in(["Move"]),
             # Filter by retention days
             models.InboxObject.ap_published_at
             < now() - timedelta(days=INBOX_RETENTION_DAYS),
