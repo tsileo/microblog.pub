@@ -1413,6 +1413,7 @@ async def serve_proxy_media(
             _filter_proxy_resp_headers(
                 proxy_resp,
                 [
+                    "content-encoding",
                     "content-length",
                     "content-type",
                     "content-range",
