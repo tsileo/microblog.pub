@@ -60,7 +60,7 @@ def _set_next_try(
     if not outgoing_activity.tries:
         raise ValueError("Should never happen")
 
-    if outgoing_activity.tries == _MAX_RETRIES:
+    if outgoing_activity.tries >= _MAX_RETRIES:
         outgoing_activity.is_errored = True
         outgoing_activity.next_try = None
     else:
