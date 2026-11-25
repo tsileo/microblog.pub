@@ -15,6 +15,7 @@ from app.httpsig import auth
 from app.key import get_pubkey_as_pem
 from app.source import dedup_tags
 from app.source import hashtagify
+from app.utils import safe_http
 from app.utils.url import check_url
 
 if TYPE_CHECKING:
@@ -180,7 +181,7 @@ async def fetch(
     logger.info(f"Fetching {url} ({params=})")
     check_url(url)
 
-    async with httpx.AsyncClient() as client:
+    async with safe_http.async_client() as client:
         resp = await client.get(
             url,
             headers={
@@ -394,7 +395,7 @@ async def post(url: str, payload: dict[str, Any]) -> httpx.Response:
     logger.info(f"Posting {url} ({payload=})")
     check_url(url)
 
-    async with httpx.AsyncClient() as client:
+    async with safe_http.async_client() as client:
         resp = await client.post(
             url,
             headers={

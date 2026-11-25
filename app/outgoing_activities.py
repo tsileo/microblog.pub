@@ -22,6 +22,7 @@ from app.actor import _actor_hash
 from app.config import KEY_PATH
 from app.database import AsyncSession
 from app.key import Key
+from app.utils import safe_http
 from app.utils.datetime import now
 from app.utils.url import check_url
 from app.utils.workers import Worker
@@ -207,7 +208,7 @@ async def process_next_outgoing_activity(
             }
             logger.info(f"{webmention_payload=}")
             check_url(next_activity.recipient)
-            async with httpx.AsyncClient() as client:
+            async with safe_http.async_client() as client:
                 resp = await client.post(
                     next_activity.recipient,  # type: ignore
                     data=webmention_payload,

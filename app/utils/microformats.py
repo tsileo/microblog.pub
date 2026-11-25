@@ -5,6 +5,7 @@ import mf2py  # type: ignore
 from loguru import logger
 
 from app import config
+from app.utils import safe_http
 
 
 class URLNotFoundOrGone(Exception):
@@ -12,7 +13,7 @@ class URLNotFoundOrGone(Exception):
 
 
 async def fetch_and_parse(url: str) -> tuple[dict[str, Any], str]:
-    async with httpx.AsyncClient() as client:
+    async with safe_http.async_client() as client:
         resp = await client.get(
             url,
             headers={

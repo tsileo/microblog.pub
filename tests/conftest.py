@@ -18,6 +18,9 @@ async def async_db_session():
         async with async_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         yield session
+        # The factories use their own (sync) session: reset it so objects from
+        # this test don't leak into the next one
+        _Session.remove()
         async with async_engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
 

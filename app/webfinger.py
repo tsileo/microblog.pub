@@ -6,13 +6,14 @@ import httpx
 from loguru import logger
 
 from app import config
+from app.utils import safe_http
 from app.utils.url import check_url
 
 
 async def get_webfinger_via_host_meta(host: str) -> str | None:
     resp: httpx.Response | None = None
     is_404 = False
-    async with httpx.AsyncClient() as client:
+    async with safe_http.async_client() as client:
         for i, proto in enumerate({"http", "https"}):
             try:
                 url = f"{proto}://{host}/.well-known/host-meta"
@@ -85,7 +86,7 @@ async def webfinger(
     is_404 = False
 
     resp: httpx.Response | None = None
-    async with httpx.AsyncClient() as client:
+    async with safe_http.async_client() as client:
         for i, url in enumerate(urls):
             try:
                 check_url(url)

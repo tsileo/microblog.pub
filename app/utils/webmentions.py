@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from typing import Any
 from typing import Optional
 
-import httpx
 from bs4 import BeautifulSoup  # type: ignore
 from loguru import logger
 
 from app import config
+from app.utils import safe_http
 from app.utils.datetime import now
 from app.utils.url import check_url
 from app.utils.url import is_url_valid
@@ -14,7 +14,7 @@ from app.utils.url import make_abs
 
 
 async def _discover_webmention_endoint(url: str) -> str | None:
-    async with httpx.AsyncClient() as client:
+    async with safe_http.async_client() as client:
         try:
             resp = await client.get(
                 url,

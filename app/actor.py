@@ -18,6 +18,7 @@ from app.config import USER_AGENT
 from app.config import USERNAME
 from app.config import WEBFINGER_DOMAIN
 from app.database import AsyncSession
+from app.utils import safe_http
 from app.utils.datetime import as_utc
 from app.utils.datetime import now
 
@@ -42,14 +43,15 @@ def _handle(raw_actor: ap.RawObject) -> str:
     }:
         try:
             logger.info(f"Webfinger {handle} at {url}")
-            resp = httpx.get(
-                url,
-                params={"resource": f"acct:{handle[1:]}"},
-                headers={
-                    "User-Agent": USER_AGENT,
-                },
-                follow_redirects=True,
-            )
+            with safe_http.client() as client:
+                resp = client.get(
+                    url,
+                    params={"resource": f"acct:{handle[1:]}"},
+                    headers={
+                        "User-Agent": USER_AGENT,
+                    },
+                    follow_redirects=True,
+                )
             resp.raise_for_status()
             break
         except Exception:

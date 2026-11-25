@@ -73,6 +73,7 @@ from app.incoming_activities import new_ap_incoming_activity
 from app.templates import is_current_user_admin
 from app.uploads import UPLOAD_DIR
 from app.utils import pagination
+from app.utils import safe_http
 from app.utils.emoji import EMOJIS_BY_NAME
 from app.utils.facepile import Face
 from app.utils.facepile import WebmentionReply
@@ -1329,6 +1330,20 @@ async def nodeinfo(
     )
 
 
+# Only forward the client headers needed for media (content negotiation,
+# caching and range requests); arbitrary headers must not reach the upstream
+# server (e.g. `Metadata-Flavor: Google` for cloud metadata endpoints).
+_PROXY_FORWARDED_REQUEST_HEADERS = {
+    b"accept",
+    b"accept-encoding",
+    b"accept-language",
+    b"range",
+    b"if-range",
+    b"if-none-match",
+    b"if-modified-since",
+}
+
+
 async def _proxy_get(
     proxy_client: httpx.AsyncClient,
     request: starlette.requests.Request,
@@ -1342,15 +1357,7 @@ async def _proxy_get(
         headers=[
             (k, v)
             for (k, v) in request.headers.raw
-            if k.lower()
-            not in [
-                b"host",
-                b"cookie",
-                b"x-forwarded-for",
-                b"x-forwarded-proto",
-                b"x-real-ip",
-                b"user-agent",
-            ]
+            if k.lower() in _PROXY_FORWARDED_REQUEST_HEADERS
         ]
         + [(b"user-agent", USER_AGENT.encode())],
     )
@@ -1387,7 +1394,7 @@ async def serve_proxy_media(
     check_url(url)
     media.verify_proxied_media_sig(exp, url, sig)
 
-    proxy_client = httpx.AsyncClient(
+    proxy_client = safe_http.async_client(
         follow_redirects=True,
         timeout=httpx.Timeout(timeout=10.0),
         transport=httpx.AsyncHTTPTransport(retries=1),
@@ -1456,7 +1463,7 @@ async def serve_proxy_media_resized(
             headers=resp_headers,
         )
 
-    proxy_client = httpx.AsyncClient(
+    proxy_client = safe_http.async_client(
         follow_redirects=True,
         timeout=httpx.Timeout(timeout=10.0),
         transport=httpx.AsyncHTTPTransport(retries=1),

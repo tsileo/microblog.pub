@@ -20,6 +20,7 @@ from app.actor import fetch_actor
 from app.database import AsyncSession
 from app.models import InboxObject
 from app.models import OutboxObject
+from app.utils import safe_http
 from app.utils.url import is_url_valid
 from app.utils.url import make_abs
 
@@ -129,7 +130,7 @@ async def external_urls(
 
 
 async def _og_meta_from_url(url: str) -> OpenGraphMeta | None:
-    async with httpx.AsyncClient() as client:
+    async with safe_http.async_client() as client:
         resp = await client.get(
             url,
             headers={
