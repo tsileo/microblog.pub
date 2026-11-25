@@ -1,3 +1,6 @@
+import base64
+import hashlib
+import hmac
 import secrets
 from dataclasses import dataclass
 from datetime import timedelta
@@ -125,6 +128,8 @@ async def indieauth_authorization_endpoint(
     else:
         client = await indieauth.get_client_id_data(client_id)  # type: ignore
 
+    await _check_redirect_uri(db_session, client_id, redirect_uri)
+
     return await templates.render_template(
         db_session,
         request,
@@ -162,6 +167,9 @@ async def indieauth_flow(
     scope = " ".join(form_data.getlist("scopes"))
     client_id = form_data["client_id"]
 
+    # Never send the code to a redirect URI the client does not own
+    await _check_redirect_uri(db_session, client_id, redirect_uri)
+
     # TODO: Ensure that me is correct
     # me = form_data.get("me")
 
@@ -186,6 +194,53 @@ async def indieauth_flow(
     return await redirect(
         request, db_session, redirect_uri + f"?code={code}&state={state}&iss={iss}"
     )
+
+
+async def _check_redirect_uri(
+    db_session: AsyncSession,
+    client_id: str | None,
+    redirect_uri: str | None,
+) -> None:
+    if not client_id or not redirect_uri:
+        raise HTTPException(status_code=400, detail="Missing client_id/redirect_uri")
+
+    registered_client = (
+        await db_session.scalars(
+            select(models.OAuthClient).where(
+                models.OAuthClient.client_id == client_id,
+            )
+        )
+    ).one_or_none()
+    if registered_client:
+        is_allowed = redirect_uri in (registered_client.redirect_uris or [])
+    else:
+        client = await indieauth.get_client_id_data(client_id)
+        is_allowed = indieauth.is_redirect_uri_allowed(
+            client_id,
+            redirect_uri,
+            client.redirect_uris if client else [],
+        )
+
+    if not is_allowed:
+        logger.warning(f"Invalid {redirect_uri=} for {client_id=}")
+        raise HTTPException(status_code=400, detail="Invalid redirect_uri")
+
+
+def _is_code_verifier_valid(
+    code_challenge: str,
+    code_challenge_method: str | None,
+    code_verifier: str | None,
+) -> bool:
+    """PKCE verification (only S256 is supported)."""
+    if code_challenge_method != "S256" or not code_verifier:
+        return False
+
+    expected_challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+        .rstrip(b"=")
+        .decode()
+    )
+    return hmac.compare_digest(expected_challenge, code_challenge)
 
 
 async def _check_auth_code(
@@ -219,6 +274,15 @@ async def _check_auth_code(
         or auth_code_req.client_id != client_id
     ):
         logger.info("redirect_uri/client_id does not match request")
+        return False, None
+
+    # PKCE (only optional for requests that did not include a challenge)
+    if auth_code_req.code_challenge and not _is_code_verifier_valid(
+        auth_code_req.code_challenge,
+        auth_code_req.code_challenge_method,
+        code_verifier,
+    ):
+        logger.info("Invalid PKCE code verifier")
         return False, None
 
     auth_code_req.is_used = True
@@ -307,6 +371,7 @@ async def indieauth_token_endpoint(
                 .where(
                     models.IndieAuthAccessToken.refresh_token == refresh_token,
                     models.IndieAuthAccessToken.was_refreshed.is_(False),
+                    models.IndieAuthAccessToken.is_revoked.is_(False),
                 )
                 .options(
                     joinedload(
@@ -385,6 +450,12 @@ class AccessTokenInfo:
     client_id: str | None
     access_token: str
     exp: int
+
+
+def has_scope(access_token_info: AccessTokenInfo | None, scope: str) -> bool:
+    if access_token_info is None:
+        return False
+    return scope in access_token_info.scopes
 
 
 async def verify_access_token(

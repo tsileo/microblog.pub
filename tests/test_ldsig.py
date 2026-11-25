@@ -47,6 +47,14 @@ async def test_linked_data_sig(
     k = Key(ra.ap_id, f"{ra.ap_id}#main-key")
     k.load(privkey)
     respx_mock.get(ra.ap_id).mock(return_value=httpx.Response(200, json=ra.ap_actor))
+    # The JSON-LD contexts are fetched for real
+    for host in [
+        "www.w3.org",
+        "w3id.org",
+        "w3c-ccg.github.io",
+        "raw.githubusercontent.com",
+    ]:
+        respx_mock.route(host=host).pass_through()
 
     doc = deepcopy(_SAMPLE_CREATE)
 

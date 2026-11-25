@@ -3,6 +3,7 @@ import time
 
 from app.config import BASE_URL
 from app.config import hmac_sha256
+from app.config import is_local_ap_id
 
 SUPPORTED_RESIZE = [50, 740]
 EXPIRY_PERIOD = 86400
@@ -29,7 +30,7 @@ def verify_proxied_media_sig(expires: int, url: str, sig: str) -> None:
 
 
 def proxied_media_url(url: str) -> str:
-    if url.startswith(BASE_URL):
+    if is_local_ap_id(url):
         return url
     expires = int(time.time() / EXPIRY_PERIOD) + EXPIRY_LENGTH
     sig = proxied_media_sig(expires, url)
@@ -44,6 +45,6 @@ def proxied_media_url(url: str) -> str:
 def resized_media_url(url: str, size: int) -> str:
     if size not in SUPPORTED_RESIZE:
         raise ValueError(f"Unsupported resize {size}")
-    if url.startswith(BASE_URL):
+    if is_local_ap_id(url):
         return url
     return proxied_media_url(url) + f"/{size}"

@@ -90,6 +90,15 @@ def check_url(url: str) -> None:
     return None
 
 
+def is_same_host(url: str, other_url: str) -> bool:
+    """Returns True if both URLs are hosted on the same (non-empty) host.
+
+    Used to ensure a remote server can only speak for objects/actors it hosts.
+    """
+    host = urlparse(url).hostname
+    return bool(host) and host == urlparse(other_url).hostname
+
+
 @functools.lru_cache(maxsize=256)
 def is_hostname_blocked(hostname: str) -> bool:
     for blocked_hostname in BLOCKED_SERVERS:

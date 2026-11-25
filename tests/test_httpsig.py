@@ -176,4 +176,5 @@ async def test_httpsig_checker__with_invvalid_signature(
         json_response = response.json()
 
     assert json_response["has_valid_signature"] is False
-    assert json_response["signed_by_ap_actor_id"] == ra.ap_id
+    # An invalid signature must not identify the signer
+    assert json_response["signed_by_ap_actor_id"] is None

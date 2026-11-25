@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import html
 import os
 import secrets
 from pathlib import Path
@@ -256,13 +257,29 @@ def generate_csrf_token() -> str:
     return csrf_serializer.dumps(secrets.token_hex(16))  # type: ignore
 
 
+def is_local_ap_id(url: str) -> bool:
+    """Returns True if the (absolute) URL is hosted by this instance.
+
+    A simple `startswith(BASE_URL)` would also match `https://domain.tld.evil`.
+    """
+    return url == BASE_URL or url.startswith(BASE_URL + "/")
+
+
+def is_local_url(url: str) -> bool:
+    """Returns True for URLs pointing to this instance (absolute or path)."""
+    if is_local_ap_id(url):
+        return True
+    return url.startswith("/") and not url.startswith("//") and "\\" not in url
+
+
 def verify_csrf_token(
     csrf_token: str = Form(),
     redirect_url: str | None = Form(None),
 ) -> None:
     please_try_again = "please try again"
-    if redirect_url:
-        please_try_again = f'<a href="{redirect_url}">please try again</a>'
+    # The message is rendered as HTML: only link back to a local URL, escaped
+    if redirect_url and is_local_url(redirect_url):
+        please_try_again = f'<a href="{html.escape(redirect_url)}">please try again</a>'
     try:
         csrf_serializer.loads(csrf_token, max_age=CONFIG.csrf_token_exp)
     except (itsdangerous.BadData, itsdangerous.SignatureExpired):

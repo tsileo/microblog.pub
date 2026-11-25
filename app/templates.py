@@ -1,3 +1,5 @@
+import html
+import re
 from datetime import datetime
 from datetime import timezone
 from functools import lru_cache
@@ -323,14 +325,14 @@ def _clean_html(html: str, note: Object) -> str:
                     tags=ALLOWED_TAGS,
                     attributes=(
                         _allow_all_attributes
-                        if note.ap_id.startswith(config.ID)
+                        if config.is_local_ap_id(note.ap_id)
                         else ALLOWED_ATTRIBUTES
                     ),
                     strip=True,
                 ),
                 note,
             ),
-            is_local=note.ap_id.startswith(BASE_URL),
+            is_local=config.is_local_ap_id(note.ap_id),
         )
     except Exception:
         raise
@@ -368,20 +370,32 @@ def _pluralize(count: int, singular: str = "", plural: str = "s") -> str:
         return singular
 
 
+_EMOJI_NAME_RE = re.compile(r"^:[a-zA-Z0-9_+\-]+:$")
+
+
 def _replace_custom_emojis(content: str, note: Object) -> str:
     idx = {}
     for tag in note.tags:
         if tag.get("type") == "Emoji":
             try:
-                idx[tag["name"]] = proxied_media_url(tag["icon"]["url"])
+                emoji_name = tag["name"]
+                # The content is already sanitized at this point: only allow
+                # plain shortcodes so the replacement cannot inject markup
+                if not isinstance(emoji_name, str) or not _EMOJI_NAME_RE.match(
+                    emoji_name
+                ):
+                    logger.warning(f"Invalid custom emoji name {emoji_name!r}")
+                    continue
+                idx[emoji_name] = proxied_media_url(tag["icon"]["url"])
             except KeyError:
                 logger.warning(f"Failed to parse custom emoji {tag=}")
                 continue
 
     for emoji_name, emoji_url in idx.items():
+        escaped_name = html.escape(emoji_name)
         content = content.replace(
             emoji_name,
-            f'<img class="custom-emoji" src="{emoji_url}" title="{emoji_name}" alt="{emoji_name}">',  # noqa: E501
+            f'<img class="custom-emoji" src="{html.escape(emoji_url)}" title="{escaped_name}" alt="{escaped_name}">',  # noqa: E501
         )
 
     return content

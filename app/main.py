@@ -141,17 +141,20 @@ class CustomMiddleware:
                 headers["x-xss-protection"] = "1; mode=block"
                 headers["x-frame-options"] = "DENY"
                 headers["permissions-policy"] = "interest-cohort=()"
-                headers["content-security-policy"] = (
-                    (
-                        f"default-src 'self'; "
-                        f"style-src 'self' 'sha256-{HIGHLIGHT_CSS_HASH}'; "
-                        f"frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+                # Keep a stricter policy set by the endpoint (e.g. media proxy)
+                if "content-security-policy" not in headers:
+                    headers["content-security-policy"] = (
+                        (
+                            f"default-src 'self'; "
+                            f"style-src 'self' 'sha256-{HIGHLIGHT_CSS_HASH}'; "
+                            f"frame-ancestors 'none'; base-uri 'self'; "
+                            f"form-action 'self';"
+                        )
+                        if not config.CUSTOM_CONTENT_SECURITY_POLICY
+                        else config.CUSTOM_CONTENT_SECURITY_POLICY.format(
+                            HIGHLIGHT_CSS_HASH=HIGHLIGHT_CSS_HASH
+                        )
                     )
-                    if not config.CUSTOM_CONTENT_SECURITY_POLICY
-                    else config.CUSTOM_CONTENT_SECURITY_POLICY.format(
-                        HIGHLIGHT_CSS_HASH=HIGHLIGHT_CSS_HASH
-                    )
-                )
                 if not DEBUG:
                     headers["strict-transport-security"] = "max-age=63072000;"
 
@@ -471,7 +474,9 @@ async def followers(
             db_session,
         )
 
-        if config.HIDES_FOLLOWERS and not maybe_access_token_info:
+        if config.HIDES_FOLLOWERS and not indieauth.has_scope(
+            maybe_access_token_info, "read"
+        ):
             return ActivityPubResponse(
                 await _empty_followx_collection(
                     db_session=db_session,
@@ -535,7 +540,9 @@ async def following(
             db_session,
         )
 
-        if config.HIDES_FOLLOWING and not maybe_access_token_info:
+        if config.HIDES_FOLLOWING and not indieauth.has_scope(
+            maybe_access_token_info, "read"
+        ):
             return ActivityPubResponse(
                 await _empty_followx_collection(
                     db_session=db_session,
@@ -612,7 +619,11 @@ async def outbox(
             select(models.OutboxObject)
             .where(
                 models.OutboxObject.is_deleted.is_(False),
-                *([] if maybe_access_token_info else restricted_where),
+                *(
+                    []
+                    if indieauth.has_scope(maybe_access_token_info, "read")
+                    else restricted_where
+                ),
             )
             .order_by(models.OutboxObject.ap_published_at.desc())
             .limit(20)
@@ -641,6 +652,9 @@ async def post_outbox(
         indieauth.enforce_access_token
     ),
 ) -> ActivityPubResponse:
+    if not indieauth.has_scope(access_token_info, "create"):
+        raise HTTPException(status_code=403, detail="insufficient_scope")
+
     payload = await request.json()
     logger.info(f"{payload=}")
 
@@ -717,8 +731,7 @@ async def _check_outbox_object_acl(
         request,
         db_session,
     )
-    if maybe_access_token_info:
-        # TODO: check scopes
+    if indieauth.has_scope(maybe_access_token_info, "read"):
         return None
 
     if ap_object.visibility in [
@@ -1373,6 +1386,41 @@ def _filter_proxy_resp_headers(
     }
 
 
+# Proxied media is served from our own origin, so only "passive" media types
+# can be served as-is (SVG can embed scripts)
+_PROXY_SAFE_MEDIA_TYPE_PREFIXES = ("image/", "video/", "audio/")
+_PROXY_UNSAFE_MEDIA_TYPES = {"image/svg+xml"}
+_PROXY_RESIZE_MAX_SIZE = 20 * 2**20  # 20MB
+_PROXY_RESIZE_MAX_PIXELS = 40_000_000
+
+
+def _is_safe_proxied_media_type(content_type: str | None) -> bool:
+    if not content_type:
+        return False
+    media_type = content_type.split(";")[0].strip().lower()
+    return (
+        media_type.startswith(_PROXY_SAFE_MEDIA_TYPE_PREFIXES)
+        and media_type not in _PROXY_UNSAFE_MEDIA_TYPES
+    )
+
+
+def _safe_proxy_resp_headers(
+    proxy_resp: httpx.Response,
+    allowed_headers: list[str],
+) -> dict[str, str]:
+    """Filter the proxied response headers, ensuring the response cannot be
+    rendered as an active document (HTML, SVG, JS...) on our origin."""
+    headers = _filter_proxy_resp_headers(proxy_resp, allowed_headers)
+    if not _is_safe_proxied_media_type(proxy_resp.headers.get("content-type")):
+        headers = _strip_content_type(headers)
+        headers["Content-Type"] = "application/octet-stream"
+        headers["Content-Disposition"] = "attachment"
+
+    # Takes precedence over the default CSP set by the middleware
+    headers["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    return headers
+
+
 def _strip_content_type(headers: dict[str, str]) -> dict[str, str]:
     return {k: v for k, v in headers.items() if k.lower() != "content-type"}
 
@@ -1417,7 +1465,7 @@ async def serve_proxy_media(
         proxy_resp.aiter_raw(),
         status_code=proxy_resp.status_code,
         headers=_add_cache_control(
-            _filter_proxy_resp_headers(
+            _safe_proxy_resp_headers(
                 proxy_resp,
                 [
                     "content-encoding",
@@ -1444,7 +1492,7 @@ async def serve_proxy_media_resized(
     encoded_url: str,
     size: int,
     background_tasks: fastapi.BackgroundTasks,
-) -> PlainTextResponse:
+) -> Response:
     if size not in {50, 740}:
         raise ValueError("Unsupported size")
 
@@ -1473,7 +1521,7 @@ async def serve_proxy_media_resized(
         await proxy_client.aclose()
 
     background_tasks.add_task(_close_proxy_client)
-    proxy_resp = await _proxy_get(proxy_client, request, url, stream=False)
+    proxy_resp = await _proxy_get(proxy_client, request, url, stream=True)
     if proxy_resp.status_code >= 300:
         logger.info(f"failed to proxy {url}, got {proxy_resp.status_code}")
         await proxy_resp.aclose()
@@ -1481,9 +1529,19 @@ async def serve_proxy_media_resized(
             status_code=proxy_resp.status_code,
         )
 
+    # Read the (decoded) content, up to a limit
+    content = bytearray()
+    async for chunk in proxy_resp.aiter_bytes():
+        content.extend(chunk)
+        if len(content) > _PROXY_RESIZE_MAX_SIZE:
+            logger.info(f"{url} is too large to be resized")
+            await proxy_resp.aclose()
+            return PlainTextResponse(status_code=413)
+    await proxy_resp.aclose()
+
     # Filter the headers
     proxy_resp_headers = _add_cache_control(
-        _filter_proxy_resp_headers(
+        _safe_proxy_resp_headers(
             proxy_resp,
             [
                 "content-type",
@@ -1495,9 +1553,12 @@ async def serve_proxy_media_resized(
     )
 
     try:
-        out = BytesIO(proxy_resp.content)
+        out = BytesIO(content)
         i = Image.open(out)
         if getattr(i, "is_animated", False):
+            raise ValueError
+        # Don't decode huge images (`Image.open` only reads the header)
+        if i.width * i.height > _PROXY_RESIZE_MAX_PIXELS:
             raise ValueError
         i.thumbnail((size, size))
         is_webp = False
@@ -1527,14 +1588,14 @@ async def serve_proxy_media_resized(
             headers=_strip_content_type(proxy_resp_headers),
         )
     except ValueError:
-        return PlainTextResponse(
-            proxy_resp.content,
+        return Response(
+            bytes(content),
             headers=proxy_resp_headers,
         )
     except Exception:
         logger.exception(f"Failed to resize {url} on the fly")
-        return PlainTextResponse(
-            proxy_resp.content,
+        return Response(
+            bytes(content),
             headers=proxy_resp_headers,
         )
 

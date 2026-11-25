@@ -17,6 +17,7 @@ from app.source import dedup_tags
 from app.source import hashtagify
 from app.utils import safe_http
 from app.utils.url import check_url
+from app.utils.url import is_same_host
 
 if TYPE_CHECKING:
     from app.actor import Actor
@@ -75,6 +76,10 @@ class ObjectNotFoundError(FetchError):
 
 class ObjectUnavailableError(FetchError):
     pass
+
+
+class InvalidObjectOriginError(FetchError):
+    """The fetched object ID is not hosted on the server that served it."""
 
 
 class FetchErrorTypeEnum(str, enum.Enum):
@@ -207,9 +212,18 @@ async def fetch(
         raise FetchError(url, resp) from http_error
 
     try:
-        return resp.json()
+        raw_object = resp.json()
     except json.JSONDecodeError:
         raise NotAnObjectError(url, resp)
+
+    # A server can only serve objects it hosts: the object ID must be on the
+    # same host as the (final, after redirects) URL it was fetched from
+    if isinstance(raw_object, dict) and isinstance(raw_object.get("id"), str):
+        if not is_same_host(raw_object["id"], str(resp.url)):
+            logger.warning(f"{resp.url} served an object with ID {raw_object['id']}")
+            raise InvalidObjectOriginError(url, resp)
+
+    return raw_object
 
 
 async def parse_collection(  # noqa: C901

@@ -29,6 +29,7 @@ from app.database import get_db_session
 from app.key import Key
 from app.utils.datetime import now
 from app.utils.url import is_hostname_blocked
+from app.utils.url import is_same_host
 
 _KEY_CACHE: MutableMapping[str, Key] = LFUCache(256)
 
@@ -141,6 +142,11 @@ async def _get_public_key(
             f"failed to fetch requested key {key_id}: got {actor['publicKey']}"
         )
 
+    # The key must belong to an actor hosted on the same server, otherwise
+    # anyone could publish a key claiming to be owned by any actor
+    if not is_same_host(key_id, k.owner):
+        raise ValueError(f"key {key_id} cannot be owned by {k.owner}")
+
     if should_skip_cache and actor["type"] != "Key" and existing_actor:
         # We had to skip the cache, which means the actor key probably changed
         # and we want to update our cached version
@@ -198,6 +204,16 @@ async def httpsig_checker(
             is_unsupported_algorithm=True,
             server=server,
         )
+
+    # The signature must cover the request target, and the body (through the
+    # digest) when there is one, otherwise it could be replayed for another
+    # request
+    signed_headers = hsig.get("headers", "").split()
+    if "(request-target)" not in signed_headers or (
+        body and "digest" not in signed_headers
+    ):
+        logger.info(f"Missing required signed headers: {signed_headers}")
+        return HTTPSigInfo(has_valid_signature=False, server=server)
 
     # Try to drop Delete activity spams early on, this prevent making an extra
     # HTTP requests trying to fetch an unavailable actor to verify the HTTP sig
@@ -268,8 +284,12 @@ async def httpsig_checker(
         except Exception:
             logger.exception("Failed to refresh actor")
 
+    if not has_valid_signature:
+        logger.info(f"Invalid HTTP signature for {k.owner}")
+        return HTTPSigInfo(has_valid_signature=False, server=server)
+
     httpsig_info = HTTPSigInfo(
-        has_valid_signature=has_valid_signature,
+        has_valid_signature=True,
         signed_by_ap_actor_id=k.owner,
         server=server,
     )

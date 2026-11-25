@@ -7,6 +7,7 @@ from fastapi import Cookie
 from fastapi import Depends
 from fastapi import Form
 from fastapi import Request
+from fastapi import Response
 from fastapi import UploadFile
 from fastapi.exceptions import HTTPException
 from fastapi.responses import RedirectResponse
@@ -30,9 +31,11 @@ from app.boxes import get_outbox_object_by_ap_id
 from app.boxes import send_block
 from app.boxes import send_follow
 from app.boxes import send_unblock
+from app.config import BASE_URL
 from app.config import EMOJIS
 from app.config import SESSION_TIMEOUT
 from app.config import generate_csrf_token
+from app.config import is_local_url
 from app.config import session_serializer
 from app.config import verify_csrf_token
 from app.config import verify_password
@@ -1265,12 +1268,24 @@ async def login_validation(
             status_code=403,
         )
 
-    resp = RedirectResponse(
-        redirect or request.url_for("admin_stream"), status_code=302
-    )
-    resp.set_cookie("session", session_serializer.dumps({"is_logged_in": True}))  # type: ignore  # noqa: E501
+    # Only redirect to a local page after login (avoid open redirects)
+    if not redirect or not is_local_url(redirect):
+        redirect = request.url_for("admin_stream")
+
+    resp = RedirectResponse(redirect, status_code=302)
+    _set_session_cookie(resp, session_serializer.dumps({"is_logged_in": True}))
 
     return resp
+
+
+def _set_session_cookie(resp: Response, value: str | bytes) -> None:
+    resp.set_cookie(
+        "session",
+        value if isinstance(value, str) else value.decode(),
+        httponly=True,
+        secure=BASE_URL.startswith("https://"),
+        samesite="lax",
+    )
 
 
 @router.get("/logout")
@@ -1278,5 +1293,5 @@ async def logout(
     request: Request,
 ) -> RedirectResponse:
     resp = RedirectResponse(request.url_for("index"), status_code=302)
-    resp.set_cookie("session", session_serializer.dumps({"is_logged_in": False}))  # type: ignore  # noqa: E501
+    _set_session_cookie(resp, session_serializer.dumps({"is_logged_in": False}))
     return resp

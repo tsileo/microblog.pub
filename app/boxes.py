@@ -46,6 +46,7 @@ from app.utils.datetime import parse_isoformat
 from app.utils.facepile import WebmentionReply
 from app.utils.text import slugify
 from app.utils.url import is_hostname_blocked
+from app.utils.url import is_same_host
 
 AnyboxObject = models.InboxObject | models.OutboxObject
 
@@ -2332,6 +2333,18 @@ async def save_to_inbox(
     raw_object_id = ap.get_id(raw_object)
     forwarded_by_actor = None
 
+    # An actor can only publish activities (and created/updated objects) hosted
+    # on its own server
+    if not is_same_host(raw_object_id, actor.ap_id):
+        logger.warning(f"Activity {raw_object_id} not hosted by {actor.ap_id}")
+        return None
+    if ap.as_list(raw_object["type"])[0] in ["Create", "Update"] and isinstance(
+        raw_object.get("object"), dict
+    ):
+        if not is_same_host(ap.get_id(raw_object["object"]), actor.ap_id):
+            logger.warning(f"Object in {raw_object_id} not hosted by {actor.ap_id}")
+            return None
+
     # Ensure forwarded activities have a valid LD sig
     if sent_by_ap_actor_id != actor.ap_id:
         logger.info(
@@ -2360,6 +2373,11 @@ async def save_to_inbox(
             # will return the actor instead
             if raw_object["id"] != raw_object_id:
                 logger.info(f"Unable to fetch {raw_object_id}")
+                return None
+
+            # The fetched activity must still be from the same actor
+            if ap.get_id(raw_object.get("actor", "")) != actor.ap_id:
+                logger.warning(f"Fetched {raw_object_id} is not from {actor.ap_id}")
                 return None
 
     if (
